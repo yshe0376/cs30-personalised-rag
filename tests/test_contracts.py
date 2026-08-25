@@ -4,10 +4,12 @@ from pydantic import TypeAdapter, ValidationError
 from cs30.citation import validate_citations
 from cs30.contracts import (
     Chunk,
+    ContentType,
     GeneratedAnswer,
     OpenStaxDocument,
     RetrievalResult,
     SciQQuestion,
+    TextBlock,
 )
 from cs30.errors import CS30Error
 from cs30.fixtures import load_fixture
@@ -140,3 +142,153 @@ def test_packaged_answer_fixture_still_validates() -> None:
     answer = GeneratedAnswer.model_validate(load_fixture("generated_answer.json"))
     assert answer.abstained is False
     assert answer.citations
+
+
+def _document_payload(**overrides: object) -> dict:
+    """Smallest valid document; individual tests break one rule at a time."""
+
+    payload: dict = {
+        "document_id": "doc",
+        "title": "Doc",
+        "version": "v1",
+        "source": "fixture://doc",
+        "document_hash": "hash",
+        "parser_version": "parser-1",
+        "text": "First sentence. Second sentence.",
+        "chapters": [
+            {"chapter_id": "ch01", "title": "One", "char_start": 0, "char_end": 32}
+        ],
+        "blocks": [{"chapter_id": "ch01", "char_start": 0, "char_end": 15}],
+    }
+    payload.update(overrides)
+    return payload
+
+
+def test_blocks_locate_their_text_in_the_document() -> None:
+    """Blocks hold offsets only; the document text stays the single source."""
+
+    document = OpenStaxDocument.model_validate(load_fixture("openstax_document.json"))
+    assert document.blocks
+    for block in document.blocks:
+        assert document.block_text(block) == document.text[block.char_start : block.char_end]
+        assert document.block_text(block).strip()
+
+
+def test_block_content_type_defaults_to_body() -> None:
+    block = TextBlock(chapter_id="ch01", char_start=0, char_end=15)
+    assert block.content_type is ContentType.BODY
+
+
+def test_block_rejects_unknown_content_type() -> None:
+    with pytest.raises(ValidationError):
+        TextBlock(
+            chapter_id="ch01", char_start=0, char_end=15, content_type="exercise_maybe"
+        )
+
+
+def test_document_requires_at_least_one_block() -> None:
+    with pytest.raises(ValidationError):
+        OpenStaxDocument.model_validate(_document_payload(blocks=[]))
+
+
+def test_blocks_must_be_ordered_and_non_overlapping() -> None:
+    with pytest.raises(ValidationError, match="ordered and non-overlapping"):
+        OpenStaxDocument.model_validate(
+            _document_payload(
+                blocks=[
+                    {"chapter_id": "ch01", "char_start": 0, "char_end": 20},
+                    {"chapter_id": "ch01", "char_start": 10, "char_end": 30},
+                ]
+            )
+        )
+
+
+def test_block_must_stay_inside_its_chapter() -> None:
+    """Catches the mislabelled-section bug class at construction."""
+
+    with pytest.raises(ValidationError, match="falls outside chapter"):
+        OpenStaxDocument.model_validate(
+            _document_payload(
+                chapters=[
+                    {"chapter_id": "ch01", "title": "One", "char_start": 0, "char_end": 16}
+                ],
+                blocks=[{"chapter_id": "ch01", "char_start": 0, "char_end": 32}],
+            )
+        )
+
+
+def test_block_rejects_unknown_chapter_id() -> None:
+    with pytest.raises(ValidationError, match="unknown chapter_id"):
+        OpenStaxDocument.model_validate(
+            _document_payload(
+                blocks=[{"chapter_id": "ch99", "char_start": 0, "char_end": 15}]
+            )
+        )
+
+
+def test_block_ids_must_be_unique() -> None:
+    with pytest.raises(ValidationError, match="duplicate block_id"):
+        OpenStaxDocument.model_validate(
+            _document_payload(
+                blocks=[
+                    {"block_id": "b1", "chapter_id": "ch01", "char_start": 0, "char_end": 15},
+                    {"block_id": "b1", "chapter_id": "ch01", "char_start": 16, "char_end": 32},
+                ]
+            )
+        )
+
+
+def test_block_span_may_not_exceed_document_text() -> None:
+    with pytest.raises(ValidationError, match="exceeds document text"):
+        OpenStaxDocument.model_validate(
+            _document_payload(
+                blocks=[{"chapter_id": "ch01", "char_start": 0, "char_end": 99}]
+            )
+        )
+
+
+def _chunk(**overrides: object) -> Chunk:
+    payload: dict = {
+        "chunk_id": "chunk_embed",
+        "document_id": "doc",
+        "chapter_id": "ch01",
+        "text": "Acceleration is the rate of change of velocity.",
+        "source": "fixture://openstax/physics#ch01",
+        "char_start": 0,
+        "char_end": 47,
+        "token_count": 9,
+    }
+    payload.update(overrides)
+    return Chunk(**payload)
+
+
+def test_embedding_input_falls_back_to_chunk_text() -> None:
+    chunk = _chunk()
+    assert chunk.embed_text is None
+    assert chunk.embedding_input == chunk.text
+
+
+def test_embed_text_carries_added_context() -> None:
+    """Contextual enrichment changes what is embedded, not what is cited."""
+
+    chunk = _chunk(
+        embed_text=(
+            "From chapter 1, section 1.1 (Physics: An Introduction): "
+            "Acceleration is the rate of change of velocity."
+        )
+    )
+    assert chunk.embedding_input.startswith("From chapter 1")
+    assert chunk.text == "Acceleration is the rate of change of velocity."
+    assert chunk.text in chunk.embedding_input
+
+
+def test_embed_text_must_contain_the_chunk_text() -> None:
+    """Retrieval may not match on wording absent from the cited evidence."""
+
+    with pytest.raises(ValidationError, match="must contain the chunk text"):
+        _chunk(embed_text="A paraphrase that drops the original wording.")
+
+
+def test_embed_text_does_not_relax_the_span_invariant() -> None:
+    with pytest.raises(ValidationError, match="does not match span"):
+        _chunk(char_end=999, embed_text="prefix Acceleration is the rate of change of velocity.")

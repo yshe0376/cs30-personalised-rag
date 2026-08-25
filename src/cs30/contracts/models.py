@@ -56,6 +56,64 @@ class OpenStaxChapter(ContractModel):
         return self
 
 
+class ContentType(StrEnum):
+    """What a block of textbook text is, so retrieval can filter by role.
+
+    Explanatory prose and a question about that prose are different things.
+    Retrieving an exercise as supporting evidence yields an answer that looks
+    grounded but rests on the wrong kind of text, which the citation check
+    cannot detect.
+    """
+
+    BODY = "body"
+    HEADING = "heading"
+    LEARNING_OBJECTIVE = "learning_objective"
+    FIGURE_CAPTION = "figure_caption"
+    TABLE = "table"
+    EQUATION = "equation"
+    EXAMPLE = "example"
+    CHECK_UNDERSTANDING = "check_understanding"
+    SIDEBAR = "sidebar"
+    SUMMARY = "summary"
+    CONCEPTUAL_QUESTION = "conceptual_question"
+    PROBLEM = "problem"
+    GLOSSARY = "glossary"
+    OTHER = "other"
+
+
+class TextBlock(ContractModel):
+    """One structural unit the parser recovered, addressed by span.
+
+    A block carries no text of its own. ``OpenStaxDocument.text`` is the single
+    source of truth and ``block_text()`` slices it; storing the same text twice
+    would let the copies drift apart, which is what the span convention exists
+    to prevent.
+
+    Blocks preserve parser structure (section, page, role) across the module
+    seam. Without them a chunker would have to re-derive that structure from
+    raw text, duplicating work the parser already did.
+    """
+
+    block_id: Identifier | None = None
+    chapter_id: Identifier
+    section_id: Identifier | None = None
+    section_title: NonEmptyText | None = None
+    content_type: ContentType = ContentType.BODY
+    char_start: int = Field(ge=0)
+    char_end: int = Field(gt=0)
+    page_start: int | None = Field(default=None, ge=1)
+    page_end: int | None = Field(default=None, ge=1)
+    metadata: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_span(self) -> "TextBlock":
+        if self.char_end <= self.char_start:
+            raise ValueError("char_end must be greater than char_start")
+        if self.page_start and self.page_end and self.page_end < self.page_start:
+            raise ValueError("page_end must not precede page_start")
+        return self
+
+
 class OpenStaxDocument(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     document_id: Identifier
@@ -66,6 +124,7 @@ class OpenStaxDocument(ContractModel):
     parser_version: Identifier
     text: SpanText
     chapters: list[OpenStaxChapter] = Field(min_length=1)
+    blocks: list[TextBlock] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_chapter_spans(self) -> "OpenStaxDocument":
@@ -82,8 +141,50 @@ class OpenStaxDocument(ContractModel):
             previous_end = chapter.char_end
         return self
 
+    @model_validator(mode="after")
+    def validate_block_spans(self) -> "OpenStaxDocument":
+        chapter_spans = {c.chapter_id: (c.char_start, c.char_end) for c in self.chapters}
+        seen: set[str] = set()
+        previous_end = 0
+        for position, block in enumerate(self.blocks):
+            label = block.block_id or f"index {position}"
+            if block.block_id is not None:
+                if block.block_id in seen:
+                    raise ValueError(f"duplicate block_id: {block.block_id}")
+                seen.add(block.block_id)
+            if block.char_end > len(self.text):
+                raise ValueError(f"block span exceeds document text: {label}")
+            if block.char_start < previous_end:
+                raise ValueError(f"block spans must be ordered and non-overlapping: {label}")
+            chapter_span = chapter_spans.get(block.chapter_id)
+            if chapter_span is None:
+                raise ValueError(
+                    f"block {label} references unknown chapter_id: {block.chapter_id}"
+                )
+            if block.char_start < chapter_span[0] or block.char_end > chapter_span[1]:
+                raise ValueError(f"block {label} falls outside chapter {block.chapter_id}")
+            previous_end = block.char_end
+        return self
+
+    def block_text(self, block: TextBlock) -> str:
+        """The verbatim text a block points at."""
+
+        return self.text[block.char_start : block.char_end]
+
 
 class Chunk(ContractModel):
+    """One retrievable unit, and optionally an enriched form of it.
+
+    ``text`` is verbatim corpus text bound to a span: it is what gets cited and
+    shown to a student. ``embed_text`` is what the embedder sees, which may
+    carry added context such as the chapter and section a passage came from.
+
+    Keeping them apart lets retrieval be enriched without the citation drifting
+    from the source. ``embed_text`` must still contain ``text`` verbatim, so a
+    chunk can never be retrieved on the strength of wording that is absent from
+    the evidence it cites.
+    """
+
     schema_version: Literal["1.0"] = "1.0"
     chunk_id: Identifier
     document_id: Identifier
@@ -94,6 +195,7 @@ class Chunk(ContractModel):
     char_end: int = Field(gt=0)
     token_count: int = Field(gt=0)
     metadata: dict[str, str] = Field(default_factory=dict)
+    embed_text: SpanText | None = None
 
     @model_validator(mode="after")
     def validate_span(self) -> "Chunk":
@@ -105,7 +207,15 @@ class Chunk(ContractModel):
                 f"text length {len(self.text)} does not match span "
                 f"[{self.char_start}, {self.char_end}) of length {expected}"
             )
+        if self.embed_text is not None and self.text not in self.embed_text:
+            raise ValueError("embed_text must contain the chunk text verbatim")
         return self
+
+    @property
+    def embedding_input(self) -> str:
+        """What the embedder receives: the enriched text when present."""
+
+        return self.text if self.embed_text is None else self.embed_text
 
 
 class IndexArtifact(ContractModel):

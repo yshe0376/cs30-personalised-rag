@@ -2,6 +2,7 @@
 
 from .models import (
     Chunk,
+    ContentType,
     GeneratedAnswer,
     Identifier,
     IndexArtifact,
@@ -15,10 +16,12 @@ from .models import (
     SpanText,
     StudentLevel,
     StudentProfile,
+    TextBlock,
 )
 
 __all__ = [
     "Chunk",
+    "ContentType",
     "GeneratedAnswer",
     "Identifier",
     "IndexArtifact",
@@ -32,4 +35,5 @@ __all__ = [
     "SpanText",
     "StudentLevel",
     "StudentProfile",
+    "TextBlock",
 ]

@@ -16,6 +16,49 @@
       "page_start": 1,
       "page_end": 1
     }
+  ],
+  "blocks": [
+    {
+      "block_id": "block_ch01_0001",
+      "chapter_id": "ch01_motion",
+      "section_id": "1.1",
+      "section_title": "Acceleration",
+      "content_type": "body",
+      "char_start": 0,
+      "char_end": 57,
+      "page_start": 1,
+      "page_end": 1,
+      "metadata": {
+        "topic": "acceleration"
+      }
+    },
+    {
+      "block_id": "block_ch01_0002",
+      "chapter_id": "ch01_motion",
+      "section_id": "1.1",
+      "section_title": "Acceleration",
+      "content_type": "body",
+      "char_start": 58,
+      "char_end": 99,
+      "page_start": 1,
+      "page_end": 1,
+      "metadata": {
+        "topic": "acceleration"
+      }
+    },
+    {
+      "block_id": "block_ch01_0003",
+      "chapter_id": "ch01_motion",
+      "section_id": "1.1",
+      "section_title": "Acceleration",
+      "content_type": "body",
+      "char_start": 100,
+      "char_end": 179,
+      "page_start": 1,
+      "page_end": 1,
+      "metadata": {
+        "topic": "acceleration"
+      }
+    }
   ]
 }
-

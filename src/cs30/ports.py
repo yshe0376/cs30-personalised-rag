@@ -39,7 +39,7 @@ class QuestionProvider(Protocol):
 
 @runtime_checkable
 class Chunker(Protocol):
-    """Member 4: 500-token chunking with chapter metadata and char spans."""
+    """Member 4: structure-aware chunking with block metadata and char spans."""
 
     def chunk(self, document: OpenStaxDocument) -> list[Chunk]: ...
 

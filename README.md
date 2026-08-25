@@ -36,7 +36,7 @@ A Drive index can be added under `docs/` after the shared folder is created.
 ```text
 OpenStax chapter
 -> normalised document
--> 500-token chunks
+-> structure-aware chunks
 -> embedding and FAISS dense retrieval
 -> student profile
 -> personalised prompt

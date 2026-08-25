@@ -18,6 +18,11 @@ to `Retriever.load_index()` without changing the orchestration code.
 
 ## Notes
 
+Embed `chunk.embedding_input`, never `chunk.text` directly: it returns the
+enriched text when member 4 supplied one and falls back to the verbatim text
+otherwise. Record which of the two an index was built from in
+`IndexArtifact.metadata`, because it is an ablation dimension.
+
 Record the embedding model, dimension, device, and build time in
 `IndexArtifact.metadata`. `location` must identify the saved FAISS index and
 chunk map consistently. Raise

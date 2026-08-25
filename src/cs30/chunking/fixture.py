@@ -1,4 +1,4 @@
-"""Fixture chunker used until real 500-token chunking lands."""
+"""Fixture chunker used until real structure-aware chunking lands."""
 
 from pydantic import TypeAdapter
 
