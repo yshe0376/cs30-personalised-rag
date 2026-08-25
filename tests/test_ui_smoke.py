@@ -36,5 +36,5 @@ def test_streamlit_smoke_path() -> None:
     app.button[0].click().run()
 
     assert not app.exception
-    assert app.success[0].value == "Pipeline execution · COMPLETED"
+    assert any("Generated answer" in item.value for item in app.markdown)
     assert "FIXTURE" in app.info[0].value

@@ -63,18 +63,6 @@ def inject_styles() -> None:
             font-weight: 650;
             letter-spacing: .025em;
         }
-        .st-key-run_status [data-testid="stAlert"] [data-testid="stMarkdownContainer"] {
-            width: 100%;
-        }
-        .st-key-run_status [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
-            margin: 0;
-            font-family: inherit;
-            font-size: .82rem;
-            font-weight: 700;
-            line-height: 1.35;
-            letter-spacing: 0;
-            text-align: center;
-        }
         .cs30-result-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
         .cs30-citation-chip,
         .cs30-integrity-chip {
@@ -163,9 +151,6 @@ def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
     st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
-    with st.container(key="run_status"):
-        st.success("Pipeline execution · COMPLETED")
-
     if run.answer.abstained:
         st.warning("The system refused to answer because the retrieved evidence was insufficient.")
         st.write(run.answer.explanation)
