@@ -78,6 +78,19 @@ python -m pytest
 returns a `PipelineRun` JSON object: question, student level, Top-K evidence,
 generated answer, verified citations, and run metadata.
 
+### Demo interface
+
+After installing the project, start the local Streamlit interface on any platform:
+
+```bash
+python -m streamlit run src/cs30/ui/app.py
+```
+
+The browser interface lets a client choose a student level, ask a question, and
+inspect the generated answer, citations, and retrieved sources. The current page
+runs in fixture mode and labels that mode prominently; it must not be presented as
+a real retrieval or model result.
+
 Ask something the sample chapter does not cover and the system refuses instead
 of inventing an answer:
 
