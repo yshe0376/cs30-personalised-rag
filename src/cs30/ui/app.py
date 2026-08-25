@@ -10,6 +10,11 @@ from cs30.errors import CS30Error
 from cs30.pipeline import build_fixture_deps, run_pipeline
 
 DEFAULT_QUESTION = "What is acceleration?"
+EXAMPLE_QUESTIONS = {
+    "Acceleration": DEFAULT_QUESTION,
+    "Net force": "Why does an object accelerate when a net force acts on it?",
+    "Safe refusal": "What is quantum entanglement?",
+}
 
 
 def inject_styles() -> None:
@@ -256,7 +261,20 @@ def main() -> None:
                 '<p class="cs30-section-label"><span class="cs30-step">02</span>ASK THE SYSTEM</p>',
                 unsafe_allow_html=True,
             )
-            question = st.text_area("Physics question", value=DEFAULT_QUESTION, height=150)
+            example = st.pills(
+                "Try a question",
+                options=list(EXAMPLE_QUESTIONS),
+                selection_mode="single",
+            )
+            if example and st.session_state.get("selected_example") != example:
+                st.session_state["question_input"] = EXAMPLE_QUESTIONS[example]
+                st.session_state["selected_example"] = example
+            question = st.text_area(
+                "Physics question",
+                value=DEFAULT_QUESTION,
+                height=150,
+                key="question_input",
+            )
 
             if st.button("Run fixture pipeline  →", type="primary", use_container_width=True):
                 try:
