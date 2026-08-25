@@ -44,28 +44,46 @@ def inject_styles() -> None:
         .cs30-section-label {
             margin: 2px 0 18px;
             color: var(--cs30-orange-dark);
-            font-size: 1.05rem;
+            font-size: 1.35rem !important;
             font-weight: 800;
-            letter-spacing: .04em;
+            letter-spacing: -.015em;
         }
         .cs30-field-title {
             margin: 18px 0 8px;
             color: var(--cs30-ink);
-            font-size: 1.15rem;
+            font-size: 1.05rem !important;
             font-weight: 750;
             letter-spacing: -.015em;
             line-height: 1.2;
         }
-        .cs30-meta {
-            display: grid;
-            grid-template-columns: 120px minmax(0, 1fr);
-            gap: 12px;
-            margin: 8px 0;
+        .cs30-helper-title {
+            margin: 14px 0 7px;
             color: var(--cs30-muted);
-            font-size: .84rem;
+            font-size: .78rem !important;
+            font-weight: 650;
+            letter-spacing: .025em;
         }
-        .cs30-meta strong { color: var(--cs30-ink); font-weight: 700; }
-        .cs30-meta span { overflow-wrap: anywhere; }
+        .cs30-result-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
+        .cs30-citation-chip,
+        .cs30-integrity-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: .76rem;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+        .cs30-citation-chip {
+            border: 1px solid #f1c8be;
+            color: var(--cs30-orange-dark);
+            background: #fff8f5;
+        }
+        .cs30-integrity-chip {
+            border: 1px solid #b9dfca;
+            color: #237a4b;
+            background: #edf8f1;
+        }
         }
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-color: var(--cs30-line);
@@ -79,13 +97,17 @@ def inject_styles() -> None:
             border-radius: 10px;
             color: white;
             background: var(--cs30-orange);
-            font-size: .95rem;
-            font-weight: 700;
+            font-size: 1.05rem;
+            font-weight: 750;
         }
         div[data-testid="stButton"] > button:hover {
             border-color: var(--cs30-orange-dark);
             color: white;
             background: var(--cs30-orange-dark);
+        }
+        div[data-testid="stButton"] > button p {
+            font-size: 1.05rem;
+            font-weight: 750;
         }
         div[data-baseweb="select"] > div,
         div[data-testid="stTextArea"] textarea {
@@ -135,23 +157,26 @@ def render_result(run: PipelineRun) -> None:
         st.write(run.answer.explanation)
     else:
         st.success("Smoke path completed")
-        st.markdown('<h3 class="cs30-field-title">Generated answer</h3>', unsafe_allow_html=True)
+        st.markdown('<p class="cs30-field-title">Generated answer</p>', unsafe_allow_html=True)
         if run.answer.final_choice:
             st.markdown(f"**Final choice:** {run.answer.final_choice}")
         st.write(run.answer.explanation)
+    citation_chip = ""
+    if run.answer.citations:
         citation_text = ", ".join(run.answer.citations)
-        st.markdown(
-            '<div class="cs30-meta"><strong>Citation ID</strong>'
-            f"<span>{escape(citation_text)}</span></div>",
-            unsafe_allow_html=True,
+        citation_chip = (
+            '<span class="cs30-citation-chip">Citation ID · '
+            f"{escape(citation_text)}</span>"
         )
-
+    integrity_chip = (
+        '<span class="cs30-integrity-chip">Citation check · '
+        f"{escape(run.citation_integrity.upper())}</span>"
+    )
     st.markdown(
-        '<div class="cs30-meta"><strong>Citation integrity</strong>'
-        f"<span>{escape(run.citation_integrity.upper())}</span></div>",
+        f'<div class="cs30-result-meta">{citation_chip}{integrity_chip}</div>',
         unsafe_allow_html=True,
     )
-    st.markdown('<h3 class="cs30-field-title">Retrieved evidence</h3>', unsafe_allow_html=True)
+    st.markdown('<p class="cs30-field-title">Retrieved evidence</p>', unsafe_allow_html=True)
     if not run.retrieval.hits:
         st.caption("No relevant evidence was retrieved.")
     for hit in run.retrieval.hits:
@@ -192,7 +217,7 @@ def main() -> None:
                 '<p class="cs30-section-label">QUESTION SETTINGS</p>',
                 unsafe_allow_html=True,
             )
-            st.markdown('<h3 class="cs30-field-title">Student level</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="cs30-field-title">Student level</p>', unsafe_allow_html=True)
             level_value = st.selectbox(
                 "Select student level",
                 options=[level.value for level in StudentLevel],
@@ -200,7 +225,7 @@ def main() -> None:
                 format_func=str.title,
                 label_visibility="collapsed",
             )
-            st.markdown('<h3 class="cs30-field-title">Input question</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="cs30-field-title">Input question</p>', unsafe_allow_html=True)
             question = st.text_area(
                 "Physics question",
                 value=DEFAULT_QUESTION,
@@ -214,7 +239,7 @@ def main() -> None:
                 if example:
                     st.session_state["question_input"] = EXAMPLE_QUESTIONS[example]
 
-            st.markdown('<h3 class="cs30-field-title">Try</h3>', unsafe_allow_html=True)
+            st.markdown('<p class="cs30-helper-title">Try</p>', unsafe_allow_html=True)
             st.pills(
                 "Try a prepared question",
                 options=list(EXAMPLE_QUESTIONS),
