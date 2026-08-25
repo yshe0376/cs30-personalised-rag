@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from html import escape
+
 import streamlit as st
 
 from cs30.config import load_config
@@ -40,11 +42,30 @@ def inject_styles() -> None:
         h1, h2, h3 { color: var(--cs30-ink); letter-spacing: -.025em; }
         .cs30-intro { margin: -.4rem 0 1.1rem; color: var(--cs30-muted); }
         .cs30-section-label {
-            margin: 2px 0 4px;
+            margin: 2px 0 18px;
             color: var(--cs30-orange-dark);
-            font-size: .7rem;
+            font-size: 1.05rem;
             font-weight: 800;
-            letter-spacing: .1em;
+            letter-spacing: .04em;
+        }
+        .cs30-field-title {
+            margin: 18px 0 8px;
+            color: var(--cs30-ink);
+            font-size: 1.15rem;
+            font-weight: 750;
+            letter-spacing: -.015em;
+            line-height: 1.2;
+        }
+        .cs30-meta {
+            display: grid;
+            grid-template-columns: 120px minmax(0, 1fr);
+            gap: 12px;
+            margin: 8px 0;
+            color: var(--cs30-muted);
+            font-size: .84rem;
+        }
+        .cs30-meta strong { color: var(--cs30-ink); font-weight: 700; }
+        .cs30-meta span { overflow-wrap: anywhere; }
         }
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-color: var(--cs30-line);
@@ -58,6 +79,7 @@ def inject_styles() -> None:
             border-radius: 10px;
             color: white;
             background: var(--cs30-orange);
+            font-size: .95rem;
             font-weight: 700;
         }
         div[data-testid="stButton"] > button:hover {
@@ -113,15 +135,23 @@ def render_result(run: PipelineRun) -> None:
         st.write(run.answer.explanation)
     else:
         st.success("Smoke path completed")
-        st.subheader("Generated answer")
+        st.markdown('<h3 class="cs30-field-title">Generated answer</h3>', unsafe_allow_html=True)
         if run.answer.final_choice:
             st.markdown(f"**Final choice:** {run.answer.final_choice}")
         st.write(run.answer.explanation)
         citation_text = ", ".join(run.answer.citations)
-        st.caption(f"Citation ID: {citation_text}")
+        st.markdown(
+            '<div class="cs30-meta"><strong>Citation ID</strong>'
+            f"<span>{escape(citation_text)}</span></div>",
+            unsafe_allow_html=True,
+        )
 
-    st.markdown(f"**Citation integrity:** {run.citation_integrity.upper()}")
-    st.subheader("Retrieved evidence")
+    st.markdown(
+        '<div class="cs30-meta"><strong>Citation integrity</strong>'
+        f"<span>{escape(run.citation_integrity.upper())}</span></div>",
+        unsafe_allow_html=True,
+    )
+    st.markdown('<h3 class="cs30-field-title">Retrieved evidence</h3>', unsafe_allow_html=True)
     if not run.retrieval.hits:
         st.caption("No relevant evidence was retrieved.")
     for hit in run.retrieval.hits:
@@ -162,25 +192,36 @@ def main() -> None:
                 '<p class="cs30-section-label">QUESTION SETTINGS</p>',
                 unsafe_allow_html=True,
             )
+            st.markdown('<h3 class="cs30-field-title">Student level</h3>', unsafe_allow_html=True)
             level_value = st.selectbox(
-                "Student level",
+                "Select student level",
                 options=[level.value for level in StudentLevel],
                 index=0,
                 format_func=str.title,
+                label_visibility="collapsed",
             )
-            example = st.pills(
-                "Try a question",
-                options=list(EXAMPLE_QUESTIONS),
-                selection_mode="single",
-            )
-            if example and st.session_state.get("selected_example") != example:
-                st.session_state["question_input"] = EXAMPLE_QUESTIONS[example]
-                st.session_state["selected_example"] = example
+            st.markdown('<h3 class="cs30-field-title">Input question</h3>', unsafe_allow_html=True)
             question = st.text_area(
                 "Physics question",
                 value=DEFAULT_QUESTION,
                 height=150,
                 key="question_input",
+                label_visibility="collapsed",
+            )
+
+            def apply_example() -> None:
+                example = st.session_state.get("selected_example")
+                if example:
+                    st.session_state["question_input"] = EXAMPLE_QUESTIONS[example]
+
+            st.markdown('<h3 class="cs30-field-title">Try</h3>', unsafe_allow_html=True)
+            st.pills(
+                "Try a prepared question",
+                options=list(EXAMPLE_QUESTIONS),
+                selection_mode="single",
+                key="selected_example",
+                on_change=apply_example,
+                label_visibility="collapsed",
             )
 
             if st.button("Run fixture pipeline", type="primary", use_container_width=True):
