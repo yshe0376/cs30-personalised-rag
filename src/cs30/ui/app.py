@@ -151,7 +151,7 @@ def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
     st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
-    st.success("Fixture run completed")
+    st.success("Pipeline execution · COMPLETED")
 
     if run.answer.abstained:
         st.warning("The system refused to answer because the retrieved evidence was insufficient.")
@@ -169,7 +169,7 @@ def render_result(run: PipelineRun) -> None:
             f"{escape(citation_text)}</span>"
         )
     integrity_chip = (
-        '<span class="cs30-integrity-chip">Citation check · '
+        '<span class="cs30-integrity-chip">Citation integrity · '
         f"{escape(run.citation_integrity.upper())}</span>"
     )
     st.markdown(
