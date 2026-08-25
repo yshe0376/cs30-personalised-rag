@@ -18,147 +18,73 @@ EXAMPLE_QUESTIONS = {
 
 
 def inject_styles() -> None:
-    """Apply a restrained blue presentation layer without changing behaviour."""
+    """Keep the Streamlit presentation simple, white, and easy to scan."""
 
     st.markdown(
         """
         <style>
         :root {
-            --cs30-blue: #3973e6;
-            --cs30-blue-dark: #2454bd;
-            --cs30-ink: #17233d;
-            --cs30-muted: #687791;
-            --cs30-line: #dbe6f4;
+            --cs30-orange: #f06f54;
+            --cs30-orange-dark: #df5b40;
+            --cs30-ink: #171411;
+            --cs30-muted: #706a64;
+            --cs30-line: #e8e4e1;
         }
         [data-testid="stAppViewContainer"] {
             color: var(--cs30-ink);
-            background:
-                radial-gradient(circle at 8% 8%, rgba(184, 216, 255, .45), transparent 28%),
-                radial-gradient(circle at 92% 40%, rgba(225, 235, 255, .65), transparent 30%),
-                #f6f9ff;
+            background: #ffffff;
         }
-        [data-testid="stHeader"] { background: transparent; }
+        [data-testid="stHeader"] { background: #ffffff; }
         [data-testid="stToolbar"], #MainMenu, footer { visibility: hidden; }
-        .block-container { max-width: 1180px; padding-top: 2rem; padding-bottom: 2rem; }
-        .cs30-hero {
-            display: flex;
-            justify-content: space-between;
-            gap: 28px;
-            align-items: flex-end;
-            padding: 26px 0 24px;
-            border-bottom: 1px solid var(--cs30-line);
-        }
-        .cs30-kicker {
-            margin: 0 0 9px;
-            color: var(--cs30-blue);
-            font-size: .72rem;
-            font-weight: 800;
-            letter-spacing: .14em;
-        }
-        .cs30-hero h1 {
-            margin: 0;
-            color: var(--cs30-ink);
-            font-family: Georgia, 'Times New Roman', serif;
-            font-size: clamp(2.45rem, 5vw, 4.5rem);
-            font-weight: 500;
-            letter-spacing: -.045em;
-            line-height: 1;
-        }
-        .cs30-hero h1 span { color: var(--cs30-blue); }
-        .cs30-subtitle { margin: 14px 0 0; color: var(--cs30-muted); font-size: 1rem; }
-        .cs30-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            border: 1px solid #bfd5f6;
-            border-radius: 999px;
-            color: var(--cs30-blue-dark);
-            background: #edf5ff;
-            font-size: .76rem;
-            font-weight: 750;
-            white-space: nowrap;
-        }
-        .cs30-pill::before {
-            content: '';
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #4f8cff;
-            box-shadow: 0 0 0 4px #d8e8ff;
-        }
+        .block-container { max-width: 1120px; padding-top: 2.3rem; padding-bottom: 2rem; }
+        h1, h2, h3 { color: var(--cs30-ink); letter-spacing: -.025em; }
+        .cs30-intro { margin: -.4rem 0 1.1rem; color: var(--cs30-muted); }
         .cs30-section-label {
-            margin: 4px 0 2px;
-            color: var(--cs30-blue);
+            margin: 2px 0 4px;
+            color: var(--cs30-orange-dark);
             font-size: .7rem;
             font-weight: 800;
-            letter-spacing: .12em;
+            letter-spacing: .1em;
         }
-        .cs30-step {
-            display: inline-grid;
-            place-items: center;
-            width: 28px;
-            height: 28px;
-            margin-right: 8px;
-            border: 1px solid #aac7ef;
-            border-radius: 50%;
-            color: var(--cs30-blue-dark);
-            font-size: .68rem;
-            font-weight: 800;
-        }
-        .cs30-empty {
-            display: grid;
-            min-height: 355px;
-            place-content: center;
-            padding: 40px;
-            border: 1px dashed #bfd2ed;
-            border-radius: 18px;
-            color: var(--cs30-muted);
-            background: rgba(255, 255, 255, .55);
-            text-align: center;
-        }
-        .cs30-empty strong { margin-bottom: 8px; color: var(--cs30-ink); font-size: 1.1rem; }
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-color: var(--cs30-line);
-            border-radius: 16px;
-            background: rgba(255, 255, 255, .72);
-            box-shadow: 0 10px 30px rgba(45, 91, 155, .06);
+            border-radius: 14px;
+            background: #ffffff;
+            box-shadow: none;
         }
         div[data-testid="stButton"] > button {
-            min-height: 48px;
-            border: 0;
-            border-radius: 11px;
+            min-height: 46px;
+            border-color: var(--cs30-orange);
+            border-radius: 10px;
             color: white;
-            background: linear-gradient(135deg, #4f86f7, #2f64d2);
-            box-shadow: 0 10px 22px rgba(61, 114, 232, .20);
-            font-weight: 750;
+            background: var(--cs30-orange);
+            font-weight: 700;
         }
         div[data-testid="stButton"] > button:hover {
+            border-color: var(--cs30-orange-dark);
             color: white;
-            border: 0;
-            background: var(--cs30-blue-dark);
+            background: var(--cs30-orange-dark);
         }
         div[data-baseweb="select"] > div,
         div[data-testid="stTextArea"] textarea {
-            border-color: #cbdcf2;
-            border-radius: 11px;
-            background: rgba(255, 255, 255, .84);
+            border-color: var(--cs30-line);
+            border-radius: 10px;
+            background: #ffffff;
         }
-        div[data-testid="stAlert"] { border-radius: 12px; }
-        details { border-color: var(--cs30-line) !important; border-radius: 12px !important; }
+        .cs30-empty {
+            padding: 42px 24px;
+            border: 1px dashed var(--cs30-line);
+            border-radius: 14px;
+            color: var(--cs30-muted);
+            text-align: center;
+        }
+        .cs30-empty strong { display: block; margin-bottom: 6px; color: var(--cs30-ink); }
         .cs30-footer {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 32px;
-            padding-top: 18px;
+            margin-top: 26px;
+            padding-top: 14px;
             border-top: 1px solid var(--cs30-line);
             color: var(--cs30-muted);
             font-size: .72rem;
-        }
-        @media (max-width: 700px) {
-            .cs30-hero { align-items: flex-start; flex-direction: column; }
-            .block-container { padding-top: 1rem; }
-            .cs30-footer { gap: 8px; flex-direction: column; }
         }
         </style>
         """,
@@ -180,8 +106,7 @@ def execute_fixture_run(question: str, level: StudentLevel) -> PipelineRun:
 def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
-    st.markdown('<p class="cs30-section-label">PIPELINE RESULT</p>', unsafe_allow_html=True)
-    st.info(f"Run mode: {run.mode.upper()}")
+    st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
 
     if run.answer.abstained:
         st.warning("The system refused to answer because the retrieved evidence was insufficient.")
@@ -193,20 +118,16 @@ def render_result(run: PipelineRun) -> None:
             st.markdown(f"**Final choice:** {run.answer.final_choice}")
         st.write(run.answer.explanation)
         citation_text = ", ".join(run.answer.citations)
-        st.caption(f"Citations: {citation_text}")
+        st.caption(f"Citation ID: {citation_text}")
 
-    integrity = run.citation_integrity.upper()
-    st.markdown(f"**Citation integrity:** {integrity}")
-
+    st.markdown(f"**Citation integrity:** {run.citation_integrity.upper()}")
     st.subheader("Retrieved evidence")
     if not run.retrieval.hits:
         st.caption("No relevant evidence was retrieved.")
     for hit in run.retrieval.hits:
         cited = " · cited" if hit.chunk_id in run.answer.citations else ""
         with st.container(border=True):
-            st.markdown(
-                f"**{hit.rank}. {hit.chunk_id}** — score {hit.score:.2f}{cited}"
-            )
+            st.markdown(f"**{hit.rank}. {hit.chunk_id}** — score {hit.score:.2f}{cited}")
             st.write(hit.text)
             st.caption(f"{hit.chapter_id} · {hit.source}")
 
@@ -223,32 +144,22 @@ def main() -> None:
         layout="wide",
     )
     inject_styles()
+    st.title("CS-30 Personalised Learning Assistant")
     st.markdown(
-        """
-        <div class="cs30-hero">
-          <div>
-            <p class="cs30-kicker">PERSONALISED PHYSICS SUPPORT</p>
-            <h1>Ask clearly.<br><span>Learn at your level.</span></h1>
-            <p class="cs30-subtitle">
-              A focused demonstration of answers grounded in retrieved textbook evidence.
-            </p>
-          </div>
-          <span class="cs30-pill">Fixture prototype</span>
-        </div>
-        """,
+        '<p class="cs30-intro">Select a learner level, enter a physics question, '
+        "and review the generated answer with retrieved evidence.</p>",
         unsafe_allow_html=True,
     )
-    st.warning(
-        "Fixture mode uses fixed sample data. It demonstrates the runnable path only; "
-        "it does not report retrieval or model performance."
+    st.info(
+        "FIXTURE MODE · MOCK DATA — Uses fixed demo data; "
+        "no real retriever or LLM is connected."
     )
 
     input_column, result_column = st.columns([0.9, 1.1], gap="large")
     with input_column:
         with st.container(border=True):
             st.markdown(
-                '<p class="cs30-section-label">'
-                '<span class="cs30-step">01</span>SET THE LEARNER</p>',
+                '<p class="cs30-section-label">QUESTION SETTINGS</p>',
                 unsafe_allow_html=True,
             )
             level_value = st.selectbox(
@@ -256,10 +167,6 @@ def main() -> None:
                 options=[level.value for level in StudentLevel],
                 index=0,
                 format_func=str.title,
-            )
-            st.markdown(
-                '<p class="cs30-section-label"><span class="cs30-step">02</span>ASK THE SYSTEM</p>',
-                unsafe_allow_html=True,
             )
             example = st.pills(
                 "Try a question",
@@ -276,7 +183,7 @@ def main() -> None:
                 key="question_input",
             )
 
-            if st.button("Run fixture pipeline  →", type="primary", use_container_width=True):
+            if st.button("Run fixture pipeline", type="primary", use_container_width=True):
                 try:
                     run = execute_fixture_run(question, StudentLevel(level_value))
                 except (CS30Error, ValueError) as exc:
@@ -292,22 +199,15 @@ def main() -> None:
             st.markdown(
                 """
                 <div class="cs30-empty">
-                  <strong>Your grounded answer appears here</strong>
-                  <span>
-                    Choose a learner level, enter a question and run the fixture pipeline.
-                  </span>
+                  <strong>Answer and evidence</strong>
+                  <span>Run the fixture pipeline to display the result.</span>
                 </div>
                 """,
                 unsafe_allow_html=True,
             )
 
     st.markdown(
-        """
-        <div class="cs30-footer">
-          <span>CS-30 · v0.1 thin-slice</span>
-          <span>Member 8 Streamlit interface · local fixture mode</span>
-        </div>
-        """,
+        '<div class="cs30-footer">CS-30 · v0.1 thin-slice · Member 8 demo interface</div>',
         unsafe_allow_html=True,
     )
 
