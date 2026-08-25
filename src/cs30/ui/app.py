@@ -151,12 +151,12 @@ def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
     st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
+    st.success("Fixture run completed")
 
     if run.answer.abstained:
         st.warning("The system refused to answer because the retrieved evidence was insufficient.")
         st.write(run.answer.explanation)
     else:
-        st.success("Smoke path completed")
         st.markdown('<p class="cs30-field-title">Generated answer</p>', unsafe_allow_html=True)
         if run.answer.final_choice:
             st.markdown(f"**Final choice:** {run.answer.final_choice}")

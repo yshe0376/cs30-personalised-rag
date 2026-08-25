@@ -36,5 +36,5 @@ def test_streamlit_smoke_path() -> None:
     app.button[0].click().run()
 
     assert not app.exception
-    assert app.success[0].value == "Smoke path completed"
+    assert app.success[0].value == "Fixture run completed"
     assert "FIXTURE" in app.info[0].value
