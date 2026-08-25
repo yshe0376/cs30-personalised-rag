@@ -63,6 +63,9 @@ def inject_styles() -> None:
             font-weight: 650;
             letter-spacing: .025em;
         }
+        .st-key-run_status [data-testid="stAlert"] [data-testid="stMarkdownContainer"] {
+            width: 100%;
+        }
         .st-key-run_status [data-testid="stAlert"] [data-testid="stMarkdownContainer"] p {
             margin: 0;
             font-family: inherit;
@@ -70,6 +73,7 @@ def inject_styles() -> None:
             font-weight: 700;
             line-height: 1.35;
             letter-spacing: 0;
+            text-align: center;
         }
         .cs30-result-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
         .cs30-citation-chip,
