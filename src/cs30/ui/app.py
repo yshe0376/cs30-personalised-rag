@@ -239,7 +239,7 @@ def main() -> None:
                 if example:
                     st.session_state["question_input"] = EXAMPLE_QUESTIONS[example]
 
-            st.markdown('<p class="cs30-helper-title">Try</p>', unsafe_allow_html=True)
+            st.markdown('<p class="cs30-helper-title">Try an example</p>', unsafe_allow_html=True)
             st.pills(
                 "Try a prepared question",
                 options=list(EXAMPLE_QUESTIONS),
