@@ -35,7 +35,7 @@ def test_smoke_streamlit_starts_and_submits_a_question() -> None:
 
     assert not app.exception
     assert any("Generated answer" in item.value for item in app.markdown)
-    assert any("Content type: Body" in item.value for item in app.caption)
+    assert any("Source:" in item.value for item in app.caption)
 
 
 def test_smoke_index_load_and_retrieval_interface() -> None:
@@ -45,7 +45,6 @@ def test_smoke_index_load_and_retrieval_interface() -> None:
 
     assert artifact.chunk_count == 3
     assert result.hits
-    assert result.hits[0].content_types
 
 
 def test_smoke_json_round_trip_and_citation_integrity() -> None:

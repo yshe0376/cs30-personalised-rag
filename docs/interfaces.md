@@ -71,10 +71,7 @@ strength of wording that is absent from what it cites.
 
 Producer is member 4, which has the section titles through `document.blocks`.
 Member 5 embeds `chunk.embedding_input`; member 6 returns `chunk.text` in a
-`RetrievalHit`, because that is the text a citation points at. Member 6 also
-copies the comma-separated `Chunk.metadata["content_types"]` values into
-`RetrievalHit.content_types`, allowing the demo interface to display the role
-of each evidence passage without looking behind the pipeline contract.
+`RetrievalHit`, because that is the text a citation points at.
 
 ## String handling: two kinds of field
 

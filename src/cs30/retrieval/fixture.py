@@ -10,7 +10,7 @@ import re
 
 from pydantic import TypeAdapter
 
-from cs30.contracts import Chunk, ContentType, IndexArtifact, RetrievalHit, RetrievalResult
+from cs30.contracts import Chunk, IndexArtifact, RetrievalHit, RetrievalResult
 from cs30.errors import EmptyQueryError
 from cs30.fixture_store import load_fixture_index
 from cs30.fixtures import load_fixture
@@ -21,13 +21,6 @@ _MIN_TERM_LENGTH = 4
 
 def _terms(text: str) -> set[str]:
     return {word for word in _WORD.findall(text.lower()) if len(word) >= _MIN_TERM_LENGTH}
-
-
-def _content_types(chunk: Chunk) -> list[ContentType]:
-    """Carry Member 4's comma-separated chunk metadata into retrieval output."""
-
-    raw = chunk.metadata.get("content_types") or chunk.metadata.get("content_type", "")
-    return [ContentType(value.strip()) for value in raw.split(",") if value.strip()]
 
 
 class FixtureRetriever:
@@ -59,7 +52,6 @@ class FixtureRetriever:
                 text=chunk.text,
                 chapter_id=chunk.chapter_id,
                 source=chunk.source,
-                content_types=_content_types(chunk),
                 score=round(score, 4),
                 rank=rank,
             )

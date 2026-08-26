@@ -154,15 +154,6 @@ def execute_configured_run(
     return run_pipeline(question=question, level=level, deps=deps, config=config)
 
 
-def format_content_types(hit: object) -> str:
-    """Format content types while tolerating runs cached before the field existed."""
-
-    values = getattr(hit, "content_types", ())
-    return ", ".join(
-        content_type.value.replace("_", " ").title() for content_type in values
-    ) or "Not provided"
-
-
 def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
@@ -195,14 +186,10 @@ def render_result(run: PipelineRun) -> None:
         st.caption("No relevant evidence was retrieved.")
     for hit in run.retrieval.hits:
         cited = " · cited" if hit.chunk_id in run.answer.citations else ""
-        content_types = format_content_types(hit)
         with st.container(border=True):
             st.markdown(f"**{hit.rank}. {hit.chunk_id}** — score {hit.score:.2f}{cited}")
             st.write(hit.text)
-            st.caption(
-                f"Chapter: {hit.chapter_id} · Content type: {content_types} · "
-                f"Source: {hit.source}"
-            )
+            st.caption(f"Chapter: {hit.chapter_id} · Source: {hit.source}")
 
     with st.expander("Technical run details"):
         st.json(run.model_dump(mode="json"))

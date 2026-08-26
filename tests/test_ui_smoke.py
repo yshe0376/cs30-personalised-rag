@@ -1,14 +1,9 @@
 from pathlib import Path
-from types import SimpleNamespace
 
 from streamlit.testing.v1 import AppTest
 
 from cs30.contracts import StudentLevel
-from cs30.ui.app import execute_fixture_run, format_content_types
-
-
-def test_content_type_display_tolerates_a_cached_legacy_hit() -> None:
-    assert format_content_types(SimpleNamespace()) == "Not provided"
+from cs30.ui.app import execute_fixture_run
 
 
 def test_ui_adapter_consumes_pipeline_run() -> None:
@@ -42,5 +37,5 @@ def test_streamlit_smoke_path() -> None:
 
     assert not app.exception
     assert any("Generated answer" in item.value for item in app.markdown)
-    assert any("Content type: Body" in item.value for item in app.caption)
+    assert any("Source:" in item.value for item in app.caption)
     assert "FIXTURE" in app.info[0].value

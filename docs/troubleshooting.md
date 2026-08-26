@@ -75,12 +75,6 @@ An empty retrieval result is valid. The generator should refuse instead of
 inventing an answer. Use one of the prepared physics examples to demonstrate a
 grounded answer.
 
-### Content type displays `Not provided`
-
-The Retriever returned an older `RetrievalHit` without `content_types`. Member 6
-must copy `Chunk.metadata["content_types"]` into the shared retrieval result.
-The UI remains operational so one missing metadata field does not crash the demo.
-
 ### API key is missing
 
 Fixture mode does not need an API key. Real staging will read credentials from

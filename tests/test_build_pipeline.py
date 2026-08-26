@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import cs30.pipeline as pipeline
-from cs30.contracts import Chunk, ContentType
+from cs30.contracts import Chunk
 from cs30.indexing.fixture import FixtureIndexBuilder
 from cs30.retrieval.fixture import FixtureRetriever
 
@@ -15,7 +15,6 @@ def test_fixture_build_pipeline_produces_a_retrievable_index_artifact() -> None:
     assert artifact.index_type == "fixture-lexical"
     assert artifact.chunk_count == 3
     assert result.hits[0].chunk_id == "chunk_ch01_0001"
-    assert result.hits[0].content_types == [ContentType.BODY]
 
 
 def test_fixture_dependencies_cannot_be_reported_as_real() -> None:
@@ -41,7 +40,6 @@ def test_fixture_retriever_loads_the_chunks_that_were_actually_indexed() -> None
         char_start=0,
         char_end=9,
         token_count=1,
-        metadata={"content_types": "example,body"},
     )
     artifact = FixtureIndexBuilder().build([chunk])
     retriever = FixtureRetriever()
@@ -50,4 +48,3 @@ def test_fixture_retriever_loads_the_chunks_that_were_actually_indexed() -> None
     result = retriever.retrieve("zebraword", top_k=1)
 
     assert [hit.chunk_id for hit in result.hits] == ["custom_chunk"]
-    assert result.hits[0].content_types == [ContentType.EXAMPLE, ContentType.BODY]

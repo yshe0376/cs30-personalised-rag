@@ -24,7 +24,7 @@ retrieval quality, model accuracy or a connected real LLM.
 2. **Show the inputs.** Select `Beginner`, keep `What is acceleration?`, then
    run the pipeline.
 3. **Show the output.** Point out the generated answer, citation ID, citation
-   integrity, retrieved evidence, chapter, content type and source.
+   integrity, retrieved evidence, chapter and source.
 4. **Show personalisation.** Select `Advanced` and rerun the same question.
    Explain that the fixture response template changes by learner level; the
    real prompt and LLM are still Member 7's integration step.
@@ -41,7 +41,7 @@ retrieval quality, model accuracy or a connected real LLM.
 | Page banner | Clearly says fixture mode |
 | Learner levels | Beginner, Intermediate and Advanced are selectable |
 | Grounded example | Answer and at least one evidence passage appear |
-| Evidence provenance | Chapter, content type and source appear |
+| Evidence provenance | Chapter and source appear |
 | Citation integrity | `PASSED` and cited IDs exist in retrieved hits |
 | Out-of-scope example | No evidence and an explicit refusal |
 | Technical details | Valid `PipelineRun` JSON |

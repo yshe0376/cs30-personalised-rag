@@ -35,7 +35,7 @@ Required hand-offs:
 | Owner | Required hand-off | Integration acceptance |
 |---|---|---|
 | Member 5 | Persistent `IndexArtifact` and index location | Another process can load it |
-| Member 6 | `Retriever` implementation | Returns ranked hits, chapter, source and `content_types` |
+| Member 6 | `Retriever` implementation | Returns ranked hits, chapter and source through the current contract |
 | Member 7 | `ProfileProvider` and `AnswerGenerator` | Three levels, fixed JSON, timeout/error handling and grounded citations |
 | Leader | Approved `build_real_deps()` composition and deployment target | One command starts the integrated path |
 | Platform and demo owner | Launchers, configuration, smoke gate, logs and demo runbook | Another member can reproduce the staging demo |

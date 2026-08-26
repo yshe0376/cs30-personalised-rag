@@ -5,8 +5,7 @@ This module consumes `PipelineRun`.
 ## Week 1 acceptance
 
 - A new member can start the system from the README.
-- The client can pick a level, ask a question, and see the answer, chapter,
-  content type, and source for each retrieved passage.
+- The client can pick a level, ask a question, and see the answer and sources.
 - No real key reaches the repository.
 
 ## Notes
