@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from streamlit.testing.v1 import AppTest
 
 from cs30.config import load_config
-from cs30.contracts import PipelineRun, StudentLevel
+from cs30.contracts import GeneratedAnswer, PipelineRun, StudentLevel
+from cs30.fixtures import load_fixture
 from cs30.logging import configure_logging, get_logger, log_path
 from cs30.pipeline import (
     build_fixture_build_deps,
@@ -57,6 +60,24 @@ def test_smoke_json_round_trip_and_citation_integrity() -> None:
 
     assert restored.citation_integrity == "passed"
     assert set(restored.answer.citations) <= retrieved_ids
+
+
+def test_smoke_generated_answer_json_parser_accepts_valid_payload() -> None:
+    payload = load_fixture("generated_answer.json")
+    answer = GeneratedAnswer.model_validate_json(json.dumps(payload))
+
+    assert answer.explanation
+    assert answer.citations
+
+
+def test_smoke_generated_answer_json_parser_rejects_invalid_payloads() -> None:
+    with pytest.raises(ValidationError):
+        GeneratedAnswer.model_validate_json('{"explanation":')
+
+    missing_explanation = load_fixture("generated_answer.json")
+    missing_explanation.pop("explanation")
+    with pytest.raises(ValidationError):
+        GeneratedAnswer.model_validate_json(json.dumps(missing_explanation))
 
 
 def test_smoke_staging_preview_is_explicitly_fixture_backed(
