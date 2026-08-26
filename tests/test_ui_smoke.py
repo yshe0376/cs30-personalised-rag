@@ -1,9 +1,14 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from streamlit.testing.v1 import AppTest
 
 from cs30.contracts import StudentLevel
-from cs30.ui.app import execute_fixture_run
+from cs30.ui.app import execute_fixture_run, format_content_types
+
+
+def test_content_type_display_tolerates_a_cached_legacy_hit() -> None:
+    assert format_content_types(SimpleNamespace()) == "Not provided"
 
 
 def test_ui_adapter_consumes_pipeline_run() -> None:

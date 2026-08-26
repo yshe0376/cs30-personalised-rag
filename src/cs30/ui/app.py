@@ -147,6 +147,15 @@ def execute_fixture_run(question: str, level: StudentLevel) -> PipelineRun:
     )
 
 
+def format_content_types(hit: object) -> str:
+    """Format content types while tolerating runs cached before the field existed."""
+
+    values = getattr(hit, "content_types", ())
+    return ", ".join(
+        content_type.value.replace("_", " ").title() for content_type in values
+    ) or "Not provided"
+
+
 def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
@@ -179,10 +188,7 @@ def render_result(run: PipelineRun) -> None:
         st.caption("No relevant evidence was retrieved.")
     for hit in run.retrieval.hits:
         cited = " · cited" if hit.chunk_id in run.answer.citations else ""
-        content_types = ", ".join(
-            content_type.value.replace("_", " ").title()
-            for content_type in hit.content_types
-        ) or "Not provided"
+        content_types = format_content_types(hit)
         with st.container(border=True):
             st.markdown(f"**{hit.rank}. {hit.chunk_id}** — score {hit.score:.2f}{cited}")
             st.write(hit.text)
