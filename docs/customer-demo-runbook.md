@@ -1,4 +1,4 @@
-# Member 8 customer and tutor demo runbook
+# Customer and Tutor Demo Runbook
 
 ## Purpose and boundary
 

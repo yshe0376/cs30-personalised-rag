@@ -160,7 +160,7 @@ for the proposed real-adapter boundary and deployment decision.
 
 ### Smoke test
 
-Run the dedicated Member 8 runnable-path gate:
+Run the dedicated runnable-path smoke gate:
 
 ```bash
 python -m pytest -m smoke
@@ -177,9 +177,8 @@ Runtime logs are written to the terminal and to `logs/cs30.log`. The file
 rotates at approximately 1 MB and keeps three backups. Override its directory
 with `CS30_LOG_DIR` if required.
 
-- [Customer/tutor demonstration runbook](docs/member8-demo-runbook.md)
+- [Customer and tutor demonstration runbook](docs/customer-demo-runbook.md)
 - [Common errors, log locations and recovery steps](docs/troubleshooting.md)
-- [Member 8 delivery status and hand-offs](docs/member8-delivery-status.md)
 - [Real staging integration proposal](docs/staging-integration-plan.md)
 
 ## Repository layout

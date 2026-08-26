@@ -38,7 +38,7 @@ Required hand-offs:
 | Member 6 | `Retriever` implementation | Returns ranked hits, chapter, source and `content_types` |
 | Member 7 | `ProfileProvider` and `AnswerGenerator` | Three levels, fixed JSON, timeout/error handling and grounded citations |
 | Leader | Approved `build_real_deps()` composition and deployment target | One command starts the integrated path |
-| Member 8 | Launchers, configuration, smoke gate, logs and demo runbook | Another member can reproduce the staging demo |
+| Platform and demo owner | Launchers, configuration, smoke gate, logs and demo runbook | Another member can reproduce the staging demo |
 
 ## Proposed real-staging configuration
 
@@ -71,9 +71,9 @@ shared configuration.
    real-staging smoke run using approved credentials.
 8. A second team member reproduces the launch from the README.
 
-## Decisions to take to the Leader
+## Decisions to confirm before real staging
 
-Bring a recommendation rather than an open-ended question:
+The proposed defaults are:
 
 - **Hosting:** university-managed environment first; otherwise an approved
   private cloud deployment.
@@ -81,5 +81,6 @@ Bring a recommendation rather than an open-ended question:
 - **Model:** one approved provider/model for Week 1 integration; comparison is
   deferred to formal experimentation.
 - **Secrets:** hosting secret store or injected environment variables.
-- **Ownership:** Leader approves composition and infrastructure; Member 8 owns
-  reproducible startup, operational documentation and smoke verification.
+- **Ownership:** The integration lead approves composition and infrastructure;
+  the platform and demo owner maintains reproducible startup, operational
+  documentation and smoke verification.

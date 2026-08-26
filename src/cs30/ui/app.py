@@ -299,7 +299,7 @@ def main() -> None:
             )
 
     st.markdown(
-        '<div class="cs30-footer">CS-30 · v0.1 thin-slice · Member 8 demo interface</div>',
+        '<div class="cs30-footer">CS-30 · v0.1 thin-slice · Demo interface</div>',
         unsafe_allow_html=True,
     )
 

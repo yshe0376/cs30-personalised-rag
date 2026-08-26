@@ -1,4 +1,4 @@
-"""Critical runnable-path checks required by the Member 8 delivery plan."""
+"""Critical runnable-path checks required by the Week 1 delivery plan."""
 
 from __future__ import annotations
 
