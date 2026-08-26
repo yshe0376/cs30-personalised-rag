@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 import cs30.config as config_module
@@ -64,3 +66,25 @@ def test_invalid_fixture_mode_environment_value_is_rejected(
 
     with pytest.raises(ConfigError, match="CS30_FIXTURE_MODE"):
         load_config("development")
+
+
+def test_local_dotenv_supplies_defaults_without_overriding_environment(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+) -> None:
+    (tmp_path / ".env").write_text(
+        "CS30_LOG_LEVEL=WARNING\nCS30_TOP_K=9\nLLM_PROVIDER='fixture-from-dotenv'\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("CS30_TOP_K", "7")
+
+    try:
+        config = load_config("development")
+
+        assert config.log_level == "WARNING"
+        assert config.retrieval.top_k == 7
+        assert config.generation.provider == "fixture-from-dotenv"
+    finally:
+        os.environ.pop("CS30_LOG_LEVEL", None)
+        os.environ.pop("LLM_PROVIDER", None)

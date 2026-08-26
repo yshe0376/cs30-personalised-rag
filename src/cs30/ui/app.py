@@ -6,10 +6,11 @@ from html import escape
 
 import streamlit as st
 
-from cs30.config import load_config
+from cs30.config import AppConfig, load_config
 from cs30.contracts import PipelineRun, StudentLevel
 from cs30.errors import CS30Error
-from cs30.pipeline import build_fixture_deps, run_pipeline
+from cs30.logging import configure_logging
+from cs30.pipeline import build_fixture_deps, build_real_deps, run_pipeline
 
 DEFAULT_QUESTION = "What is acceleration?"
 EXAMPLE_QUESTIONS = {
@@ -139,12 +140,18 @@ def inject_styles() -> None:
 def execute_fixture_run(question: str, level: StudentLevel) -> PipelineRun:
     """Run the stable fixture path consumed by the demo interface."""
 
-    return run_pipeline(
-        question=question,
-        level=level,
-        deps=build_fixture_deps(),
-        config=load_config("development"),
-    )
+    return execute_configured_run(question, level, load_config("development"))
+
+
+def execute_configured_run(
+    question: str,
+    level: StudentLevel,
+    config: AppConfig,
+) -> PipelineRun:
+    """Select fixture or real adapters from the active environment configuration."""
+
+    deps = build_fixture_deps() if config.fixture_mode else build_real_deps(config)
+    return run_pipeline(question=question, level=level, deps=deps, config=config)
 
 
 def format_content_types(hit: object) -> str:
@@ -204,6 +211,8 @@ def render_result(run: PipelineRun) -> None:
 def main() -> None:
     """Render the demo and submit questions to the fixture pipeline."""
 
+    config = load_config()
+    configure_logging(config.log_level)
     st.set_page_config(
         page_title="CS-30 Personalised Learning Assistant",
         page_icon="🎓",
@@ -216,10 +225,16 @@ def main() -> None:
         "and review the generated answer with retrieved evidence.</p>",
         unsafe_allow_html=True,
     )
-    st.info(
-        "FIXTURE MODE · MOCK DATA — Uses fixed demo data; "
-        "no real retriever or LLM is connected."
-    )
+    if config.fixture_mode:
+        environment_label = (
+            "STAGING PREVIEW" if config.environment == "staging" else config.environment.upper()
+        )
+        st.info(
+            f"{environment_label} · FIXTURE MODE · MOCK DATA — Uses fixed demo data; "
+            "no real retriever or LLM is connected."
+        )
+    else:
+        st.info(f"{config.environment.upper()} · REAL MODE")
 
     input_column, result_column = st.columns([0.9, 1.1], gap="large")
     with input_column:
@@ -262,8 +277,8 @@ def main() -> None:
 
             if st.button("Run fixture pipeline", type="primary", use_container_width=True):
                 try:
-                    run = execute_fixture_run(question, StudentLevel(level_value))
-                except (CS30Error, ValueError) as exc:
+                    run = execute_configured_run(question, StudentLevel(level_value), config)
+                except (CS30Error, NotImplementedError, ValueError) as exc:
                     st.error(f"The pipeline could not run: {exc}")
                 else:
                     st.session_state["pipeline_run"] = run

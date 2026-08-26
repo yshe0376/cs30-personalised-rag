@@ -5,25 +5,50 @@ ablation table, so keep the emitted fields stable.
 """
 
 import logging
+import os
 import sys
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 
-_CONFIGURED = False
+_FORMAT = "%(asctime)s %(levelname)-8s %(name)s | %(message)s"
+
+
+def log_path() -> Path:
+    """Return the documented application log path."""
+
+    directory = Path(os.environ.get("CS30_LOG_DIR", "logs"))
+    return directory / "cs30.log"
 
 
 def configure_logging(level: str = "INFO") -> None:
-    """Install a single stderr handler. Safe to call more than once."""
+    """Install stderr and rotating-file handlers. Safe to call more than once."""
 
-    global _CONFIGURED
     resolved = getattr(logging, level.upper(), logging.INFO)
     root = logging.getLogger("cs30")
-    if not _CONFIGURED:
+    formatter = logging.Formatter(_FORMAT)
+    if not any(getattr(handler, "_cs30_console", False) for handler in root.handlers):
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(
-            logging.Formatter("%(asctime)s %(levelname)-8s %(name)s | %(message)s")
-        )
+        handler.setFormatter(formatter)
+        handler._cs30_console = True  # type: ignore[attr-defined]
         root.addHandler(handler)
-        root.propagate = False
-        _CONFIGURED = True
+
+    target = log_path()
+    if not any(getattr(handler, "_cs30_file", False) for handler in root.handlers):
+        try:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            file_handler = RotatingFileHandler(
+                target,
+                maxBytes=1_000_000,
+                backupCount=3,
+                encoding="utf-8",
+            )
+            file_handler.setFormatter(formatter)
+            file_handler._cs30_file = True  # type: ignore[attr-defined]
+            root.addHandler(file_handler)
+        except OSError as exc:
+            root.warning("file logging unavailable path=%s error=%s", target, exc)
+
+    root.propagate = False
     root.setLevel(resolved)
 
 

@@ -59,6 +59,18 @@ python -m venv .venv
 python -m pip install -e ".[dev]"
 ```
 
+Optional local configuration can be created from the safe template. The
+application reads this ignored `.env` file without overriding variables already
+set by the shell or deployment platform:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+```bash
+cp .env.example .env
+```
+
 macOS and Linux:
 
 ```bash
@@ -80,7 +92,26 @@ generated answer, verified citations, and run metadata.
 
 ### Demo interface
 
-After installing the project, start the local Streamlit interface on any platform:
+The simplest startup path is the repository-root launcher. It creates `.venv`
+and installs the project on first use, then opens the Streamlit interface.
+
+Windows — double-click `start_demo.cmd`, or run:
+
+```powershell
+.\start_demo.cmd
+```
+
+Equivalent `.bat` aliases are included for environments that prefer that
+extension.
+
+macOS and Linux:
+
+```bash
+chmod +x start_demo.sh start_staging_preview.sh
+./start_demo.sh
+```
+
+The equivalent manual command is:
 
 ```bash
 python -m streamlit run src/cs30/ui/app.py
@@ -107,6 +138,49 @@ Until the corpus and model access are confirmed, the default `development`
 environment runs stand-in modules and prints a banner saying so. `PipelineRun.mode`
 records it in the output. **A fixture run must never be presented as a real
 result**, and CI enforces the behavioural guarantees that make it safe to show.
+
+### Staging preview
+
+Before the real Member 6 and 7 adapters are integrated, use the honest,
+fixture-backed staging preview:
+
+```powershell
+.\start_staging_preview.cmd
+```
+
+```bash
+./start_staging_preview.sh
+```
+
+This loads the staging configuration while forcing fixture mode and labels the
+page `STAGING PREVIEW · FIXTURE MODE`. It is suitable for checking startup,
+configuration and the client demonstration sequence, but it is not the real
+retriever or LLM. See [the staging integration plan](docs/staging-integration-plan.md)
+for the proposed real-adapter boundary and deployment decision.
+
+### Smoke test
+
+Run the dedicated Member 8 runnable-path gate:
+
+```bash
+python -m pytest -m smoke
+```
+
+It checks Streamlit startup and submission, fixture index loading, the Retriever
+interface, JSON round-trip validation, citation integrity, staging-preview
+configuration and file logging. These checks prove runnability only; they do
+not report retrieval or model quality.
+
+### Logs, demo instructions and help
+
+Runtime logs are written to the terminal and to `logs/cs30.log`. The file
+rotates at approximately 1 MB and keeps three backups. Override its directory
+with `CS30_LOG_DIR` if required.
+
+- [Customer/tutor demonstration runbook](docs/member8-demo-runbook.md)
+- [Common errors, log locations and recovery steps](docs/troubleshooting.md)
+- [Member 8 delivery status and hand-offs](docs/member8-delivery-status.md)
+- [Real staging integration proposal](docs/staging-integration-plan.md)
 
 ## Repository layout
 
