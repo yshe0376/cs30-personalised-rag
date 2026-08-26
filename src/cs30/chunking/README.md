@@ -1,40 +1,87 @@
-# Member 4 - chunking and metadata
+# Member 4 — structure-aware chunking and metadata
 
-Implement `cs30.ports.Chunker`:
+`BlockAwareChunker` implements the existing `cs30.ports.Chunker` interface:
 
-    `chunk(document: OpenStaxDocument) -> list[Chunk]`
+```python
+chunk(document: OpenStaxDocument) -> list[Chunk]
+```
 
-Drop the real implementation next to `fixture.py`. The Leader supplies it as the
-`chunker` field of `BuildDeps`; `run_build_pipeline()` itself does not change.
+## Revised Week 1 strategy
 
-## Week 1 acceptance
+The chunker groups complete `document.blocks`. It does **not** scan the text
+with fixed 500-token windows and does not implement a fixed-window comparison
+experiment. The default strategy has one approximate size target:
 
-- Every chunk has a unique id and a chapter source.
-- Chunk text can be located back in the normalised document.
-- No empty chunks and no cross-chapter mixing.
-- Output feeds member 5 directly.
+```text
+target_tokens = 500
+min_tokens = 100
+max_tokens = 600
+respect_section_boundaries = true
+```
 
-## Notes
+The target guides greedy grouping. Every emitted boundary remains a parser
+block boundary. A single block above the maximum is emitted intact and marked
+`oversized_chunk=true`; it is never split in the middle merely to satisfy a
+numeric limit. A short final group is merged or rebalanced using whole blocks
+where possible.
 
-The contract enforces `len(text) == char_end - char_start`, so a wrong span
-fails at construction instead of at demo time. `Chunk.metadata` accepts
-string values only: use `{"section": "1"}`, not `{"section": 1}`.
+## Contract guarantees
 
-Do not re-derive structure from raw text. `document.blocks` already carries
-`section_id`, `content_type`, and pages; carry them into `Chunk.metadata`
-instead of parsing the text a second time.
+- Accepts `OpenStaxDocument`, including parser-provided `TextBlock` structure.
+- Never re-derives sections, content types, pages, or chapter membership from text.
+- Never mixes chapters; sections are also isolated by default.
+- Stores document-wide half-open character offsets.
+- Keeps `Chunk.text` as an exact substring of `document.text`.
+- Carries section IDs, section titles, content types, block IDs, pages, parser
+  version, document hash, strategy, tokenizer, and size flags in string-only metadata.
+- Generates deterministic unique chunk IDs.
+- Rejects empty chunks and exact duplicate chunk text by default.
+- Optionally adds context through `embed_text` while keeping evidence text verbatim.
 
-Chunk boundaries follow block structure, but chunk offsets still address
-`document.text`. Keep one ~500-token size target so chunk lengths stay
-comparable: blocks range from a few tokens to several hundred, and mixing those
-lengths in a single index distorts similarity scores.
+For every emitted chunk:
 
-Emit offsets into `document.text` even when a chunk is a union of whole blocks.
-Gold evidence spans live in that coordinate system, so retrieval metrics can
-only be computed when chunks are addressed the same way.
+```python
+assert document.text[chunk.char_start:chunk.char_end] == chunk.text
+```
 
-Set `Chunk.embed_text` when applying context enrichment: keep `text` verbatim
-and put the enriched form, such as `"From chapter 1, section 1.2 (Physical
-Quantities and Units): <text>"`, in `embed_text`. The section titles come from
-`document.blocks`. The contract requires `embed_text` to contain `text`
-verbatim, so the citation never drifts from the evidence.
+## Usage
+
+```python
+from cs30.chunking import BlockAwareChunker, BlockChunkingStrategy
+
+strategy = BlockChunkingStrategy(
+    target_tokens=500,
+    min_tokens=100,
+    max_tokens=600,
+    respect_section_boundaries=True,
+    enrich_embed_text=False,
+)
+chunker = BlockAwareChunker(strategy=strategy)
+chunks = chunker.chunk(document)
+```
+
+The Team Lead supplies the instance through `BuildDeps.chunker`; shared
+contracts, ports, and pipeline orchestration do not change.
+
+## Tokenizer hand-off
+
+`UnicodeWordPunctTokenCounter` is a deterministic provisional counter for
+fixture development. Member 5 should confirm the final embedding model and
+inject its tokenizer through the `token_counter` constructor parameter before
+building the production index. The tokenizer name is recorded in every chunk.
+
+## Engineering reports
+
+`build_chunk_statistics()` reports chunk counts, chapter distribution, length
+distribution, empty/duplicate/short/oversized checks, and explicitly states
+that these are engineering statistics rather than retrieval evaluation.
+
+`build_traceability_samples()` selects up to ten deterministic chunks and
+checks each character span against `OpenStaxDocument.text`.
+
+## Current integration status
+
+The real implementation and its tests run against the repository's packaged
+`OpenStaxDocument` fixture, so Member 4 development does not wait for Member 2.
+Complete 2–3 chapter outputs and the joint ten-chunk source review remain
+pending until Member 2 supplies contract-valid real documents.
