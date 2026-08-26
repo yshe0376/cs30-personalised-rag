@@ -179,10 +179,17 @@ def render_result(run: PipelineRun) -> None:
         st.caption("No relevant evidence was retrieved.")
     for hit in run.retrieval.hits:
         cited = " · cited" if hit.chunk_id in run.answer.citations else ""
+        content_types = ", ".join(
+            content_type.value.replace("_", " ").title()
+            for content_type in hit.content_types
+        ) or "Not provided"
         with st.container(border=True):
             st.markdown(f"**{hit.rank}. {hit.chunk_id}** — score {hit.score:.2f}{cited}")
             st.write(hit.text)
-            st.caption(f"{hit.chapter_id} · {hit.source}")
+            st.caption(
+                f"Chapter: {hit.chapter_id} · Content type: {content_types} · "
+                f"Source: {hit.source}"
+            )
 
     with st.expander("Technical run details"):
         st.json(run.model_dump(mode="json"))

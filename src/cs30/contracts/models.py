@@ -251,6 +251,7 @@ class RetrievalHit(ContractModel):
     text: SpanText
     chapter_id: Identifier
     source: Identifier
+    content_types: list[ContentType] = Field(default_factory=list)
     score: float
     rank: int = Field(ge=1)
 

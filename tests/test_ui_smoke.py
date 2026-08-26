@@ -37,4 +37,5 @@ def test_streamlit_smoke_path() -> None:
 
     assert not app.exception
     assert any("Generated answer" in item.value for item in app.markdown)
+    assert any("Content type: Body" in item.value for item in app.caption)
     assert "FIXTURE" in app.info[0].value

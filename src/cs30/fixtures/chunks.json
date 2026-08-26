@@ -9,7 +9,7 @@
     "char_start": 0,
     "char_end": 57,
     "token_count": 11,
-    "metadata": {"topic": "acceleration"}
+    "metadata": {"topic": "acceleration", "content_types": "body"}
   },
   {
     "schema_version": "1.0",
@@ -21,7 +21,7 @@
     "char_start": 58,
     "char_end": 99,
     "token_count": 9,
-    "metadata": {"topic": "acceleration"}
+    "metadata": {"topic": "acceleration", "content_types": "body"}
   },
   {
     "schema_version": "1.0",
@@ -33,7 +33,7 @@
     "char_start": 100,
     "char_end": 179,
     "token_count": 12,
-    "metadata": {"topic": "acceleration"}
+    "metadata": {"topic": "acceleration", "content_types": "body"}
   }
 ]
 
