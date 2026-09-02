@@ -239,6 +239,7 @@ def test_evidence_bundle_assigns_stable_ids_and_maps_chunks() -> None:
     assert [item.evidence_id for item in bundle.evidence_items] == ["E1", "E2"]
     assert bundle.citation_map["E1"] == bundle.evidence_items[0].chunk_id
     assert bundle.prompt_context and "[E1]" in bundle.prompt_context
+    assert bundle.retrieval_provenance == retrieval.provenance
 
 
 def test_evidence_bundle_rejects_duplicate_or_incomplete_map() -> None:

@@ -18,10 +18,12 @@ Display IDs are assigned in rank order and are stable within a run.
 `citation_map` maps each display ID to the original chunk ID. The resolver also
 accepts legacy chunk IDs during the transition from the W4 contract.
 
-The bundle records a token estimate, retrieval mode and provenance. The current
-fixture implementation uses whitespace tokens and a 1200-token budget; the
-production implementation can replace the estimator when the approved tokenizer
-is known.
+The bundle records a token estimate, retrieval mode and two provenance layers.
+`retrieval_provenance` preserves the structured corpus and index identity supplied
+by the retrieval contract, while `provenance` records run-level information such
+as the environment and request ID. The current fixture implementation uses
+whitespace tokens and a 1200-token budget; the production implementation can
+replace the estimator when the approved tokenizer is known.
 
 ## Validation rules
 

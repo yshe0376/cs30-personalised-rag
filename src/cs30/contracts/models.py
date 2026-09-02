@@ -400,6 +400,7 @@ class EvidenceBundle(ContractModel):
     prompt_context: NonEmptyText | None = None
     citation_map: dict[Identifier, Identifier] = Field(default_factory=dict)
     token_count: int = Field(default=0, ge=0)
+    retrieval_provenance: EvidenceProvenance | None = None
     provenance: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")

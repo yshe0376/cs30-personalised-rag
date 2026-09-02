@@ -57,6 +57,7 @@ def build_evidence_bundle(
         prompt_context=("\n\n".join(f"[{i['evidence_id']}] {i['text']}" for i in items) or None),
         citation_map={i["evidence_id"]: i["chunk_id"] for i in items},
         token_count=used_tokens,
+        retrieval_provenance=retrieval.provenance,
         provenance=provenance or {},
     )
 
