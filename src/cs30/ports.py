@@ -16,6 +16,7 @@ from cs30.contracts import (
     GeneratedAnswer,
     IndexArtifact,
     OpenStaxDocument,
+    RetrievalMode,
     RetrievalResult,
     SciQQuestion,
     StudentLevel,
@@ -55,11 +56,18 @@ class IndexBuilder(Protocol):
 
 @runtime_checkable
 class Retriever(Protocol):
-    """Member 6: query embedding and Top-K dense retrieval."""
+    """One retrieval backend, implemented by M5 (dense) or M6 (BM25/hybrid)."""
 
     def load_index(self, artifact: IndexArtifact) -> None: ...
 
     def retrieve(self, query: str, top_k: int) -> RetrievalResult: ...
+
+
+@runtime_checkable
+class RetrievalService(Protocol):
+    """Member 1: the integration seam for M5 and M6 retrieval backends."""
+
+    def retrieve(self, query: str, top_k: int, mode: RetrievalMode) -> RetrievalResult: ...
 
 
 @runtime_checkable

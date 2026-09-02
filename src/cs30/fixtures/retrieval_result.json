@@ -1,6 +1,7 @@
 {
   "schema_version": "1.0",
   "query": "What is acceleration?",
+  "mode": "fixture",
   "hits": [
     {
       "chunk_id": "chunk_ch01_0001",
@@ -8,7 +9,8 @@
       "chapter_id": "ch01_motion",
       "source": "fixture://openstax/physics#ch01_motion",
       "score": 0.96,
-      "rank": 1
+      "rank": 1,
+      "retriever_type": "fixture"
     },
     {
       "chunk_id": "chunk_ch01_0002",
@@ -16,7 +18,8 @@
       "chapter_id": "ch01_motion",
       "source": "fixture://openstax/physics#ch01_motion",
       "score": 0.82,
-      "rank": 2
+      "rank": 2,
+      "retriever_type": "fixture"
     }
   ]
 }

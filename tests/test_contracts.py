@@ -92,8 +92,96 @@ def test_chunk_identifier_fields_are_normalised() -> None:
 def test_retrieval_result_allows_no_hits() -> None:
     """Finding nothing is a valid outcome, not a failure."""
 
-    result = RetrievalResult(query="unrelated question")
+    result = RetrievalResult(query="unrelated question", mode="fixture")
     assert result.hits == []
+
+
+def _retrieved_evidence_payload(*, chunk_id: str, rank: int, retriever_type: str) -> dict:
+    return {
+        "chunk_id": chunk_id,
+        "text": "Evidence text",
+        "chapter_id": "ch01",
+        "source": "fixture://doc#ch01",
+        "score": 0.9,
+        "rank": rank,
+        "retriever_type": retriever_type,
+    }
+
+
+def test_hybrid_accepts_mixed_retriever_types() -> None:
+    result = RetrievalResult(
+        query="mixed retrieval",
+        mode="hybrid",
+        hits=[
+            _retrieved_evidence_payload(
+                chunk_id="chunk_bm25", rank=1, retriever_type="bm25"
+            ),
+            _retrieved_evidence_payload(
+                chunk_id="chunk_dense", rank=2, retriever_type="dense"
+            ),
+            _retrieved_evidence_payload(
+                chunk_id="chunk_hybrid", rank=3, retriever_type="hybrid"
+            ),
+        ],
+    )
+
+    assert [hit.retriever_type.value for hit in result.hits] == [
+        "bm25",
+        "dense",
+        "hybrid",
+    ]
+
+
+def test_dense_mode_rejects_bm25_typed_hit() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        RetrievalResult(
+            query="dense retrieval",
+            mode="dense",
+            hits=[
+                _retrieved_evidence_payload(
+                    chunk_id="chunk_bm25", rank=1, retriever_type="bm25"
+                )
+            ],
+        )
+
+    assert "retriever_type must match the retrieval mode" in str(exc_info.value)
+
+
+def test_dense_provenance_requires_an_embedding_model() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        RetrievalResult(
+            query="dense retrieval",
+            mode="dense",
+            provenance={
+                "corpus_hash": "corpus-v1",
+                "chunk_config_hash": "chunks-v1",
+                "index_version": "index-v1",
+            },
+        )
+
+    assert "embedding_model is required" in str(exc_info.value)
+
+
+def test_bm25_provenance_rejects_an_embedding_model() -> None:
+    with pytest.raises(ValidationError) as exc_info:
+        RetrievalResult(
+            query="bm25 retrieval",
+            mode="bm25",
+            provenance={
+                "corpus_hash": "corpus-v1",
+                "chunk_config_hash": "chunks-v1",
+                "embedding_model": "model-v1",
+                "index_version": "index-v1",
+            },
+        )
+
+    assert "BM25 provenance must not include embedding_model" in str(exc_info.value)
+
+
+def test_retrieval_hit_remains_an_alias_for_retrieved_evidence() -> None:
+    import cs30.contracts as contracts
+
+    assert contracts.RetrievalHit is contracts.RetrievedEvidence
 
 
 def test_generated_answer_allows_abstention() -> None:
@@ -129,7 +217,7 @@ def test_non_abstained_answer_requires_a_citation() -> None:
 
 
 def test_abstained_answer_passes_citation_integrity() -> None:
-    retrieval = RetrievalResult(query="unrelated question")
+    retrieval = RetrievalResult(query="unrelated question", mode="fixture")
     answer = GeneratedAnswer(
         explanation="The retrieved evidence does not support an answer.",
         abstained=True,

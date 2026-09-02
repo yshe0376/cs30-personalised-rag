@@ -39,6 +39,15 @@ class StudentLevel(StrEnum):
     ADVANCED = "advanced"
 
 
+class RetrievalMode(StrEnum):
+    """Tag retrieval output so fixture evidence cannot be mistaken for real output."""
+
+    BM25 = "bm25"
+    DENSE = "dense"
+    HYBRID = "hybrid"
+    FIXTURE = "fixture"
+
+
 class OpenStaxChapter(ContractModel):
     chapter_id: Identifier
     title: NonEmptyText
@@ -246,13 +255,38 @@ class SciQQuestion(ContractModel):
         return self
 
 
-class RetrievalHit(ContractModel):
+class EvidenceProvenance(ContractModel):
+    """Identify the exact corpus and index build behind retrieved evidence.
+
+    Keeping these identities with the result lets downstream evaluation trace
+    a citation to the artifact that produced it instead of trusting a mutable
+    backend label.
+    """
+
+    corpus_hash: Identifier
+    chunk_config_hash: Identifier
+    embedding_model: Identifier | None = None  # Pure BM25 retrieval has no embedding model.
+    index_version: Identifier
+
+
+class RetrievedEvidence(ContractModel):
+    """One evidence item returned by a retrieval backend.
+
+    ``retriever_type`` records which backend contributed the item. In hybrid
+    mode, evidence found by both lists is ``HYBRID``; evidence found by only
+    one list keeps that list's own mode.
+    """
+
     chunk_id: Identifier
     text: SpanText
     chapter_id: Identifier
     source: Identifier
     score: float
     rank: int = Field(ge=1)
+    retriever_type: RetrievalMode
+
+
+RetrievalHit = RetrievedEvidence
 
 
 class RetrievalResult(ContractModel):
@@ -261,11 +295,17 @@ class RetrievalResult(ContractModel):
     An empty ``hits`` list is a valid, meaningful answer: retrieval ran and
     found nothing relevant. That is distinct from an index or input failure,
     which raises instead.
+
+    ``provenance`` is optional at this contract seam because fixture retrieval
+    has no corpus or index artifact. RetrievalService must reject a real-mode
+    result without it.
     """
 
     schema_version: Literal["1.0"] = "1.0"
     query: NonEmptyText
-    hits: list[RetrievalHit] = Field(default_factory=list)
+    mode: RetrievalMode
+    hits: list[RetrievedEvidence] = Field(default_factory=list)
+    provenance: EvidenceProvenance | None = None
 
     @model_validator(mode="after")
     def validate_ranks(self) -> "RetrievalResult":
@@ -274,6 +314,30 @@ class RetrievalResult(ContractModel):
             raise ValueError("retrieval ranks must be consecutive and start at 1")
         if len({hit.chunk_id for hit in self.hits}) != len(self.hits):
             raise ValueError("retrieval hits must have unique chunk_id values")
+        return self
+
+    @model_validator(mode="after")
+    def validate_retriever_types(self) -> "RetrievalResult":
+        if self.mode is RetrievalMode.HYBRID:
+            allowed = {RetrievalMode.BM25, RetrievalMode.DENSE, RetrievalMode.HYBRID}
+            if any(hit.retriever_type not in allowed for hit in self.hits):
+                raise ValueError(
+                    "hybrid retrieval hits must use retriever_type values "
+                    "bm25, dense, or hybrid"
+                )
+        elif any(hit.retriever_type != self.mode for hit in self.hits):
+            raise ValueError("retriever_type must match the retrieval mode")
+        return self
+
+    @model_validator(mode="after")
+    def validate_provenance(self) -> "RetrievalResult":
+        if self.provenance is None:
+            return self
+        if self.mode in (RetrievalMode.DENSE, RetrievalMode.HYBRID):
+            if self.provenance.embedding_model is None:
+                raise ValueError("embedding_model is required for dense or hybrid provenance")
+        elif self.mode is RetrievalMode.BM25 and self.provenance.embedding_model is not None:
+            raise ValueError("BM25 provenance must not include embedding_model")
         return self
 
 

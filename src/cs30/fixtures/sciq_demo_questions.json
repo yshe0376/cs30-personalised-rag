@@ -1,0 +1,338 @@
+[
+  {
+    "question_id": "sciq-train-00226",
+    "question": "What is the method of setting or correcting a measuring device by matching it to known measurement standards called?",
+    "choices": {
+      "A": "precision",
+      "B": "parallax",
+      "C": "distortion",
+      "D": "calibration"
+    },
+    "correct_choice": "D",
+    "support": "When using measuring devices, we often use a technique called calibration to increase the accuracy of our measurements. Calibration is a method of setting or correcting a measuring device by matching it to known measurement standards. To better understand calibration, we will look at the example of calibrating a thermometer. All thermometers are slightly different in their temperature readings. One way to calibrate a thermometer is by using the freezing point and boiling point of water ( Figure below ). If we know that water freezes at 0°C and boils at 100°C, we can calibrate our thermometer by measuring the temperature of ice water and of boiling water. We place the thermometer in ice water and wait for the thermometer liquid to reach a stable height, then place a mark at this height which represents 0°C. Then we place the thermometer in boiling water, and after waiting for the thermometer liquid to reach a stable height, we place a mark at this height which represents 100°C. We can then place 100 equally spaced divisions between our 0 and 100°C marks to each represent 1°C. Our thermometer has now been calibrated using the known values for the freezing point and boiling point of water, and can be used to measure temperatures of objects between 0 and 100°C.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-00998",
+    "question": "What is used to report the results of scientific measurements?",
+    "choices": {
+      "A": "los units",
+      "B": "bi units",
+      "C": "latin units",
+      "D": "si units"
+    },
+    "correct_choice": "D",
+    "support": "The number in the measurement can be represented in different ways, including decimal form and scientific notation. (Scientific notation is also known as exponential notation; a review of this topic can be found in Appendix B. ) For example, the maximum takeoff weight of a Boeing 777-200ER airliner is 298,000 kilograms, which can also be written as 2.98 × 105 kg. The mass of the average mosquito is about 0.0000025 kilograms, which can be written as 2.5 × 10−6 kg. Units, such as liters, pounds, and centimeters, are standards of comparison for measurements. When we buy a 2-liter bottle of a soft drink, we expect that the volume of the drink was measured, so it is two times larger than the volume that everyone agrees to be 1 liter. The meat used to prepare a 0.25-pound hamburger is measured so it weighs onefourth as much as 1 pound. Without units, a number can be meaningless, confusing, or possibly life threatening. Suppose a doctor prescribes phenobarbital to control a patient’s seizures and states a dosage of “100” without specifying units. Not only will this be confusing to the medical professional giving the dose, but the consequences can be dire: 100 mg given three times per day can be effective as an anticonvulsant, but a single dose of 100 g is more than 10 times the lethal amount. We usually report the results of scientific measurements in SI units, an updated version of the metric system, using the units listed in Table 1.2. Other units can be derived from these base units. The standards for these units are fixed by international agreement, and they are called the International System of Units or SI Units (from the French, Le Système International d’Unités). SI units have been used by the United States National Institute of Standards and Technology (NIST) since 1964. Base Units of the SI System Property Measured.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-01923",
+    "question": "What type of numerical figure is important in considering the precision and accuracy of a number?",
+    "choices": {
+      "A": "exponent",
+      "B": "component",
+      "C": "insignificant",
+      "D": "significant"
+    },
+    "correct_choice": "D",
+    "support": "Next, we identify the least precise measurement: 13.7 kg. This measurement is expressed to the 0.1 decimal place, so our final answer must also be expressed to the 0.1 decimal place. Thus, the answer is rounded to the tenths place, giving us 15.2 kg. Significant Figures in this Text In this text, most numbers are assumed to have three significant figures. Furthermore, consistent numbers of significant figures are used in all worked examples. You will note that an answer given to three digits is based on input good to at least three digits, for example. If the input has fewer significant figures, the answer will also have fewer significant figures. Care is also taken that the number of significant figures is reasonable for the situation posed. In some topics, particularly in optics, more accurate numbers are needed and more than three significant figures will be used. Finally, if a number is exact, such as the two in the formula for the circumference of a circle, c = 2πr , it does not affect the number of significant figures in a calculation.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-03335",
+    "question": "Time, mass, length, and temperature are considered to be what kinds of units?",
+    "choices": {
+      "A": "unitary",
+      "B": "support",
+      "C": "measurement",
+      "D": "base"
+    },
+    "correct_choice": "D",
+    "support": "Base units have independent scales and cannot be described by a combination of any other base units. Examples of base units used in chemistry are length, mass, temperature, and time.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-02682",
+    "question": "What is the standard measurement for mass?",
+    "choices": {
+      "A": "BMI",
+      "B": "volume",
+      "C": "calories",
+      "D": "grams"
+    },
+    "correct_choice": "D",
+    "support": "You’ve probably been using a ruler to measure length since you were in elementary school. But you may have made most of the measurements in English units of length, such as inches and feet. In science, length is most often measured in SI units, such as millimeters and centimeters. Many rulers have both types of units, one on each edge. The ruler pictured below has only SI units. It is shown here bigger than it really is so it’s easier to see the small lines, which measure millimeters. The large lines and numbers stand for centimeters. Count the number of small lines from the left end of the ruler (0.0). You should count 10 lines because there are 10 millimeters in a centimeter.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-00591",
+    "question": "What is the base unit that frequency is typically measured in?",
+    "choices": {
+      "A": "degrees",
+      "B": "watt",
+      "C": "volume",
+      "D": "hertz"
+    },
+    "correct_choice": "D",
+    "support": "The frequency , , is the number of cycles an object goes through in 1 second. Frequency is measured in Hertz (Hz). 1 Hz = 1 cycle per sec.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-00490",
+    "question": "Displacement, velocity, acceleration, and force are examples of what type of quantity that has magnitude and direction?",
+    "choices": {
+      "A": "frequency",
+      "B": "cycles",
+      "C": "wave",
+      "D": "vector"
+    },
+    "correct_choice": "D",
+    "support": "Vectors in Two Dimensions A vector is a quantity that has magnitude and direction. Displacement, velocity, acceleration, and force, for example, are all vectors. In one-dimensional, or straight-line, motion, the direction of a vector can be given simply by a plus or minus sign. In two dimensions (2-d), however, we specify the direction of a vector relative to some reference frame (i. , coordinate system), using an arrow having length proportional to the vector’s magnitude and pointing in the direction of the vector. Figure 3.9 shows such a graphical representation of a vector, using as an example the total displacement for the person walking in a city considered in Kinematics in Two Dimensions: An Introduction. We shall use the notation that a boldface symbol, such as D , stands for a vector. Its magnitude is represented by the symbol in italics, D , and its direction by θ . Vectors in this Text In this text, we will represent a vector with a boldface variable. For example, we will represent the quantity force with the vector F , which has both magnitude and direction. The magnitude of the vector will be represented by a variable in italics, such as.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-test-00536",
+    "question": "What term always refers to acceleration in the direction opposite to the direction of the velocity and always reduces speed, unlike negative acceleration?",
+    "choices": {
+      "A": "calibration",
+      "B": "progression",
+      "C": "extraction",
+      "D": "deceleration"
+    },
+    "correct_choice": "D",
+    "support": "Misconception Alert: Deceleration vs. Negative Acceleration Deceleration always refers to acceleration in the direction opposite to the direction of the velocity. Deceleration always reduces speed. Negative acceleration, however, is acceleration in the negative direction in the chosen coordinate system. Negative acceleration may or may not be deceleration, and deceleration may or may not be considered negative acceleration. For example, consider Figure 2.14.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-03331",
+    "question": "What is a measure of both speed and direction of motion?",
+    "choices": {
+      "A": "acceleration",
+      "B": "distance",
+      "C": "intensity",
+      "D": "velocity"
+    },
+    "correct_choice": "D",
+    "support": "Velocity is a measure of both speed and direction of motion. Velocity is a vector, which is a measurement that includes both size and direction.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-03744",
+    "question": "Velocity is a vector that has both direction and what?",
+    "choices": {
+      "A": "radiation",
+      "B": "variable",
+      "C": "latitude",
+      "D": "magnitude"
+    },
+    "correct_choice": "D",
+    "support": "Because acceleration is velocity in m/s divided by time in s, the SI units for acceleration are m/s 2 , meters per second squared or meters per second per second, which literally means by how many meters per second the velocity changes every second. Recall that velocity is a vector—it has both magnitude and direction. This means that a change in velocity can be a change in magnitude (or speed), but it can also be a change in direction. For example, if a car turns a corner at constant speed, it is accelerating because its direction is changing. The quicker you turn, the greater the acceleration. So there is an acceleration when velocity changes either in magnitude (an increase or decrease in speed) or in direction, or both. Acceleration as a Vector Acceleration is a vector in the same direction as the change in velocity, Δv . Since velocity is a vector, it can change either in magnitude or in direction. Acceleration is therefore a change in either speed or direction, or both. Keep in mind that although acceleration is in the direction of the change in velocity, it is not always in the direction of motion. When an object slows down, its acceleration is opposite to the direction of its motion. This is known as deceleration.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-06766",
+    "question": "What is the term for the rate at which velocity changes?",
+    "choices": {
+      "A": "compression",
+      "B": "stability",
+      "C": "transmission",
+      "D": "acceleration"
+    },
+    "correct_choice": "D",
+    "support": "Acceleration is a measure of the change in velocity of a moving object. It measures the rate at which velocity changes. Velocity, in turn, is a measure of the speed and direction of motion, so a change in velocity may reflect a change in speed, a change in direction, or both. Both velocity and acceleration are vectors. A vector is any measurement that has both size and direction. People commonly think of acceleration as in increase in speed, but a decrease in speed is also acceleration. In this case, acceleration is negative and called deceleration. A change in direction without a change in speed is acceleration as well.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-08020",
+    "question": "What is the name for speed with a direction?",
+    "choices": {
+      "A": "trajectory",
+      "B": "distance",
+      "C": "acceleration",
+      "D": "velocity"
+    },
+    "correct_choice": "D",
+    "support": "Speed represents how quickly an object is moving through space. Velocity is speed with a direction, making it a vector quantity. If an object’s velocity changes with time, the object is said to be accelerating. As we’ll see in the next chapters, understanding the acceleration of an object is the key to understanding its motion. We will assume constant acceleration throughout this chapter.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-05273",
+    "question": "What influence does the  horizontal motion of a projectile have on free fall?",
+    "choices": {
+      "A": "increase acceleration",
+      "B": "decrease acceleration",
+      "C": "vertical",
+      "D": "none"
+    },
+    "correct_choice": "D",
+    "support": "The horizontal motion of a projectile does not influence its free fall.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-validation-00294",
+    "question": "In projectile motion, the horizontal displacement of an object is called its what?",
+    "choices": {
+      "A": "variety",
+      "B": "width",
+      "C": "height",
+      "D": "range"
+    },
+    "correct_choice": "D",
+    "support": "In projectile motion, the horizontal displacement of an object is called its range .",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-validation-00773",
+    "question": "What is the maximum horizontal distance traveled by a projectile?",
+    "choices": {
+      "A": "length",
+      "B": "span",
+      "C": "radius",
+      "D": "range"
+    },
+    "correct_choice": "D",
+    "support": "• The maximum horizontal distance traveled by a projectile is called the range. The range launched at an angle.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-07340",
+    "question": "What type of motion only occurs when there is one force applied at the beginning of the trajectory after which there is no interference apart from gravity?",
+    "choices": {
+      "A": "thrust",
+      "B": "velocity",
+      "C": "propellant",
+      "D": "projectile"
+    },
+    "correct_choice": "D",
+    "support": "projectile motion: A form of motion where a particle (called a projectile) is thrown obliquely near the earth's surface, & it moves along a curved path under the action of gravity. The path followed by a projectile motion is called its trajectory. Projectile motion only occurs when there is one force applied at the beginning of the trajectory after which there is no interference apart from gravity.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-test-00233",
+    "question": "Often represented by an arrow, a vector is a measurement that has both size and what?",
+    "choices": {
+      "A": "reason",
+      "B": "pressure",
+      "C": "location",
+      "D": "direction"
+    },
+    "correct_choice": "D",
+    "support": "When both distance and direction are considered, motion can be represented by a vector. A vector is a measurement that has both size and direction. It may be represented by an arrow. If you are representing motion with an arrow, the length of the arrow represents distance, and the way the arrow points represents direction. The red arrows on the map in the Figure above are vectors for Jordan’s route from his house to the school and from the school to the post office. If you want to learn more about vectors, watch the video at this URL:.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-test-00748",
+    "question": "A vector is any quantity that has magnitude and what?",
+    "choices": {
+      "A": "latitude",
+      "B": "length",
+      "C": "longitude",
+      "D": "direction"
+    },
+    "correct_choice": "D",
+    "support": "A vector is any quantity that has magnitude and direction. A scalar is any quantity that has magnitude but no direction. Displacement and velocity are vectors, whereas distance and speed are scalars. In one-dimensional motion, direction is specified by a plus or minus sign to signify left or right, up or down, and the like.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-10834",
+    "question": "Because the human body is about 70% water by mass, and liquid water has high specific heat, a great deal of what is required to change its temperature?",
+    "choices": {
+      "A": "digestion",
+      "B": "power",
+      "C": "work",
+      "D": "energy"
+    },
+    "correct_choice": "D",
+    "support": "The high specific heat of liquid water has important implications for life on Earth. A given mass of water releases more than five times as much heat for a 1°C temperature change as does the same mass of limestone or granite. Consequently, coastal regions of our planet tend to have less variable climates than regions in the center of a continent. After absorbing large amounts of thermal energy from the sun in summer, the water slowly releases the energy during the winter, thus keeping coastal areas warmer than otherwise would be expected (Figure 5.13 \"The High Specific Heat of Liquid Water Has Major Effects on Climate\"). Water’s capacity to absorb large amounts of energy without undergoing a large increase in temperature also explains why swimming pools and waterbeds are usually heated. Heat must be applied to raise the temperature of the water to a comfortable level for swimming or sleeping and to maintain that level as heat is exchanged with the surroundings. Moreover, because the human body is about 70% water by mass, a great deal of energy is required to change its temperature by even 1°C. Consequently, the mechanism for maintaining our body temperature at about 37°C does not have to be as finely tuned as would be necessary if our bodies were primarily composed of a substance with a lower specific heat. Figure 5.13 The High Specific Heat of Liquid Water Has Major Effects on Climate.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-test-00403",
+    "question": "The amount of heat required to raise a single mass unit of a substance by a single temperature unit is known as what?",
+    "choices": {
+      "A": "solitary heat",
+      "B": "temperature variation",
+      "C": "specific gravity",
+      "D": "specific heat"
+    },
+    "correct_choice": "D",
+    "support": "When heat flows into an object, its thermal energy increases and so does its temperature. The amount of temperature increase depends on three things: 1) how much heat was added, 2) the size of the object, and 3) the material of which the object is made. When you add the same amount of heat to the same mass of different substances, the amount of temperature increase is different. Each substance has a specific heat, which is the amount of heat necessary to raise one mass unit of that substance by one temperature unit.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-05702",
+    "question": "A hot-water heating system uses what type of energy to heat water?",
+    "choices": {
+      "A": "atmospheric energy",
+      "B": "negative energy",
+      "C": "potential energy",
+      "D": "thermal energy"
+    },
+    "correct_choice": "D",
+    "support": "A hot-water heating system uses thermal energy to heat water and then pumps the hot water throughout the building in a system of pipes and radiators. You can see a diagram of this type of heating system in Figure below . Typically, the water is heated in a boiler that burns natural gas or heating oil. There is usually a radiator in each room that gets warm when the hot water flows through it. The radiator transfers thermal energy to the air around it by conduction and radiation. The warm air then circulates throughout the room in convection currents. The hot water cools as it flows through the system and transfers its thermal energy. When it finally returns to the boiler, it is heated again and the cycle repeats.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-test-00874",
+    "question": "What is the transfer of heat by physical contact?",
+    "choices": {
+      "A": "diffusion",
+      "B": "oxidation",
+      "C": "inhibition",
+      "D": "conduction"
+    },
+    "correct_choice": "D",
+    "support": "Heat can be transferred in three ways, through conduction, convection, and radiation. Conduction is the transfer of heat by physical contact. Heat flows form the hotter object to the cooler object. Convection is heat transfer by an intermediate substance (for example air or water). Your oven (often properly called the ‘convection oven’) works by heating up the air and then the air heats up your food. Radiation is the release of heat (and thus the lowering of its internal energy) by releasing electromagnetic waves. The hotter the object the higher the frequency of the light emitted. When you look at a fire the blue flames our hotter than the red flames because blue has a higher frequency than red.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-00667",
+    "question": "When heat flows into an object, its thermal energy increases and so does its what?",
+    "choices": {
+      "A": "color",
+      "B": "matter",
+      "C": "speed",
+      "D": "temperature"
+    },
+    "correct_choice": "D",
+    "support": "When heat flows into an object, its thermal energy increases and so does its temperature.",
+    "in_scope": true,
+    "source": "SciQ"
+  },
+  {
+    "question_id": "sciq-train-03800",
+    "question": "What happens to the temperature of a system during phase change?",
+    "choices": {
+      "A": "decreases",
+      "B": "increases",
+      "C": "fluctuates rapidly",
+      "D": "remains constant"
+    },
+    "correct_choice": "D",
+    "support": "This plot of temperature shows what happens to a 75 g sample of ice initially at 1 atm and −23°C as heat is added at a constant rate: A–B: heating solid ice; B–C: melting ice; C–D: heating liquid water; D– E: vaporizing water; E–F: heating steam. Thus the temperature of a system does not change during a phase change. In this example, as long as even a tiny amount of ice is present, the temperature of the system remains at 0°C during the melting process, and as long as even a small amount of liquid water is present, the temperature of the system remains at 100°C during the boiling process. The rate at which heat is added does not affect the temperature of the ice/water or water/steam mixture because the added heat is being used exclusively to overcome the attractive forces that hold the more condensed phase together. Many cooks think that food will cook faster if the heat is turned up higher so that the water boils more rapidly. Instead, the pot of water will boil to dryness sooner, but the temperature of the water does not depend on how vigorously it boils.",
+    "in_scope": true,
+    "source": "SciQ"
+  }
+]

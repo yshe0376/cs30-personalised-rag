@@ -10,7 +10,13 @@ import re
 
 from pydantic import TypeAdapter
 
-from cs30.contracts import Chunk, IndexArtifact, RetrievalHit, RetrievalResult
+from cs30.contracts import (
+    Chunk,
+    IndexArtifact,
+    RetrievalMode,
+    RetrievalResult,
+    RetrievedEvidence,
+)
 from cs30.errors import EmptyQueryError
 from cs30.fixture_store import load_fixture_index
 from cs30.fixtures import load_fixture
@@ -47,14 +53,15 @@ class FixtureRetriever:
         scored.sort(key=lambda pair: (-pair[0], pair[1].chunk_id))
 
         hits = [
-            RetrievalHit(
+            RetrievedEvidence(
                 chunk_id=chunk.chunk_id,
                 text=chunk.text,
                 chapter_id=chunk.chapter_id,
                 source=chunk.source,
                 score=round(score, 4),
                 rank=rank,
+                retriever_type=RetrievalMode.FIXTURE,
             )
             for rank, (score, chunk) in enumerate(scored[:top_k], start=1)
         ]
-        return RetrievalResult(query=query, hits=hits)
+        return RetrievalResult(query=query, mode=RetrievalMode.FIXTURE, hits=hits)

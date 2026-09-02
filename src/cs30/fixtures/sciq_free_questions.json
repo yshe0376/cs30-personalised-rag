@@ -1,0 +1,58 @@
+[
+  {
+    "free_question_id": "free-01",
+    "question": "What is the difference between distance and displacement?",
+    "chapter_id": "2",
+    "expected_focus": "definition and comparison",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-02",
+    "question": "How does acceleration affect an object's velocity?",
+    "chapter_id": "2",
+    "expected_focus": "concept explanation",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-03",
+    "question": "How do you resolve a two-dimensional velocity into horizontal and vertical components?",
+    "chapter_id": "3",
+    "expected_focus": "simple application",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-04",
+    "question": "Why does a projectile follow a curved path when launched at an angle?",
+    "chapter_id": "3",
+    "expected_focus": "concept explanation",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-05",
+    "question": "What is the difference between heat and temperature?",
+    "chapter_id": "14",
+    "expected_focus": "definition and comparison",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-06",
+    "question": "How does convection transfer thermal energy?",
+    "chapter_id": "14",
+    "expected_focus": "concept explanation",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-07",
+    "question": "What is the SI unit of length and how is it used in measurement?",
+    "chapter_id": "1",
+    "expected_focus": "definition and units",
+    "usage": "smoke_demo_only"
+  },
+  {
+    "free_question_id": "free-08",
+    "question": "How is the speed of a moving bicycle calculated from the distance it travels and the time taken?",
+    "chapter_id": "2",
+    "expected_focus": "simple application of speed",
+    "usage": "smoke_demo_only"
+  }
+]
