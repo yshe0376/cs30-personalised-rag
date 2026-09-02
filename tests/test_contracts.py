@@ -1,10 +1,11 @@
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
-from cs30.citation import validate_citations
+from cs30.citation import build_evidence_bundle, resolve_and_validate, validate_citations
 from cs30.contracts import (
     Chunk,
     ContentType,
+    EvidenceBundle,
     GeneratedAnswer,
     OpenStaxDocument,
     RetrievalResult,
@@ -142,6 +143,73 @@ def test_packaged_answer_fixture_still_validates() -> None:
     answer = GeneratedAnswer.model_validate(load_fixture("generated_answer.json"))
     assert answer.abstained is False
     assert answer.citations
+
+
+def test_evidence_bundle_assigns_stable_ids_and_maps_chunks() -> None:
+    retrieval = RetrievalResult.model_validate(load_fixture("retrieval_result.json"))
+    bundle = build_evidence_bundle(retrieval, retrieval_mode="fixture")
+    assert [item.evidence_id for item in bundle.evidence_items] == ["E1", "E2"]
+    assert bundle.citation_map["E1"] == bundle.evidence_items[0].chunk_id
+    assert bundle.prompt_context and "[E1]" in bundle.prompt_context
+
+
+def test_evidence_bundle_rejects_duplicate_or_incomplete_map() -> None:
+    with pytest.raises(ValidationError, match="evidence IDs must be unique"):
+        EvidenceBundle(
+            query="q",
+            retrieval_mode="fixture",
+            evidence_items=[
+                {
+                    "evidence_id": "E1",
+                    "chunk_id": "c1",
+                    "text": "one",
+                    "chapter_id": "ch1",
+                    "source": "src",
+                    "source_locator": "src",
+                    "rank": 1,
+                    "score": 1.0,
+                    "token_count": 1,
+                },
+                {
+                    "evidence_id": "E1",
+                    "chunk_id": "c2",
+                    "text": "two",
+                    "chapter_id": "ch1",
+                    "source": "src",
+                    "source_locator": "src",
+                    "rank": 2,
+                    "score": 0.5,
+                    "token_count": 1,
+                },
+            ],
+            citation_map={"E1": "c1"},
+            token_count=2,
+        )
+
+
+def test_resolver_accepts_legacy_chunk_ids_and_new_evidence_ids() -> None:
+    retrieval = RetrievalResult.model_validate(load_fixture("retrieval_result.json"))
+    bundle = build_evidence_bundle(retrieval)
+    answer = GeneratedAnswer(
+        final_choice="B",
+        explanation="Fixture explanation",
+        citations=["E1"],
+    )
+    validated = resolve_and_validate(answer, bundle)
+    assert validated.citation_status == "passed"
+    assert validated.resolved_citations == [bundle.evidence_items[0].chunk_id]
+
+
+def test_resolver_rejects_citation_outside_bundle() -> None:
+    retrieval = RetrievalResult.model_validate(load_fixture("retrieval_result.json"))
+    bundle = build_evidence_bundle(retrieval)
+    answer = GeneratedAnswer(
+        final_choice="B",
+        explanation="Fixture explanation",
+        citations=["E99"],
+    )
+    with pytest.raises(CS30Error, match="unknown evidence IDs"):
+        resolve_and_validate(answer, bundle)
 
 
 def _document_payload(**overrides: object) -> dict:

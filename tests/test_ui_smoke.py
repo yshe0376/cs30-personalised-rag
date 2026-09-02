@@ -13,6 +13,9 @@ def test_ui_adapter_consumes_pipeline_run() -> None:
     assert result.profile.level is StudentLevel.BEGINNER
     assert result.answer.abstained is False
     assert result.citation_integrity == "passed"
+    assert result.evidence_bundle is not None
+    assert result.validated_answer is not None
+    assert result.trace["request_id"] == result.run_id
 
 
 def test_ui_surfaces_an_abstained_answer() -> None:

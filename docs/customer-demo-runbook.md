@@ -2,7 +2,8 @@
 
 ## Purpose and boundary
 
-Demonstrate that the Week 1 interface and shared `PipelineRun` path are runnable.
+Demonstrate that the Week 5 interface, evidence assembly layer and shared
+`PipelineRun` path are runnable.
 The current staging preview uses fixed fixture data. It does not demonstrate
 retrieval quality, model accuracy or a connected real LLM.
 
@@ -27,12 +28,15 @@ retrieval quality, model accuracy or a connected real LLM.
    integrity, retrieved evidence, chapter and source.
 4. **Show personalisation.** Select `Advanced` and rerun the same question.
    Explain that the fixture response template changes by learner level; the
-   real prompt and LLM are still Member 7's integration step.
+   real prompt and LLM are still Member 7's integration step. Point out that
+   `E1`, `E2` are display IDs and that the citation map resolves them back to
+   the retrieved chunk IDs.
 5. **Show safe refusal.** Select the prepared `Safe refusal` question and run
    it. Explain that no evidence is a valid result and the system refuses rather
    than fabricating an answer.
 6. **Show technical details if asked.** Expand `Technical run details` to show
-   the complete `PipelineRun` JSON, environment, mode and timings.
+   the complete run details, including the `EvidenceBundle`, `ValidatedAnswer`,
+   provenance and trace fields.
 
 ## Presenter checks
 
@@ -41,10 +45,10 @@ retrieval quality, model accuracy or a connected real LLM.
 | Page banner | Clearly says fixture mode |
 | Learner levels | Beginner, Intermediate and Advanced are selectable |
 | Grounded example | Answer and at least one evidence passage appear |
-| Evidence provenance | Chapter and source appear |
+| Evidence provenance | Evidence ID, chapter and source locator appear |
 | Citation integrity | `PASSED` and cited IDs exist in retrieved hits |
 | Out-of-scope example | No evidence and an explicit refusal |
-| Technical details | Valid `PipelineRun` JSON |
+| Technical details | Bundle, validated answer and trace are visible |
 
 ## If the live page fails
 

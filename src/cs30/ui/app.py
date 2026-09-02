@@ -85,6 +85,11 @@ def inject_styles() -> None:
             color: #237a4b;
             background: #edf8f1;
         }
+        .cs30-integrity-chip.skipped {
+            border-color: #f0cf8a;
+            color: #8a5a00;
+            background: #fff8e6;
+        }
         }
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-color: var(--cs30-line);
@@ -170,29 +175,60 @@ def render_result(run: PipelineRun) -> None:
     if run.answer.citations:
         citation_text = ", ".join(run.answer.citations)
         citation_chip = (
-            '<span class="cs30-citation-chip">Citation ID · '
+            '<span class="cs30-citation-chip">Cited chunk ID · '
             f"{escape(citation_text)}</span>"
         )
+    integrity_status = (
+        "skipped"
+        if run.answer.abstained
+        else run.citation_integrity
+    )
+    integrity_class = "cs30-integrity-chip skipped" if integrity_status == "skipped" else "cs30-integrity-chip"
     integrity_chip = (
-        '<span class="cs30-integrity-chip">Citation integrity · '
-        f"{escape(run.citation_integrity.upper())}</span>"
+        f'<span class="{integrity_class}">Citation integrity · '
+        f"{escape(integrity_status.upper())}</span>"
     )
     st.markdown(
         f'<div class="cs30-result-meta">{citation_chip}{integrity_chip}</div>',
         unsafe_allow_html=True,
     )
     st.markdown('<p class="cs30-field-title">Retrieved evidence</p>', unsafe_allow_html=True)
-    if not run.retrieval.hits:
+    bundle = getattr(run, "evidence_bundle", None)
+    evidence_items = bundle.evidence_items if bundle is not None else []
+    if not evidence_items and run.retrieval.hits:
+        evidence_items = run.retrieval.hits
+    if not evidence_items:
         st.caption("No relevant evidence was retrieved.")
-    for hit in run.retrieval.hits:
-        cited = " · cited" if hit.chunk_id in run.answer.citations else ""
+    for position, item in enumerate(evidence_items, start=1):
+        evidence_id = getattr(item, "evidence_id", f"E{position}")
+        source_locator = getattr(item, "source_locator", item.source)
+        cited = " · cited" if (
+            evidence_id in run.answer.citations or item.chunk_id in run.answer.citations
+        ) else ""
         with st.container(border=True):
-            st.markdown(f"**{hit.rank}. {hit.chunk_id}** — score {hit.score:.2f}{cited}")
-            st.write(hit.text)
-            st.caption(f"Chapter: {hit.chapter_id} · Source: {hit.source}")
+            st.markdown(
+                f"**{evidence_id} · rank {item.rank} · {item.chunk_id}** "
+                f"— score {item.score:.2f}{cited}"
+            )
+            st.write(item.text)
+            st.caption(
+                f"Chapter: {item.chapter_id} · Source: {item.source} · "
+                f"Source locator: {source_locator}"
+            )
 
     with st.expander("Technical run details"):
-        st.json(run.model_dump(mode="json"))
+        st.json(
+            {
+                "evidence_bundle": bundle.model_dump(mode="json") if bundle else None,
+                "validated_answer": (
+                    run.validated_answer.model_dump(mode="json")
+                    if getattr(run, "validated_answer", None)
+                    else None
+                ),
+                "trace": getattr(run, "trace", {}),
+                "pipeline_run": run.model_dump(mode="json"),
+            }
+        )
 
 
 def main() -> None:

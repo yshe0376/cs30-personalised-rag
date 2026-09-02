@@ -16,7 +16,11 @@ from pathlib import Path
 from typing import Literal
 
 from cs30.chunking import FixtureChunker
-from cs30.citation import validate_citations
+from cs30.citation import (
+    CitationResolver,
+    EvidenceContextBuilder,
+    validate_citations,
+)
 from cs30.config import AppConfig, load_config
 from cs30.contracts import IndexArtifact, PipelineRun, StudentLevel
 from cs30.errors import CS30Error, EmptyQueryError
@@ -149,8 +153,34 @@ def run_pipeline(
         len(answer.citations),
     )
 
+    evidence_bundle = EvidenceContextBuilder().build(
+        retrieval,
+        retrieval_mode=config.retrieval.index_type,
+        provenance={
+            "run_id": "pending",
+            "environment": config.environment,
+            "mode": deps.mode,
+        },
+    )
+    validated_answer = CitationResolver().resolve(answer, evidence_bundle)
+    trace = {
+        "request_id": "pending",
+        "query": question,
+        "profile_level": profile.level.value,
+        "retrieval_mode": config.retrieval.index_type,
+        "retrieved_ids": ",".join(hit.chunk_id for hit in retrieval.hits),
+        "selected_evidence_ids": ",".join(
+            item.evidence_id for item in evidence_bundle.evidence_items
+        ),
+        "citation_ids": ",".join(answer.citations),
+        "context_token_count": str(evidence_bundle.token_count),
+    }
+    run_id = uuid.uuid4().hex[:12]
+    evidence_bundle.provenance["run_id"] = run_id
+    trace["request_id"] = run_id
+    validated_answer.provenance["run_id"] = run_id
     return PipelineRun(
-        run_id=uuid.uuid4().hex[:12],
+        run_id=run_id,
         mode=deps.mode,
         question=question,
         question_id=question_id,
@@ -165,6 +195,9 @@ def run_pipeline(
             "provider": config.generation.provider,
             "retrieval_ms": f"{retrieval_ms:.1f}",
         },
+        evidence_bundle=evidence_bundle,
+        validated_answer=validated_answer,
+        trace=trace,
     )
 
 

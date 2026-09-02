@@ -3,6 +3,8 @@
 from .models import (
     Chunk,
     ContentType,
+    EvidenceBundle,
+    EvidenceItem,
     GeneratedAnswer,
     Identifier,
     IndexArtifact,
@@ -17,11 +19,14 @@ from .models import (
     StudentLevel,
     StudentProfile,
     TextBlock,
+    ValidatedAnswer,
 )
 
 __all__ = [
     "Chunk",
     "ContentType",
+    "EvidenceBundle",
+    "EvidenceItem",
     "GeneratedAnswer",
     "Identifier",
     "IndexArtifact",
@@ -36,4 +41,5 @@ __all__ = [
     "StudentLevel",
     "StudentProfile",
     "TextBlock",
+    "ValidatedAnswer",
 ]

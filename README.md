@@ -120,7 +120,8 @@ python -m streamlit run src/cs30/ui/app.py
 The browser interface lets a client choose a student level, ask a question, and
 inspect the generated answer, citations, and retrieved sources. The current page
 runs in fixture mode and labels that mode prominently; it must not be presented as
-a real retrieval or model result.
+a real retrieval or model result. The W5 evidence layer assigns display IDs (`E1`,
+`E2`, ...), maps them back to chunk IDs, and records a compact trace for each run.
 
 Ask something the sample chapter does not cover and the system refuses instead
 of inventing an answer:
@@ -211,8 +212,8 @@ and week 1 acceptance criteria.
 ## Adding your module
 
 1. Implement your Protocol from `src/cs30/ports.py` next to the `fixture.py` in
-   your package. Member 8 consumes `PipelineRun` directly instead of implementing
-   a Protocol.
+   your package. Member 8 consumes `PipelineRun` and its `EvidenceBundle` directly
+   instead of implementing a computational Protocol.
 2. Offline modules (members 2, 4, and 5) are supplied through `BuildDeps` to
    `run_build_pipeline()`. Online modules (members 6 and 7) are supplied through
    `PipelineDeps` to `run_pipeline()`. Neither orchestration function changes.
