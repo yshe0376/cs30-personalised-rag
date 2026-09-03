@@ -162,9 +162,14 @@ def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
     st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
+    bundle = getattr(run, "evidence_bundle", None)
+    retrieval_mode = getattr(getattr(run, "retrieval", None), "mode", None)
+    if retrieval_mode is None and bundle is not None:
+        retrieval_mode = bundle.retrieval_mode
+    retrieval_mode_text = getattr(retrieval_mode, "value", retrieval_mode or "unknown")
     summary_columns = st.columns(3)
     summary_columns[0].metric("Query", run.question)
-    summary_columns[1].metric("Retrieval mode", run.retrieval.mode.value)
+    summary_columns[1].metric("Retrieval mode", retrieval_mode_text)
     summary_columns[2].metric("Run ID", run.run_id)
     if run.answer.abstained:
         st.warning("The system refused to answer because the retrieved evidence was insufficient.")
@@ -200,7 +205,6 @@ def render_result(run: PipelineRun) -> None:
         unsafe_allow_html=True,
     )
     st.markdown('<p class="cs30-field-title">Retrieved evidence</p>', unsafe_allow_html=True)
-    bundle = getattr(run, "evidence_bundle", None)
     evidence_items = bundle.evidence_items if bundle is not None else []
     if not evidence_items and run.retrieval.hits:
         evidence_items = run.retrieval.hits
