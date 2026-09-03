@@ -82,15 +82,17 @@ sequenceDiagram
     PL->>RT: retrieve(question, top_k)
     alt evidence found
         RT-->>PL: RetrievalResult(hits=[...])
-        PL->>GN: generate(question, profile, retrieval)
+        PL->>EB: EvidenceContextBuilder.build(retrieval)
+        EB-->>PL: EvidenceBundle(E1, E2, citation_map)
+        PL->>GN: generate(question, profile, evidence_bundle)
         GN-->>PL: GeneratedAnswer(citations=[...])
     else nothing relevant
         RT-->>PL: RetrievalResult(hits=[])
-        PL->>GN: generate(question, profile, retrieval)
+        PL->>GN: generate(question, profile, evidence_bundle)
         GN-->>PL: GeneratedAnswer(abstained=True)
     end
-    PL->>CK: validate_citations(answer, retrieval)
-    CK-->>PL: every citation came from retrieval
+    PL->>CK: resolve_and_validate(answer, evidence_bundle)
+    CK-->>PL: evidence IDs resolve to retrieved chunks
     PL-->>UI: PipelineRun
 ```
 

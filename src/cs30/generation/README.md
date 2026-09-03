@@ -2,15 +2,18 @@
 
 Implement `cs30.ports.AnswerGenerator`:
 
-    `generate(question, profile, retrieval) -> GeneratedAnswer`
+    `generate(question, profile, evidence) -> GeneratedAnswer`
 
-Drop the real implementation next to `fixture.py`, then swap it into
-`build_real_deps()` in `src/cs30/pipeline.py`. Nothing else changes.
+Member 8 constructs the `EvidenceBundle` before this boundary. The generator
+must use its evidence IDs in the fixed JSON citations. Drop the real
+implementation next to `fixture.py`, then swap it into `build_real_deps()` in
+`src/cs30/pipeline.py`.
 
 ## Week 1 acceptance
 
 - Output parses into the fixed JSON schema.
-- Citation ids come from the actual retrieval input.
+- Citation ids come from the supplied `EvidenceBundle` and resolve to the
+  original retrieved chunks through its `citation_map`.
 - Three levels reach the prompt.
 - One API failure does not abort the batch.
 

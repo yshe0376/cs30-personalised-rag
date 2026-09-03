@@ -372,7 +372,7 @@ class GeneratedAnswer(ContractModel):
             if self.citations:
                 raise ValueError("an abstained answer must not cite evidence")
         elif not self.citations:
-            raise ValueError("a non-abstained answer must cite at least one chunk")
+            raise ValueError("a non-abstained answer must cite at least one evidence ID")
         return self
 
 
@@ -395,13 +395,13 @@ class EvidenceBundle(ContractModel):
 
     schema_version: Literal["1.0"] = "1.0"
     query: NonEmptyText
-    retrieval_mode: Identifier
+    retrieval_mode: RetrievalMode
     evidence_items: list[EvidenceItem] = Field(default_factory=list)
     prompt_context: NonEmptyText | None = None
     citation_map: dict[Identifier, Identifier] = Field(default_factory=dict)
     token_count: int = Field(default=0, ge=0)
     retrieval_provenance: EvidenceProvenance | None = None
-    provenance: dict[str, str] = Field(default_factory=dict)
+    run_provenance: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_evidence_map(self) -> "EvidenceBundle":
@@ -423,7 +423,7 @@ class ValidatedAnswer(ContractModel):
     answer: GeneratedAnswer
     resolved_citations: list[Identifier] = Field(default_factory=list)
     citation_status: Literal["passed", "failed", "skipped"]
-    provenance: dict[str, str] = Field(default_factory=dict)
+    run_provenance: dict[str, str] = Field(default_factory=dict)
     abstained: bool
 
 

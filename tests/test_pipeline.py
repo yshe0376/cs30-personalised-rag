@@ -18,7 +18,7 @@ def test_fixture_pipeline_runs_end_to_end() -> None:
     assert result.mode == "fixture"
     assert result.profile.level is StudentLevel.BEGINNER
     assert result.retrieval.hits[0].chunk_id == "chunk_ch01_0001"
-    assert result.answer.citations == ["chunk_ch01_0001"]
+    assert result.answer.citations == ["E1"]
     assert result.answer.abstained is False
     assert result.citation_integrity == "passed"
 
@@ -37,8 +37,8 @@ def test_pipeline_abstains_when_no_evidence_matches() -> None:
 def test_every_citation_comes_from_retrieval() -> None:
     result = run("What is acceleration?")
 
-    retrieved = {hit.chunk_id for hit in result.retrieval.hits}
-    assert set(result.answer.citations) <= retrieved
+    evidence_ids = {item.evidence_id for item in result.evidence_bundle.evidence_items}
+    assert set(result.answer.citations) <= evidence_ids
 
 
 def test_level_changes_the_explanation() -> None:

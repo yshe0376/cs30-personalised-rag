@@ -8,6 +8,7 @@ through ``BuildDeps`` or ``PipelineDeps``; orchestration functions do not change
 from __future__ import annotations
 
 import argparse
+import hashlib
 import sys
 import time
 import uuid
@@ -19,7 +20,6 @@ from cs30.chunking import FixtureChunker
 from cs30.citation import (
     CitationResolver,
     EvidenceContextBuilder,
-    validate_citations,
 )
 from cs30.config import AppConfig, load_config
 from cs30.contracts import IndexArtifact, PipelineRun, StudentLevel
@@ -144,8 +144,17 @@ def run_pipeline(
         retrieval_ms,
     )
 
-    answer = deps.generator.generate(question, profile, retrieval)
-    validate_citations(answer, retrieval)
+    run_id = uuid.uuid4().hex[:12]
+    evidence_bundle = EvidenceContextBuilder().build(
+        retrieval,
+        retrieval_mode=retrieval.mode,
+        run_provenance={
+            "run_id": run_id,
+            "environment": config.environment,
+            "mode": deps.mode,
+        },
+    )
+    answer = deps.generator.generate(question, profile, evidence_bundle)
     LOGGER.info(
         "generation level=%s abstained=%s citations=%d",
         profile.level.value,
@@ -153,32 +162,22 @@ def run_pipeline(
         len(answer.citations),
     )
 
-    evidence_bundle = EvidenceContextBuilder().build(
-        retrieval,
-        retrieval_mode=config.retrieval.index_type,
-        provenance={
-            "run_id": "pending",
-            "environment": config.environment,
-            "mode": deps.mode,
-        },
-    )
     validated_answer = CitationResolver().resolve(answer, evidence_bundle)
     trace = {
-        "request_id": "pending",
+        "request_id": run_id,
         "query": question,
         "profile_level": profile.level.value,
-        "retrieval_mode": config.retrieval.index_type,
+        "retrieval_mode": retrieval.mode.value,
         "retrieved_ids": ",".join(hit.chunk_id for hit in retrieval.hits),
         "selected_evidence_ids": ",".join(
             item.evidence_id for item in evidence_bundle.evidence_items
         ),
         "citation_ids": ",".join(answer.citations),
         "context_token_count": str(evidence_bundle.token_count),
+        "context_hash": hashlib.sha256(
+            (evidence_bundle.prompt_context or "").encode("utf-8")
+        ).hexdigest(),
     }
-    run_id = uuid.uuid4().hex[:12]
-    evidence_bundle.provenance["run_id"] = run_id
-    trace["request_id"] = run_id
-    validated_answer.provenance["run_id"] = run_id
     return PipelineRun(
         run_id=run_id,
         mode=deps.mode,
@@ -191,7 +190,7 @@ def run_pipeline(
         metadata={
             "environment": config.environment,
             "top_k": str(config.retrieval.top_k),
-            "index_type": config.retrieval.index_type,
+            "retrieval_mode": retrieval.mode.value,
             "provider": config.generation.provider,
             "retrieval_ms": f"{retrieval_ms:.1f}",
         },

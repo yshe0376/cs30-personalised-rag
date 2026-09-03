@@ -55,10 +55,10 @@ def test_smoke_json_round_trip_and_citation_integrity() -> None:
         load_config("development"),
     )
     restored = PipelineRun.model_validate_json(run.model_dump_json())
-    retrieved_ids = {hit.chunk_id for hit in restored.retrieval.hits}
+    evidence_ids = {item.evidence_id for item in restored.evidence_bundle.evidence_items}
 
     assert restored.citation_integrity == "passed"
-    assert set(restored.answer.citations) <= retrieved_ids
+    assert set(restored.answer.citations) <= evidence_ids
 
 
 def test_smoke_generated_answer_json_parser_accepts_valid_payload() -> None:

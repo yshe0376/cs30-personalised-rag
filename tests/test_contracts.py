@@ -212,7 +212,7 @@ def test_abstained_answer_must_not_cite_evidence() -> None:
 
 
 def test_non_abstained_answer_requires_a_citation() -> None:
-    with pytest.raises(ValidationError, match="must cite at least one chunk"):
+    with pytest.raises(ValidationError, match="must cite at least one evidence ID"):
         GeneratedAnswer(explanation="Ungrounded claim with no evidence.")
 
 
@@ -240,6 +240,7 @@ def test_evidence_bundle_assigns_stable_ids_and_maps_chunks() -> None:
     assert bundle.citation_map["E1"] == bundle.evidence_items[0].chunk_id
     assert bundle.prompt_context and "[E1]" in bundle.prompt_context
     assert bundle.retrieval_provenance == retrieval.provenance
+    assert bundle.run_provenance == {}
 
 
 def test_evidence_bundle_rejects_duplicate_or_incomplete_map() -> None:

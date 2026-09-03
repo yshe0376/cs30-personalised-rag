@@ -90,7 +90,6 @@ def inject_styles() -> None:
             color: #8a5a00;
             background: #fff8e6;
         }
-        }
         div[data-testid="stVerticalBlockBorderWrapper"] {
             border-color: var(--cs30-line);
             border-radius: 14px;
@@ -163,6 +162,10 @@ def render_result(run: PipelineRun) -> None:
     """Render one complete pipeline result without changing its contract."""
 
     st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
+    summary_columns = st.columns(3)
+    summary_columns[0].metric("Query", run.question)
+    summary_columns[1].metric("Retrieval mode", run.retrieval.mode.value)
+    summary_columns[2].metric("Run ID", run.run_id)
     if run.answer.abstained:
         st.warning("The system refused to answer because the retrieved evidence was insufficient.")
         st.write(run.answer.explanation)
@@ -175,7 +178,7 @@ def render_result(run: PipelineRun) -> None:
     if run.answer.citations:
         citation_text = ", ".join(run.answer.citations)
         citation_chip = (
-            '<span class="cs30-citation-chip">Cited chunk ID · '
+            '<span class="cs30-citation-chip">Cited evidence ID · '
             f"{escape(citation_text)}</span>"
         )
     integrity_status = (
@@ -183,7 +186,11 @@ def render_result(run: PipelineRun) -> None:
         if run.answer.abstained
         else run.citation_integrity
     )
-    integrity_class = "cs30-integrity-chip skipped" if integrity_status == "skipped" else "cs30-integrity-chip"
+    integrity_class = (
+        "cs30-integrity-chip skipped"
+        if integrity_status == "skipped"
+        else "cs30-integrity-chip"
+    )
     integrity_chip = (
         f'<span class="{integrity_class}">Citation integrity · '
         f"{escape(integrity_status.upper())}</span>"
@@ -298,11 +305,21 @@ def main() -> None:
                 label_visibility="collapsed",
             )
 
-            if st.button("Run fixture pipeline", type="primary", use_container_width=True):
+            if st.button("Run pipeline", type="primary", use_container_width=True):
                 try:
                     run = execute_configured_run(question, StudentLevel(level_value), config)
                 except (CS30Error, NotImplementedError, ValueError) as exc:
                     st.error(f"The pipeline could not run: {exc}")
+                    if not config.fixture_mode:
+                        st.warning("Falling back to the offline fixture pipeline for this run.")
+                        try:
+                            run = execute_fixture_run(question, StudentLevel(level_value))
+                        except (CS30Error, ValueError) as fallback_exc:
+                            st.error(f"The fixture fallback also failed: {fallback_exc}")
+                        else:
+                            run.metadata["fallback_reason"] = str(exc)
+                            run.trace["fallback_reason"] = str(exc)
+                            st.session_state["pipeline_run"] = run
                 else:
                     st.session_state["pipeline_run"] = run
 
@@ -315,7 +332,7 @@ def main() -> None:
                 """
                 <div class="cs30-empty">
                   <strong>Answer and evidence</strong>
-                  <span>Run the fixture pipeline to display the result.</span>
+                  <span>Run the pipeline to display the result.</span>
                 </div>
                 """,
                 unsafe_allow_html=True,

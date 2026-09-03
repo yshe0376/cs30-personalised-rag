@@ -13,6 +13,7 @@ from typing import Protocol, runtime_checkable
 
 from cs30.contracts import (
     Chunk,
+    EvidenceBundle,
     GeneratedAnswer,
     IndexArtifact,
     OpenStaxDocument,
@@ -85,5 +86,5 @@ class AnswerGenerator(Protocol):
         self,
         question: str,
         profile: StudentProfile,
-        retrieval: RetrievalResult,
+        evidence: EvidenceBundle,
     ) -> GeneratedAnswer: ...

@@ -20,8 +20,8 @@ accepts legacy chunk IDs during the transition from the W4 contract.
 
 The bundle records a token estimate, retrieval mode and two provenance layers.
 `retrieval_provenance` preserves the structured corpus and index identity supplied
-by the retrieval contract, while `provenance` records run-level information such
-as the environment and request ID. The current fixture implementation uses
+by the retrieval contract, while `run_provenance` records run-level information
+such as the environment and request ID. The current fixture implementation uses
 whitespace tokens and a 1200-token budget; the production implementation can
 replace the estimator when the approved tokenizer is known.
 

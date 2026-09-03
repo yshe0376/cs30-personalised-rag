@@ -23,9 +23,9 @@ def validate_citations(answer: GeneratedAnswer, retrieval: RetrievalResult) -> N
 def build_evidence_bundle(
     retrieval: RetrievalResult,
     *,
-    retrieval_mode: str = "fixture",
+    retrieval_mode: str | None = None,
     token_budget: int = 1200,
-    provenance: dict[str, str] | None = None,
+    run_provenance: dict[str, str] | None = None,
 ) -> EvidenceBundle:
     """Create stable E1/E2 identifiers without changing retrieved text."""
 
@@ -52,13 +52,13 @@ def build_evidence_bundle(
         used_tokens += token_count
     return EvidenceBundle(
         query=retrieval.query,
-        retrieval_mode=retrieval_mode,
+        retrieval_mode=retrieval_mode or retrieval.mode,
         evidence_items=items,
         prompt_context=("\n\n".join(f"[{i['evidence_id']}] {i['text']}" for i in items) or None),
         citation_map={i["evidence_id"]: i["chunk_id"] for i in items},
         token_count=used_tokens,
         retrieval_provenance=retrieval.provenance,
-        provenance=provenance or {},
+        run_provenance=run_provenance or {},
     )
 
 
@@ -73,7 +73,7 @@ def resolve_and_validate(
             answer=answer,
             resolved_citations=[],
             citation_status="skipped",
-            provenance=bundle.provenance,
+            run_provenance=bundle.run_provenance,
             abstained=True,
         )
     allowed_ids = set(bundle.citation_map)
@@ -89,7 +89,7 @@ def resolve_and_validate(
             bundle.citation_map.get(citation, citation) for citation in answer.citations
         ],
         citation_status="passed",
-        provenance=bundle.provenance,
+        run_provenance=bundle.run_provenance,
         abstained=False,
     )
 
@@ -104,14 +104,14 @@ class EvidenceContextBuilder:
         self,
         retrieval: RetrievalResult,
         *,
-        retrieval_mode: str = "fixture",
-        provenance: dict[str, str] | None = None,
+        retrieval_mode: str | None = None,
+        run_provenance: dict[str, str] | None = None,
     ) -> EvidenceBundle:
         return build_evidence_bundle(
             retrieval,
             retrieval_mode=retrieval_mode,
             token_budget=self.token_budget,
-            provenance=provenance,
+            run_provenance=run_provenance,
         )
 
 
