@@ -22,21 +22,24 @@ retrieval quality, model accuracy or a connected real LLM.
 1. **State the boundary.** “This is a fixture-backed integration demo. The UI
    runs the shared pipeline contract, but the real retriever and LLM are not
    connected yet.”
-2. **Show the inputs.** Select `Beginner`, keep `What is acceleration?`, then
-   run the pipeline.
-3. **Show the output.** Point out the generated answer, citation ID, citation
-   integrity, retrieved evidence, chapter and source.
+2. **Show the inputs.** Select `Beginner`, choose the `Acceleration` example,
+   and run the pipeline.
+3. **Show the output.** Point out the generated answer, citation integrity,
+   retrieval mode, Run ID, and the retrieved evidence with its evidence ID,
+   chapter and source.
 4. **Show personalisation.** Select `Advanced` and rerun the same question.
    Explain that the fixture response template changes by learner level; the
    real prompt and LLM are still Member 7's integration step. Point out that
    `E1`, `E2` are display IDs and that the citation map resolves them back to
    the retrieved chunk IDs.
-5. **Show safe refusal.** Select the prepared `Safe refusal` question and run
-   it. Explain that no evidence is a valid result and the system refuses rather
-   than fabricating an answer.
+5. **Show refusal.** Select the prepared `Quantum entanglement` question and
+   run it. Explain that the current fixture material does not cover the
+   question, so the system refuses rather than fabricating an answer. The
+   citation status is `SKIPPED` because there is no answer citation to validate.
 6. **Show technical details if asked.** Expand `Technical run details` to show
-   the complete run details, including the `EvidenceBundle`, `ValidatedAnswer`,
-   provenance and trace fields.
+   the compact run summary, `EvidenceBundle`, `ValidatedAnswer` and trace.
+   The technical view supports inspection and reproducibility; it is not
+   necessary to read every field aloud.
 
 ## Presenter checks
 
@@ -47,7 +50,7 @@ retrieval quality, model accuracy or a connected real LLM.
 | Grounded example | Answer and at least one evidence passage appear |
 | Evidence provenance | Evidence ID, chapter and source locator appear |
 | Citation integrity | `PASSED` and cited IDs exist in retrieved hits |
-| Out-of-scope example | No evidence and an explicit refusal |
+| Refusal example | No evidence and an explicit refusal |
 | Technical details | Bundle, validated answer and trace are visible |
 
 ## If the live page fails

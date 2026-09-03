@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import sys
 import time
 import uuid
@@ -178,6 +179,18 @@ def run_pipeline(
             (evidence_bundle.prompt_context or "").encode("utf-8")
         ).hexdigest(),
     }
+    LOGGER.info(
+        "trace request_id=%s query=%r profile_level=%s retrieved_ids=%s "
+        "selected_ids=%s citation_ids=%s context_hash=%s",
+        trace["request_id"],
+        trace["query"],
+        trace["profile_level"],
+        trace["retrieved_ids"],
+        trace["selected_evidence_ids"],
+        trace["citation_ids"],
+        trace["context_hash"],
+    )
+    LOGGER.info("trace_json=%s", json.dumps(trace, ensure_ascii=False, sort_keys=True))
     return PipelineRun(
         run_id=run_id,
         mode=deps.mode,

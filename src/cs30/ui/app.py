@@ -9,15 +9,16 @@ import streamlit as st
 from cs30.config import AppConfig, load_config
 from cs30.contracts import PipelineRun, StudentLevel
 from cs30.errors import CS30Error
-from cs30.logging import configure_logging
+from cs30.logging import configure_logging, get_logger
 from cs30.pipeline import build_fixture_deps, build_real_deps, run_pipeline
 
 DEFAULT_QUESTION = "What is acceleration?"
 EXAMPLE_QUESTIONS = {
     "Acceleration": DEFAULT_QUESTION,
     "Net force": "Why does an object accelerate when a net force acts on it?",
-    "Safe refusal": "What is quantum entanglement?",
+    "Quantum entanglement": "What is quantum entanglement?",
 }
+LOGGER = get_logger("ui")
 
 
 def inject_styles() -> None:
@@ -65,6 +66,15 @@ def inject_styles() -> None:
             letter-spacing: .025em;
         }
         .cs30-result-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 18px; }
+        .cs30-run-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 4px 0 18px;
+            color: var(--cs30-muted);
+            font-size: .86rem;
+        }
+        .cs30-run-meta strong { color: var(--cs30-ink); }
         .cs30-citation-chip,
         .cs30-integrity-chip {
             display: inline-flex;
@@ -128,6 +138,15 @@ def inject_styles() -> None:
             text-align: center;
         }
         .cs30-empty strong { display: block; margin-bottom: 6px; color: var(--cs30-ink); }
+        .cs30-refusal-note {
+            margin: 8px 0 4px;
+            padding: 10px 14px;
+            border: 1px solid #f0cf8a;
+            border-radius: 10px;
+            color: #8a5a00;
+            background: #fff8e6;
+            font-size: .92rem;
+        }
         .cs30-footer {
             margin-top: 26px;
             padding-top: 14px;
@@ -159,38 +178,27 @@ def execute_configured_run(
 
 
 def render_result(run: PipelineRun) -> None:
-    """Render one complete pipeline result without changing its contract."""
+    """Render the new PipelineRun contract; business decisions stay in pipeline."""
+
+    bundle = run.evidence_bundle
+    validated = run.validated_answer
+    if bundle is None or validated is None:
+        raise ValueError("PipelineRun must contain evidence_bundle and validated_answer")
 
     st.markdown('<p class="cs30-section-label">PIPELINE OUTPUT</p>', unsafe_allow_html=True)
-    bundle = getattr(run, "evidence_bundle", None)
-    retrieval_mode = getattr(getattr(run, "retrieval", None), "mode", None)
-    if retrieval_mode is None and bundle is not None:
-        retrieval_mode = bundle.retrieval_mode
-    retrieval_mode_text = getattr(retrieval_mode, "value", retrieval_mode or "unknown")
-    summary_columns = st.columns(3)
-    summary_columns[0].metric("Query", run.question)
-    summary_columns[1].metric("Retrieval mode", retrieval_mode_text)
-    summary_columns[2].metric("Run ID", run.run_id)
     if run.answer.abstained:
-        st.warning("The system refused to answer because the retrieved evidence was insufficient.")
+        st.markdown(
+            '<div class="cs30-refusal-note"><strong>Grounded answer unavailable</strong></div>',
+            unsafe_allow_html=True,
+        )
         st.write(run.answer.explanation)
     else:
         st.markdown('<p class="cs30-field-title">Generated answer</p>', unsafe_allow_html=True)
         if run.answer.final_choice:
             st.markdown(f"**Final choice:** {run.answer.final_choice}")
         st.write(run.answer.explanation)
-    citation_chip = ""
-    if run.answer.citations:
-        citation_text = ", ".join(run.answer.citations)
-        citation_chip = (
-            '<span class="cs30-citation-chip">Cited evidence ID · '
-            f"{escape(citation_text)}</span>"
-        )
-    integrity_status = (
-        "skipped"
-        if run.answer.abstained
-        else run.citation_integrity
-    )
+
+    integrity_status = validated.citation_status
     integrity_class = (
         "cs30-integrity-chip skipped"
         if integrity_status == "skipped"
@@ -201,43 +209,50 @@ def render_result(run: PipelineRun) -> None:
         f"{escape(integrity_status.upper())}</span>"
     )
     st.markdown(
-        f'<div class="cs30-result-meta">{citation_chip}{integrity_chip}</div>',
+        f'<div class="cs30-result-meta">{integrity_chip}</div>',
         unsafe_allow_html=True,
     )
+
+    st.markdown(
+        '<div class="cs30-run-meta">'
+        f'<span><strong>Retrieval mode:</strong> <code>{escape(bundle.retrieval_mode.value)}</code></span>'
+        f'<span><strong>Run ID:</strong> <code>{escape(run.run_id)}</code></span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
     st.markdown('<p class="cs30-field-title">Retrieved evidence</p>', unsafe_allow_html=True)
-    evidence_items = bundle.evidence_items if bundle is not None else []
-    if not evidence_items and run.retrieval.hits:
-        evidence_items = run.retrieval.hits
-    if not evidence_items:
+    if not bundle.evidence_items:
         st.caption("No relevant evidence was retrieved.")
-    for position, item in enumerate(evidence_items, start=1):
-        evidence_id = getattr(item, "evidence_id", f"E{position}")
-        source_locator = getattr(item, "source_locator", item.source)
-        cited = " · cited" if (
-            evidence_id in run.answer.citations or item.chunk_id in run.answer.citations
-        ) else ""
+    for item in bundle.evidence_items:
+        cited = " · cited" if item.evidence_id in run.answer.citations else ""
         with st.container(border=True):
             st.markdown(
-                f"**{evidence_id} · rank {item.rank} · {item.chunk_id}** "
+                f"**{item.evidence_id} · rank {item.rank} · {item.chunk_id}** "
                 f"— score {item.score:.2f}{cited}"
             )
             st.write(item.text)
             st.caption(
                 f"Chapter: {item.chapter_id} · Source: {item.source} · "
-                f"Source locator: {source_locator}"
+                f"Source locator: {item.source_locator}"
             )
 
     with st.expander("Technical run details"):
+        validated_snapshot = validated.model_dump(mode="json")
+        # Run provenance is already preserved in the Evidence Bundle. Keep the
+        # validated answer focused on answer/citation state in this view.
+        validated_snapshot.pop("run_provenance", None)
         st.json(
             {
-                "evidence_bundle": bundle.model_dump(mode="json") if bundle else None,
-                "validated_answer": (
-                    run.validated_answer.model_dump(mode="json")
-                    if getattr(run, "validated_answer", None)
-                    else None
-                ),
-                "trace": getattr(run, "trace", {}),
-                "pipeline_run": run.model_dump(mode="json"),
+                "run_summary": {
+                    "run_id": run.run_id,
+                    "mode": run.mode,
+                    "profile": run.profile.model_dump(mode="json"),
+                    "metadata": run.metadata,
+                },
+                "evidence_bundle": bundle.model_dump(mode="json"),
+                "validated_answer": validated_snapshot,
+                "trace": run.trace,
             }
         )
 
@@ -313,12 +328,18 @@ def main() -> None:
                 try:
                     run = execute_configured_run(question, StudentLevel(level_value), config)
                 except (CS30Error, NotImplementedError, ValueError) as exc:
+                    LOGGER.exception("pipeline_failed query=%r error=%s", question, exc)
                     st.error(f"The pipeline could not run: {exc}")
                     if not config.fixture_mode:
                         st.warning("Falling back to the offline fixture pipeline for this run.")
                         try:
                             run = execute_fixture_run(question, StudentLevel(level_value))
                         except (CS30Error, ValueError) as fallback_exc:
+                            LOGGER.exception(
+                                "fixture_fallback_failed query=%r error=%s",
+                                question,
+                                fallback_exc,
+                            )
                             st.error(f"The fixture fallback also failed: {fallback_exc}")
                         else:
                             run.metadata["fallback_reason"] = str(exc)

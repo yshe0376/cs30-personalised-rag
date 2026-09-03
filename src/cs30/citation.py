@@ -31,7 +31,11 @@ def build_evidence_bundle(
 
     items = []
     used_tokens = 0
+    seen_chunk_ids: set[str] = set()
     for hit in retrieval.hits:
+        if hit.chunk_id in seen_chunk_ids:
+            continue
+        seen_chunk_ids.add(hit.chunk_id)
         token_count = max(1, len(hit.text.split()))
         if items and used_tokens + token_count > token_budget:
             break
