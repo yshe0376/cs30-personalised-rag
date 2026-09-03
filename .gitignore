@@ -27,6 +27,7 @@ logs/
 cache/
 *.faiss
 *.index
+/data/index/
 
 # Keep placeholder files in ignored data directories
 !data/raw/.gitkeep
