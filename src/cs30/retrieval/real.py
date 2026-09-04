@@ -661,21 +661,11 @@ class RealRetrievalService:
             input_top_k=input_top_k,
         )
 
-    def load_index(self, artifact: IndexArtifact) -> None:
-        # Hybrid loads both shared instances exactly once.
-        self.hybrid.load_index(artifact)
-
-    def retrieve(self, query: str, top_k: int, mode: RetrievalMode) -> RetrievalResult:
-        if mode is RetrievalMode.DENSE:
-            return self.dense.retrieve(query, top_k)
-        if mode is RetrievalMode.BM25:
-            return self.bm25.retrieve(query, top_k)
-        if mode is RetrievalMode.HYBRID:
-            return self.hybrid.retrieve(query, top_k)
-        raise RetrievalModeError(f"unsupported real retrieval mode: {mode}")
-
-    def backend(self, mode: RetrievalMode) -> FaissDenseRetriever | BM25Retriever | RRFRetriever:
-        """Return a two-argument Retriever for the existing online pipeline."""
+    def backend(
+        self,
+        mode: RetrievalMode,
+    ) -> FaissDenseRetriever | BM25Retriever | RRFRetriever:
+        """Return the retrieval backend selected for one experiment."""
 
         if mode is RetrievalMode.DENSE:
             return self.dense
@@ -683,4 +673,32 @@ class RealRetrievalService:
             return self.bm25
         if mode is RetrievalMode.HYBRID:
             return self.hybrid
-        raise RetrievalModeError(f"unsupported real retrieval mode: {mode}")
+        raise RetrievalModeError(
+            f"unsupported real retrieval mode: {mode}"
+        )
+
+    def load_index(
+        self,
+        artifact: IndexArtifact,
+        mode: RetrievalMode,
+    ) -> None:
+        """Load only the backend required by the selected mode."""
+
+        self.backend(mode).load_index(artifact)
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int,
+        mode: RetrievalMode,
+    ) -> RetrievalResult:
+        """Retrieve evidence and enforce real-mode provenance."""
+
+        result = self.backend(mode).retrieve(query, top_k)
+
+        if result.provenance is None:
+            raise ArtifactMismatchError(
+                "real retrieval result must include provenance"
+            )
+
+        return result
