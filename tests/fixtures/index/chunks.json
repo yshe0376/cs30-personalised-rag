@@ -1,0 +1,16 @@
+[
+  {
+    "position": 0,
+    "chunk_id": "ci-acceleration-definition",
+    "text": "Acceleration is the rate at which velocity changes with time.",
+    "chapter_id": "motion",
+    "source": "fixture://openstax/motion"
+  },
+  {
+    "position": 1,
+    "chunk_id": "ci-acceleration-unit",
+    "text": "The SI unit of acceleration is metres per second squared.",
+    "chapter_id": "motion",
+    "source": "fixture://openstax/motion"
+  }
+]
