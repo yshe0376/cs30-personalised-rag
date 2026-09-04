@@ -203,9 +203,13 @@ def run_pipeline(
             "mode": deps.mode,
         },
     )
-    # M7 owns generation and consumes the frozen RetrievalResult contract.
-    # M8 owns the post-generation evidence/citation governance boundary.
-    answer = deps.generator.generate(question, profile, retrieval)
+    # M8 owns the bundle boundary; M7 consumes it through the optional seam.
+    # The legacy RetrievalResult port remains available for older generators.
+    generate_from_bundle = getattr(deps.generator, "generate_from_bundle", None)
+    if callable(generate_from_bundle):
+        answer = generate_from_bundle(question, profile, evidence_bundle)
+    else:
+        answer = deps.generator.generate(question, profile, retrieval)
     LOGGER.info(
         "generation level=%s abstained=%s citations=%d",
         profile.level.value,

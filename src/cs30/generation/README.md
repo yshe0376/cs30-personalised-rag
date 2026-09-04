@@ -9,10 +9,10 @@ generate(question, profile, retrieval) -> GeneratedAnswer
 It implements `cs30.ports.AnswerGenerator` without changing the frozen
 cross-module contracts.
 
-Member 8 builds an `EvidenceBundle` from the same `RetrievalResult` and
-validates the generated answer after this boundary. The generator therefore
-continues to receive `RetrievalResult`; the orchestration layer connects the
-M7 answer to Member 8's citation resolver.
+Member 8 builds an `EvidenceBundle` and supplies it to generators that expose
+the bundle seam. The legacy `generate(..., RetrievalResult)` port remains
+available so older adapters continue to work during integration. The
+orchestration layer connects the M7 answer to Member 8's citation resolver.
 
 ## What is implemented
 
