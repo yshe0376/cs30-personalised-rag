@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 import cs30.retrieval.real as real_retrieval
-from cs30.contracts import IndexArtifact
+from cs30.contracts import IndexArtifact, RetrievalMode, RetrievalResult
+from cs30.errors import ArtifactMismatchError
 
 
 def _chunks() -> list[dict]:
@@ -144,4 +145,71 @@ def test_dense_rejects_invalid_similarity_threshold() -> None:
     ):
         real_retrieval.FaissDenseRetriever(
             min_similarity=1.1,
+        )
+
+
+class _SpyRetriever:
+    def __init__(
+        self,
+        result: RetrievalResult | None = None,
+    ) -> None:
+        self.loaded = False
+        self.result = result
+
+    def load_index(self, artifact: IndexArtifact) -> None:
+        self.loaded = True
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int,
+    ) -> RetrievalResult:
+        if self.result is None:
+            raise AssertionError("no fake retrieval result was configured")
+        return self.result
+
+
+def test_real_service_loads_only_selected_backend() -> None:
+    dense = _SpyRetriever()
+    bm25 = _SpyRetriever()
+    hybrid = _SpyRetriever()
+
+    service = real_retrieval.RealRetrievalService(
+        dense=dense,
+        bm25=bm25,
+        hybrid=hybrid,
+    )
+
+    service.load_index(
+        _artifact(),
+        RetrievalMode.BM25,
+    )
+
+    assert bm25.loaded is True
+    assert dense.loaded is False
+    assert hybrid.loaded is False
+
+
+def test_real_service_rejects_result_without_provenance() -> None:
+    bm25_result = RetrievalResult(
+        query="What is acceleration?",
+        mode=RetrievalMode.BM25,
+        hits=[],
+        provenance=None,
+    )
+
+    service = real_retrieval.RealRetrievalService(
+        dense=_SpyRetriever(),
+        bm25=_SpyRetriever(result=bm25_result),
+        hybrid=_SpyRetriever(),
+    )
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="real retrieval result must include provenance",
+    ):
+        service.retrieve(
+            "What is acceleration?",
+            top_k=5,
+            mode=RetrievalMode.BM25,
         )
