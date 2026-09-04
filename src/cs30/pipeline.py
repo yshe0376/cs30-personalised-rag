@@ -45,7 +45,7 @@ from cs30.retrieval import (
     BM25Retriever,
     FaissDenseRetriever,
     FixtureRetriever,
-    RRFRetriever,
+       RealRetrievalService,
 )
 
 LOGGER = get_logger("pipeline")
@@ -157,31 +157,32 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
                 f"failed to load IndexArtifact from {artifact_path}: {exc}"
             ) from exc
 
-        artifact = artifact.model_copy(update={"location": str(index_dir)})
+        artifact = IndexArtifact.model_validate({
+           **artifact.model_dump(),
+           "location": str(index_dir),
+        })
 
         retrieval_mode = config.retrieval.mode
 
-        if retrieval_mode is RetrievalMode.BM25:
-            retriever = BM25Retriever(
-                min_score=config.retrieval.bm25_min_score,
-            )
-        elif retrieval_mode is RetrievalMode.DENSE:
-             retriever = FaissDenseRetriever(
-                 min_similarity=config.retrieval.dense_min_similarity,
-            )
-        elif retrieval_mode is RetrievalMode.HYBRID:
-            retriever = RRFRetriever(
-               dense=FaissDenseRetriever(
-                 min_similarity=config.retrieval.dense_min_similarity,
-               ),
-               bm25=BM25Retriever(
-                 min_score=config.retrieval.bm25_min_score,
-               ),
-               rrf_k=config.retrieval.rrf_k,
-               input_top_k=config.retrieval.rrf_input_top_k,
-            )
+        dense_retriever = FaissDenseRetriever(
+            min_similarity=config.retrieval.dense_min_similarity,
+        )
+        bm25_retriever = BM25Retriever(
+            min_score=config.retrieval.bm25_min_score,
+        )
 
-        retriever.load_index(artifact)
+        retrieval_service = RealRetrievalService(
+            dense=dense_retriever,
+            bm25=bm25_retriever,
+            rrf_k=config.retrieval.rrf_k,
+            input_top_k=config.retrieval.rrf_input_top_k,
+        )
+
+        retrieval_service.load_index(
+            artifact,
+            retrieval_mode,
+        )
+        retriever = retrieval_service.backend(retrieval_mode)
         dependency_mode = "real"
 
     provider = config.generation.provider.casefold()
