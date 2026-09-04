@@ -18,17 +18,15 @@ from typing import Literal
 from cs30.chunking import FixtureChunker
 from cs30.citation import validate_citations
 from cs30.config import AppConfig, load_config
-from cs30.contracts import IndexArtifact, PipelineRun, RetrievalHit, StudentLevel
-from cs30.errors import ConfigError, CS30Error, EmptyQueryError
+from cs30.contracts import IndexArtifact, PipelineRun, RetrievalMode, StudentLevel
+from cs30.errors import ConfigError, CS30Error, EmptyQueryError, IndexUnavailableError
 from cs30.generation import (
-    CombinedEvidenceRetriever,
     FixtureAnswerGenerator,
     MockJsonLLMClient,
     OllamaChatClient,
     OpenAIResponsesClient,
     PersonalisedAnswerGenerator,
 )
-from cs30.generation.demo import build_all_dataset_items
 from cs30.indexing import FixtureIndexBuilder
 from cs30.ingest import FixtureDocumentParser
 from cs30.logging import configure_logging, get_logger
@@ -41,7 +39,12 @@ from cs30.ports import (
     Retriever,
 )
 from cs30.profile import FixtureProfileProvider, Week1ProfileProvider
-from cs30.retrieval import FixtureRetriever
+from cs30.retrieval import (
+    BM25Retriever,
+    FaissDenseRetriever,
+    FixtureRetriever,
+    RRFRetriever,
+)
 
 LOGGER = get_logger("pipeline")
 
@@ -121,14 +124,40 @@ def run_build_pipeline(source: Path, deps: BuildDeps) -> IndexArtifact:
 
 
 def build_real_deps(config: AppConfig) -> PipelineDeps:
-    """Build configured generation over the available fixture evidence."""
+    """Build real retrieval from Member 5's artifact plus configured generation."""
 
-    dataset = build_all_dataset_items(StudentLevel.INTERMEDIATE)
-    evidence_by_id: dict[str, RetrievalHit] = {}
-    for item in dataset.items:
-        for hit in item.retrieval.hits:
-            evidence_by_id.setdefault(hit.chunk_id, hit)
-    retriever = CombinedEvidenceRetriever(evidence_by_id.values())
+    index_dir = Path(config.retrieval.index_dir)
+    artifact_path = index_dir / "artifact.json"
+    try:
+        artifact = IndexArtifact.model_validate_json(
+            artifact_path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError) as exc:
+        raise IndexUnavailableError(
+            f"failed to load IndexArtifact from {artifact_path}: {exc}"
+        ) from exc
+
+    # The artifact directory may have moved with a cloned repository.  Its
+    # manifest still identifies the same corpus/index, while the configured
+    # directory is the authoritative local location.
+    artifact = artifact.model_copy(update={"location": str(index_dir)})
+
+    retrieval_mode = config.retrieval.mode
+    if retrieval_mode is RetrievalMode.BM25:
+        retriever = BM25Retriever()
+    elif retrieval_mode is RetrievalMode.DENSE:
+        retriever = FaissDenseRetriever()
+    elif retrieval_mode is RetrievalMode.HYBRID:
+        retriever = RRFRetriever(
+            rrf_k=config.retrieval.rrf_k,
+            input_top_k=config.retrieval.rrf_input_top_k,
+        )
+    else:
+        raise ConfigError(
+            "real retrieval mode must be bm25, dense, or hybrid; "
+            f"received {retrieval_mode.value!r}"
+        )
+    retriever.load_index(artifact)
 
     provider = config.generation.provider.casefold()
     if provider == "mock":
@@ -152,7 +181,7 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
 
     return PipelineDeps(
-        mode="fixture",
+        mode="real",
         profile_provider=Week1ProfileProvider(profile_prefix="local-rag"),
         retriever=retriever,
         generator=PersonalisedAnswerGenerator(
@@ -256,6 +285,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of evidence passages to retrieve",
     )
     parser.add_argument(
+        "--retrieval-mode",
+        choices=[
+            RetrievalMode.BM25.value,
+            RetrievalMode.DENSE.value,
+            RetrievalMode.HYBRID.value,
+        ],
+        default=None,
+        help="Real retrieval backend: bm25, dense, or hybrid",
+    )
+    parser.add_argument(
         "--answer-only",
         action="store_true",
         help="Print only the final explanation and suppress informational logs",
@@ -287,6 +326,14 @@ def main() -> None:
                 update={
                     "retrieval": config.retrieval.model_copy(
                         update={"top_k": args.top_k}
+                    )
+                }
+            )
+        if args.retrieval_mode is not None:
+            config = config.model_copy(
+                update={
+                    "retrieval": config.retrieval.model_copy(
+                        update={"mode": RetrievalMode(args.retrieval_mode)}
                     )
                 }
             )
