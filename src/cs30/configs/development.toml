@@ -5,6 +5,10 @@ fixture_mode = true
 [retrieval]
 top_k = 3
 index_type = "IndexFlatIP"
+mode = "hybrid"
+index_dir = "data/index"
+rrf_k = 60
+rrf_input_top_k = 20
 
 [generation]
 provider = "mock"
