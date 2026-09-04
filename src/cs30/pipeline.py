@@ -23,9 +23,17 @@ from cs30.citation import (
     EvidenceContextBuilder,
 )
 from cs30.config import AppConfig, load_config
-from cs30.contracts import IndexArtifact, PipelineRun, StudentLevel
-from cs30.errors import CS30Error, EmptyQueryError
-from cs30.generation import FixtureAnswerGenerator
+from cs30.contracts import IndexArtifact, PipelineRun, RetrievalHit, StudentLevel
+from cs30.errors import ConfigError, CS30Error, EmptyQueryError
+from cs30.generation import (
+    CombinedEvidenceRetriever,
+    FixtureAnswerGenerator,
+    MockJsonLLMClient,
+    OllamaChatClient,
+    OpenAIResponsesClient,
+    PersonalisedAnswerGenerator,
+)
+from cs30.generation.demo import build_all_dataset_items
 from cs30.indexing import FixtureIndexBuilder
 from cs30.ingest import FixtureDocumentParser
 from cs30.logging import configure_logging, get_logger
@@ -37,7 +45,7 @@ from cs30.ports import (
     ProfileProvider,
     Retriever,
 )
-from cs30.profile import FixtureProfileProvider
+from cs30.profile import FixtureProfileProvider, Week1ProfileProvider
 from cs30.retrieval import FixtureRetriever
 
 LOGGER = get_logger("pipeline")
@@ -85,6 +93,17 @@ def build_fixture_deps() -> PipelineDeps:
     )
 
 
+def build_task7_smoke_deps() -> PipelineDeps:
+    """Exercise member 7 against fixture retrieval without calling a remote model."""
+
+    return PipelineDeps(
+        mode="fixture",
+        profile_provider=Week1ProfileProvider(profile_prefix="task7-smoke"),
+        retriever=FixtureRetriever(),
+        generator=PersonalisedAnswerGenerator(MockJsonLLMClient()),
+    )
+
+
 def build_fixture_build_deps() -> BuildDeps:
     """Stand-in modules for exercising the complete offline hand-off."""
 
@@ -107,15 +126,44 @@ def run_build_pipeline(source: Path, deps: BuildDeps) -> IndexArtifact:
 
 
 def build_real_deps(config: AppConfig) -> PipelineDeps:
-    """Wire the real modules.
+    """Build configured generation over the available fixture evidence."""
 
-    Replace one field at a time as each member's module lands. This is the only
-    function that changes during integration.
-    """
+    dataset = build_all_dataset_items(StudentLevel.INTERMEDIATE)
+    evidence_by_id: dict[str, RetrievalHit] = {}
+    for item in dataset.items:
+        for hit in item.retrieval.hits:
+            evidence_by_id.setdefault(hit.chunk_id, hit)
+    retriever = CombinedEvidenceRetriever(evidence_by_id.values())
 
-    raise NotImplementedError(
-        "real adapters are not wired yet - run with --mode fixture, or set "
-        "fixture_mode = true for this environment"
+    provider = config.generation.provider.casefold()
+    if provider == "mock":
+        client = MockJsonLLMClient()
+    elif provider == "ollama":
+        client = OllamaChatClient(
+            config.generation.model or "gpt-oss:20b",
+            temperature=config.generation.temperature,
+        )
+    elif provider == "openai":
+        if not config.generation.model:
+            raise ConfigError("LLM_MODEL is required when LLM_PROVIDER=openai")
+        client = OpenAIResponsesClient(
+            config.generation.model,
+            temperature=config.generation.temperature,
+        )
+    else:
+        raise ConfigError(
+            "LLM_PROVIDER must be one of: mock, ollama, openai; "
+            f"received {config.generation.provider!r}"
+        )
+
+    return PipelineDeps(
+        mode="fixture",
+        profile_provider=Week1ProfileProvider(profile_prefix="local-rag"),
+        retriever=retriever,
+        generator=PersonalisedAnswerGenerator(
+            client,
+            max_retries=config.generation.max_retries,
+        ),
     )
 
 
@@ -155,7 +203,9 @@ def run_pipeline(
             "mode": deps.mode,
         },
     )
-    answer = deps.generator.generate(question, profile, evidence_bundle)
+    # M7 owns generation and consumes the frozen RetrievalResult contract.
+    # M8 owns the post-generation evidence/citation governance boundary.
+    answer = deps.generator.generate(question, profile, retrieval)
     LOGGER.info(
         "generation level=%s abstained=%s citations=%d",
         profile.level.value,
@@ -164,7 +214,7 @@ def run_pipeline(
     )
 
     validated_answer = CitationResolver().resolve(answer, evidence_bundle)
-    trace = {
+    run_trace = {
         "request_id": run_id,
         "query": question,
         "profile_level": profile.level.value,
@@ -182,15 +232,30 @@ def run_pipeline(
     LOGGER.info(
         "trace request_id=%s query=%r profile_level=%s retrieved_ids=%s "
         "selected_ids=%s citation_ids=%s context_hash=%s",
-        trace["request_id"],
-        trace["query"],
-        trace["profile_level"],
-        trace["retrieved_ids"],
-        trace["selected_evidence_ids"],
-        trace["citation_ids"],
-        trace["context_hash"],
+        run_trace["request_id"],
+        run_trace["query"],
+        run_trace["profile_level"],
+        run_trace["retrieved_ids"],
+        run_trace["selected_evidence_ids"],
+        run_trace["citation_ids"],
+        run_trace["context_hash"],
     )
-    LOGGER.info("trace_json=%s", json.dumps(trace, ensure_ascii=False, sort_keys=True))
+    LOGGER.info("trace_json=%s", json.dumps(run_trace, ensure_ascii=False, sort_keys=True))
+    metadata = {
+        "environment": config.environment,
+        "top_k": str(config.retrieval.top_k),
+        "index_type": str(
+            getattr(deps.retriever, "index_type", config.retrieval.index_type)
+        ),
+        "provider": config.generation.provider,
+        "retrieval_ms": f"{retrieval_ms:.1f}",
+    }
+    generation_trace = getattr(deps.generator, "last_trace", None)
+    if generation_trace is not None and callable(getattr(generation_trace, "to_metadata", None)):
+        metadata.update(generation_trace.to_metadata())
+    evidence_count = getattr(deps.retriever, "evidence_count", None)
+    if evidence_count is not None:
+        metadata["corpus_evidence_count"] = str(evidence_count)
     return PipelineRun(
         run_id=run_id,
         mode=deps.mode,
@@ -206,10 +271,11 @@ def run_pipeline(
             "retrieval_mode": retrieval.mode.value,
             "provider": config.generation.provider,
             "retrieval_ms": f"{retrieval_ms:.1f}",
+            **metadata,
         },
         evidence_bundle=evidence_bundle,
         validated_answer=validated_answer,
-        trace=trace,
+        trace=run_trace,
     )
 
 
@@ -229,6 +295,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Override the environment's fixture_mode setting",
     )
+    parser.add_argument(
+        "--provider",
+        choices=["mock", "ollama", "openai"],
+        default=None,
+        help="Generation provider override; use ollama for the local real model",
+    )
+    parser.add_argument("--model", default=None, help="Generation model override")
+    parser.add_argument(
+        "--top-k",
+        type=int,
+        default=None,
+        help="Number of evidence passages to retrieve",
+    )
+    parser.add_argument(
+        "--answer-only",
+        action="store_true",
+        help="Print only the final explanation and suppress informational logs",
+    )
     return parser
 
 
@@ -236,7 +320,30 @@ def main() -> None:
     args = build_parser().parse_args()
     try:
         config = load_config(args.env)
-        configure_logging(config.log_level)
+        if args.provider is not None or args.model is not None:
+            generation_updates = {}
+            if args.provider is not None:
+                generation_updates["provider"] = args.provider
+            if args.model is not None:
+                generation_updates["model"] = args.model
+            config = config.model_copy(
+                update={
+                    "generation": config.generation.model_copy(
+                        update=generation_updates
+                    )
+                }
+            )
+        if args.top_k is not None:
+            if args.top_k < 1:
+                raise ConfigError("--top-k must be positive")
+            config = config.model_copy(
+                update={
+                    "retrieval": config.retrieval.model_copy(
+                        update={"top_k": args.top_k}
+                    )
+                }
+            )
+        configure_logging("WARNING" if args.answer_only else config.log_level)
         mode = args.mode or ("fixture" if config.fixture_mode else "real")
         if mode == "fixture":
             print(FIXTURE_BANNER, file=sys.stderr)
@@ -247,7 +354,10 @@ def main() -> None:
     except (CS30Error, NotImplementedError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
-    print(run.model_dump_json(indent=2))
+    if args.answer_only:
+        print(run.answer.explanation)
+    else:
+        print(run.model_dump_json(indent=2))
 
 
 if __name__ == "__main__":

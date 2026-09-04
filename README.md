@@ -131,7 +131,62 @@ cs30-demo --question "What is quantum entanglement?" --level advanced
 ```
 
 Useful flags: `--level beginner|intermediate|advanced`, `--env
-development|staging`, `--mode fixture|real`.
+development|staging`, `--mode fixture|real`, `--provider mock|ollama|openai`,
+`--model`, and `--top-k`.
+
+To ask an arbitrary question through the combined local RAG corpus and the
+installed Ollama model:
+
+```bash
+python -m cs30.pipeline --mode real --provider ollama --model gpt-oss:20b \
+  --question "What is the difference between velocity and acceleration?" \
+  --level beginner --top-k 3
+```
+
+The portable retriever searches every available evidence passage while keeping
+the frozen `Retriever` and `AnswerGenerator` interfaces unchanged. It returns
+an empty result for insufficient matches, causing a grounded abstention rather
+than an unrelated answer. This is a local engineering path, not a formal
+retrieval-effectiveness result. Although `--mode real` selects the configured
+model-provider path, its `PipelineRun` and retrieval output remain labelled
+`fixture` until the real Member 6 retriever and index are connected.
+
+For a concise terminal answer, omit `--top-k` to use the configured default of
+3 and add `--answer-only`:
+
+```bash
+python -m cs30.pipeline --mode real --provider ollama --model gpt-oss:20b \
+  --question "What is Newton's second law?" --level beginner --answer-only
+```
+
+### Member 7 smoke delivery
+
+The Week 1 profile, prompt, fixed JSON, retry, and citation path can be exercised
+against every available local and packaged dataset without an API key:
+
+```bash
+python -m cs30.generation.demo --provider mock
+```
+
+By default it combines the original 20-question fixture, Member 3's packaged
+24-question SciQ set and 8 free questions, plus the local 20-row SciQ file when
+`data/raw/sciq/train_first_20.json` exists. Set `CS30_LOCAL_SCIQ_PATH` to use a
+different local file. Each output row records its dataset source. Use
+`--dataset original`, `--dataset team`, or `--dataset local-sciq` to run one
+group. The 8 free questions explicitly abstain until a retriever supplies
+matching evidence.
+
+To use a real model without API fees, install Ollama, run
+`ollama run gpt-oss:20b` once, then smoke-test the existing generation path:
+
+```bash
+python -m cs30.generation.demo --provider ollama --model gpt-oss:20b \
+  --limit 1 --skip-three-level --output-dir artifacts/task7-ollama-smoke
+```
+
+The model runs on the local machine and does not require an API key. Evidence
+remains explicitly labelled fixture evidence, so the smoke test must not be
+reported as model-effectiveness evidence.
 
 ### Fixture mode
 

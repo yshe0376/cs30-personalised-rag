@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.12,<3",
     "streamlit>=1.50,<2",
+    "numpy>=1.26,<3",
 ]
 
 [project.optional-dependencies]
@@ -19,8 +20,13 @@ dev = [
     "ruff>=0.12,<1",
 ]
 
+ml = [
+    "faiss-cpu>=1.8,<2",
+    "sentence-transformers>=3,<6",
+]
 [project.scripts]
 cs30-demo = "cs30.pipeline:main"
+cs30-task7-demo = "cs30.generation.demo:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

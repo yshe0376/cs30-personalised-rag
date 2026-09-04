@@ -111,22 +111,25 @@ The offline and online paths have separate dependency groups:
   then passes the returned `IndexArtifact` to `Retriever.load_index()`.
 - `run_pipeline()` uses `PipelineDeps` for profile → retrieval → generation.
 
-`build_fixture_build_deps()` and `build_fixture_deps()` supply stand-ins. Online
-real adapters are wired in `build_real_deps()` one field at a time:
+`build_fixture_build_deps()` and `build_fixture_deps()` supply stand-ins. The
+configured-provider path is wired through the same frozen interfaces in
+`build_real_deps()`. It remains labelled as a fixture run until a real Member 6
+retriever and index replace the portable smoke evidence:
 
 ```python
 def build_real_deps(config: AppConfig) -> PipelineDeps:
     return PipelineDeps(
-        mode="real",
-        profile_provider=FixtureProfileProvider(),   # still fixture
-        retriever=FaissRetriever(config),            # member 6 landed
-        generator=FixtureAnswerGenerator(),          # still fixture
+        mode="fixture",
+        profile_provider=Week1ProfileProvider(),
+        retriever=CombinedEvidenceRetriever(evidence),
+        generator=PersonalisedAnswerGenerator(client),
     )
 ```
 
 Member 3 works behind `QuestionProvider`; member 8 consumes `PipelineRun`
 directly. This keeps module work independent without claiming that the UI is a
-computational Protocol implementation.
+computational Protocol implementation. Member 6's later dense retriever can
+replace the portable retriever without changing `PipelineDeps` or the contracts.
 
 ## 5. What is deliberately absent in week 1
 

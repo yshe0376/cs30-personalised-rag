@@ -215,7 +215,8 @@ def render_result(run: PipelineRun) -> None:
 
     st.markdown(
         '<div class="cs30-run-meta">'
-        f'<span><strong>Retrieval mode:</strong> <code>{escape(bundle.retrieval_mode.value)}</code></span>'
+        f'<span><strong>Retrieval mode:</strong> '
+        f'<code>{escape(bundle.retrieval_mode.value)}</code></span>'
         f'<span><strong>Run ID:</strong> <code>{escape(run.run_id)}</code></span>'
         '</div>',
         unsafe_allow_html=True,
