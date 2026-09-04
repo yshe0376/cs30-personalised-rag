@@ -247,6 +247,12 @@ class FaissDenseRetriever:
         self._effective_instruction = ""
 
     def load_index(self, artifact: IndexArtifact) -> None:
+        if artifact.index_type != self.index_type:
+            raise ArtifactMismatchError(
+                "Dense retrieval requires a faiss-flat-ip artifact; "
+                f"received {artifact.index_type!r}"
+            )
+
         model_name = artifact.metadata.get("embedding_model")
         if not model_name:
             raise ArtifactMismatchError(
