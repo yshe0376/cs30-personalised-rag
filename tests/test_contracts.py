@@ -212,7 +212,7 @@ def test_abstained_answer_must_not_cite_evidence() -> None:
 
 
 def test_non_abstained_answer_requires_a_citation() -> None:
-    with pytest.raises(ValidationError, match="must cite at least one evidence ID"):
+    with pytest.raises(ValidationError, match="must cite at least one chunk"):
         GeneratedAnswer(explanation="Ungrounded claim with no evidence.")
 
 

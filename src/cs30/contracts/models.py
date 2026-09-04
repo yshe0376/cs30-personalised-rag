@@ -372,7 +372,7 @@ class GeneratedAnswer(ContractModel):
             if self.citations:
                 raise ValueError("an abstained answer must not cite evidence")
         elif not self.citations:
-            raise ValueError("a non-abstained answer must cite at least one evidence ID")
+            raise ValueError("a non-abstained answer must cite at least one chunk")
         return self
 
 
