@@ -233,6 +233,12 @@ def test_packaged_answer_fixture_still_validates() -> None:
     assert answer.citations
 
 
+def test_packaged_evidence_bundle_fixture_still_validates() -> None:
+    bundle = EvidenceBundle.model_validate(load_fixture("evidence_bundle.json"))
+    assert [item.evidence_id for item in bundle.evidence_items] == ["E1", "E2"]
+    assert bundle.citation_map["E1"] == "chunk_ch01_0001"
+
+
 def test_evidence_bundle_assigns_stable_ids_and_maps_chunks() -> None:
     retrieval = RetrievalResult.model_validate(load_fixture("retrieval_result.json"))
     bundle = build_evidence_bundle(retrieval, retrieval_mode="fixture")

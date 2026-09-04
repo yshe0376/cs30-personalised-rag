@@ -21,6 +21,8 @@ def test_fixture_pipeline_runs_end_to_end() -> None:
     result = run("What is acceleration?")
 
     assert result.mode == "fixture"
+    assert result.trace["index_version"] == "fixture-index-v1"
+    assert result.trace["artifact_version"] == "fixture-index-v1"
     assert result.profile.level is StudentLevel.BEGINNER
     assert result.retrieval.hits[0].chunk_id == "chunk_ch01_0001"
     assert result.answer.citations == ["chunk_ch01_0001"]

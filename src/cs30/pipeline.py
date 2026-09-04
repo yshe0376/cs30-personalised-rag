@@ -228,6 +228,21 @@ def run_pipeline(
         "context_hash": hashlib.sha256(
             (evidence_bundle.prompt_context or "").encode("utf-8")
         ).hexdigest(),
+        "corpus_version": (
+            retrieval.provenance.corpus_hash
+            if retrieval.provenance is not None
+            else "fixture-corpus-v1"
+        ),
+        "index_version": (
+            retrieval.provenance.index_version
+            if retrieval.provenance is not None
+            else "fixture-index-v1"
+        ),
+        "artifact_version": (
+            retrieval.provenance.index_version
+            if retrieval.provenance is not None
+            else "fixture-index-v1"
+        ),
     }
     LOGGER.info(
         "trace request_id=%s query=%r profile_level=%s retrieved_ids=%s "

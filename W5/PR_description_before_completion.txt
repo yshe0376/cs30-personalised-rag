@@ -1,0 +1,41 @@
+## Summary
+Complete Member 8's W3/W4 evidence governance and Streamlit demo UI work.
+
+## Completed work
+- Task 89: stabilise delivery tooling and UI integration by resolving UI-branch conflicts, verifying dependencies, displaying content type and source traceability, adding startup/runbook documentation, and documenting the main/PR/local working-state distinction
+- Task 37: build a typed EvidenceBundle, add EvidenceItem records, assemble token-budgeted context, assign stable evidence IDs, preserve provenance, and add contract tests
+- Task 38: implement citation resolution, citation validation, ValidatedAnswer, trace logging, failure handling, and tests
+- Task 40: deliver the thin Streamlit UI, stable demo, evidence/citation display, startup scripts, offline fallback, and documentation
+- Add smoke tests, contract tests, and operational documentation
+- Complete verification of the full test suite and lint checks
+
+## Contract impact
+
+- [ ] No public contract changes
+
+This PR adds EvidenceItem, EvidenceBundle, and ValidatedAnswer. It also extends PipelineRun with evidence_bundle, validated_answer, and trace. These structures are required to represent the evidence bundle, citation-validated answer, and traceable pipeline result defined for the Member 8 work.
+
+- [ ] Contract change discussed with the Leader and versioned
+
+The M8 contract additions follow the repository's existing schema_version: 1.0 convention. No migration is required because no previous EvidenceBundle data exists. Leader confirmation is requested for the final shared-contract decision and for the downstream EvidenceBundle hand-off to Member 7 described in Task 37.
+
+- [ ] Fixtures updated
+
+No new packaged EvidenceBundle fixture is included in this PR. The existing RetrievalResult fixture remains valid because the EvidenceBundle is assembled at runtime. The new bundle structure is covered by direct contract tests.
+
+## Verification
+- [x] `python -m ruff check .`
+- [x] `python -m pytest`
+- [x] Mock pipeline still runs
+- [x] No keys, private data, indexes, or model files committed
+
+Test result: 118 tests passed in 44.78 seconds.
+
+## Scope
+The staging demo uses fixture retrieval data. Real retriever and real LLM integration are outside the scope of this PR.
+
+## Related tasks
+Refs #89
+Refs #37
+Refs #38
+Refs #40

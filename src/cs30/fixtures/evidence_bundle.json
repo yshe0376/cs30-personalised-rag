@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "query": "What is acceleration?",
+  "retrieval_mode": "fixture",
+  "evidence_items": [
+    {
+      "evidence_id": "E1",
+      "chunk_id": "chunk_ch01_0001",
+      "text": "Acceleration is the rate of change of velocity with time.",
+      "chapter_id": "ch01_motion",
+      "source": "fixture://openstax/physics#ch01_motion",
+      "source_locator": "fixture://openstax/physics#ch01_motion",
+      "rank": 1,
+      "score": 0.96,
+      "token_count": 10
+    },
+    {
+      "evidence_id": "E2",
+      "chunk_id": "chunk_ch01_0002",
+      "text": "Its SI unit is metres per second squared.",
+      "chapter_id": "ch01_motion",
+      "source": "fixture://openstax/physics#ch01_motion",
+      "source_locator": "fixture://openstax/physics#ch01_motion",
+      "rank": 2,
+      "score": 0.82,
+      "token_count": 8
+    }
+  ],
+  "prompt_context": "[E1] Acceleration is the rate of change of velocity with time.\n\n[E2] Its SI unit is metres per second squared.",
+  "citation_map": {
+    "E1": "chunk_ch01_0001",
+    "E2": "chunk_ch01_0002"
+  },
+  "token_count": 18,
+  "retrieval_provenance": null,
+  "run_provenance": {
+    "environment": "development",
+    "mode": "fixture"
+  }
+}
