@@ -281,6 +281,8 @@ class RetrievedEvidence(ContractModel):
     text: SpanText
     chapter_id: Identifier
     source: Identifier
+    # Optional until the retrieval seam supplies a real corpus locator/span.
+    source_locator: Identifier | None = None
     score: float
     rank: int = Field(ge=1)
     retriever_type: RetrievalMode
@@ -384,7 +386,7 @@ class EvidenceItem(ContractModel):
     text: SpanText
     chapter_id: Identifier
     source: Identifier
-    source_locator: Identifier
+    source_locator: Identifier | None = None
     rank: int = Field(ge=1)
     score: float
     token_count: int = Field(gt=0)
@@ -417,14 +419,24 @@ class EvidenceBundle(ContractModel):
 
 
 class ValidatedAnswer(ContractModel):
-    """Answer plus citations resolved against the same evidence bundle."""
+    """Answer plus citations resolved against the same evidence bundle.
+
+    ``abstained`` is retained as a convenient top-level field for consumers
+    such as the UI, but it is derived from ``answer.abstained``.  Callers do
+    not get two independent abstention states to keep in sync.
+    """
 
     schema_version: Literal["1.0"] = "1.0"
     answer: GeneratedAnswer
     resolved_citations: list[Identifier] = Field(default_factory=list)
     citation_status: Literal["passed", "failed", "skipped"]
     run_provenance: dict[str, str] = Field(default_factory=dict)
-    abstained: bool
+    abstained: bool = False
+
+    @model_validator(mode="after")
+    def derive_abstention(self) -> "ValidatedAnswer":
+        self.abstained = self.answer.abstained
+        return self
 
 
 class PipelineRun(ContractModel):

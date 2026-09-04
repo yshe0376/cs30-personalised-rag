@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
+
+pytest.importorskip("streamlit")
 from streamlit.testing.v1 import AppTest
 
 from cs30.config import load_config

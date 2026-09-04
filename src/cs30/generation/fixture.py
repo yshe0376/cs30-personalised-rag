@@ -5,13 +5,7 @@ citation is always genuinely grounded in the retrieval input, and the requested
 level visibly changes the wording.
 """
 
-from cs30.contracts import (
-    EvidenceBundle,
-    GeneratedAnswer,
-    RetrievalResult,
-    StudentLevel,
-    StudentProfile,
-)
+from cs30.contracts import GeneratedAnswer, RetrievalResult, StudentLevel, StudentProfile
 
 _LEVEL_TEMPLATES = {
     StudentLevel.BEGINNER: "In simple terms, the textbook says: {evidence}",
@@ -41,23 +35,6 @@ class FixtureAnswerGenerator:
             return GeneratedAnswer(explanation=_NO_EVIDENCE, abstained=True)
 
         top = retrieval.hits[0]
-        template = _LEVEL_TEMPLATES[profile.level]
-        return GeneratedAnswer(
-            explanation=template.format(evidence=top.text),
-            citations=[top.chunk_id],
-        )
-
-    def generate_from_bundle(
-        self,
-        question: str,
-        profile: StudentProfile,
-        bundle: EvidenceBundle,
-    ) -> GeneratedAnswer:
-        """Consume the packaged evidence seam without changing legacy output IDs."""
-
-        if not bundle.evidence_items:
-            return GeneratedAnswer(explanation=_NO_EVIDENCE, abstained=True)
-        top = bundle.evidence_items[0]
         template = _LEVEL_TEMPLATES[profile.level]
         return GeneratedAnswer(
             explanation=template.format(evidence=top.text),

@@ -27,7 +27,7 @@ fi
 
 if ! .venv/bin/python -c "import streamlit, pytest, ruff, cs30.config" >/dev/null 2>&1; then
     echo "[CS-30] Installing project dependencies. This is required only on first use..."
-    .venv/bin/python -m pip install -e ".[dev]"
+    .venv/bin/python -m pip install -e ".[dev,ui]"
 fi
 
 mkdir -p "$CS30_LOG_DIR"

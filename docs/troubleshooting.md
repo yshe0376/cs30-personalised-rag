@@ -37,7 +37,7 @@ terminal. Close and reopen the terminal, then run the launcher again.
 Check the internet connection, VPN or university proxy. Then run:
 
 ```bash
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,ui]"
 ```
 
 Do not copy another member's `.venv`; virtual environments are machine-specific.

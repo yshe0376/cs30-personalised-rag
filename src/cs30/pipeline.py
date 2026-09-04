@@ -203,13 +203,10 @@ def run_pipeline(
             "mode": deps.mode,
         },
     )
-    # M8 owns the bundle boundary; M7 consumes it through the optional seam.
-    # The legacy RetrievalResult port remains available for older generators.
-    generate_from_bundle = getattr(deps.generator, "generate_from_bundle", None)
-    if callable(generate_from_bundle):
-        answer = generate_from_bundle(question, profile, evidence_bundle)
-    else:
-        answer = deps.generator.generate(question, profile, retrieval)
+    # M8 owns the evidence bundle and post-generation governance. Member 7's
+    # generator keeps its existing RetrievalResult interface until the team
+    # explicitly approves a bundle-consumer contract.
+    answer = deps.generator.generate(question, profile, retrieval)
     LOGGER.info(
         "generation level=%s abstained=%s citations=%d",
         profile.level.value,
@@ -235,17 +232,16 @@ def run_pipeline(
         "corpus_version": (
             retrieval.provenance.corpus_hash
             if retrieval.provenance is not None
-            else "fixture-corpus-v1"
+            else ("fixture-corpus-v1" if deps.mode == "fixture" else "unknown")
         ),
         "index_version": (
             retrieval.provenance.index_version
             if retrieval.provenance is not None
-            else "fixture-index-v1"
+            else ("fixture-index-v1" if deps.mode == "fixture" else "unknown")
         ),
-        "artifact_version": (
-            retrieval.provenance.index_version
-            if retrieval.provenance is not None
-            else "fixture-index-v1"
+        "artifact_version": str(
+            getattr(deps.retriever, "artifact_version", None)
+            or ("fixture-artifact-v1" if deps.mode == "fixture" else "unknown")
         ),
     }
     LOGGER.info(
@@ -283,15 +279,8 @@ def run_pipeline(
         profile=profile,
         retrieval=retrieval,
         answer=answer,
-        citation_integrity="passed",
-        metadata={
-            "environment": config.environment,
-            "top_k": str(config.retrieval.top_k),
-            "retrieval_mode": retrieval.mode.value,
-            "provider": config.generation.provider,
-            "retrieval_ms": f"{retrieval_ms:.1f}",
-            **metadata,
-        },
+        citation_integrity=validated_answer.citation_status,
+        metadata=metadata,
         evidence_bundle=evidence_bundle,
         validated_answer=validated_answer,
         trace=run_trace,

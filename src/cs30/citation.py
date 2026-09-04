@@ -24,7 +24,7 @@ def build_evidence_bundle(
     retrieval: RetrievalResult,
     *,
     retrieval_mode: str | None = None,
-    token_budget: int = 1200,
+    token_budget: int = 1500,
     run_provenance: dict[str, str] | None = None,
 ) -> EvidenceBundle:
     """Create stable E1/E2 identifiers without changing retrieved text."""
@@ -47,7 +47,7 @@ def build_evidence_bundle(
                 "text": hit.text,
                 "chapter_id": hit.chapter_id,
                 "source": hit.source,
-                "source_locator": hit.source,
+                "source_locator": hit.source_locator,
                 "rank": hit.rank,
                 "score": hit.score,
                 "token_count": token_count,
@@ -58,7 +58,8 @@ def build_evidence_bundle(
         query=retrieval.query,
         retrieval_mode=retrieval_mode or retrieval.mode,
         evidence_items=items,
-        prompt_context=("\n\n".join(f"[{i['evidence_id']}] {i['text']}" for i in items) or None),
+        # E IDs remain local display labels; M7 cites the stable chunk IDs.
+        prompt_context=("\n\n".join(f"[{i['chunk_id']}] {i['text']}" for i in items) or None),
         citation_map={i["evidence_id"]: i["chunk_id"] for i in items},
         token_count=used_tokens,
         retrieval_provenance=retrieval.provenance,
@@ -80,12 +81,11 @@ def resolve_and_validate(
             run_provenance=bundle.run_provenance,
             abstained=True,
         )
-    allowed_ids = set(bundle.citation_map)
     allowed_chunk_ids = set(bundle.citation_map.values())
-    invalid = sorted(set(answer.citations) - allowed_ids - allowed_chunk_ids)
+    invalid = sorted(set(answer.citations) - allowed_chunk_ids)
     if invalid:
         raise CitationIntegrityError(
-            f"answer contains unknown evidence IDs: {', '.join(invalid)}"
+            f"answer contains unknown citation IDs: {', '.join(invalid)}"
         )
     return ValidatedAnswer(
         answer=answer,
@@ -99,9 +99,9 @@ def resolve_and_validate(
 
 
 class EvidenceContextBuilder:
-    """Named W5 façade for constructing an EvidenceBundle."""
+    """Named W5 façade for constructing a 1500-token estimate."""
 
-    def __init__(self, token_budget: int = 1200) -> None:
+    def __init__(self, token_budget: int = 1500) -> None:
         self.token_budget = token_budget
 
     def build(

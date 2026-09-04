@@ -244,7 +244,8 @@ def test_evidence_bundle_assigns_stable_ids_and_maps_chunks() -> None:
     bundle = build_evidence_bundle(retrieval, retrieval_mode="fixture")
     assert [item.evidence_id for item in bundle.evidence_items] == ["E1", "E2"]
     assert bundle.citation_map["E1"] == bundle.evidence_items[0].chunk_id
-    assert bundle.prompt_context and "[E1]" in bundle.prompt_context
+    assert bundle.prompt_context
+    assert f"[{bundle.evidence_items[0].chunk_id}]" in bundle.prompt_context
     assert bundle.retrieval_provenance == retrieval.provenance
     assert bundle.run_provenance == {}
 
@@ -283,13 +284,13 @@ def test_evidence_bundle_rejects_duplicate_or_incomplete_map() -> None:
         )
 
 
-def test_resolver_accepts_legacy_chunk_ids_and_new_evidence_ids() -> None:
+def test_resolver_accepts_original_chunk_ids() -> None:
     retrieval = RetrievalResult.model_validate(load_fixture("retrieval_result.json"))
     bundle = build_evidence_bundle(retrieval)
     answer = GeneratedAnswer(
         final_choice="B",
         explanation="Fixture explanation",
-        citations=["E1"],
+        citations=["chunk_ch01_0001"],
     )
     validated = resolve_and_validate(answer, bundle)
     assert validated.citation_status == "passed"
@@ -304,7 +305,7 @@ def test_resolver_rejects_citation_outside_bundle() -> None:
         explanation="Fixture explanation",
         citations=["E99"],
     )
-    with pytest.raises(CS30Error, match="unknown evidence IDs"):
+    with pytest.raises(CS30Error, match="unknown citation IDs"):
         resolve_and_validate(answer, bundle)
 
 

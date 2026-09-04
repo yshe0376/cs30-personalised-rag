@@ -131,6 +131,9 @@ Computational modules implement Protocols from `src/cs30/ports.py`. Members 2,
 validated questions through `QuestionProvider`. Member 8 constructs the
 `EvidenceBundle` between retrieval and generation, then consumes `PipelineRun`
 for the UI. See each module package's `README.md` for its acceptance criteria.
+The bundle is the M8 delivery fixture for downstream M7 integration; M7's
+existing `AnswerGenerator` remains responsible for its own prompt and LLM
+implementation.
 
 `IndexArtifact` is the explicit hand-off between index building and retrieval.
 It records the index type, stable location, chunk count, and implementation
@@ -139,8 +142,9 @@ corresponding real index. The fixture implementation uses a process-local
 `memory://` location; real adapters must use a persistent location that another
 process can reopen.
 
-`CitationResolver` validates the generator's evidence IDs against the
-`EvidenceBundle.citation_map` and resolves them to the original chunk IDs.
+`CitationResolver` validates the generator's chunk IDs against the evidence
+items in the `EvidenceBundle`. E-style IDs, when retained, are M8 display labels
+and are not part of the generator's citation interface.
 Unknown citations raise `CitationIntegrityError`; abstention is recorded as
 `skipped` because there is no citation to validate.
 

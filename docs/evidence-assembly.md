@@ -7,29 +7,31 @@ This is the Member 8 W5 boundary between retrieval, generation and the demo.
 ```text
 RetrievedEvidence / RetrievalResult
         -> EvidenceContextBuilder (fixture implementation: build_evidence_bundle)
-        -> EvidenceBundle with E1, E2, ... and citation_map
-        -> Member 7 generation
+        -> EvidenceBundle with evidence items (E IDs are local display labels)
+        -> Member 7 integration (downstream consumer)
         -> ValidatedAnswer
         -> UI and trace log
 ```
 
 `EvidenceBundle.evidence_items` preserves retrieved text and its source locator.
-Display IDs are assigned in rank order and are stable within a run.
-`citation_map` maps each display ID to the original chunk ID. The resolver also
-accepts legacy chunk IDs during the transition from the W4 contract.
+Display IDs are assigned in rank order for the M8 UI and are stable within a run.
+They are not part of the Member 7 citation interface; a downstream generator
+uses the original stable chunk IDs when it consumes the bundle. The fixture is
+provided for that integration; M8 does not own Member 7's prompt or LLM
+implementation.
 
-The bundle records a token estimate, retrieval mode and two provenance layers.
+The bundle records a whitespace-based estimate capped at 1500 retrieved-token
+equivalents, retrieval mode and two provenance layers.
 `retrieval_provenance` preserves the structured corpus and index identity supplied
 by the retrieval contract, while `run_provenance` records run-level information
-such as the environment and request ID. The current fixture implementation uses
-whitespace tokens and a 1200-token budget; the production implementation can
-replace the estimator when the approved tokenizer is known.
+such as the environment and request ID. A production tokenizer can replace the
+estimate once the team approves and provisions a tokenizer for all environments.
 
 ## Validation rules
 
 - Every evidence ID is unique.
 - Every evidence ID maps to exactly one retrieved chunk.
-- A non-abstained answer must cite an evidence ID or a retrieved legacy chunk ID.
+- A non-abstained answer must cite a chunk ID from the bundle.
 - Unknown citations raise `CitationIntegrityError`.
 - An abstained answer has no resolved citations and is marked `skipped`.
 

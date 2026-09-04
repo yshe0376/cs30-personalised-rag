@@ -30,8 +30,7 @@ retrieval quality, model accuracy or a connected real LLM.
 4. **Show personalisation.** Select `Advanced` and rerun the same question.
    Explain that the fixture response template changes by learner level; the
    real prompt and LLM are still Member 7's integration step. Point out that
-   `E1`, `E2` are display IDs and that the citation map resolves them back to
-   the retrieved chunk IDs.
+   `E1`, `E2` are local display labels; citations use the original chunk IDs.
 5. **Show refusal.** Select the prepared `Quantum entanglement` question and
    run it. Explain that the current fixture material does not cover the
    question, so the system refuses rather than fabricating an answer. The

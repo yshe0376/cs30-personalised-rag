@@ -8,6 +8,7 @@
       "text": "Acceleration is the rate of change of velocity with time.",
       "chapter_id": "ch01_motion",
       "source": "fixture://openstax/physics#ch01_motion",
+      "source_locator": "fixture://openstax/physics#ch01_motion?char_start=0&char_end=57",
       "score": 0.96,
       "rank": 1,
       "retriever_type": "fixture"
@@ -17,6 +18,7 @@
       "text": "Its SI unit is metres per second squared.",
       "chapter_id": "ch01_motion",
       "source": "fixture://openstax/physics#ch01_motion",
+      "source_locator": "fixture://openstax/physics#ch01_motion?char_start=58&char_end=99",
       "score": 0.82,
       "rank": 2,
       "retriever_type": "fixture"

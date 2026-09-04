@@ -226,7 +226,7 @@ def render_result(run: PipelineRun) -> None:
     if not bundle.evidence_items:
         st.caption("No relevant evidence was retrieved.")
     for item in bundle.evidence_items:
-        cited = " · cited" if item.evidence_id in run.answer.citations else ""
+        cited = " · cited" if item.chunk_id in run.answer.citations else ""
         with st.container(border=True):
             st.markdown(
                 f"**{item.evidence_id} · rank {item.rank} · {item.chunk_id}** "
@@ -235,7 +235,7 @@ def render_result(run: PipelineRun) -> None:
             st.write(item.text)
             st.caption(
                 f"Chapter: {item.chapter_id} · Source: {item.source} · "
-                f"Source locator: {item.source_locator}"
+                f"Source locator: {item.source_locator or 'not supplied'}"
             )
 
     with st.expander("Technical run details"):

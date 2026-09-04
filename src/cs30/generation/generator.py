@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass, field
 
 from cs30.citation import validate_citations
-from cs30.contracts import EvidenceBundle, GeneratedAnswer, RetrievalResult, StudentProfile
+from cs30.contracts import GeneratedAnswer, RetrievalResult, StudentProfile
 from cs30.errors import CitationIntegrityError, GenerationError
 
 from .client import LLMClient, TokenUsage
@@ -140,30 +140,3 @@ class PersonalisedAnswerGenerator:
         raise GenerationError(
             f"generation failed after {self.max_retries + 1} attempts: {last_error}"
         ) from last_error
-
-    def generate_from_bundle(
-        self,
-        question: str,
-        profile: StudentProfile,
-        bundle: EvidenceBundle,
-    ) -> GeneratedAnswer:
-        """Consume M8's EvidenceBundle while preserving the legacy port."""
-
-        retrieval = RetrievalResult(
-            query=bundle.query,
-            mode=bundle.retrieval_mode,
-            hits=[
-                {
-                    "chunk_id": item.chunk_id,
-                    "text": item.text,
-                    "chapter_id": item.chapter_id,
-                    "source": item.source,
-                    "score": item.score,
-                    "rank": item.rank,
-                    "retriever_type": bundle.retrieval_mode,
-                }
-                for item in bundle.evidence_items
-            ],
-            provenance=bundle.retrieval_provenance,
-        )
-        return self.generate(question, profile, retrieval)

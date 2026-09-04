@@ -26,7 +26,7 @@ if not exist ".venv\Scripts\python.exe" (
 ".venv\Scripts\python.exe" -c "import streamlit, pytest, ruff, cs30.config" >nul 2>nul
 if errorlevel 1 (
     echo [CS-30] Installing project dependencies. This is required only on first use...
-    ".venv\Scripts\python.exe" -m pip install -e ".[dev]"
+    ".venv\Scripts\python.exe" -m pip install -e ".[dev,ui]"
     if errorlevel 1 (
         echo [CS-30] Dependency installation failed. Check the internet connection.
         pause

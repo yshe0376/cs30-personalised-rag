@@ -56,7 +56,7 @@ Windows (PowerShell):
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,ui]"
 ```
 
 Optional local configuration can be created from the safe template. The
@@ -76,7 +76,7 @@ macOS and Linux:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,ui]"
 ```
 
 For the exact dependency versions used by the verified development environment,
