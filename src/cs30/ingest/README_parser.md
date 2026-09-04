@@ -3,7 +3,7 @@
 This version implements the CS-30 Week 1 requirements for Member 2 while
 remaining compatible with the v1.0.0 command format and record fields.
 
-Version 1.2.0 also matches the team's strict `models.py` v1 contract.
+Version 1.2.0 also matches the team's strict `cs30.contracts` v1 models.
 
 ## Main improvements
 
@@ -23,7 +23,7 @@ Version 1.2.0 also matches the team's strict `models.py` v1 contract.
 - Creates deterministic JSON/JSONL, metadata, statistics, known-issue, and QA
   outputs.
 - Writes `openstax_document.json` with exactly the fields accepted by
-  `models.OpenStaxDocument`; no forbidden parser-only fields are included.
+  `cs30.contracts.OpenStaxDocument`; no forbidden parser-only fields are included.
 - Represents each parser unit as a contract-compatible `TextBlock`. The block
   stores only a character span, while `OpenStaxDocument.text` remains the
   single source of truth.
@@ -35,7 +35,7 @@ Version 1.2.0 also matches the team's strict `models.py` v1 contract.
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements.txt
+python -m pip install -e ".[parse]"
 ```
 
 On Windows, activate the environment with:
@@ -44,12 +44,16 @@ On Windows, activate the environment with:
 .venv\Scripts\activate
 ```
 
+The `parse` extra carries PyMuPDF and pdfplumber. They stay out of the core
+dependencies so that a plain `pip install .` keeps working without them; the
+parser is the only module that needs a PDF toolchain.
+
 ## Run one pilot chapter first
 
 The original v1 command remains valid:
 
 ```bash
-python college_physics_parser.py college-physics-2e_-_WEB.pdf \
+cs30-parse-openstax college-physics-2e_-_WEB.pdf \
   --chapters 2 \
   --output parsed_ch2 \
   --download-date 2026-09-03
@@ -60,7 +64,7 @@ python college_physics_parser.py college-physics-2e_-_WEB.pdf \
 Comma-separated syntax:
 
 ```bash
-python college_physics_parser.py college-physics-2e_-_WEB.pdf \
+cs30-parse-openstax college-physics-2e_-_WEB.pdf \
   --chapters 2,3,4 \
   --output parsed_openstax \
   --download-date 2026-09-03
@@ -69,18 +73,18 @@ python college_physics_parser.py college-physics-2e_-_WEB.pdf \
 Space-separated and range syntax are also accepted:
 
 ```bash
-python college_physics_parser.py college-physics-2e_-_WEB.pdf \
+cs30-parse-openstax college-physics-2e_-_WEB.pdf \
   --chapters 2 3 4 \
   --output-dir parsed_openstax
 
-python college_physics_parser.py college-physics-2e_-_WEB.pdf \
+cs30-parse-openstax college-physics-2e_-_WEB.pdf \
   --chapters 2-4 \
   --output parsed_openstax
 ```
 
 ## Outputs
 
-- `openstax_document.json`: strict `models.py` `OpenStaxDocument` payload with
+- `openstax_document.json`: strict `cs30.contracts.OpenStaxDocument` payload with
   `schema_version`, metadata, full text, `chapters`, and `blocks`.
 - `blocks.jsonl`: the contract-compatible `TextBlock` objects, one per line.
 - `records.jsonl` / `all_records.jsonl`: all paragraph, heading, equation,
@@ -121,7 +125,8 @@ field conversion:
 
 ```python
 import json
-from models import OpenStaxDocument
+
+from cs30.contracts import OpenStaxDocument
 
 with open("parsed_openstax/openstax_document.json", encoding="utf-8") as file:
     document = OpenStaxDocument.model_validate(json.load(file))
@@ -133,10 +138,11 @@ Member 4 can then:
 2. use `document.blocks` to preserve section, page, and `content_type`; and
 3. obtain any block's exact source text with `document.block_text(block)`.
 
-For traceability, every record satisfies:
+For traceability, every compatibility record in `records.jsonl` satisfies, against
+the raw `openstax_document.json` payload:
 
 ```python
-document["text"][record["char_start"]:record["char_end"]] == record["text"]
+payload["text"][record["char_start"]:record["char_end"]] == record["text"]
 ```
 
 Before handoff, complete the ten manual checks in `qa_report.json`, especially
