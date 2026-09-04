@@ -79,6 +79,20 @@ source .venv/bin/activate
 python -m pip install -e ".[dev]"
 ```
 
+For the exact dependency versions used by the verified development environment,
+install `requirements.lock` first and then install the local package without
+re-resolving dependencies:
+
+```bash
+python -m pip install -r requirements.lock
+python -m pip install -e . --no-deps
+```
+
+The lock file excludes the editable local package and records the current
+Windows/Python 3.12 environment. The `pyproject.toml` command above remains
+the normal choice for editable development or other platforms until the team
+adopts a cross-platform lock format.
+
 Then, on any platform:
 
 ```bash
@@ -294,8 +308,11 @@ The first contract version includes:
 - `IndexArtifact`
 - `SciQQuestion`
 - `RetrievalResult`
+- `EvidenceItem`
+- `EvidenceBundle`
 - `StudentProfile`
 - `GeneratedAnswer`
+- `ValidatedAnswer`
 - `PipelineRun`
 
 See [docs/interfaces.md](docs/interfaces.md) for ownership and field semantics,
