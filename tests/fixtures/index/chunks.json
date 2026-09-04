@@ -1,0 +1,146 @@
+[
+  {
+    "position": 0,
+    "chunk_id": "ch01_motion_0000",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch01_motion",
+    "text": "Acceleration is the rate at which velocity changes with time. An object accelerates when its speed changes, when its direction changes, or when both change.",
+    "source": "fixture://openstax/physics#ch01_motion",
+    "char_start": 0,
+    "char_end": 156,
+    "token_count": 25,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Acceleration is the rate at which velocity changes with time. An object accelerates when its speed changes, when its direction changes, or when both change."
+  },
+  {
+    "position": 1,
+    "chunk_id": "ch01_motion_0001",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch01_motion",
+    "text": "Velocity is a vector quantity that describes how fast an object moves and the direction of its motion. Speed is the magnitude of velocity and carries no direction.",
+    "source": "fixture://openstax/physics#ch01_motion",
+    "char_start": 157,
+    "char_end": 320,
+    "token_count": 28,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Velocity is a vector quantity that describes how fast an object moves and the direction of its motion. Speed is the magnitude of velocity and carries no direction."
+  },
+  {
+    "position": 2,
+    "chunk_id": "ch01_motion_0002",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch01_motion",
+    "text": "Displacement is the change in position of an object. Unlike distance travelled, displacement depends only on the starting and ending positions.",
+    "source": "fixture://openstax/physics#ch01_motion",
+    "char_start": 321,
+    "char_end": 464,
+    "token_count": 21,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Displacement is the change in position of an object. Unlike distance travelled, displacement depends only on the starting and ending positions."
+  },
+  {
+    "position": 3,
+    "chunk_id": "ch02_forces_0003",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch02_forces",
+    "text": "Newton's first law states that an object at rest stays at rest, and an object in motion keeps moving in a straight line at constant speed, unless a net force acts on it.",
+    "source": "fixture://openstax/physics#ch02_forces",
+    "char_start": 465,
+    "char_end": 634,
+    "token_count": 33,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Newton's first law states that an object at rest stays at rest, and an object in motion keeps moving in a straight line at constant speed, unless a net force acts on it."
+  },
+  {
+    "position": 4,
+    "chunk_id": "ch02_forces_0004",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch02_forces",
+    "text": "Newton's second law relates the net force on an object to its mass and its acceleration, and is usually written as force equals mass times acceleration.",
+    "source": "fixture://openstax/physics#ch02_forces",
+    "char_start": 635,
+    "char_end": 787,
+    "token_count": 26,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Newton's second law relates the net force on an object to its mass and its acceleration, and is usually written as force equals mass times acceleration."
+  },
+  {
+    "position": 5,
+    "chunk_id": "ch02_forces_0005",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch02_forces",
+    "text": "Newton's third law states that when one body exerts a force on a second body, the second body exerts a force of equal magnitude and opposite direction on the first.",
+    "source": "fixture://openstax/physics#ch02_forces",
+    "char_start": 788,
+    "char_end": 952,
+    "token_count": 30,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Newton's third law states that when one body exerts a force on a second body, the second body exerts a force of equal magnitude and opposite direction on the first."
+  },
+  {
+    "position": 6,
+    "chunk_id": "ch02_forces_0006",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch02_forces",
+    "text": "Friction is a contact force that opposes the relative motion of two surfaces. Its magnitude depends on the normal force pressing the surfaces together and on the materials involved.",
+    "source": "fixture://openstax/physics#ch02_forces",
+    "char_start": 953,
+    "char_end": 1134,
+    "token_count": 29,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Friction is a contact force that opposes the relative motion of two surfaces. Its magnitude depends on the normal force pressing the surfaces together and on the materials involved."
+  },
+  {
+    "position": 7,
+    "chunk_id": "ch03_energy_0007",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch03_energy",
+    "text": "Work is done when a force moves an object through a distance along the direction of that force. Work transfers energy into or out of a system.",
+    "source": "fixture://openstax/physics#ch03_energy",
+    "char_start": 1135,
+    "char_end": 1277,
+    "token_count": 27,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Work is done when a force moves an object through a distance along the direction of that force. Work transfers energy into or out of a system."
+  },
+  {
+    "position": 8,
+    "chunk_id": "ch03_energy_0008",
+    "document_id": "openstax_physics_fixture",
+    "chapter_id": "ch03_energy",
+    "text": "Kinetic energy is the energy an object has because of its motion. It grows with the mass of the object and with the square of its speed.",
+    "source": "fixture://openstax/physics#ch03_energy",
+    "char_start": 1278,
+    "char_end": 1414,
+    "token_count": 27,
+    "metadata": {
+      "strategy": "fixed",
+      "chunker_version": "1.0"
+    },
+    "embed_text": "Kinetic energy is the energy an object has because of its motion. It grows with the mass of the object and with the square of its speed."
+  }
+]

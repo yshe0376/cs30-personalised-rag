@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "artifact_id": "fixture-all-MiniLM-L6-v2-fixed-384",
+  "index_type": "faiss-flat-ip",
+  "location": "tests/fixtures/index",
+  "chunk_count": 9,
+  "metadata": {
+    "corpus_hash": "fixture-corpus-0001",
+    "chunk_config_hash": "fixture-chunkcfg-0001",
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "index_version": "all-MiniLM-L6-v2-384-fixture",
+    "dimension": "384",
+    "index_file": "tests/fixtures/index/index.faiss",
+    "chunk_map": "tests/fixtures/index/chunks.json",
+    "normalisation": "L2",
+    "similarity": "inner_product"
+  }
+}

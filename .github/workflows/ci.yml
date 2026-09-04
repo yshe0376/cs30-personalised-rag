@@ -45,3 +45,24 @@ jobs:
           cd "$(mktemp -d)"
           cs30-demo --question "What is quantum entanglement?" --level advanced \
             | python -c "import json,sys; r=json.load(sys.stdin); assert r['answer']['abstained'] is True, 'pipeline answered without evidence'; assert r['retrieval']['hits']==[]; assert r['answer']['citations']==[]"
+
+      # The two steps above run from a temp directory, to prove the installed
+      # package works anywhere. The two below deliberately run from the
+      # checkout, because they need tests/fixtures/index. That directory has no
+      # index.faiss, so this exercises the BM25 path on a core-only install.
+      - name: Real retrieval must abstain on an out-of-scope question
+        env:
+          CS30_RETRIEVAL_MODE: bm25
+          CS30_INDEX_DIR: tests/fixtures/index
+        run: |
+          cs30-demo --mode real --provider mock \
+            --question "What is quantum entanglement?" --level advanced \
+            | python -c "import json,sys; r=json.load(sys.stdin); assert r['mode']=='real', f\"expected a real run, got {r['mode']!r}\"; assert r['retrieval']['hits']==[], 'real retrieval returned evidence for an out-of-scope question'; assert r['answer']['abstained'] is True, 'pipeline answered without evidence'; assert r['answer']['citations']==[]"
+      - name: Real retrieval must still answer an in-scope question
+        env:
+          CS30_RETRIEVAL_MODE: bm25
+          CS30_INDEX_DIR: tests/fixtures/index
+        run: |
+          cs30-demo --mode real --provider mock \
+            --question "What is acceleration?" --level beginner \
+            | python -c "import json,sys; r=json.load(sys.stdin); assert r['mode']=='real', f\"expected a real run, got {r['mode']!r}\"; assert r['retrieval']['hits'], 'real retrieval found nothing for an in-scope question'; assert r['answer']['abstained'] is False, 'pipeline abstained despite having evidence'; assert set(r['answer']['citations']) <= {h['chunk_id'] for h in r['retrieval']['hits']}, 'citation not grounded in retrieval'"
