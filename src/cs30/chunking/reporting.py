@@ -76,4 +76,3 @@ def build_traceability_samples(
             }
         )
     return samples
-

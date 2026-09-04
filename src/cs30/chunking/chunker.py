@@ -73,7 +73,18 @@ class BlockAwareChunker:
         segments: list[list[TextBlock]] = []
         current: list[TextBlock] = []
         current_key: tuple[str, str | None] | None = None
+        included_types = (
+            None
+            if self.strategy.include_types is None
+            else set(self.strategy.include_types)
+        )
         for block in blocks:
+            if included_types is not None and block.content_type not in included_types:
+                if current:
+                    segments.append(current)
+                    current = []
+                current_key = None
+                continue
             section_key = block.section_id if self.strategy.respect_section_boundaries else None
             key = (block.chapter_id, section_key)
             if current and key != current_key:
@@ -177,6 +188,10 @@ class BlockAwareChunker:
         if not text.strip() or token_count == 0:
             raise ValueError("block group produced an empty chunk")
 
+        embed_text = self._embed_text(text, document, blocks)
+        embedding_input = text if embed_text is None else embed_text
+        embedding_input_token_count = self.token_counter.count(embedding_input)
+
         chapter_id = blocks[0].chapter_id
         section_ids = self._ordered_unique(block.section_id or "" for block in blocks)
         section_titles = self._ordered_unique(block.section_title or "" for block in blocks)
@@ -188,10 +203,18 @@ class BlockAwareChunker:
             for page in (block.page_start, block.page_end)
             if page is not None
         ]
+        parent_blocks = self._parent_blocks(document, blocks)
+        parent_block_ids = [
+            block.block_id for block in parent_blocks if block.block_id is not None
+        ]
         text_hash = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
+        strategy_name = "block_greedy_nearest_target"
+        if self.strategy.candidate_id != "main":
+            strategy_name += f"_{self._safe_id(self.strategy.candidate_id).lower()}"
         metadata = {
-            "strategy": "block_greedy_nearest_target",
+            "strategy": strategy_name,
             "chunker_version": self.strategy.chunker_version,
+            "candidate_id": self.strategy.candidate_id,
             "tokenizer_name": self.token_counter.name,
             "target_tokens": str(self.strategy.target_tokens),
             "min_tokens": str(self.strategy.min_tokens),
@@ -199,6 +222,14 @@ class BlockAwareChunker:
             "respect_section_boundaries": str(
                 self.strategy.respect_section_boundaries
             ).lower(),
+            "enrich_embed_text": str(self.strategy.enrich_embed_text).lower(),
+            "reject_duplicate_text": str(self.strategy.reject_duplicate_text).lower(),
+            "embedding_input_token_count": str(embedding_input_token_count),
+            "include_types": (
+                "*"
+                if self.strategy.include_types is None
+                else ",".join(item.value for item in self.strategy.include_types)
+            ),
             "section_id": section_ids[0] if len(section_ids) == 1 else "",
             "section_ids": ",".join(section_ids),
             "section_title": section_titles[0] if len(section_titles) == 1 else "",
@@ -208,15 +239,29 @@ class BlockAwareChunker:
             "block_count": str(len(blocks)),
             "page_start": str(min(pages)) if pages else "",
             "page_end": str(max(pages)) if pages else "",
+            "source_locator": (
+                f"{document.source}#chapter={chapter_id}&char={char_start}:{char_end}"
+            ),
+            "parent_scope": (
+                "section" if len(section_ids) == 1 and section_ids[0] else "chapter"
+            ),
+            "parent_char_start": str(parent_blocks[0].char_start),
+            "parent_char_end": str(parent_blocks[-1].char_end),
+            "parent_source_block_ids": ",".join(parent_block_ids),
             "short_chunk": str(token_count < self.strategy.min_tokens).lower(),
             "oversized_chunk": str(token_count > self.strategy.max_tokens).lower(),
             "text_hash": text_hash,
             "document_hash": document.document_hash,
             "parser_version": document.parser_version,
         }
+        candidate_fragment = (
+            ""
+            if self.strategy.candidate_id == "main"
+            else f"_{self._safe_id(self.strategy.candidate_id).lower()}"
+        )
         chunk_id = (
             f"{self._safe_id(document.document_id)}_"
-            f"{self._safe_id(chapter_id)}_c{chunk_index:05d}"
+            f"{self._safe_id(chapter_id)}{candidate_fragment}_c{chunk_index:05d}"
         )
         return Chunk(
             chunk_id=chunk_id,
@@ -228,7 +273,7 @@ class BlockAwareChunker:
             char_end=char_end,
             token_count=token_count,
             metadata=metadata,
-            embed_text=self._embed_text(text, document, blocks),
+            embed_text=embed_text,
         )
 
     def _embed_text(
@@ -250,6 +295,23 @@ class BlockAwareChunker:
         if any(section_titles):
             context += f" ({' | '.join(item for item in section_titles if item)})"
         return f"{context}:\n\n{text}"
+
+    def _parent_blocks(
+        self,
+        document: OpenStaxDocument,
+        blocks: Sequence[TextBlock],
+    ) -> list[TextBlock]:
+        """Return the section, or chapter, used for small-to-big expansion."""
+
+        chapter_id = blocks[0].chapter_id
+        section_ids = self._ordered_unique(block.section_id or "" for block in blocks)
+        if len(section_ids) == 1 and section_ids[0]:
+            return [
+                block
+                for block in document.blocks
+                if block.chapter_id == chapter_id and block.section_id == section_ids[0]
+            ]
+        return [block for block in document.blocks if block.chapter_id == chapter_id]
 
     def _validate_output(self, chunks: Sequence[Chunk]) -> None:
         ids = [chunk.chunk_id for chunk in chunks]
