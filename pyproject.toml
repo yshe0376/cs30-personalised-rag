@@ -23,9 +23,16 @@ ml = [
     "faiss-cpu>=1.8,<2",
     "sentence-transformers>=3,<6",
 ]
+
+parse = [
+    "PyMuPDF>=1.24,<2",
+    "pdfplumber>=0.11,<1",
+]
+
 [project.scripts]
 cs30-demo = "cs30.pipeline:main"
 cs30-task7-demo = "cs30.generation.demo:main"
+cs30-parse-openstax = "cs30.ingest.college_physics_parser:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

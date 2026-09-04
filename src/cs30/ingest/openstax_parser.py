@@ -43,7 +43,7 @@ try:
     import pdfplumber
     from pdfplumber.utils import extract_text
 except ImportError as exc:  # pragma: no cover - exercised by the CLI
-    raise SystemExit("Missing dependency. Run: python -m pip install PyMuPDF pdfplumber") from exc
+    raise SystemExit('Missing dependency. Run: python -m pip install -e ".[parse]"') from exc
 
 
 PARSER_VERSION = "1.2.0"
