@@ -148,6 +148,15 @@ def test_dense_rejects_invalid_similarity_threshold() -> None:
         )
 
 
+def test_dense_rejects_wrong_artifact_type() -> None:
+    retriever = real_retrieval.FaissDenseRetriever()
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="faiss-flat-ip",
+    ):
+        retriever.load_index(_artifact())
+
 class _SpyRetriever:
     def __init__(
         self,
