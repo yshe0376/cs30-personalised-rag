@@ -21,12 +21,14 @@ from cs30.config import AppConfig, load_config
 from cs30.contracts import IndexArtifact, PipelineRun, RetrievalMode, StudentLevel
 from cs30.errors import ConfigError, CS30Error, EmptyQueryError, IndexUnavailableError
 from cs30.generation import (
+    CombinedEvidenceRetriever,
     FixtureAnswerGenerator,
     MockJsonLLMClient,
     OllamaChatClient,
     OpenAIResponsesClient,
     PersonalisedAnswerGenerator,
 )
+from cs30.generation.demo import build_all_dataset_items
 from cs30.indexing import FixtureIndexBuilder
 from cs30.ingest import FixtureDocumentParser
 from cs30.logging import configure_logging, get_logger
@@ -124,42 +126,61 @@ def run_build_pipeline(source: Path, deps: BuildDeps) -> IndexArtifact:
 
 
 def build_real_deps(config: AppConfig) -> PipelineDeps:
-    """Build real retrieval from Member 5's artifact plus configured generation."""
+    """Use real retrieval when an index exists, otherwise preserve fixture mode."""
 
     index_dir = Path(config.retrieval.index_dir)
     artifact_path = index_dir / "artifact.json"
-    try:
-        artifact = IndexArtifact.model_validate_json(
-            artifact_path.read_text(encoding="utf-8")
-        )
-    except (OSError, ValueError) as exc:
-        raise IndexUnavailableError(
-            f"failed to load IndexArtifact from {artifact_path}: {exc}"
-        ) from exc
 
-    # The artifact directory may have moved with a cloned repository.  Its
-    # manifest still identifies the same corpus/index, while the configured
-    # directory is the authoritative local location.
-    artifact = artifact.model_copy(update={"location": str(index_dir)})
+    if not artifact_path.is_file():
+        if not config.fixture_mode:
+            raise IndexUnavailableError(
+                f"IndexArtifact not found at {artifact_path}"
+            )
 
-    retrieval_mode = config.retrieval.mode
-    if retrieval_mode is RetrievalMode.BM25:
-        retriever = BM25Retriever()
-    elif retrieval_mode is RetrievalMode.DENSE:
-        retriever = FaissDenseRetriever()
-    elif retrieval_mode is RetrievalMode.HYBRID:
-        retriever = RRFRetriever(
-            rrf_k=config.retrieval.rrf_k,
-            input_top_k=config.retrieval.rrf_input_top_k,
-        )
+        dataset = build_all_dataset_items(StudentLevel.INTERMEDIATE)
+        evidence_by_id = {}
+
+        for item in dataset.items:
+            for hit in item.retrieval.hits:
+                evidence_by_id.setdefault(hit.chunk_id, hit)
+
+        retriever = CombinedEvidenceRetriever(evidence_by_id.values())
+        dependency_mode: Literal["fixture", "real"] = "fixture"
+
     else:
-        raise ConfigError(
-            "real retrieval mode must be bm25, dense, or hybrid; "
-            f"received {retrieval_mode.value!r}"
-        )
-    retriever.load_index(artifact)
+        try:
+            artifact = IndexArtifact.model_validate_json(
+                artifact_path.read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError) as exc:
+            raise IndexUnavailableError(
+                f"failed to load IndexArtifact from {artifact_path}: {exc}"
+            ) from exc
+
+        artifact = artifact.model_copy(update={"location": str(index_dir)})
+
+        retrieval_mode = config.retrieval.mode
+
+        if retrieval_mode is RetrievalMode.BM25:
+            retriever = BM25Retriever()
+        elif retrieval_mode is RetrievalMode.DENSE:
+            retriever = FaissDenseRetriever()
+        elif retrieval_mode is RetrievalMode.HYBRID:
+            retriever = RRFRetriever(
+                rrf_k=config.retrieval.rrf_k,
+                input_top_k=config.retrieval.rrf_input_top_k,
+            )
+        else:
+            raise ConfigError(
+                "real retrieval mode must be bm25, dense, or hybrid; "
+                f"received {retrieval_mode.value!r}"
+            )
+
+        retriever.load_index(artifact)
+        dependency_mode = "real"
 
     provider = config.generation.provider.casefold()
+
     if provider == "mock":
         client = MockJsonLLMClient()
     elif provider == "ollama":
@@ -169,7 +190,10 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
     elif provider == "openai":
         if not config.generation.model:
-            raise ConfigError("LLM_MODEL is required when LLM_PROVIDER=openai")
+            raise ConfigError(
+                "LLM_MODEL is required when LLM_PROVIDER=openai"
+            )
+
         client = OpenAIResponsesClient(
             config.generation.model,
             temperature=config.generation.temperature,
@@ -181,7 +205,7 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
 
     return PipelineDeps(
-        mode="real",
+        mode=dependency_mode,
         profile_provider=Week1ProfileProvider(profile_prefix="local-rag"),
         retriever=retriever,
         generator=PersonalisedAnswerGenerator(
@@ -189,8 +213,6 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
             max_retries=config.generation.max_retries,
         ),
     )
-
-
 def run_pipeline(
     question: str,
     level: StudentLevel,
