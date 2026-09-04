@@ -37,6 +37,12 @@ from cs30.errors import (
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
+_STOPWORDS = frozenset({
+    "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does",
+    "for", "from", "how", "in", "is", "it", "of", "on", "or", "that", "the",
+    "to", "was", "were", "what", "when", "where", "which", "who", "why",
+    "will", "with",
+})
 
 class _EmbeddingModel(Protocol):
     """The small part of SentenceTransformer used by this module."""
@@ -363,19 +369,25 @@ class BM25Retriever:
 
     index_type = "bm25"
 
-    def __init__(
-        self,
-        *,
-        k1: float = 1.5,
-        b: float = 0.75,
-        cache_size: int = 256,
-    ) -> None:
+   def __init__(
+    self,
+    *,
+    k1: float = 1.5,
+    b: float = 0.75,
+    cache_size: int = 256,
+    min_score: float = 0.0,
+    stopwords: frozenset[str] | None = None,
+) -> None:
         if k1 <= 0:
             raise ValueError("k1 must be positive")
         if not 0 <= b <= 1:
             raise ValueError("b must be between zero and one")
+        if min_score < 0:
+            raise ValueError("min_score must not be negative")    
         self.k1 = k1
         self.b = b
+        self.min_score = min_score
+        self._stopwords = _STOPWORDS if stopwords is None else stopwords
         self._cache = _ResultCache(cache_size)
 
         self._artifact: IndexArtifact | None = None
@@ -389,6 +401,13 @@ class BM25Retriever:
     @staticmethod
     def _tokenize(text: str) -> list[str]:
         return _TOKEN_PATTERN.findall(text.casefold())
+        
+    def _query_terms(self, query: str) -> Counter[str]:
+    return Counter(
+        token
+        for token in self._tokenize(query)
+        if token not in self._stopwords
+    )
 
     def load_index(self, artifact: IndexArtifact) -> None:
         chunks = _load_chunk_map(artifact)
@@ -453,12 +472,21 @@ class BM25Retriever:
         if cached is not None:
             return cached
 
-        query_terms = Counter(self._tokenize(cleaned))
+        query_terms = self._query_terms(cleaned)
+        if not query_terms:
+            result = RetrievalResult(
+                query=cleaned,
+                mode=RetrievalMode.BM25,
+                hits=[],
+                provenance=self._provenance,
+            )
+        self._cache.put(key, result)
+        return result
         scored = [
             (self._score_document(query_terms, position), position)
             for position in range(len(self._chunks))
         ]
-        scored = [pair for pair in scored if pair[0] > 0.0]
+        scored = [pair for pair in scored if pair[0] > self.min_score]
         scored.sort(key=lambda pair: (-pair[0], self._chunks[pair[1]]["chunk_id"]))
 
         hits = [
