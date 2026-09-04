@@ -225,11 +225,16 @@ class FaissDenseRetriever:
         expected_model_name: str | None = None,
         query_instruction: str | None = None,
         cache_size: int = 256,
+        min_similarity: float | None = None,
         model_loader: ModelLoader | None = None,
         index_reader: IndexReader | None = None,
     ) -> None:
+        if min_similarity is not None and not -1.0 <= min_similarity <= 1.0:
+            raise ValueError("min_similarity must be between -1 and 1")
+            
         self.expected_model_name = expected_model_name
         self.query_instruction = query_instruction
+        self.min_similarity = min_similarity
         self._model_loader = model_loader or _default_model_loader
         self._index_reader = index_reader or _default_index_reader
         self._cache = _ResultCache(cache_size)
@@ -334,10 +339,18 @@ class FaissDenseRetriever:
             raise RetrievalError(f"dense retrieval failed: {exc}") from exc
 
         hits: list[RetrievedEvidence] = []
+        
         for score, position in zip(scores[0], positions[0], strict=True):
             position = int(position)
             if position < 0:
                 continue
+            score_value = float(score)
+            if (
+                self.min_similarity is not None
+                and score_value < self.min_similarity
+            ):
+                continue
+                
             item = self._chunks[position]
             hits.append(
                 RetrievedEvidence(
@@ -345,7 +358,7 @@ class FaissDenseRetriever:
                     text=item["text"],
                     chapter_id=item["chapter_id"],
                     source=item["source"],
-                    score=float(score),
+                    score=score_value,
                     rank=len(hits) + 1,
                     retriever_type=RetrievalMode.DENSE,
                 )
