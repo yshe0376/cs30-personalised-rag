@@ -162,18 +162,23 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         retrieval_mode = config.retrieval.mode
 
         if retrieval_mode is RetrievalMode.BM25:
-            retriever = BM25Retriever()
+            retriever = BM25Retriever(
+                min_score=config.retrieval.bm25_min_score,
+            )
         elif retrieval_mode is RetrievalMode.DENSE:
-            retriever = FaissDenseRetriever()
+             retriever = FaissDenseRetriever(
+                 min_similarity=config.retrieval.dense_min_similarity,
+            )
         elif retrieval_mode is RetrievalMode.HYBRID:
             retriever = RRFRetriever(
-                rrf_k=config.retrieval.rrf_k,
-                input_top_k=config.retrieval.rrf_input_top_k,
-            )
-        else:
-            raise ConfigError(
-                "real retrieval mode must be bm25, dense, or hybrid; "
-                f"received {retrieval_mode.value!r}"
+               dense=FaissDenseRetriever(
+                 min_similarity=config.retrieval.dense_min_similarity,
+               ),
+               bm25=BM25Retriever(
+                 min_score=config.retrieval.bm25_min_score,
+               ),
+               rrf_k=config.retrieval.rrf_k,
+               input_top_k=config.retrieval.rrf_input_top_k,
             )
 
         retriever.load_index(artifact)
