@@ -1,0 +1,58 @@
+[
+  {
+    "position": 0,
+    "chunk_id": "ci-acceleration-definition",
+    "text": "Acceleration is the rate at which velocity changes with time.",
+    "chapter_id": "motion",
+    "source": "fixture://openstax/motion"
+  },
+  {
+    "position": 1,
+    "chunk_id": "ci-acceleration-unit",
+    "text": "The SI unit of acceleration is metres per second squared.",
+    "chapter_id": "motion",
+    "source": "fixture://openstax/motion"
+  },
+  {
+    "position": 2,
+    "chunk_id": "ci-velocity-definition",
+    "text": "Velocity describes the rate and direction of change in position over time.",
+    "chapter_id": "motion",
+    "source": "fixture://openstax/motion"
+  },
+  {
+    "position": 3,
+    "chunk_id": "ci-newton-second-law",
+    "text": "Newton's second law states that net force equals mass multiplied by acceleration.",
+    "chapter_id": "forces",
+    "source": "fixture://openstax/forces"
+  },
+  {
+    "position": 4,
+    "chunk_id": "ci-inertia-definition",
+    "text": "Inertia is the tendency of an object to resist a change in its state of motion.",
+    "chapter_id": "forces",
+    "source": "fixture://openstax/forces"
+  },
+  {
+    "position": 5,
+    "chunk_id": "ci-gravity-definition",
+    "text": "Gravity is an attractive force between objects with mass.",
+    "chapter_id": "forces",
+    "source": "fixture://openstax/forces"
+  },
+  {
+    "position": 6,
+    "chunk_id": "ci-kinetic-energy",
+    "text": "Kinetic energy is the energy an object has because of its motion.",
+    "chapter_id": "energy",
+    "source": "fixture://openstax/energy"
+  },
+  {
+    "position": 7,
+    "chunk_id": "ci-potential-energy",
+    "text": "Potential energy is stored energy associated with position or configuration.",
+    "chapter_id": "energy",
+    "source": "fixture://openstax/energy"
+  }
+]

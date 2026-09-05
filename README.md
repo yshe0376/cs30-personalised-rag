@@ -146,7 +146,7 @@ cs30-demo --question "What is quantum entanglement?" --level advanced
 
 Useful flags: `--level beginner|intermediate|advanced`, `--env
 development|staging`, `--mode fixture|real`, `--provider mock|ollama|openai`,
-`--model`, and `--top-k`.
+`--model`, `--top-k`, and `--retrieval-mode bm25|dense|hybrid`.
 
 To ask an arbitrary question through the combined local RAG corpus and the
 installed Ollama model:
@@ -157,13 +157,11 @@ python -m cs30.pipeline --mode real --provider ollama --model gpt-oss:20b \
   --level beginner --top-k 3
 ```
 
-The portable retriever searches every available evidence passage while keeping
-the frozen `Retriever` and `AnswerGenerator` interfaces unchanged. It returns
-an empty result for insufficient matches, causing a grounded abstention rather
-than an unrelated answer. This is a local engineering path, not a formal
-retrieval-effectiveness result. Although `--mode real` selects the configured
-model-provider path, its `PipelineRun` and retrieval output remain labelled
-`fixture` until the real Member 6 retriever and index are connected.
+The real retriever reads Member 5's `artifact.json`, `chunks.json`, and
+`index.faiss` from the configured local index directory. It keeps the frozen
+`Retriever` and `AnswerGenerator` interfaces unchanged and supports BM25,
+Dense, and RRF Hybrid retrieval. Real runs are labelled `real` in
+`PipelineRun`.
 
 For a concise terminal answer, omit `--top-k` to use the configured default of
 3 and add `--answer-only`:
@@ -266,7 +264,7 @@ src/cs30/ingest/        Member 2  - OpenStax parsing
 src/cs30/questions/     Member 3  - validated SciQ demo questions
 src/cs30/chunking/      Member 4  - chunking and metadata
 src/cs30/indexing/      Member 5  - embeddings and FAISS
-src/cs30/retrieval/     Member 6  - dense retrieval
+src/cs30/retrieval/     Member 6  - Dense, BM25, and RRF hybrid retrieval
 src/cs30/profile/       Member 7  - student profile
 src/cs30/generation/    Member 7  - prompting and LLM generation
 src/cs30/ui/            Member 8  - demo interface

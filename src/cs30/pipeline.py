@@ -23,8 +23,8 @@ from cs30.citation import (
     EvidenceContextBuilder,
 )
 from cs30.config import AppConfig, load_config
-from cs30.contracts import IndexArtifact, PipelineRun, RetrievalHit, StudentLevel
-from cs30.errors import ConfigError, CS30Error, EmptyQueryError
+from cs30.contracts import IndexArtifact, PipelineRun, RetrievalMode, StudentLevel
+from cs30.errors import ConfigError, CS30Error, EmptyQueryError, IndexUnavailableError
 from cs30.generation import (
     CombinedEvidenceRetriever,
     FixtureAnswerGenerator,
@@ -46,7 +46,12 @@ from cs30.ports import (
     Retriever,
 )
 from cs30.profile import FixtureProfileProvider, Week1ProfileProvider
-from cs30.retrieval import FixtureRetriever
+from cs30.retrieval import (
+    BM25Retriever,
+    FaissDenseRetriever,
+    FixtureRetriever,
+    RealRetrievalService,
+)
 
 LOGGER = get_logger("pipeline")
 
@@ -126,16 +131,69 @@ def run_build_pipeline(source: Path, deps: BuildDeps) -> IndexArtifact:
 
 
 def build_real_deps(config: AppConfig) -> PipelineDeps:
-    """Build configured generation over the available fixture evidence."""
+    """Use real retrieval when an index exists, otherwise preserve fixture mode."""
 
-    dataset = build_all_dataset_items(StudentLevel.INTERMEDIATE)
-    evidence_by_id: dict[str, RetrievalHit] = {}
-    for item in dataset.items:
-        for hit in item.retrieval.hits:
-            evidence_by_id.setdefault(hit.chunk_id, hit)
-    retriever = CombinedEvidenceRetriever(evidence_by_id.values())
+    index_dir = Path(config.retrieval.index_dir)
+    artifact_path = index_dir / "artifact.json"
+
+    if not artifact_path.is_file():
+        if not config.fixture_mode:
+            raise IndexUnavailableError(
+                f"IndexArtifact not found at {artifact_path}"
+            )
+
+        dataset = build_all_dataset_items(StudentLevel.INTERMEDIATE)
+        evidence_by_id = {}
+
+        for item in dataset.items:
+            for hit in item.retrieval.hits:
+                evidence_by_id.setdefault(hit.chunk_id, hit)
+
+        retriever = CombinedEvidenceRetriever(evidence_by_id.values())
+        dependency_mode: Literal["fixture", "real"] = "fixture"
+
+    else:
+        try:
+            artifact = IndexArtifact.model_validate_json(
+                artifact_path.read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError) as exc:
+            raise IndexUnavailableError(
+                f"failed to load IndexArtifact from {artifact_path}: {exc}"
+            ) from exc
+
+        artifact = IndexArtifact.model_validate(
+            {
+                **artifact.model_dump(),
+                "location": str(index_dir),
+            }
+        )
+
+        retrieval_mode = config.retrieval.mode
+
+        dense_retriever = FaissDenseRetriever(
+            min_similarity=config.retrieval.dense_min_similarity,
+        )
+        bm25_retriever = BM25Retriever(
+            min_score=config.retrieval.bm25_min_score,
+        )
+
+        retrieval_service = RealRetrievalService(
+            dense=dense_retriever,
+            bm25=bm25_retriever,
+            rrf_k=config.retrieval.rrf_k,
+            input_top_k=config.retrieval.rrf_input_top_k,
+        )
+
+        retrieval_service.load_index(
+            artifact,
+            retrieval_mode,
+        )
+        retriever = retrieval_service.backend(retrieval_mode)
+        dependency_mode = "real"
 
     provider = config.generation.provider.casefold()
+
     if provider == "mock":
         client = MockJsonLLMClient()
     elif provider == "ollama":
@@ -146,6 +204,7 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
     elif provider == "openai":
         if not config.generation.model:
             raise ConfigError("LLM_MODEL is required when LLM_PROVIDER=openai")
+
         client = OpenAIResponsesClient(
             config.generation.model,
             temperature=config.generation.temperature,
@@ -157,7 +216,7 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
 
     return PipelineDeps(
-        mode="fixture",
+        mode=dependency_mode,
         profile_provider=Week1ProfileProvider(profile_prefix="local-rag"),
         retriever=retriever,
         generator=PersonalisedAnswerGenerator(
@@ -317,6 +376,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Number of evidence passages to retrieve",
     )
     parser.add_argument(
+        "--retrieval-mode",
+        choices=[
+            RetrievalMode.BM25.value,
+            RetrievalMode.DENSE.value,
+            RetrievalMode.HYBRID.value,
+        ],
+        default=None,
+        help="Real retrieval backend: bm25, dense, or hybrid",
+    )
+    parser.add_argument(
         "--answer-only",
         action="store_true",
         help="Print only the final explanation and suppress informational logs",
@@ -348,6 +417,14 @@ def main() -> None:
                 update={
                     "retrieval": config.retrieval.model_copy(
                         update={"top_k": args.top_k}
+                    )
+                }
+            )
+        if args.retrieval_mode is not None:
+            config = config.model_copy(
+                update={
+                    "retrieval": config.retrieval.model_copy(
+                        update={"mode": RetrievalMode(args.retrieval_mode)}
                     )
                 }
             )
