@@ -41,6 +41,19 @@ def _artifact(*, dense: bool = False) -> IndexArtifact:
         "chunk_config_hash": "test-chunk-config-hash",
         "index_version": "test-index-v1",
     }
+    if dense:
+        metadata.update({
+            "embedding_model": "fake-embedding-model",
+            "dimension": "2",
+        })
+
+    return IndexArtifact(
+        artifact_id="test-artifact",
+        index_type="faiss-flat-ip" if dense else "bm25",
+        location="unused",
+        chunk_count=2,
+        metadata=metadata,
+    )
 
 
 def _artifact_at(path: Path, *, dense: bool = False) -> IndexArtifact:
@@ -56,19 +69,6 @@ def _write_chunk_map(path: Path, chunks: list[dict]) -> None:
     (path / "chunks.json").write_text(
         json.dumps(chunks),
         encoding="utf-8",
-    )
-    if dense:
-        metadata.update({
-            "embedding_model": "fake-embedding-model",
-            "dimension": "2",
-        })
-
-    return IndexArtifact(
-        artifact_id="test-artifact",
-        index_type="faiss-flat-ip" if dense else "bm25",
-        location="unused",
-        chunk_count=2,
-        metadata=metadata,
     )
 
 
