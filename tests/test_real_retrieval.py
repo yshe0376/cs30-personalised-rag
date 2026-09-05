@@ -128,6 +128,17 @@ class _FakeIndex:
         return scores[:, :top_k], positions[:, :top_k]
 
 
+class _FakeIndexWithPadding(_FakeIndex):
+    def search(
+        self,
+        vectors: np.ndarray,
+        top_k: int,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        scores = np.array([[0.8, -1.0]], dtype=np.float32)
+        positions = np.array([[0, -1]], dtype=np.int64)
+        return scores[:, :top_k], positions[:, :top_k]
+
+
 def test_dense_filters_hits_below_similarity_threshold(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -155,6 +166,33 @@ def test_dense_filters_hits_below_similarity_threshold(
     assert result.hits[0].score == pytest.approx(0.8)
     assert result.hits[0].rank == 1
 
+
+def test_dense_skips_negative_faiss_positions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        real_retrieval,
+        "_load_chunk_map",
+        lambda artifact: _chunks(),
+    )
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+
+    retriever = real_retrieval.FaissDenseRetriever(
+        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        index_reader=lambda path: _FakeIndexWithPadding(),
+    )
+    retriever.load_index(_artifact(dense=True))
+
+    result = retriever.retrieve("What is acceleration?", top_k=2)
+
+    assert [hit.chunk_id for hit in result.hits] == ["chunk-1"]
+    assert [hit.rank for hit in result.hits] == [1]
+    assert result.hits[0].score == pytest.approx(0.8)
+    
 
 def test_dense_rejects_invalid_similarity_threshold() -> None:
     with pytest.raises(
