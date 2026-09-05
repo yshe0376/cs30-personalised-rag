@@ -250,6 +250,17 @@ def test_evidence_bundle_assigns_stable_ids_and_maps_chunks() -> None:
     assert bundle.run_provenance == {}
 
 
+def test_evidence_bundle_keeps_all_selected_hits_when_estimate_exceeds_budget() -> None:
+    retrieval = RetrievalResult.model_validate(load_fixture("retrieval_result.json"))
+
+    bundle = build_evidence_bundle(retrieval, token_budget=1)
+
+    assert [item.chunk_id for item in bundle.evidence_items] == [
+        hit.chunk_id for hit in retrieval.hits
+    ]
+    assert bundle.token_count > 1
+
+
 def test_evidence_bundle_rejects_duplicate_or_incomplete_map() -> None:
     with pytest.raises(ValidationError, match="evidence IDs must be unique"):
         EvidenceBundle(

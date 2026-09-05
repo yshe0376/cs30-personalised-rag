@@ -1,5 +1,7 @@
 """Runtime citation-integrity checks."""
 
+import logging
+
 from cs30.contracts import (
     EvidenceBundle,
     GeneratedAnswer,
@@ -7,6 +9,8 @@ from cs30.contracts import (
     ValidatedAnswer,
 )
 from cs30.errors import CitationIntegrityError
+
+LOGGER = logging.getLogger(__name__)
 
 
 def validate_citations(answer: GeneratedAnswer, retrieval: RetrievalResult) -> None:
@@ -27,7 +31,11 @@ def build_evidence_bundle(
     token_budget: int = 1500,
     run_provenance: dict[str, str] | None = None,
 ) -> EvidenceBundle:
-    """Create stable E1/E2 identifiers without changing retrieved text."""
+    """Create a bundle from the selected retrieval results.
+
+    The budget is observational in fixture mode: it is recorded through the
+    estimated count and a warning, but it never silently removes evidence.
+    """
 
     items = []
     used_tokens = 0
@@ -37,8 +45,6 @@ def build_evidence_bundle(
             continue
         seen_chunk_ids.add(hit.chunk_id)
         token_count = max(1, len(hit.text.split()))
-        if items and used_tokens + token_count > token_budget:
-            break
         evidence_id = f"E{len(items) + 1}"
         items.append(
             {
@@ -54,6 +60,13 @@ def build_evidence_bundle(
             }
         )
         used_tokens += token_count
+    if used_tokens > token_budget:
+        LOGGER.warning(
+            "whitespace word-count estimate exceeds provisional 1500-token target: "
+            "estimated_words=%s target_tokens=%s",
+            used_tokens,
+            token_budget,
+        )
     return EvidenceBundle(
         query=retrieval.query,
         retrieval_mode=retrieval_mode or retrieval.mode,
@@ -99,7 +112,7 @@ def resolve_and_validate(
 
 
 class EvidenceContextBuilder:
-    """Named W5 façade for constructing a 1500-token estimate."""
+    """Named W5 façade for constructing an observational token estimate."""
 
     def __init__(self, token_budget: int = 1500) -> None:
         self.token_budget = token_budget

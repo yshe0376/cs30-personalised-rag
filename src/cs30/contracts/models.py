@@ -393,7 +393,7 @@ class EvidenceItem(ContractModel):
 
 
 class EvidenceBundle(ContractModel):
-    """Traceable evidence context passed from retrieval to generation."""
+    """Traceable evidence context prepared for downstream generation integration."""
 
     schema_version: Literal["1.0"] = "1.0"
     query: NonEmptyText

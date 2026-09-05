@@ -116,7 +116,7 @@ values only**. Use `{"section": "1"}`, not `{"section": 1}`.
 | `IndexArtifact` | Member 5 | Member 6 |
 | `SciQQuestion` | Member 3 | Members 6 and 7 |
 | `RetrievalResult` | Member 6 | Member 8 EvidenceContextBuilder |
-| `EvidenceBundle` | Member 8 | Member 7, citation resolver, UI |
+| `EvidenceBundle` | Member 8 | Member 7 (downstream integration), citation resolver, UI |
 | `StudentProfile` | Member 7 / UI | Prompt builder |
 | `GeneratedAnswer` | Member 7 | Member 8 citation resolver, UI |
 | `PipelineRun` | Leader | Member 8, ablation table |
@@ -128,12 +128,13 @@ Member numbers follow the week 1 division of labour held in the team Drive.
 Computational modules implement Protocols from `src/cs30/ports.py`. Members 2,
 4, and 5 are orchestrated by `BuildDeps` / `run_build_pipeline()`; members 6 and
 7 are orchestrated by `PipelineDeps` / `run_pipeline()`. Member 3 supplies
-validated questions through `QuestionProvider`. Member 8 constructs the
-`EvidenceBundle` between retrieval and generation, then consumes `PipelineRun`
-for the UI. See each module package's `README.md` for its acceptance criteria.
-The bundle is the M8 delivery fixture for downstream M7 integration; M7's
-existing `AnswerGenerator` remains responsible for its own prompt and LLM
-implementation.
+validated questions through `QuestionProvider`. Member 8 prepares the
+`EvidenceBundle` from the selected retrieval results and consumes `PipelineRun`
+for the UI. The bundle is the M8 delivery fixture for downstream M7
+integration; the current legacy `AnswerGenerator` still receives
+`RetrievalResult`, and M7 remains responsible for its own prompt and LLM
+implementation. See each module package's `README.md` for its acceptance
+criteria.
 
 `IndexArtifact` is the explicit hand-off between index building and retrieval.
 It records the index type, stable location, chunk count, and implementation
