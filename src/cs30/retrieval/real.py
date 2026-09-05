@@ -429,11 +429,19 @@ class BM25Retriever:
             for token in self._tokenize(query)
             if token not in self._stopwords
         )
+        
     def load_index(self, artifact: IndexArtifact) -> None:
+        accepted_index_types = {
+            self.index_type,
+            FaissDenseRetriever.index_type,
+        }
+        if artifact.index_type not in accepted_index_types:
+            raise ArtifactMismatchError(
+                "BM25 retrieval requires a bm25 or faiss-flat-ip artifact; "
+                f"received {artifact.index_type!r}"
+            )
+
         chunks = _load_chunk_map(artifact)
-        term_frequencies: list[Counter[str]] = []
-        document_lengths: list[int] = []
-        document_frequency: Counter[str] = Counter()
 
         for item in chunks:
             tokens = self._tokenize(item["text"])
