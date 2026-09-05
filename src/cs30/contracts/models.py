@@ -281,6 +281,8 @@ class RetrievedEvidence(ContractModel):
     text: SpanText
     chapter_id: Identifier
     source: Identifier
+    # Optional until the retrieval seam supplies a real corpus locator/span.
+    source_locator: Identifier | None = None
     score: float
     rank: int = Field(ge=1)
     retriever_type: RetrievalMode
@@ -376,6 +378,67 @@ class GeneratedAnswer(ContractModel):
         return self
 
 
+class EvidenceItem(ContractModel):
+    """One evidence item prepared for prompting and citation display."""
+
+    evidence_id: Identifier
+    chunk_id: Identifier
+    text: SpanText
+    chapter_id: Identifier
+    source: Identifier
+    source_locator: Identifier | None = None
+    rank: int = Field(ge=1)
+    score: float
+    token_count: int = Field(gt=0)
+
+
+class EvidenceBundle(ContractModel):
+    """Traceable evidence context prepared for downstream generation integration."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    query: NonEmptyText
+    retrieval_mode: RetrievalMode
+    evidence_items: list[EvidenceItem] = Field(default_factory=list)
+    prompt_context: NonEmptyText | None = None
+    citation_map: dict[Identifier, Identifier] = Field(default_factory=dict)
+    token_count: int = Field(default=0, ge=0)
+    retrieval_provenance: EvidenceProvenance | None = None
+    run_provenance: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_evidence_map(self) -> "EvidenceBundle":
+        ids = [item.evidence_id for item in self.evidence_items]
+        if len(set(ids)) != len(ids):
+            raise ValueError("evidence IDs must be unique")
+        expected = {item.evidence_id: item.chunk_id for item in self.evidence_items}
+        if self.citation_map != expected:
+            raise ValueError("citation_map must map every evidence ID to its chunk ID")
+        if self.token_count < sum(item.token_count for item in self.evidence_items):
+            raise ValueError("token_count must include all evidence item tokens")
+        return self
+
+
+class ValidatedAnswer(ContractModel):
+    """Answer plus citations resolved against the same evidence bundle.
+
+    ``abstained`` is retained as a convenient top-level field for consumers
+    such as the UI, but it is derived from ``answer.abstained``.  Callers do
+    not get two independent abstention states to keep in sync.
+    """
+
+    schema_version: Literal["1.0"] = "1.0"
+    answer: GeneratedAnswer
+    resolved_citations: list[Identifier] = Field(default_factory=list)
+    citation_status: Literal["passed", "failed", "skipped"]
+    run_provenance: dict[str, str] = Field(default_factory=dict)
+    abstained: bool = False
+
+    @model_validator(mode="after")
+    def derive_abstention(self) -> "ValidatedAnswer":
+        self.abstained = self.answer.abstained
+        return self
+
+
 class PipelineRun(ContractModel):
     """One end-to-end execution, including everything needed to reproduce it.
 
@@ -393,3 +456,6 @@ class PipelineRun(ContractModel):
     answer: GeneratedAnswer
     citation_integrity: Literal["passed", "failed", "skipped"]
     metadata: dict[str, str] = Field(default_factory=dict)
+    evidence_bundle: EvidenceBundle | None = None
+    validated_answer: ValidatedAnswer | None = None
+    trace: dict[str, str] = Field(default_factory=dict)

@@ -84,5 +84,7 @@ def test_configured_pipeline_returns_only_retrieved_citations() -> None:
         for hit in result.retrieval.hits
     )
     assert result.answer.abstained is False
-    assert set(result.answer.citations) <= retrieved_ids
+    # Bundle-aware generation cites E IDs; the validated answer resolves them
+    # back to the retrieved chunk IDs at the contract boundary.
+    assert set(result.validated_answer.resolved_citations) <= retrieved_ids
     assert result.metadata["index_type"] == "weighted-term-coverage"

@@ -8,6 +8,8 @@ through ``BuildDeps`` or ``PipelineDeps``; orchestration functions do not change
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import sys
 import time
 import uuid
@@ -16,7 +18,10 @@ from pathlib import Path
 from typing import Literal
 
 from cs30.chunking import FixtureChunker
-from cs30.citation import validate_citations
+from cs30.citation import (
+    CitationResolver,
+    EvidenceContextBuilder,
+)
 from cs30.config import AppConfig, load_config
 from cs30.contracts import IndexArtifact, PipelineRun, RetrievalHit, StudentLevel
 from cs30.errors import ConfigError, CS30Error, EmptyQueryError
@@ -188,8 +193,20 @@ def run_pipeline(
         retrieval_ms,
     )
 
+    run_id = uuid.uuid4().hex[:12]
+    evidence_bundle = EvidenceContextBuilder().build(
+        retrieval,
+        retrieval_mode=retrieval.mode,
+        run_provenance={
+            "run_id": run_id,
+            "environment": config.environment,
+            "mode": deps.mode,
+        },
+    )
+    # M8 owns the evidence bundle and post-generation governance. Member 7's
+    # generator keeps its existing RetrievalResult interface until the team
+    # explicitly approves a bundle-consumer contract.
     answer = deps.generator.generate(question, profile, retrieval)
-    validate_citations(answer, retrieval)
     LOGGER.info(
         "generation level=%s abstained=%s citations=%d",
         profile.level.value,
@@ -197,6 +214,48 @@ def run_pipeline(
         len(answer.citations),
     )
 
+    validated_answer = CitationResolver().resolve(answer, evidence_bundle)
+    run_trace = {
+        "request_id": run_id,
+        "query": question,
+        "profile_level": profile.level.value,
+        "retrieval_mode": retrieval.mode.value,
+        "retrieved_ids": ",".join(hit.chunk_id for hit in retrieval.hits),
+        "selected_evidence_ids": ",".join(
+            item.evidence_id for item in evidence_bundle.evidence_items
+        ),
+        "citation_ids": ",".join(answer.citations),
+        "context_token_count": str(evidence_bundle.token_count),
+        "context_hash": hashlib.sha256(
+            (evidence_bundle.prompt_context or "").encode("utf-8")
+        ).hexdigest(),
+        "corpus_version": (
+            retrieval.provenance.corpus_hash
+            if retrieval.provenance is not None
+            else ("fixture-corpus-v1" if deps.mode == "fixture" else "unknown")
+        ),
+        "index_version": (
+            retrieval.provenance.index_version
+            if retrieval.provenance is not None
+            else ("fixture-index-v1" if deps.mode == "fixture" else "unknown")
+        ),
+        "artifact_version": str(
+            getattr(deps.retriever, "artifact_version", None)
+            or ("fixture-artifact-v1" if deps.mode == "fixture" else "unknown")
+        ),
+    }
+    LOGGER.info(
+        "trace request_id=%s query=%r profile_level=%s retrieved_ids=%s "
+        "selected_ids=%s citation_ids=%s context_hash=%s",
+        run_trace["request_id"],
+        run_trace["query"],
+        run_trace["profile_level"],
+        run_trace["retrieved_ids"],
+        run_trace["selected_evidence_ids"],
+        run_trace["citation_ids"],
+        run_trace["context_hash"],
+    )
+    LOGGER.info("trace_json=%s", json.dumps(run_trace, ensure_ascii=False, sort_keys=True))
     metadata = {
         "environment": config.environment,
         "top_k": str(config.retrieval.top_k),
@@ -206,23 +265,25 @@ def run_pipeline(
         "provider": config.generation.provider,
         "retrieval_ms": f"{retrieval_ms:.1f}",
     }
-    trace = getattr(deps.generator, "last_trace", None)
-    if trace is not None and callable(getattr(trace, "to_metadata", None)):
-        metadata.update(trace.to_metadata())
+    generation_trace = getattr(deps.generator, "last_trace", None)
+    if generation_trace is not None and callable(getattr(generation_trace, "to_metadata", None)):
+        metadata.update(generation_trace.to_metadata())
     evidence_count = getattr(deps.retriever, "evidence_count", None)
     if evidence_count is not None:
         metadata["corpus_evidence_count"] = str(evidence_count)
-
     return PipelineRun(
-        run_id=uuid.uuid4().hex[:12],
+        run_id=run_id,
         mode=deps.mode,
         question=question,
         question_id=question_id,
         profile=profile,
         retrieval=retrieval,
         answer=answer,
-        citation_integrity="passed",
+        citation_integrity=validated_answer.citation_status,
         metadata=metadata,
+        evidence_bundle=evidence_bundle,
+        validated_answer=validated_answer,
+        trace=run_trace,
     )
 
 
