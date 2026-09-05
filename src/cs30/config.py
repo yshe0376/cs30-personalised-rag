@@ -49,6 +49,7 @@ class RetrievalConfig(BaseModel):
     rrf_k: int = Field(default=60, gt=0)
     rrf_input_top_k: int = Field(default=20, gt=0)
     bm25_min_score: float = Field(default=0.0, ge=0.0)
+    bm25_stopwords: bool = True
     dense_min_similarity: float | None = Field(
         default=None,
         ge=-1.0,
@@ -106,14 +107,32 @@ def _read_toml(environment: str) -> dict:
 
 
 def _apply_env_overrides(payload: dict) -> dict:
+    def assign(keys: tuple[str, ...], value: object) -> None:
+        target = payload
+        for key in keys[:-1]:
+            target = target.setdefault(key, {})
+        target[keys[-1]] = value
+
     def scalar(env_name: str, *keys: str) -> None:
         raw = os.environ.get(env_name)
         if raw is None or raw == "":
             return
-        target = payload
-        for key in keys[:-1]:
-            target = target.setdefault(key, {})
-        target[keys[-1]] = raw
+        assign(keys, raw)
+
+    def boolean(env_name: str, *keys: str) -> None:
+        raw = os.environ.get(env_name)
+        if not raw:
+            return
+        normalised = raw.strip().lower()
+        if normalised in {"1", "true", "yes", "on"}:
+            assign(keys, True)
+        elif normalised in {"0", "false", "no", "off"}:
+            assign(keys, False)
+        else:
+            raise ConfigError(
+                f"{env_name} must be one of: "
+                "1, true, yes, on, 0, false, no, off"
+            )
 
     scalar("CS30_LOG_LEVEL", "log_level")
     scalar("CS30_TOP_K", "retrieval", "top_k")
@@ -127,23 +146,11 @@ def _apply_env_overrides(payload: dict) -> dict:
         "retrieval",
         "dense_min_similarity",
     )
+    boolean("CS30_BM25_STOPWORDS", "retrieval", "bm25_stopwords")
     scalar("LLM_PROVIDER", "generation", "provider")
     scalar("LLM_MODEL", "generation", "model")
 
-    fixture_mode = os.environ.get("CS30_FIXTURE_MODE")
-    if fixture_mode:
-        normalised = fixture_mode.strip().lower()
-        true_values = {"1", "true", "yes", "on"}
-        false_values = {"0", "false", "no", "off"}
-        if normalised in true_values:
-            payload["fixture_mode"] = True
-        elif normalised in false_values:
-            payload["fixture_mode"] = False
-        else:
-            raise ConfigError(
-                "CS30_FIXTURE_MODE must be one of: "
-                "1, true, yes, on, 0, false, no, off"
-            )
+    boolean("CS30_FIXTURE_MODE", "fixture_mode")
     return payload
 
 
