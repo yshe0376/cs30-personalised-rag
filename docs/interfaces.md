@@ -106,6 +106,26 @@ not return.
 `Chunk.metadata` and `PipelineRun.metadata` are `dict[str, str]`: **string
 values only**. Use `{"section": "1"}`, not `{"section": 1}`.
 
+Member 4 publishes the following `Chunk.metadata` keys for indexing,
+retrieval and citation trace-back. These keys are a documented module seam;
+they do not add fields to the shared `Chunk` contract.
+
+| Key | Meaning |
+|---|---|
+| `source_locator` | Source URI plus chapter and half-open character span |
+| `source_chapter_ids` | Comma-separated source chapter IDs used by anomaly reporting |
+| `parent_scope` | `section` or `chapter` for small-to-big expansion |
+| `parent_char_start`, `parent_char_end` | Half-open parent span in `OpenStaxDocument.text` |
+| `parent_source_block_ids` | Parser block IDs covered by the parent span |
+| `candidate_id` | Stable candidate name such as `main` or `S1`–`S6` |
+| `include_types` | Canonical comma-separated content filter, or `*` for all types |
+| `embedding_input_token_count` | Token count of `Chunk.embedding_input` |
+
+`strategy` also encodes the canonical `include_types` filter. This ensures
+Member 5's configuration provenance distinguishes two custom `main` runs that
+use different content filters, even before M5 explicitly adds `include_types`
+to its own configuration-key list.
+
 ## Ownership
 
 | Contract | Producer | Primary consumers |
@@ -115,9 +135,10 @@ values only**. Use `{"section": "1"}`, not `{"section": 1}`.
 | `Chunk` | Member 4 | Members 5 and 6 |
 | `IndexArtifact` | Member 5 | Member 6 |
 | `SciQQuestion` | Member 3 | Members 6 and 7 |
-| `RetrievalResult` | Member 6 | Member 7, Leader |
+| `RetrievalResult` | Member 6 | Member 8 EvidenceContextBuilder |
+| `EvidenceBundle` | Member 8 | Member 7 (downstream integration), citation resolver, UI |
 | `StudentProfile` | Member 7 / UI | Prompt builder |
-| `GeneratedAnswer` | Member 7 | UI, citation checker |
+| `GeneratedAnswer` | Member 7 | Member 8 citation resolver, UI |
 | `PipelineRun` | Leader | Member 8, ablation table |
 
 Member numbers follow the week 1 division of labour held in the team Drive.
@@ -127,8 +148,13 @@ Member numbers follow the week 1 division of labour held in the team Drive.
 Computational modules implement Protocols from `src/cs30/ports.py`. Members 2,
 4, and 5 are orchestrated by `BuildDeps` / `run_build_pipeline()`; members 6 and
 7 are orchestrated by `PipelineDeps` / `run_pipeline()`. Member 3 supplies
-validated questions through `QuestionProvider`. Member 8 consumes `PipelineRun`
-directly. See each module package's `README.md` for its acceptance criteria.
+validated questions through `QuestionProvider`. Member 8 prepares the
+`EvidenceBundle` from the selected retrieval results and consumes `PipelineRun`
+for the UI. The bundle is the M8 delivery fixture for downstream M7
+integration; the current legacy `AnswerGenerator` still receives
+`RetrievalResult`, and M7 remains responsible for its own prompt and LLM
+implementation. See each module package's `README.md` for its acceptance
+criteria.
 
 `IndexArtifact` is the explicit hand-off between index building and retrieval.
 It records the index type, stable location, chunk count, and implementation
@@ -137,10 +163,11 @@ corresponding real index. The fixture implementation uses a process-local
 `memory://` location; real adapters must use a persistent location that another
 process can reopen.
 
-`validate_citations()` raises `CitationIntegrityError` when generated citations
-are not present in the retrieval result. Because it derives from `CS30Error`,
-the command-line boundary reports the problem cleanly instead of leaking a
-traceback.
+`CitationResolver` validates the generator's chunk IDs against the evidence
+items in the `EvidenceBundle`. E-style IDs, when retained, are M8 display labels
+and are not part of the generator's citation interface.
+Unknown citations raise `CitationIntegrityError`; abstention is recorded as
+`skipped` because there is no citation to validate.
 
 ## Integration gate
 
