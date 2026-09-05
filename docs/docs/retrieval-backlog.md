@@ -50,7 +50,7 @@ unacceptable reduction in retrieval recall.
 - [ ] Calculate abstention precision, recall and F1.
 - [ ] Select and freeze the threshold before final testing.
 - [ ] Run the frozen configuration on the test set.
-- [ ] Add the selected value and results to `RAG优化旋钮清单.md`.
+- [ ] Add the selected value and results to `retrieval-ablation-plan.md`.
 - [ ] Record the final configuration in the project report.
 
 ### Acceptance Criteria
