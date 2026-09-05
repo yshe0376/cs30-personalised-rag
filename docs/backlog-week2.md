@@ -16,8 +16,8 @@ The following work has already been completed:
   pipeline mode selection.
 - A real-mode BM25 CI assertion for an out-of-scope question.
 
-The current retrieval regression test file contains 22 tests. The complete
-repository test suite currently contains 125 passing tests.
+The current retrieval regression test file contains 23 tests. The complete
+repository test suite currently contains 149 passing tests.
 
 ## RET-01: Calibrate the Dense Abstention Threshold
 

@@ -551,7 +551,44 @@ def test_pipeline_uses_shared_real_bm25_fixture() -> None:
     )
     assert result.hits
 
+def test_pipeline_passes_thresholds_to_hybrid_retrievers(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    artifact = _artifact(dense=True)
+    (tmp_path / "artifact.json").write_text(
+        artifact.model_dump_json(),
+        encoding="utf-8",
+    )
 
+    monkeypatch.setattr(
+        real_retrieval.RRFRetriever,
+        "load_index",
+        lambda self, artifact: None,
+    )
+
+    config = AppConfig(
+        fixture_mode=False,
+        retrieval=RetrievalConfig(
+            mode=RetrievalMode.HYBRID,
+            index_dir=str(tmp_path),
+            bm25_min_score=0.25,
+            dense_min_similarity=0.55,
+            rrf_k=42,
+            rrf_input_top_k=7,
+        ),
+    )
+
+    deps = build_real_deps(config)
+
+    assert deps.mode == "real"
+    assert isinstance(deps.retriever, real_retrieval.RRFRetriever)
+    assert deps.retriever.dense.min_similarity == pytest.approx(0.55)
+    assert deps.retriever.bm25.min_score == pytest.approx(0.25)
+    assert deps.retriever.rrf_k == 42
+    assert deps.retriever.input_top_k == 7
+
+    
 def test_pipeline_falls_back_to_fixture_when_index_is_missing(
     tmp_path: Path,
 ) -> None:

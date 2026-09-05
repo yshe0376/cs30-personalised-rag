@@ -203,7 +203,7 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
     elif provider == "openai":
         if not config.generation.model:
-             raise ConfigError("LLM_MODEL is required when LLM_PROVIDER=openai")
+            raise ConfigError("LLM_MODEL is required when LLM_PROVIDER=openai")
 
         client = OpenAIResponsesClient(
             config.generation.model,
