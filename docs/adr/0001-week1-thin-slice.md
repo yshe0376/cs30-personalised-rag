@@ -182,9 +182,16 @@ is added to `ports.py` until Member 7 accepts one.
 
 Left deliberately empty: `evidence_role` (A3, pending the taxonomy freeze in
 #16), the normalised score and the `lambda`/`confidence` inputs C4 needs (#17),
-and `source_locator` until retrieval supplies it. `prompt_context` and
-`citation_map` are built but read by nobody today; they exist for the
-integration Member 7 has not yet accepted.
+and `source_locator` until retrieval supplies it.
+
+`prompt_context` and `citation_map` are both read, but not by the generator.
+`prompt_context` is hashed into `trace.context_hash`; since the generator
+receives a `RetrievalResult` and builds its own prompt, that hash records the
+context the bundle assembled rather than the text the model saw. The resolver
+validates citations against `citation_map.values()` and resolves through it,
+so the map's chunk IDs are load-bearing; only its `E` keys are unused, because
+the generator cites chunk IDs. Both become fully used when Member 7 accepts a
+bundle-consuming port.
 
 ## Consequences
 
