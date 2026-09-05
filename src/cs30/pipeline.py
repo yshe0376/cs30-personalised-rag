@@ -176,6 +176,9 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
         bm25_retriever = BM25Retriever(
             min_score=config.retrieval.bm25_min_score,
+            # An empty set disables query-side filtering; None keeps the default
+            # list. This is knob A2 in docs/retrieval-ablation-plan.md.
+            stopwords=None if config.retrieval.bm25_stopwords else frozenset(),
         )
 
         retrieval_service = RealRetrievalService(

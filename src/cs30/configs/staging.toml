@@ -10,6 +10,7 @@ index_dir = "data/index"
 rrf_k = 60
 rrf_input_top_k = 20
 bm25_min_score = 0.0
+bm25_stopwords = true
 # Keep disabled until it is calibrated on the validation set.
 # dense_min_similarity = 0.5
 

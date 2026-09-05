@@ -128,6 +128,7 @@
 | `retrieval.rrf_k` | `CS30_RRF_K` | 60 | C 层 RRF 的 `k` | 可用。60 是文献惯例值，本语料上未验证 |
 | `retrieval.rrf_input_top_k` | `CS30_RRF_INPUT_TOP_K` | 20 | ★ 两阶段的"粗召回"宽度 | 可用。融合前每一路取多少候选 |
 | `retrieval.bm25_min_score` | `CS30_BM25_MIN_SCORE` | `0.0` | F 层 ★ 拒答机制 | 可用但**未校准** |
+| `retrieval.bm25_stopwords` | `CS30_BM25_STOPWORDS` | `true` | C 层查询处理 | 可用。关掉即消融 A2 的基线档 |
 | `retrieval.dense_min_similarity` | `CS30_DENSE_MIN_SIMILARITY` | `None`（关闭） | F 层 ★ 拒答机制 | 可用但**未校准**，见下 |
 | `retrieval.index_dir` | `CS30_INDEX_DIR` | `data/index` | — | 不是旋钮，是 M5 产物的位置 |
 
@@ -135,7 +136,7 @@
 
 改这些要动构造参数，暂时只能在代码里调：
 
-- **BM25 停用词表**（`retrieval/real.py` 的 `_STOPWORDS`）。这是个**真旋钮**，不是实现细节：换一份表就是一次消融。目前是硬编码的 33 个英文功能词，只作用于查询侧，索引侧的词频和 IDF 不受影响。
+- **停用词表的内容**。开关已经能从配置改（`bm25_stopwords`），但**换一份表**还不行——`_STOPWORDS` 是 `retrieval/real.py` 里硬编码的 33 个英文功能词。开关够跑消融 A2（有/无），换表要再加一个字段。只作用于查询侧，索引侧的词频和 IDF 不受影响。
 - **BM25 的 `k1` / `b`**（默认 1.5 / 0.75，Okapi 惯例值）。
 - **查询指令前缀**（`FaissDenseRetriever.query_instruction`）。上文标了 ★ 并注明"不加会明显掉点"——目前从 `IndexArtifact.metadata.query_instruction` 读，M5 建索引时没写这个字段，所以现在等于没加。**换 bge 系列模型时必须先把这条接上。**
 
