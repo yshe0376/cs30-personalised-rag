@@ -3,10 +3,12 @@
   "artifact_id": "ci-bm25-fixture",
   "index_type": "bm25",
   "location": "tests/fixtures/index",
-  "chunk_count": 2,
+  "chunk_count": 8,
   "metadata": {
     "corpus_hash": "ci-openstax-corpus",
     "chunk_config_hash": "ci-chunk-config",
-    "index_version": "ci-bm25-v1"
+    "index_version": "ci-bm25-v1",
+    "embedding_model": "not-applicable-bm25-fixture",
+    "dimension": "0"
   }
 }

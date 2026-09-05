@@ -527,22 +527,13 @@ def test_non_positive_top_k_raises_typed_error() -> None:
         )
 
 
-def test_pipeline_uses_real_bm25_when_index_exists(
-    tmp_path: Path,
-) -> None:
-    _write_chunk_map(tmp_path, _chunks())
-    artifact = _artifact_at(tmp_path)
-
-    (tmp_path / "artifact.json").write_text(
-        artifact.model_dump_json(indent=2),
-        encoding="utf-8",
-    )
-
+def test_pipeline_uses_shared_real_bm25_fixture() -> None:
+    index_dir = Path(__file__).parent / "fixtures" / "index"
     config = AppConfig(
         fixture_mode=False,
         retrieval=RetrievalConfig(
             mode=RetrievalMode.BM25,
-            index_dir=str(tmp_path),
+            index_dir=str(index_dir),
         ),
     )
 
@@ -553,6 +544,11 @@ def test_pipeline_uses_real_bm25_when_index_exists(
         deps.retriever,
         real_retrieval.BM25Retriever,
     )
+    result = deps.retriever.retrieve(
+        "What is acceleration?",
+        top_k=3,
+    )
+    assert result.hits
 
 
 def test_pipeline_falls_back_to_fixture_when_index_is_missing(
