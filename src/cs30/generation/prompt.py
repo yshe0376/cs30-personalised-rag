@@ -6,6 +6,22 @@ from cs30.contracts import RetrievalResult, SciQQuestion, StudentLevel, StudentP
 
 from .schema import ANSWER_JSON_SCHEMA
 
+#: Exactly the ``StudentProfile`` fields the prompt is allowed to carry.
+#:
+#: The prompt used to serialise whatever ``model_dump()`` returned, so any field
+#: added to the contract would have silently changed the prompt and with it the
+#: model's behaviour. Persistence fields such as an update timestamp would also
+#: have made the prompt differ between runs on identical input. Listing the
+#: fields here keeps that decision explicit; ``tests/test_prompt_profile_fields``
+#: fails when the contract grows a field this list does not mention.
+PROMPT_PROFILE_FIELDS = (
+    "schema_version",
+    "profile_id",
+    "level",
+    "topic_levels",
+    "confidence",
+)
+
 _LEVEL_GUIDANCE = {
     StudentLevel.BEGINNER: (
         "Use plain language. Define the key physics term and explain the reason "
@@ -29,6 +45,18 @@ def format_sciq_question(question: SciQQuestion) -> str:
         f"{label}. {question.choices[label]}" for label in ("A", "B", "C", "D")
     )
     return f"{question.question}\n{choices}"
+
+
+def _profile_payload(profile: StudentProfile) -> dict[str, object]:
+    """Return only the profile fields listed in ``PROMPT_PROFILE_FIELDS``.
+
+    Serialisation is unchanged: the values still come from ``model_dump(mode=
+    "json")`` and are still emitted with ``sort_keys=True``, so selecting the
+    current field set produces a byte-identical prompt.
+    """
+
+    dumped = profile.model_dump(mode="json")
+    return {name: dumped[name] for name in PROMPT_PROFILE_FIELDS if name in dumped}
 
 
 class PromptBuilder:
@@ -61,7 +89,7 @@ Follow these rules in order:
 
 STUDENT_LEVEL: {profile.level.value}
 STUDENT_PROFILE_JSON:
-{json.dumps(profile.model_dump(mode="json"), sort_keys=True)}
+{json.dumps(_profile_payload(profile), sort_keys=True)}
 
 PERSONALISATION_GUIDANCE:
 {_LEVEL_GUIDANCE[profile.level]}
