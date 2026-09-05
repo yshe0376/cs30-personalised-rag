@@ -442,6 +442,9 @@ class BM25Retriever:
             )
 
         chunks = _load_chunk_map(artifact)
+        term_frequencies: list[Counter[str]] = []
+        document_lengths: list[int] = []
+        document_frequency: Counter[str] = Counter()
 
         for item in chunks:
             tokens = self._tokenize(item["text"])
