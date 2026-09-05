@@ -19,6 +19,26 @@ from cs30.errors import ConfigError
 DEFAULT_ENVIRONMENT = "development"
 
 
+def _load_local_env(path: Path | None = None) -> None:
+    """Load simple KEY=VALUE entries from an ignored local ``.env`` file."""
+
+    candidate = path or (Path.cwd() / ".env")
+    if not candidate.is_file():
+        return
+    for raw_line in candidate.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key:
+            continue
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {'"', "'"}:
+            value = value[1:-1]
+        os.environ.setdefault(key, value)
+
+
 class RetrievalConfig(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -134,6 +154,7 @@ def load_config(environment: str | None = None) -> AppConfig:
     ``development``.
     """
 
+    _load_local_env()
     resolved = environment or os.environ.get("CS30_ENV") or DEFAULT_ENVIRONMENT
     payload = _read_toml(resolved)
     payload.setdefault("environment", resolved)

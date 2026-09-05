@@ -58,6 +58,9 @@ class FixtureRetriever:
                 text=chunk.text,
                 chapter_id=chunk.chapter_id,
                 source=chunk.source,
+                source_locator=(
+                    f"{chunk.source}?char_start={chunk.char_start}&char_end={chunk.char_end}"
+                ),
                 score=round(score, 4),
                 rank=rank,
                 retriever_type=RetrievalMode.FIXTURE,
