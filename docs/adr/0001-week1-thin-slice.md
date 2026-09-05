@@ -138,6 +138,61 @@ Member 4 produces it, since section titles arrive through `document.blocks`.
 Member 5 embeds `embedding_input`. Member 6 keeps returning `text` in a
 `RetrievalHit`, because that is what a citation points at.
 
+## Revision, 2026-09-05: an evidence bundle between retrieval and generation
+
+Citation integrity was checked by `validate_citations(answer, retrieval)`,
+which tested membership against whatever retrieval happened to return. Nothing
+recorded which evidence was actually offered to the model, how much context it
+amounted to, or which index artifact produced it. The ablation table needs all
+three, and a run cannot be reproduced from a set-membership test.
+
+`EvidenceItem`, `EvidenceBundle`, and `ValidatedAnswer` were added, with three
+optional fields on `PipelineRun`: `evidence_bundle`, `validated_answer`, and
+`trace`. `RetrievedEvidence` gained an optional `source_locator`, left `None`
+until the retrieval seam can supply a real corpus locator. It is deliberately
+not filled with the document source: a traceability field that silently
+duplicates `source` is worse than an absent one, because it reads as span-level
+provenance the system does not have.
+
+**Citations stay chunk-based.** The bundle assigns `E1`, `E2` identifiers and
+keeps a `citation_map`, but the prompt shows chunk IDs and the resolver accepts
+only chunk IDs. Switching namespace means changing the prompt, which changes
+model behaviour. W5 opens with Level-Aware Reranking; two simultaneous changes
+would make the generation results unattributable, which the one-knob rule
+exists to prevent. E numbers stay display labels until a prompt-format
+comparison is worth its own ablation row.
+
+**The token budget observes, it does not filter.** An earlier revision dropped
+evidence past the budget while the prompt still listed every retrieved chunk as
+citable, so a model obeying the prompt could be judged to have hallucinated a
+citation — measured at two of five hits. The budget is now recorded and warned
+about, never enforced by removal. Its unit is whitespace-separated words, not
+model tokens; the warning message says so, and a real tokenizer replaces it
+before any budget claim is made.
+
+`schema_version` stays `1.0`. Every new field is optional with a default, so
+records written before this revision still validate. The reverse does not hold:
+`ContractModel` forbids extra keys, so older code rejects newer records. That
+asymmetry is acceptable while nothing outside this repository consumes a
+`PipelineRun`.
+
+Member 8 builds the bundle and owns citation resolution. Member 7's
+`AnswerGenerator` keeps receiving a `RetrievalResult`; no bundle-consuming port
+is added to `ports.py` until Member 7 accepts one.
+
+Left deliberately empty: `evidence_role` (A3, pending the taxonomy freeze in
+#16), the normalised score and the `lambda`/`confidence` inputs C4 needs (#17),
+and `source_locator` until retrieval supplies it.
+
+`prompt_context` and `citation_map` are both read, but not by the generator.
+`prompt_context` is hashed into `trace.context_hash`; since the generator
+receives a `RetrievalResult` and builds its own prompt, that hash records the
+context the bundle assembled rather than the text the model saw. The resolver
+validates citations against `citation_map.values()` and resolves through it,
+so the map's chunk IDs are load-bearing; only its `E` keys are unused, because
+the generator cites chunk IDs. Both become fully used when Member 7 accepts a
+bundle-consuming port.
+
 ## Consequences
 
 The team can develop in parallel against fixtures and replace adapters without
