@@ -67,7 +67,9 @@ def test_bm25_out_of_scope_question_returns_no_hits(
     )
 
     assert result.hits == []
-
+    assert result.mode is RetrievalMode.BM25
+    assert result.provenance is not None
+    assert result.provenance.embedding_model is None
 
 def test_bm25_stopword_only_question_returns_no_hits(
     monkeypatch: pytest.MonkeyPatch,
@@ -84,6 +86,22 @@ def test_bm25_stopword_only_question_returns_no_hits(
     result = retriever.retrieve("Is the a of", top_k=5)
 
     assert result.hits == []
+
+
+def test_bm25_rejects_unsupported_artifact_type() -> None:
+    invalid_artifact = IndexArtifact.model_validate(
+        {
+            **_artifact().model_dump(),
+            "index_type": "unknown-index",
+        }
+    )
+    retriever = real_retrieval.BM25Retriever()
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="bm25 or faiss-flat-ip",
+    ):
+        retriever.load_index(invalid_artifact)
 
 
 class _FakeEmbeddingModel:
