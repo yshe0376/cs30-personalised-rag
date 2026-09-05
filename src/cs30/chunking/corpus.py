@@ -45,7 +45,11 @@ def _sample_indices(length: int, count: int) -> list[int]:
 def load_retrieval_corpus(path: Path) -> list[Chunk]:
     """Load the one JSONL corpus consumed by both Dense and BM25."""
 
-    payloads = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    payloads = [
+        json.loads(line)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
     return TypeAdapter(list[Chunk]).validate_python(payloads)
 
 
@@ -77,6 +81,28 @@ def export_retrieval_corpus(
     if len({chunk.chunk_id for chunk in ordered_chunks}) != len(ordered_chunks):
         raise ValueError("chunk_id values must be unique")
 
+    configuration_keys = (
+        "candidate_id",
+        "strategy",
+        "chunker_version",
+        "tokenizer_name",
+        "target_tokens",
+        "min_tokens",
+        "max_tokens",
+        "respect_section_boundaries",
+        "enrich_embed_text",
+        "reject_duplicate_text",
+        "include_types",
+    )
+    configurations = sorted(
+        {
+            tuple(chunk.metadata.get(key, "") for key in configuration_keys)
+            for chunk in ordered_chunks
+        }
+    )
+    if len(configurations) != 1:
+        raise ValueError("cannot export chunks produced by mixed chunk configurations")
+
     for chunk in ordered_chunks:
         document = documents_by_id.get(chunk.document_id)
         if document is None:
@@ -104,9 +130,7 @@ def export_retrieval_corpus(
     }
     statistics_payload = build_chunk_statistics(ordered_chunks)
     statistics_payload["traceback_sample_count"] = len(tracebacks)
-    statistics_payload["all_sampled_spans_match"] = all(
-        item["recovered_text_matches"] for item in tracebacks
-    )
+    statistics_payload["traceback_validation"] = "fail_fast"
 
     file_payloads = {
         "records.jsonl": _jsonl_bytes(record_payloads),
@@ -118,21 +142,6 @@ def export_retrieval_corpus(
     for name, data in file_payloads.items():
         (output_dir / name).write_bytes(data)
 
-    configurations = sorted(
-        {
-            (
-                chunk.metadata.get("candidate_id", "main"),
-                chunk.metadata.get("strategy", ""),
-                chunk.metadata.get("chunker_version", ""),
-                chunk.metadata.get("tokenizer_name", ""),
-                chunk.metadata.get("target_tokens", ""),
-                chunk.metadata.get("min_tokens", ""),
-                chunk.metadata.get("max_tokens", ""),
-                chunk.metadata.get("include_types", "*"),
-            )
-            for chunk in ordered_chunks
-        }
-    )
     manifest = {
         "manifest_version": "1.0",
         "corpus_id": _sha256(file_payloads["records.jsonl"]),
@@ -148,16 +157,7 @@ def export_retrieval_corpus(
             for document in sorted(documents, key=lambda item: item.document_id)
         ],
         "chunk_configurations": [
-            {
-                "candidate_id": values[0],
-                "strategy": values[1],
-                "chunker_version": values[2],
-                "tokenizer_name": values[3],
-                "target_tokens": values[4],
-                "min_tokens": values[5],
-                "max_tokens": values[6],
-                "include_types": values[7],
-            }
+            dict(zip(configuration_keys, values, strict=True))
             for values in configurations
         ],
         "consumers": {

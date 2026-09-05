@@ -9,6 +9,18 @@ from collections.abc import Sequence
 from cs30.contracts import Chunk, OpenStaxDocument
 
 
+def _crosses_chapter_boundary(chunk: Chunk) -> bool:
+    source_chapter_ids = {
+        chapter_id.strip()
+        for chapter_id in chunk.metadata.get(
+            "source_chapter_ids",
+            chunk.chapter_id,
+        ).split(",")
+        if chapter_id.strip()
+    }
+    return len(source_chapter_ids) != 1 or chunk.chapter_id not in source_chapter_ids
+
+
 def build_chunk_statistics(chunks: Sequence[Chunk]) -> dict[str, object]:
     """Return engineering checks without claiming retrieval effectiveness."""
 
@@ -34,7 +46,9 @@ def build_chunk_statistics(chunks: Sequence[Chunk]) -> dict[str, object]:
         "oversized_chunks": sum(
             chunk.metadata.get("oversized_chunk") == "true" for chunk in chunks
         ),
-        "cross_chapter_chunks": 0,
+        "cross_chapter_chunks": sum(
+            _crosses_chapter_boundary(chunk) for chunk in chunks
+        ),
         "note": "Engineering statistics only; no retrieval-effectiveness claim is made.",
     }
 

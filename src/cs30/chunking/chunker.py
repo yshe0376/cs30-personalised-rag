@@ -193,6 +193,7 @@ class BlockAwareChunker:
         embedding_input_token_count = self.token_counter.count(embedding_input)
 
         chapter_id = blocks[0].chapter_id
+        source_chapter_ids = self._ordered_unique(block.chapter_id for block in blocks)
         section_ids = self._ordered_unique(block.section_id or "" for block in blocks)
         section_titles = self._ordered_unique(block.section_title or "" for block in blocks)
         content_types = self._ordered_unique(block.content_type.value for block in blocks)
@@ -208,7 +209,20 @@ class BlockAwareChunker:
             block.block_id for block in parent_blocks if block.block_id is not None
         ]
         text_hash = "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
-        strategy_name = "block_greedy_nearest_target"
+        include_types = (
+            "*"
+            if self.strategy.include_types is None
+            else ",".join(sorted(item.value for item in self.strategy.include_types))
+        )
+        filter_key = (
+            "all"
+            if self.strategy.include_types is None
+            else "-".join(sorted(item.value for item in self.strategy.include_types))
+        )
+        strategy_name = (
+            "block_greedy_nearest_target_types-"
+            f"{self._safe_id(filter_key).lower()}"
+        )
         if self.strategy.candidate_id != "main":
             strategy_name += f"_{self._safe_id(self.strategy.candidate_id).lower()}"
         metadata = {
@@ -225,11 +239,8 @@ class BlockAwareChunker:
             "enrich_embed_text": str(self.strategy.enrich_embed_text).lower(),
             "reject_duplicate_text": str(self.strategy.reject_duplicate_text).lower(),
             "embedding_input_token_count": str(embedding_input_token_count),
-            "include_types": (
-                "*"
-                if self.strategy.include_types is None
-                else ",".join(item.value for item in self.strategy.include_types)
-            ),
+            "include_types": include_types,
+            "source_chapter_ids": ",".join(source_chapter_ids),
             "section_id": section_ids[0] if len(section_ids) == 1 else "",
             "section_ids": ",".join(section_ids),
             "section_title": section_titles[0] if len(section_titles) == 1 else "",

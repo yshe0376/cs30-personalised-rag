@@ -77,9 +77,10 @@ strategy = BlockChunkingStrategy(
 ## Split-ready candidates S1-S6
 
 `CHUNKING_CANDIDATES` freezes six reproducible engineering configurations.
-All retain the agreed 500-token target and 100-600 reporting thresholds. They
+They share the same size constraints (`min=100`, `target=500`, `max=600`) and
 vary only parser content-type inclusion, optional `embed_text` context, and
-section versus chapter isolation:
+section versus chapter isolation. The target guides whole-block grouping; it
+does not promise that every emitted chunk will be close to 500 tokens.
 
 | ID | Included content | Embed context | Isolation |
 | --- | --- | --- | --- |
@@ -154,9 +155,28 @@ manifest = export_retrieval_corpus(
     documents,
     chunks,
     Path("artifacts/retrieval_corpus"),
-    rebuild_command="python scripts/build_retrieval_corpus.py",
+    rebuild_command=(
+        "python scripts/build_retrieval_corpus.py "
+        "--document src/cs30/fixtures/openstax_document.json "
+        "--output-dir artifacts/retrieval_corpus"
+    ),
 )
 ```
+
+The repository includes that script. A runnable fixture rebuild is:
+
+```bash
+python scripts/build_retrieval_corpus.py \
+  --document src/cs30/fixtures/openstax_document.json \
+  --output-dir artifacts/retrieval_corpus
+```
+
+## Chunker version
+
+Version `0.4.0` is intentional. Version `0.3.0` added embedding-input and
+duplicate-rejection provenance during the M5 hand-off; `0.4.0` adds candidate,
+content-filter, parent-span and unified-corpus semantics. Both revisions are
+contained in the still-unmerged M4 feature branch.
 
 ## Current integration status
 
