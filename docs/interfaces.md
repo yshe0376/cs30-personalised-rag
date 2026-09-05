@@ -106,6 +106,26 @@ not return.
 `Chunk.metadata` and `PipelineRun.metadata` are `dict[str, str]`: **string
 values only**. Use `{"section": "1"}`, not `{"section": 1}`.
 
+Member 4 publishes the following `Chunk.metadata` keys for indexing,
+retrieval and citation trace-back. These keys are a documented module seam;
+they do not add fields to the shared `Chunk` contract.
+
+| Key | Meaning |
+|---|---|
+| `source_locator` | Source URI plus chapter and half-open character span |
+| `source_chapter_ids` | Comma-separated source chapter IDs used by anomaly reporting |
+| `parent_scope` | `section` or `chapter` for small-to-big expansion |
+| `parent_char_start`, `parent_char_end` | Half-open parent span in `OpenStaxDocument.text` |
+| `parent_source_block_ids` | Parser block IDs covered by the parent span |
+| `candidate_id` | Stable candidate name such as `main` or `S1`–`S6` |
+| `include_types` | Canonical comma-separated content filter, or `*` for all types |
+| `embedding_input_token_count` | Token count of `Chunk.embedding_input` |
+
+`strategy` also encodes the canonical `include_types` filter. This ensures
+Member 5's configuration provenance distinguishes two custom `main` runs that
+use different content filters, even before M5 explicitly adds `include_types`
+to its own configuration-key list.
+
 ## Ownership
 
 | Contract | Producer | Primary consumers |

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from pathlib import Path
 
+import numpy as np
 import pytest
 from pydantic import TypeAdapter
 
@@ -171,6 +173,88 @@ def test_optional_embed_text_preserves_verbatim_evidence() -> None:
     chunk = BlockAwareChunker(strategy=strategy).chunk(document)[0]
     assert chunk.embed_text is not None
     assert chunk.text in chunk.embed_text
+    assert chunk.metadata["enrich_embed_text"] == "true"
+    assert int(chunk.metadata["embedding_input_token_count"]) > chunk.token_count
+
+
+def test_model_tokenizer_handoff_builds_a_chapter_isolated_faiss_index(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Exercise the real Member 4 -> Member 5 seam without downloading a model."""
+
+    from cs30.indexing import faiss_index
+
+    class FakeTokenizer:
+        def encode(self, text: str, *, add_special_tokens: bool) -> list[str]:
+            assert add_special_tokens is False
+            return text.split()
+
+    class FakeSentenceTransformer:
+        def __init__(self, model_name: str) -> None:
+            self.model_name = model_name
+            self.device = "cpu"
+            self.max_seq_length = 128
+            self.tokenizer = FakeTokenizer()
+
+        def encode(
+            self,
+            texts: list[str],
+            *,
+            convert_to_numpy: bool,
+        ) -> np.ndarray:
+            assert convert_to_numpy is True
+            return np.asarray(
+                [[float(index + 1), 1.0] for index, _text in enumerate(texts)],
+                dtype=np.float32,
+            )
+
+    monkeypatch.setattr(
+        faiss_index,
+        "SentenceTransformer",
+        FakeSentenceTransformer,
+    )
+    index_builder = faiss_index.FaissIndexBuilder(
+        model_name="fake-model-tokenizer",
+        index_dir=str(tmp_path),
+    )
+    strategy = BlockChunkingStrategy(
+        target_tokens=10,
+        min_tokens=4,
+        max_tokens=16,
+        enrich_embed_text=True,
+    )
+    document = make_document(
+        [
+            ("2", "2.1", "Kinematics", "velocity changes with elapsed time"),
+            ("2", "2.1", "Kinematics", "acceleration measures that velocity change"),
+            ("3", "3.1", "Vectors", "vectors have magnitude and direction"),
+            ("3", "3.1", "Vectors", "components describe motion in two dimensions"),
+        ],
+        document_id="member4-member5-integration",
+    )
+
+    counter = index_builder.token_counter()
+    chunks = BlockAwareChunker(strategy=strategy, token_counter=counter).chunk(document)
+
+    assert {chunk.chapter_id for chunk in chunks} == {"2", "3"}
+    assert all(
+        chunk.metadata["tokenizer_name"] == "fake-model-tokenizer" for chunk in chunks
+    )
+    assert all(chunk.metadata["enrich_embed_text"] == "true" for chunk in chunks)
+    assert all(chunk.metadata["reject_duplicate_text"] == "true" for chunk in chunks)
+    assert all(chunk.token_count == counter.count(chunk.text) for chunk in chunks)
+    assert all(
+        int(chunk.metadata["embedding_input_token_count"])
+        == counter.count(chunk.embedding_input)
+        for chunk in chunks
+    )
+
+    artifact = index_builder.build(chunks)
+
+    assert artifact.chunk_count == len(chunks)
+    assert artifact.metadata["embedding_source"] == "embed_text"
+    assert artifact.metadata["chunk_config_hash"]
 
 
 def test_duplicate_chunk_text_is_rejected_by_default() -> None:
@@ -197,12 +281,32 @@ def test_statistics_and_ten_traceability_samples() -> None:
     assert all(sample["recovered_text_matches"] is True for sample in samples)
 
 
+def test_statistics_calculates_cross_chapter_chunks_from_provenance() -> None:
+    document = make_document([("1", "1.1", "Motion", standard_block(1))])
+    chunk = BlockAwareChunker().chunk(document)[0]
+    cross_chapter = chunk.model_copy(
+        update={
+            "metadata": {
+                **chunk.metadata,
+                "source_chapter_ids": "1,2",
+            }
+        }
+    )
+
+    statistics = build_chunk_statistics([chunk, cross_chapter])
+
+    assert statistics["cross_chapter_chunks"] == 1
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
         {"min_tokens": 0},
         {"min_tokens": 200, "target_tokens": 100},
         {"target_tokens": 500, "max_tokens": 499},
+        {"candidate_id": " "},
+        {"include_types": ()},
+        {"include_types": (ContentType.BODY, ContentType.BODY)},
         {"chunker_version": " "},
     ],
 )

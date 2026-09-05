@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from cs30.contracts import ContentType
+
 
 @dataclass(frozen=True, slots=True)
 class BlockChunkingStrategy:
@@ -20,7 +22,9 @@ class BlockChunkingStrategy:
     respect_section_boundaries: bool = True
     enrich_embed_text: bool = False
     reject_duplicate_text: bool = True
-    chunker_version: str = "0.2.0"
+    candidate_id: str = "main"
+    include_types: tuple[ContentType, ...] | None = None
+    chunker_version: str = "0.4.0"
 
     def __post_init__(self) -> None:
         if self.min_tokens <= 0:
@@ -29,6 +33,12 @@ class BlockChunkingStrategy:
             raise ValueError("target_tokens must be greater than or equal to min_tokens")
         if self.max_tokens < self.target_tokens:
             raise ValueError("max_tokens must be greater than or equal to target_tokens")
+        if not self.candidate_id.strip():
+            raise ValueError("candidate_id must not be empty")
+        if self.include_types is not None:
+            if not self.include_types:
+                raise ValueError("include_types must contain at least one content type")
+            if len(self.include_types) != len(set(self.include_types)):
+                raise ValueError("include_types must not contain duplicates")
         if not self.chunker_version.strip():
             raise ValueError("chunker_version must not be empty")
-
