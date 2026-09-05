@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -159,8 +161,75 @@ def test_unified_corpus_is_deterministic_and_shared_by_dense_and_bm25(
     bm25_records = load_retrieval_corpus(first_dir / first["consumers"]["bm25"])
     assert dense_records == bm25_records == chunks
     statistics = json.loads((first_dir / "statistics.json").read_text())
-    assert statistics["all_sampled_spans_match"] is True
+    assert statistics["traceback_validation"] == "fail_fast"
+    assert "all_sampled_spans_match" not in statistics
     assert statistics["empty_chunks"] == 0
+
+
+def test_export_rejects_mixed_chunk_configurations(tmp_path: Path) -> None:
+    document = make_typed_document()
+    s1_chunks = BlockAwareChunker(
+        strategy=get_chunking_candidate("S1").strategy
+    ).chunk(document)
+    s2_chunks = BlockAwareChunker(
+        strategy=get_chunking_candidate("S2").strategy
+    ).chunk(document)
+
+    with pytest.raises(ValueError, match="mixed chunk configurations"):
+        export_retrieval_corpus(
+            [document],
+            [*s1_chunks, *s2_chunks],
+            tmp_path,
+            rebuild_command="python scripts/build_retrieval_corpus.py",
+        )
+
+
+def test_load_retrieval_corpus_ignores_blank_lines(tmp_path: Path) -> None:
+    document = make_typed_document()
+    chunk = BlockAwareChunker().chunk(document)[0]
+    path = tmp_path / "records.jsonl"
+    path.write_text(
+        f"\n{chunk.model_dump_json()}\n   \n",
+        encoding="utf-8",
+    )
+
+    assert load_retrieval_corpus(path) == [chunk]
+
+
+def test_filter_set_is_encoded_in_main_strategy_provenance() -> None:
+    document = make_typed_document()
+    all_types = BlockAwareChunker().chunk(document)[0]
+    body_only = BlockAwareChunker(
+        strategy=BlockChunkingStrategy(include_types=(ContentType.BODY,))
+    ).chunk(document)[0]
+
+    assert all_types.metadata["candidate_id"] == "main"
+    assert body_only.metadata["candidate_id"] == "main"
+    assert all_types.metadata["strategy"] != body_only.metadata["strategy"]
+    assert all_types.metadata["strategy"].endswith("types-all")
+    assert body_only.metadata["strategy"].endswith("types-body")
+
+
+def test_repository_rebuild_script_runs_against_contract_fixture(tmp_path: Path) -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(repository_root / "scripts" / "build_retrieval_corpus.py"),
+            "--document",
+            str(repository_root / "src" / "cs30" / "fixtures" / "openstax_document.json"),
+            "--output-dir",
+            str(tmp_path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["record_count"] > 0
+    assert "Built" in result.stdout
+    assert (tmp_path / "records.jsonl").exists()
 
 
 def test_export_rejects_a_chunk_without_a_source_locator(tmp_path: Path) -> None:

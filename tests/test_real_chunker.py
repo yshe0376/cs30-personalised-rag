@@ -281,6 +281,23 @@ def test_statistics_and_ten_traceability_samples() -> None:
     assert all(sample["recovered_text_matches"] is True for sample in samples)
 
 
+def test_statistics_calculates_cross_chapter_chunks_from_provenance() -> None:
+    document = make_document([("1", "1.1", "Motion", standard_block(1))])
+    chunk = BlockAwareChunker().chunk(document)[0]
+    cross_chapter = chunk.model_copy(
+        update={
+            "metadata": {
+                **chunk.metadata,
+                "source_chapter_ids": "1,2",
+            }
+        }
+    )
+
+    statistics = build_chunk_statistics([chunk, cross_chapter])
+
+    assert statistics["cross_chapter_chunks"] == 1
+
+
 @pytest.mark.parametrize(
     "kwargs",
     [
