@@ -123,9 +123,9 @@ def _apply_env_overrides(payload: dict) -> dict:
     scalar("CS30_RRF_INPUT_TOP_K", "retrieval", "rrf_input_top_k")
     scalar("CS30_BM25_MIN_SCORE", "retrieval", "bm25_min_score")
     scalar(
-    "CS30_DENSE_MIN_SIMILARITY",
-    "retrieval",
-    "dense_min_similarity",
+        "CS30_DENSE_MIN_SIMILARITY",
+        "retrieval",
+        "dense_min_similarity",
     )
     scalar("LLM_PROVIDER", "generation", "provider")
     scalar("LLM_MODEL", "generation", "model")

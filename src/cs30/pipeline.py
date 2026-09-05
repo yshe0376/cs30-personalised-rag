@@ -50,7 +50,7 @@ from cs30.retrieval import (
     BM25Retriever,
     FaissDenseRetriever,
     FixtureRetriever,
-       RealRetrievalService,
+    RealRetrievalService,
 )
 
 LOGGER = get_logger("pipeline")
@@ -162,10 +162,12 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
                 f"failed to load IndexArtifact from {artifact_path}: {exc}"
             ) from exc
 
-        artifact = IndexArtifact.model_validate({
-           **artifact.model_dump(),
-           "location": str(index_dir),
-        })
+        artifact = IndexArtifact.model_validate(
+            {
+                **artifact.model_dump(),
+                "location": str(index_dir),
+            }
+        )
 
         retrieval_mode = config.retrieval.mode
 
@@ -201,9 +203,7 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
     elif provider == "openai":
         if not config.generation.model:
-            raise ConfigError(
-                "LLM_MODEL is required when LLM_PROVIDER=openai"
-            )
+             raise ConfigError("LLM_MODEL is required when LLM_PROVIDER=openai")
 
         client = OpenAIResponsesClient(
             config.generation.model,
@@ -224,6 +224,8 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
             max_retries=config.generation.max_retries,
         ),
     )
+
+
 def run_pipeline(
     question: str,
     level: StudentLevel,

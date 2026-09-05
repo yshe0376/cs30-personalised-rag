@@ -54,7 +54,7 @@ jobs:
           cs30-demo --mode real --provider mock \
             --retrieval-mode bm25 \
             --question "What is quantum entanglement?" --level advanced \
-            | python -c "import json,sys; r=json.load(sys.stdin); assert r['mode']=='real'; assert r['retrieval']['mode']=='bm25'; assert r['retrieval']['hits']==[]; assert r['answer']['abstained'] is True; assert r['answer']['citations']==[]"     
+            | python -c "import json,sys; r=json.load(sys.stdin); assert r['mode']=='real'; assert r['retrieval']['mode']=='bm25'; assert r['retrieval']['hits']==[]; assert r['answer']['abstained'] is True; assert r['answer']['citations']==[]"
       - name: Real BM25 returns grounded in-domain evidence
         env:
           CS30_FIXTURE_MODE: "false"

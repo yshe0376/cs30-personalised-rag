@@ -231,7 +231,7 @@ class FaissDenseRetriever:
     ) -> None:
         if min_similarity is not None and not -1.0 <= min_similarity <= 1.0:
             raise ValueError("min_similarity must be between -1 and 1")
-            
+
         self.expected_model_name = expected_model_name
         self.query_instruction = query_instruction
         self.min_similarity = min_similarity
@@ -345,7 +345,7 @@ class FaissDenseRetriever:
             raise RetrievalError(f"dense retrieval failed: {exc}") from exc
 
         hits: list[RetrievedEvidence] = []
-        
+
         for score, position in zip(scores[0], positions[0], strict=True):
             position = int(position)
             if position < 0:
@@ -356,7 +356,7 @@ class FaissDenseRetriever:
                 and score_value < self.min_similarity
             ):
                 continue
-                
+
             item = self._chunks[position]
             hits.append(
                 RetrievedEvidence(
@@ -429,7 +429,7 @@ class BM25Retriever:
             for token in self._tokenize(query)
             if token not in self._stopwords
         )
-        
+
     def load_index(self, artifact: IndexArtifact) -> None:
         accepted_index_types = {
             self.index_type,

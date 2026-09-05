@@ -16,6 +16,7 @@ from cs30.contracts import (
 from cs30.errors import ArtifactMismatchError, EmptyQueryError, RetrievalError
 from cs30.pipeline import build_real_deps
 
+
 def _chunks() -> list[dict]:
     return [
         {
@@ -215,7 +216,7 @@ def test_dense_skips_negative_faiss_positions(
     assert [hit.chunk_id for hit in result.hits] == ["chunk-1"]
     assert [hit.rank for hit in result.hits] == [1]
     assert result.hits[0].score == pytest.approx(0.8)
-    
+
 
 def test_dense_rejects_invalid_similarity_threshold() -> None:
     with pytest.raises(
