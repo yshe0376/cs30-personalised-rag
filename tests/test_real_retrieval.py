@@ -1,12 +1,20 @@
+import json
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 import cs30.retrieval.real as real_retrieval
-from cs30.contracts import IndexArtifact, RetrievalMode, RetrievalResult
-from cs30.errors import ArtifactMismatchError
-
+from cs30.config import AppConfig, RetrievalConfig
+from cs30.contracts import (
+    EvidenceProvenance,
+    IndexArtifact,
+    RetrievalMode,
+    RetrievalResult,
+    RetrievedEvidence,
+)
+from cs30.errors import ArtifactMismatchError, EmptyQueryError, RetrievalError
+from cs30.pipeline import build_real_deps
 
 def _chunks() -> list[dict]:
     return [
@@ -34,6 +42,21 @@ def _artifact(*, dense: bool = False) -> IndexArtifact:
         "index_version": "test-index-v1",
     }
 
+
+def _artifact_at(path: Path, *, dense: bool = False) -> IndexArtifact:
+    return IndexArtifact.model_validate(
+        {
+            **_artifact(dense=dense).model_dump(),
+            "location": str(path),
+        }
+    )
+
+
+def _write_chunk_map(path: Path, chunks: list[dict]) -> None:
+    (path / "chunks.json").write_text(
+        json.dumps(chunks),
+        encoding="utf-8",
+    )
     if dense:
         metadata.update({
             "embedding_model": "fake-embedding-model",
@@ -213,6 +236,125 @@ def test_dense_rejects_wrong_artifact_type() -> None:
     ):
         retriever.load_index(_artifact())
 
+
+def test_dense_rejects_missing_embedding_model() -> None:
+    dense_artifact = _artifact(dense=True)
+    metadata = dense_artifact.metadata.copy()
+    metadata.pop("embedding_model")
+
+    invalid_artifact = IndexArtifact.model_validate(
+        {
+            **dense_artifact.model_dump(),
+            "metadata": metadata,
+        }
+    )
+    retriever = real_retrieval.FaissDenseRetriever()
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="metadata.embedding_model",
+    ):
+        retriever.load_index(invalid_artifact)
+
+
+def test_dense_rejects_vector_count_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        real_retrieval,
+        "_load_chunk_map",
+        lambda artifact: _chunks(),
+    )
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+
+    wrong_count_index = _FakeIndex()
+    wrong_count_index.ntotal = 1
+
+    retriever = real_retrieval.FaissDenseRetriever(
+        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        index_reader=lambda path: wrong_count_index,
+    )
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="vector count",
+    ):
+        retriever.load_index(_artifact(dense=True))
+
+
+def test_dense_rejects_dimension_mismatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        real_retrieval,
+        "_load_chunk_map",
+        lambda artifact: _chunks(),
+    )
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+
+    wrong_dimension_index = _FakeIndex()
+    wrong_dimension_index.d = 3
+
+    retriever = real_retrieval.FaissDenseRetriever(
+        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        index_reader=lambda path: wrong_dimension_index,
+    )
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="dimension",
+    ):
+        retriever.load_index(_artifact(dense=True))
+
+
+def test_chunk_map_rejects_non_consecutive_positions(
+    tmp_path: Path,
+) -> None:
+    chunks = _chunks()
+    chunks[1]["position"] = 3
+    _write_chunk_map(tmp_path, chunks)
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="positions",
+    ):
+        real_retrieval._load_chunk_map(_artifact_at(tmp_path))
+
+
+def test_chunk_map_rejects_duplicate_chunk_ids(
+    tmp_path: Path,
+) -> None:
+    chunks = _chunks()
+    chunks[1]["chunk_id"] = chunks[0]["chunk_id"]
+    _write_chunk_map(tmp_path, chunks)
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="duplicate chunk_id",
+    ):
+        real_retrieval._load_chunk_map(_artifact_at(tmp_path))
+
+
+def test_chunk_map_rejects_count_mismatch(
+    tmp_path: Path,
+) -> None:
+    _write_chunk_map(tmp_path, _chunks()[:1])
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="count",
+    ):
+        real_retrieval._load_chunk_map(_artifact_at(tmp_path))
+
+
 class _SpyRetriever:
     def __init__(
         self,
@@ -232,6 +374,200 @@ class _SpyRetriever:
         if self.result is None:
             raise AssertionError("no fake retrieval result was configured")
         return self.result
+
+def _provenance(mode: RetrievalMode) -> EvidenceProvenance:
+    return EvidenceProvenance(
+        corpus_hash="test-corpus-hash",
+        chunk_config_hash="test-chunk-config-hash",
+        embedding_model=(
+            "fake-embedding-model"
+            if mode is RetrievalMode.DENSE
+            else None
+        ),
+        index_version="test-index-v1",
+    )
+
+
+def _result(
+    mode: RetrievalMode,
+    chunk_ids: list[str],
+) -> RetrievalResult:
+    return RetrievalResult(
+        query="What is acceleration?",
+        mode=mode,
+        hits=[
+            RetrievedEvidence(
+                chunk_id=chunk_id,
+                text=f"Evidence for {chunk_id}.",
+                chapter_id="chapter-1",
+                source="fixture://openstax/chapter-1",
+                score=1.0 / rank,
+                rank=rank,
+                retriever_type=mode,
+            )
+            for rank, chunk_id in enumerate(
+                chunk_ids,
+                start=1,
+            )
+        ],
+        provenance=_provenance(mode),
+    )
+
+
+def test_rrf_fuses_rankings_and_labels_contributing_modes() -> None:
+    dense = _SpyRetriever(
+        result=_result(
+            RetrievalMode.DENSE,
+            ["dense-only", "shared"],
+        )
+    )
+    bm25 = _SpyRetriever(
+        result=_result(
+            RetrievalMode.BM25,
+            ["shared", "bm25-only"],
+        )
+    )
+
+    retriever = real_retrieval.RRFRetriever(
+        dense=dense,
+        bm25=bm25,
+    )
+    retriever.load_index(_artifact(dense=True))
+
+    result = retriever.retrieve(
+        "What is acceleration?",
+        top_k=3,
+    )
+
+    assert [hit.chunk_id for hit in result.hits] == [
+        "shared",
+        "dense-only",
+        "bm25-only",
+    ]
+    assert [hit.rank for hit in result.hits] == [1, 2, 3]
+    assert [hit.retriever_type for hit in result.hits] == [
+        RetrievalMode.HYBRID,
+        RetrievalMode.DENSE,
+        RetrievalMode.BM25,
+    ]
+
+
+def test_rrf_returns_empty_when_both_backends_abstain() -> None:
+    dense = _SpyRetriever(
+        result=_result(RetrievalMode.DENSE, [])
+    )
+    bm25 = _SpyRetriever(
+        result=_result(RetrievalMode.BM25, [])
+    )
+
+    retriever = real_retrieval.RRFRetriever(
+        dense=dense,
+        bm25=bm25,
+    )
+    retriever.load_index(_artifact(dense=True))
+
+    result = retriever.retrieve(
+        "Unknown topic",
+        top_k=3,
+    )
+
+    assert result.mode is RetrievalMode.HYBRID
+    assert result.hits == []
+
+
+def test_cache_returns_equal_copies_without_leaking_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        real_retrieval,
+        "_load_chunk_map",
+        lambda artifact: _chunks(),
+    )
+
+    retriever = real_retrieval.BM25Retriever()
+    retriever.load_index(_artifact())
+
+    first = retriever.retrieve(
+        "What is acceleration?",
+        top_k=2,
+    )
+    second = retriever.retrieve(
+        "What is acceleration?",
+        top_k=2,
+    )
+
+    assert first == second
+    assert first is not second
+
+    second.hits.clear()
+
+    third = retriever.retrieve(
+        "What is acceleration?",
+        top_k=2,
+    )
+    assert third.hits
+
+
+def test_empty_query_raises_typed_error() -> None:
+    with pytest.raises(EmptyQueryError):
+        real_retrieval.BM25Retriever().retrieve(
+            "   ",
+            top_k=1,
+        )
+
+
+def test_non_positive_top_k_raises_typed_error() -> None:
+    with pytest.raises(
+        RetrievalError,
+        match="top_k must be positive",
+    ):
+        real_retrieval.BM25Retriever().retrieve(
+            "acceleration",
+            top_k=0,
+        )
+
+
+def test_pipeline_uses_real_bm25_when_index_exists(
+    tmp_path: Path,
+) -> None:
+    _write_chunk_map(tmp_path, _chunks())
+    artifact = _artifact_at(tmp_path)
+
+    (tmp_path / "artifact.json").write_text(
+        artifact.model_dump_json(indent=2),
+        encoding="utf-8",
+    )
+
+    config = AppConfig(
+        fixture_mode=False,
+        retrieval=RetrievalConfig(
+            mode=RetrievalMode.BM25,
+            index_dir=str(tmp_path),
+        ),
+    )
+
+    deps = build_real_deps(config)
+
+    assert deps.mode == "real"
+    assert isinstance(
+        deps.retriever,
+        real_retrieval.BM25Retriever,
+    )
+
+
+def test_pipeline_falls_back_to_fixture_when_index_is_missing(
+    tmp_path: Path,
+) -> None:
+    config = AppConfig(
+        fixture_mode=True,
+        retrieval=RetrievalConfig(
+            index_dir=str(tmp_path / "missing"),
+        ),
+    )
+
+    deps = build_real_deps(config)
+
+    assert deps.mode == "fixture"
 
 
 def test_real_service_loads_only_selected_backend() -> None:
