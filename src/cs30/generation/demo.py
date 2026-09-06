@@ -6,9 +6,10 @@ import argparse
 import json
 import os
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
+from cs30.citation import EvidenceContextBuilder
 from cs30.contracts import RetrievalHit, RetrievalMode, RetrievalResult, StudentLevel
 from cs30.logging import get_logger
 from cs30.profile import Week1ProfileProvider
@@ -359,6 +360,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--evidence-bundle",
+        action="store_true",
+        help="Exercise the native M8 EvidenceBundle input with stable chunk-ID citations",
+    )
+    parser.add_argument(
         "--skip-three-level",
         action="store_true",
         help="Skip the additional beginner/intermediate/advanced comparison",
@@ -426,6 +432,13 @@ def main() -> None:
     if args.sciq_json and args.dataset == "original":
         raise SystemExit("error: --sciq-json cannot be combined with --dataset original")
 
+    if args.evidence_bundle:
+        builder = EvidenceContextBuilder()
+        items = [
+            replace(item, retrieval=builder.build(item.retrieval)) for item in items
+        ]
+    generation_input = "EvidenceBundle" if args.evidence_bundle else "RetrievalResult"
+
     if args.provider == "openai":
         model = args.model or os.environ.get("LLM_MODEL")
         if not model:
@@ -459,6 +472,7 @@ def main() -> None:
     source_counts = Counter(dataset.sources[result.question_id] for result in batch_results)
     batch_payload = {
         "notice": notice,
+        "generation_input": generation_input,
         "dataset_sources": dict(sorted(source_counts.items())),
         "provider": args.provider,
         "level": level.value,
@@ -484,6 +498,7 @@ def main() -> None:
             json.dumps(
                 {
                     "notice": notice,
+                    "generation_input": generation_input,
                     "dataset_source": dataset.sources[first_item.question_id],
                     "results": [result.model_dump() for result in three_level],
                 },
@@ -495,6 +510,7 @@ def main() -> None:
         json.dumps(
             {
                 "notice": notice,
+                "generation_input": generation_input,
                 "batch_results": str(batch_path),
                 "three_level_sample": str(levels_path) if three_level else None,
                 "completed": batch_payload["completed"],

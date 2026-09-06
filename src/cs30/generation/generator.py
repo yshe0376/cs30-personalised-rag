@@ -5,11 +5,12 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
-from cs30.citation import validate_citations
-from cs30.contracts import GeneratedAnswer, RetrievalResult, StudentProfile
+from cs30.citation import resolve_and_validate, validate_citations
+from cs30.contracts import EvidenceBundle, GeneratedAnswer, StudentProfile
 from cs30.errors import CitationIntegrityError, GenerationError
 
 from .client import LLMClient, TokenUsage
+from .evidence import GenerationEvidence, evidence_items
 from .exceptions import LLMOutputValidationError
 from .prompt import PromptBuilder
 from .schema import openai_text_format, parse_answer_payload
@@ -69,10 +70,11 @@ class PersonalisedAnswerGenerator:
         self,
         question: str,
         profile: StudentProfile,
-        retrieval: RetrievalResult,
+        retrieval: GenerationEvidence,
     ) -> GeneratedAnswer:
+        self.last_trace = None
         started = time.perf_counter()
-        if not retrieval.hits:
+        if not evidence_items(retrieval):
             answer = GeneratedAnswer(explanation=_NO_EVIDENCE, abstained=True)
             self.last_trace = GenerationTrace(
                 model=self.client.model,
@@ -103,7 +105,7 @@ class PersonalisedAnswerGenerator:
                     explanation=payload.explanation,
                     citations=payload.citations,
                 )
-                validate_citations(answer, retrieval)
+                self._validate_citations(answer, retrieval)
                 self.last_trace = GenerationTrace(
                     model=response.model,
                     temperature=self.client.temperature,
@@ -140,3 +142,13 @@ class PersonalisedAnswerGenerator:
         raise GenerationError(
             f"generation failed after {self.max_retries + 1} attempts: {last_error}"
         ) from last_error
+
+    @staticmethod
+    def _validate_citations(
+        answer: GeneratedAnswer,
+        retrieval: GenerationEvidence,
+    ) -> None:
+        if isinstance(retrieval, EvidenceBundle):
+            resolve_and_validate(answer, retrieval)
+        else:
+            validate_citations(answer, retrieval)
