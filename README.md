@@ -137,6 +137,22 @@ runs in fixture mode and labels that mode prominently; it must not be presented 
 a real retrieval or model result. The W5 evidence layer assigns display IDs (`E1`,
 `E2`, ...), maps them back to chunk IDs, and records a compact trace for each run.
 
+### Member 8 offline evaluation
+
+Saved run files can be scored without rerunning retrieval or calling a model:
+
+```powershell
+python -m cs30.evaluation.cli `
+  --runs tests/fixtures/evaluation/hand_checked_runs.jsonl `
+  --output-dir artifacts/m8-evaluation
+```
+
+The evaluator reports answer-choice accuracy, abstention metrics, retained raw-output JSON and
+schema validity, citation validity, gold-citation hits when mappings exist, and explicit failure
+counts. Every metric includes its numerator, denominator, excluded count, and definition. Current
+M3 `correct_choice` data is supported through `--gold`; unresolved answerability and missing gold
+evidence remain visibly excluded instead of being guessed from `in_scope` or SciQ `support`.
+
 Ask something the sample chapter does not cover and the system refuses instead
 of inventing an answer:
 
@@ -267,6 +283,7 @@ src/cs30/indexing/      Member 5  - embeddings and FAISS
 src/cs30/retrieval/     Member 6  - Dense, BM25, and RRF hybrid retrieval
 src/cs30/profile/       Member 7  - student profile
 src/cs30/generation/    Member 7  - prompting and LLM generation
+src/cs30/evaluation/    Member 8  - offline answer, abstention, format, and citation metrics
 src/cs30/ui/            Member 8  - demo interface
 tests/                  Contract, pipeline, port, and config tests
 docs/adr/               Architecture decision records
