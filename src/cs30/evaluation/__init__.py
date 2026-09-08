@@ -3,9 +3,12 @@
 from .adapter import adapt_evaluation_record, load_evaluation_records
 from .models import (
     Answerability,
+    CitationCheck,
+    EvaluationGroup,
     EvaluationRecord,
     EvaluationReport,
     ExecutionStatus,
+    FailureLabel,
     MetricResult,
     RecordScore,
 )
@@ -14,9 +17,12 @@ from .scoring import evaluate_records
 
 __all__ = [
     "Answerability",
+    "CitationCheck",
+    "EvaluationGroup",
     "EvaluationRecord",
     "EvaluationReport",
     "ExecutionStatus",
+    "FailureLabel",
     "MetricResult",
     "RecordScore",
     "adapt_evaluation_record",

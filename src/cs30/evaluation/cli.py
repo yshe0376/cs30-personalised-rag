@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         required=True,
-        help="Directory for scores.json, scores.csv, report.md and failures.jsonl",
+        help=("Directory for scores.json, scores.jsonl, scores.csv, report.md and failures.jsonl"),
     )
     return parser
 

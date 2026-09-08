@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 from cs30.generation.schema import AnswerPayload
 
-from .models import Answerability, EvaluationRecord, ExecutionStatus
+from .models import Answerability, EvaluationRecord, EvidenceReference, ExecutionStatus
 
 
 def _choice(gold: dict[str, Any]) -> str | None:
@@ -102,14 +102,13 @@ def _failure_status(run: dict[str, Any]) -> ExecutionStatus:
     return ExecutionStatus.COMPLETED
 
 
-def _raw_validity(run: dict[str, Any]) -> tuple[bool | None, bool | None]:
-    raw = run.get("raw_model_output", run.get("raw_output"))
-    if raw is None:
+def _output_validity(output: object) -> tuple[bool | None, bool | None]:
+    if output is None:
         return None, None
-    if not isinstance(raw, str):
+    if not isinstance(output, str):
         return False, False
     try:
-        value = json.loads(raw)
+        value = json.loads(output)
     except json.JSONDecodeError:
         return False, False
     try:
@@ -117,6 +116,44 @@ def _raw_validity(run: dict[str, Any]) -> tuple[bool | None, bool | None]:
     except ValidationError:
         return True, False
     return True, True
+
+
+def _first_present(payload: dict[str, Any], *keys: str) -> object | None:
+    for key in keys:
+        if key in payload:
+            return payload[key]
+    return None
+
+
+def _non_negative_int(value: object, *, default: int = 0) -> int:
+    try:
+        return max(0, int(str(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _sent_evidence(run: dict[str, Any], hits: list[Any]) -> list[EvidenceReference]:
+    bundle = run.get("evidence_bundle")
+    items = bundle.get("evidence_items") if isinstance(bundle, dict) else None
+    if not isinstance(items, list):
+        items = hits
+
+    result: list[EvidenceReference] = []
+    for item in items:
+        if not isinstance(item, dict) or item.get("chunk_id") is None:
+            continue
+        chunk_id = str(item["chunk_id"])
+        result.append(
+            EvidenceReference(
+                evidence_id=str(item.get("evidence_id", chunk_id)),
+                chunk_id=chunk_id,
+                source=str(item["source"]) if item.get("source") is not None else None,
+                source_locator=(
+                    str(item["source_locator"]) if item.get("source_locator") is not None else None
+                ),
+            )
+        )
+    return result
 
 
 def _citation_status(run: dict[str, Any]) -> str:
@@ -141,20 +178,63 @@ def adapt_evaluation_record(
     gold = gold_payload or (embedded_gold if isinstance(embedded_gold, dict) else {})
 
     answer = run_payload.get("answer")
+    validated = run_payload.get("validated_answer")
+    if not isinstance(answer, dict) and isinstance(validated, dict):
+        answer = validated.get("answer")
     answer = answer if isinstance(answer, dict) else {}
     retrieval = run_payload.get("retrieval")
     retrieval = retrieval if isinstance(retrieval, dict) else {}
     hits = retrieval.get("hits") if isinstance(retrieval.get("hits"), list) else []
-    raw_json_valid, raw_schema_valid = _raw_validity(run_payload)
+    metadata = run_payload.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
+    trace = run_payload.get("trace")
+    trace = trace if isinstance(trace, dict) else {}
+    raw_output = _first_present(
+        run_payload, "raw_model_output", "raw_output", "first_output", "initial_output"
+    )
+    repaired_output = _first_present(
+        run_payload,
+        "repaired_model_output",
+        "repaired_output",
+        "post_repair_output",
+    )
+    raw_json_valid, raw_schema_valid = _output_validity(raw_output)
+    repaired_json_valid, repaired_schema_valid = _output_validity(repaired_output)
 
     question_id = run_payload.get("question_id", gold.get("question_id"))
     if question_id is None:
         raise ValueError("evaluation record requires question_id")
 
-    repaired_output = run_payload.get("repaired_output")
     repair_used = run_payload.get("repair_used")
     if repair_used is None and repaired_output is not None:
         repair_used = True
+    attempts = _non_negative_int(
+        _first_present(run_payload, "generation_attempts", "attempts")
+        or metadata.get("generation_attempts")
+        or trace.get("generation_attempts")
+    )
+    retry_count = _non_negative_int(run_payload.get("retry_count"), default=max(0, attempts - 1))
+    repair_count = _non_negative_int(
+        run_payload.get("repair_count"),
+        default=1 if repair_used else 0,
+    )
+    sent_evidence = _sent_evidence(run_payload, hits)
+    retrieval_mode = retrieval.get("mode")
+    mode = (
+        retrieval_mode
+        or run_payload.get("retrieval_mode")
+        or trace.get("retrieval_mode")
+        or run_payload.get("mode")
+    )
+    condition_id = run_payload.get("condition_id", metadata.get("condition_id"))
+    provenance = retrieval.get("provenance")
+    provenance = provenance if isinstance(provenance, dict) else {}
+    corpus_version = (
+        run_payload.get("corpus_version")
+        or trace.get("corpus_version")
+        or metadata.get("corpus_version")
+        or provenance.get("corpus_hash")
+    )
 
     return EvaluationRecord(
         question_id=str(question_id),
@@ -164,6 +244,7 @@ def adapt_evaluation_record(
         predicted_choice=answer.get("final_choice"),
         abstained=answer.get("abstained"),
         citation_ids=list(answer.get("citations", [])),
+        sent_evidence=sent_evidence,
         retrieved_chunk_ids=[
             str(hit["chunk_id"])
             for hit in hits
@@ -173,10 +254,23 @@ def adapt_evaluation_record(
         execution_status=_failure_status(run_payload),
         raw_json_valid=raw_json_valid,
         raw_schema_valid=raw_schema_valid,
+        repaired_json_valid=repaired_json_valid,
+        repaired_schema_valid=repaired_schema_valid,
+        retry_count=retry_count,
+        repair_count=repair_count,
         repair_used=repair_used,
         source_schema=str(envelope.get("source_schema", "pipeline-run-v1")),
-        split=gold.get("split"),
-        dataset_version=gold.get("dataset_version", gold.get("version")),
+        mode=str(mode) if mode is not None else None,
+        condition_id=str(condition_id) if condition_id is not None else None,
+        split=gold.get("split", run_payload.get("split", metadata.get("split"))),
+        dataset_version=gold.get(
+            "dataset_version",
+            gold.get(
+                "version",
+                run_payload.get("dataset_version", metadata.get("dataset_version")),
+            ),
+        ),
+        corpus_version=str(corpus_version) if corpus_version is not None else None,
         error=run_payload.get("error"),
     )
 

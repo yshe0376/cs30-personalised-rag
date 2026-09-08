@@ -147,10 +147,12 @@ python -m cs30.evaluation.cli `
   --output-dir artifacts/m8-evaluation
 ```
 
-The evaluator reports answer-choice accuracy, abstention metrics, retained raw-output JSON and
-schema validity, citation validity, gold-citation hits when mappings exist, and explicit failure
-counts. Every metric includes its numerator, denominator, excluded count, and definition. Current
-M3 `correct_choice` data is supported through `--gold`; unresolved answerability and missing gold
+The evaluator reports answer-choice accuracy, an abstention confusion table and metrics, separate
+first/repaired-output validity, retry/repair counts, per-citation and per-answer validity,
+gold-citation hits when mappings exist, and coexisting failure labels. It exports per-question
+JSONL plus summary JSON, CSV and Markdown, grouped by mode, condition, dataset, split and corpus.
+Every metric includes its numerator, denominator, excluded count, and definition. Current M3
+`correct_choice` data is supported through `--gold`; unresolved answerability and missing gold
 evidence remain visibly excluded instead of being guessed from `in_scope` or SciQ `support`.
 
 Ask something the sample chapter does not cover and the system refuses instead

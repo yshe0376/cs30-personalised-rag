@@ -29,5 +29,15 @@ python -m cs30.evaluation.cli `
 To join current M3 question data to saved M1 runs, add `--gold path/to/questions.json`. The join
 key is `question_id`.
 
-The command writes `scores.json`, `scores.csv`, `report.md`, and `failures.jsonl`. Every reported
-metric contains its numerator, denominator, excluded count, and definition.
+The command writes `scores.json`, per-question `scores.jsonl`, `scores.csv`, `report.md`, and
+`failures.jsonl`. Every reported metric contains its numerator, denominator, excluded count, and
+definition. The report also keeps answer outcomes, an abstention confusion table, retry/repair
+counts, coexisting review labels, and comparable mode/condition/dataset/split/corpus groups.
+
+When available, citation checks use `evidence_bundle.evidence_items`, because those are the items
+actually sent to generation. A citation must resolve to a sent item, chunk, and source. The adapter
+falls back to retrieval hits for older saved files and leaves unavailable source checks visible.
+
+First-attempt and repaired outputs are scored separately when saved under the supported aliases.
+Missing M7 output text is reported as not computable; the evaluator never reconstructs model text
+from a final parsed answer.

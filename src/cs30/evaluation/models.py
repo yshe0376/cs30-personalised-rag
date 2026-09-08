@@ -40,6 +40,40 @@ class ExecutionStatus(StrEnum):
     TECHNICAL_FAILURE = "technical_failure"
 
 
+class FailureLabel(StrEnum):
+    """Reviewable symptoms; multiple labels may apply to one run."""
+
+    GOLD_MISSED = "gold_missed"
+    WRONG_OPTION = "wrong_option"
+    WRONG_ABSTENTION = "wrong_abstention"
+    ANSWERED_WHEN_UNANSWERABLE = "answered_when_unanswerable"
+    INVALID_OUTPUT = "invalid_output"
+    INVALID_CITATION = "invalid_citation"
+    CALL_FAILURE = "call_failure"
+
+
+class EvidenceReference(EvaluationModel):
+    """One evidence item actually sent to generation, when retained."""
+
+    evidence_id: Identifier
+    chunk_id: Identifier
+    source: Identifier | None = None
+    source_locator: Identifier | None = None
+
+
+class CitationCheck(EvaluationModel):
+    """Auditable result for one cited identifier."""
+
+    citation_id: Identifier
+    chunk_id: Identifier | None = None
+    source: Identifier | None = None
+    source_locator: Identifier | None = None
+    belongs_to_sent_evidence: bool
+    resolves_to_chunk: bool
+    resolves_to_source: bool
+    valid: bool
+
+
 class EvaluationRecord(EvaluationModel):
     """Schema-independent record consumed by every M8 scorer."""
 
@@ -51,15 +85,23 @@ class EvaluationRecord(EvaluationModel):
     predicted_choice: ChoiceLabel | None = None
     abstained: bool | None = None
     citation_ids: list[Identifier] = Field(default_factory=list)
+    sent_evidence: list[EvidenceReference] = Field(default_factory=list)
     retrieved_chunk_ids: list[Identifier] = Field(default_factory=list)
     citation_status: Literal["passed", "failed", "skipped", "unknown"] = "unknown"
     execution_status: ExecutionStatus
     raw_json_valid: bool | None = None
     raw_schema_valid: bool | None = None
+    repaired_json_valid: bool | None = None
+    repaired_schema_valid: bool | None = None
+    retry_count: int = Field(default=0, ge=0)
+    repair_count: int = Field(default=0, ge=0)
     repair_used: bool | None = None
     source_schema: Identifier
+    mode: Identifier | None = None
+    condition_id: Identifier | None = None
     split: Identifier | None = None
     dataset_version: Identifier | None = None
+    corpus_version: Identifier | None = None
     error: str | None = None
 
     @model_validator(mode="after")
@@ -73,6 +115,12 @@ class EvaluationRecord(EvaluationModel):
             raise ValueError("citation_ids must be unique")
         if len(set(self.retrieved_chunk_ids)) != len(self.retrieved_chunk_ids):
             raise ValueError("retrieved_chunk_ids must be unique")
+        evidence_ids = [item.evidence_id for item in self.sent_evidence]
+        if len(set(evidence_ids)) != len(evidence_ids):
+            raise ValueError("sent evidence IDs must be unique")
+        chunk_ids = [item.chunk_id for item in self.sent_evidence]
+        if len(set(chunk_ids)) != len(chunk_ids):
+            raise ValueError("sent evidence chunk IDs must be unique")
         if len(set(self.gold_evidence_ids)) != len(self.gold_evidence_ids):
             raise ValueError("gold_evidence_ids must be unique")
         return self
@@ -84,15 +132,18 @@ class RecordScore(EvaluationModel):
     question_id: Identifier
     answer_outcome: Literal[
         "correct",
-        "incorrect",
+        "wrong",
         "abstained",
+        "call_failed",
+        "format_failed",
         "missing_gold",
-        "technical_failure",
     ]
     answer_correct: bool | None
     abstention_correct: bool | None
     citation_valid: bool | None
     gold_citation_hit: bool | None
+    citation_checks: list[CitationCheck] = Field(default_factory=list)
+    failure_labels: list[FailureLabel] = Field(default_factory=list)
     execution_status: ExecutionStatus
 
 
@@ -115,6 +166,23 @@ class MetricResult(EvaluationModel):
         return self
 
 
+class EvaluationGroup(EvaluationModel):
+    """One comparable mode/condition/data-version/split/corpus slice."""
+
+    mode: str
+    condition_id: str
+    dataset_version: str
+    split: str
+    corpus_version: str
+    total_records: int = Field(ge=0)
+    metrics: dict[str, MetricResult]
+    execution_status_counts: dict[ExecutionStatus, int]
+    failure_label_counts: dict[FailureLabel, int]
+    answer_outcome_counts: dict[str, int]
+    abstention_confusion: dict[str, int]
+    operation_counts: dict[str, int]
+
+
 class EvaluationReport(EvaluationModel):
     """Deterministic report that can be regenerated from saved run files."""
 
@@ -122,4 +190,9 @@ class EvaluationReport(EvaluationModel):
     total_records: int = Field(ge=0)
     metrics: dict[str, MetricResult]
     failure_counts: dict[ExecutionStatus, int]
+    failure_label_counts: dict[FailureLabel, int]
+    answer_outcome_counts: dict[str, int]
+    abstention_confusion: dict[str, int]
+    operation_counts: dict[str, int]
+    groups: list[EvaluationGroup] = Field(default_factory=list)
     records: list[RecordScore]

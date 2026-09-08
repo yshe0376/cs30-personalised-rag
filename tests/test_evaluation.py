@@ -10,6 +10,7 @@ from cs30.contracts import StudentLevel
 from cs30.evaluation import (
     Answerability,
     ExecutionStatus,
+    FailureLabel,
     adapt_evaluation_record,
     evaluate_records,
     load_evaluation_records,
@@ -106,7 +107,7 @@ def test_technical_failure_is_not_a_correct_abstention() -> None:
     score = next(item for item in report.records if item.question_id == "q4")
 
     assert score.execution_status is ExecutionStatus.GENERATION_CALL_FAILURE
-    assert score.answer_outcome == "technical_failure"
+    assert score.answer_outcome == "call_failed"
     assert score.abstention_correct is False
 
 
@@ -145,7 +146,8 @@ def test_report_files_are_deterministic(tmp_path: Path) -> None:
 
     assert first == second
     assert "Numerator | Denominator" in paths["markdown"].read_text(encoding="utf-8")
-    assert len(paths["failures"].read_text(encoding="utf-8").splitlines()) == 3
+    assert len(paths["failures"].read_text(encoding="utf-8").splitlines()) == 4
+    assert len(paths["per_question"].read_text(encoding="utf-8").splitlines()) == 6
 
 
 def test_separate_current_m3_gold_joins_by_question_id(tmp_path: Path) -> None:
@@ -197,3 +199,123 @@ def test_duplicate_run_ids_fail_explicitly(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="duplicate question_id"):
         load_evaluation_records(path)
+
+
+def test_answer_counts_abstention_confusion_and_coexisting_labels() -> None:
+    report = evaluate_records(load_evaluation_records(FIXTURE))
+
+    assert report.answer_outcome_counts == {
+        "abstained": 1,
+        "call_failed": 1,
+        "correct": 2,
+        "format_failed": 1,
+        "wrong": 1,
+    }
+    assert report.abstention_confusion == {
+        "correct_abstention": 1,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 3,
+        "technical_failure": 1,
+        "unresolved": 1,
+    }
+    wrong = next(score for score in report.records if score.question_id == "q2")
+    assert wrong.failure_labels == [FailureLabel.GOLD_MISSED, FailureLabel.WRONG_OPTION]
+
+
+def test_raw_and_repaired_outputs_and_retry_counts_are_separate() -> None:
+    record = adapt_evaluation_record(
+        {
+            "question_id": "q-repair",
+            "status": "completed",
+            "answer": {"final_choice": "B", "abstained": False, "citations": ["c1"]},
+            "retrieval": {
+                "hits": [
+                    {
+                        "chunk_id": "c1",
+                        "source": "OpenStax College Physics 2e",
+                        "source_locator": "chapter-1",
+                    }
+                ]
+            },
+            "citation_integrity": "passed",
+            "raw_model_output": "{not-json",
+            "repaired_output": ('{"final_choice":"B","explanation":"ok","citations":["c1"]}'),
+            "metadata": {"generation_attempts": "3"},
+        },
+        {"question_id": "q-repair", "gold_choice": "B", "answerable": True},
+    )
+    report = evaluate_records([record])
+
+    assert record.raw_json_valid is False
+    assert record.repaired_json_valid is True
+    assert record.repaired_schema_valid is True
+    assert record.retry_count == 2
+    assert record.repair_count == 1
+    assert report.operation_counts == {
+        "runs_retried": 1,
+        "retry_attempts": 2,
+        "runs_repaired": 1,
+        "repair_attempts": 1,
+    }
+    assert FailureLabel.INVALID_OUTPUT in report.records[0].failure_labels
+
+
+def test_citation_checks_use_evidence_actually_sent_not_every_retrieval_hit() -> None:
+    record = adapt_evaluation_record(
+        {
+            "question_id": "q-whitelist",
+            "status": "completed",
+            "answer": {"final_choice": "A", "abstained": False, "citations": ["c2"]},
+            "retrieval": {"hits": [{"chunk_id": "c1"}, {"chunk_id": "c2"}]},
+            "evidence_bundle": {
+                "evidence_items": [
+                    {
+                        "evidence_id": "E1",
+                        "chunk_id": "c1",
+                        "source": "OpenStax",
+                        "source_locator": "chapter-1",
+                    }
+                ]
+            },
+            "citation_integrity": "passed",
+        },
+        {"question_id": "q-whitelist", "gold_choice": "A", "answerable": True},
+    )
+    score = evaluate_records([record]).records[0]
+
+    assert score.citation_valid is False
+    assert score.citation_checks[0].belongs_to_sent_evidence is False
+    assert FailureLabel.INVALID_CITATION in score.failure_labels
+
+
+def test_groups_keep_mode_condition_version_split_and_corpus_separate() -> None:
+    report = evaluate_records(load_evaluation_records(FIXTURE))
+    identified = {
+        (group.mode, group.condition_id, group.dataset_version, group.split, group.corpus_version)
+        for group in report.groups
+    }
+
+    assert ("bm25", "plain", "fixture-0.1", "dev", "corpus-1") in identified
+    assert ("hybrid", "combined", "fixture-0.1", "dev", "corpus-1") in identified
+
+
+def test_all_abstain_and_no_computable_denominator_remain_visible() -> None:
+    records = [
+        adapt_evaluation_record(
+            {
+                "question_id": f"q-{number}",
+                "status": "completed",
+                "answer": {"final_choice": None, "abstained": True, "citations": []},
+                "retrieval": {"hits": []},
+                "citation_integrity": "skipped",
+            }
+        )
+        for number in range(2)
+    ]
+    report = evaluate_records(records)
+
+    assert report.answer_outcome_counts == {"abstained": 2}
+    assert report.abstention_confusion["unresolved"] == 2
+    assert report.metrics["abstention_precision"].value is None
+    assert report.metrics["abstention_precision"].denominator == 0
