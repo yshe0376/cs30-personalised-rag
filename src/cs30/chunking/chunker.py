@@ -8,7 +8,7 @@ from collections.abc import Iterable, Sequence
 from typing import Protocol
 
 from cs30.chunking.strategy import BlockChunkingStrategy
-from cs30.contracts import Chunk, OpenStaxDocument, TextBlock
+from cs30.contracts import Chunk, TextBlock, TextbookDocument
 
 
 class TokenCounter(Protocol):
@@ -40,7 +40,7 @@ class BlockAwareChunker:
 
     Boundaries always coincide with ``TextBlock`` boundaries. Chunks never mix
     chapters and, by default, never mix sections. Character offsets address the
-    complete ``OpenStaxDocument.text`` string required by the shared contract.
+    complete ``TextbookDocument.text`` string required by the shared contract.
     """
 
     def __init__(
@@ -52,7 +52,7 @@ class BlockAwareChunker:
         self.strategy = strategy or BlockChunkingStrategy()
         self.token_counter = token_counter or UnicodeWordPunctTokenCounter()
 
-    def chunk(self, document: OpenStaxDocument) -> list[Chunk]:
+    def chunk(self, document: TextbookDocument) -> list[Chunk]:
         """Implement ``cs30.ports.Chunker`` for a normalised document."""
 
         chunks: list[Chunk] = []
@@ -98,7 +98,7 @@ class BlockAwareChunker:
 
     def _partition_segment(
         self,
-        document: OpenStaxDocument,
+        document: TextbookDocument,
         blocks: list[TextBlock],
     ) -> list[list[TextBlock]]:
         """Greedily choose the nearest whole-block group to the token target."""
@@ -134,7 +134,7 @@ class BlockAwareChunker:
 
     def _rebalance_short_tail(
         self,
-        document: OpenStaxDocument,
+        document: TextbookDocument,
         groups: list[list[TextBlock]],
     ) -> None:
         """Merge or redistribute a short final group without splitting blocks."""
@@ -167,17 +167,19 @@ class BlockAwareChunker:
 
     def _group_token_count(
         self,
-        document: OpenStaxDocument,
+        document: TextbookDocument,
         blocks: Sequence[TextBlock],
     ) -> int:
         if not blocks:
             return 0
         text = document.text[blocks[0].char_start : blocks[-1].char_end]
+        if self.strategy.enrich_embed_text:
+            text = self._embed_text(text, document, blocks) or text
         return self.token_counter.count(text)
 
     def _build_chunk(
         self,
-        document: OpenStaxDocument,
+        document: TextbookDocument,
         blocks: list[TextBlock],
         chunk_index: int,
     ) -> Chunk:
@@ -264,6 +266,10 @@ class BlockAwareChunker:
             "text_hash": text_hash,
             "document_hash": document.document_hash,
             "parser_version": document.parser_version,
+            "textbook_id": blocks[0].metadata.get("textbook_id", ""),
+            "provider": blocks[0].metadata.get("provider", ""),
+            "subject": blocks[0].metadata.get("subject", ""),
+            "license": blocks[0].metadata.get("license", ""),
         }
         candidate_fragment = (
             ""
@@ -290,7 +296,7 @@ class BlockAwareChunker:
     def _embed_text(
         self,
         text: str,
-        document: OpenStaxDocument,
+        document: TextbookDocument,
         blocks: Sequence[TextBlock],
     ) -> str | None:
         if not self.strategy.enrich_embed_text:
@@ -309,7 +315,7 @@ class BlockAwareChunker:
 
     def _parent_blocks(
         self,
-        document: OpenStaxDocument,
+        document: TextbookDocument,
         blocks: Sequence[TextBlock],
     ) -> list[TextBlock]:
         """Return the section, or chapter, used for small-to-big expansion."""

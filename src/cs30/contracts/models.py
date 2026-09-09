@@ -181,6 +181,13 @@ class OpenStaxDocument(ContractModel):
         return self.text[block.char_start : block.char_end]
 
 
+# Provider-neutral names for the shared textbook contract.  These are aliases,
+# rather than a schema revision, so existing OpenStax payloads and member code
+# remain compatible while CK-12 and later providers use the same boundary.
+TextbookChapter = OpenStaxChapter
+TextbookDocument = OpenStaxDocument
+
+
 class Chunk(ContractModel):
     """One retrievable unit, and optionally an enriched form of it.
 
@@ -410,6 +417,9 @@ class EvidenceBundle(ContractModel):
         ids = [item.evidence_id for item in self.evidence_items]
         if len(set(ids)) != len(ids):
             raise ValueError("evidence IDs must be unique")
+        chunk_ids = [item.chunk_id for item in self.evidence_items]
+        if len(set(chunk_ids)) != len(chunk_ids):
+            raise ValueError("evidence items must refer to unique chunks")
         expected = {item.evidence_id: item.chunk_id for item in self.evidence_items}
         if self.citation_map != expected:
             raise ValueError("citation_map must map every evidence ID to its chunk ID")

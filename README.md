@@ -6,7 +6,7 @@ the runnable implementation, small test fixtures, engineering contracts, and
 essential technical documentation. Planning documents, source materials, and
 large project assets are maintained separately in the team Google Drive.
 
-The current milestone is `v0.1-thin-slice`: a small OpenStax Physics path used
+The current milestone is `v0.1-thin-slice`: a small textbook Physics path used
 to validate the engineering workflow. It does not report formal retrieval or
 model-effectiveness results.
 
@@ -34,7 +34,7 @@ A Drive index can be added under `docs/` after the shared folder is created.
 ## Week 1 scope
 
 ```text
-OpenStax chapter
+OpenStax or registered CK-12 chapter
 -> normalised document
 -> structure-aware chunks
 -> embedding and FAISS dense retrieval
@@ -260,7 +260,7 @@ src/cs30/configs/       Packaged development and staging configuration
 src/cs30/logging.py     Shared logging setup
 src/cs30/errors.py      Typed errors
 src/cs30/fixtures/      Small, non-sensitive fixtures, shipped with the package
-src/cs30/ingest/        Member 2  - OpenStax parsing
+src/cs30/ingest/        Member 2  - OpenStax/CK-12 textbook parsing
 src/cs30/questions/     Member 3  - validated SciQ demo questions
 src/cs30/chunking/      Member 4  - chunking and metadata
 src/cs30/indexing/      Member 5  - embeddings and FAISS
@@ -301,7 +301,7 @@ and week 1 acceptance criteria.
 
 The first contract version includes:
 
-- `OpenStaxDocument`
+- `TextbookDocument` (`OpenStaxDocument` compatibility alias)
 - `Chunk`
 - `IndexArtifact`
 - `SciQQuestion`

@@ -11,7 +11,7 @@ from pydantic import TypeAdapter
 
 from cs30.chunking.reporting import build_chunk_statistics
 from cs30.chunking.traceback import resolve_small_to_big
-from cs30.contracts import Chunk, OpenStaxDocument
+from cs30.contracts import Chunk, TextbookDocument
 
 
 def _json_bytes(payload: object) -> bytes:
@@ -54,7 +54,7 @@ def load_retrieval_corpus(path: Path) -> list[Chunk]:
 
 
 def export_retrieval_corpus(
-    documents: Sequence[OpenStaxDocument],
+    documents: Sequence[TextbookDocument],
     chunks: Sequence[Chunk],
     output_dir: Path,
     *,

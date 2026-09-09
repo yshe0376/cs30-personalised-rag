@@ -6,7 +6,7 @@ import statistics
 from collections import Counter
 from collections.abc import Sequence
 
-from cs30.contracts import Chunk, OpenStaxDocument
+from cs30.contracts import Chunk, TextbookDocument
 
 
 def _crosses_chapter_boundary(chunk: Chunk) -> bool:
@@ -54,7 +54,7 @@ def build_chunk_statistics(chunks: Sequence[Chunk]) -> dict[str, object]:
 
 
 def build_traceability_samples(
-    document: OpenStaxDocument,
+    document: TextbookDocument,
     chunks: Sequence[Chunk],
     *,
     sample_count: int = 10,

@@ -1,4 +1,4 @@
-"""Parse selected OpenStax College Physics 2e chapters for a RAG pipeline.
+"""Parse selected textbook chapters for a RAG pipeline.
 
 The parser uses the PDF outline for stable chapter/section boundaries and the
 Tagged-PDF structure tree for reading order.  OpenStax renders many equations
@@ -37,6 +37,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from cs30.ingest.textbooks import chapter_number
 
 try:
     import fitz  # PyMuPDF
@@ -459,9 +461,40 @@ def parse_outline(pdf_path: Path) -> list[OutlineEntry]:
     return outline
 
 
-def chapter_number(title: str) -> str | None:
-    match = re.match(r"Chapter\s+(\d+)\b", title, re.IGNORECASE)
-    return match.group(1) if match else None
+def validate_source_identity(pdf_path: Path, title_markers: Sequence[str]) -> None:
+    """Reject a PDF whose embedded title does not match the selected catalogue entry.
+
+    The local file hash still identifies the exact edition. This inexpensive check
+    prevents accidentally attaching one book's provider, licence, and source URL
+    to another book when the same compatible PDF parser is used.
+    """
+
+    if not title_markers:
+        raise ValueError("textbook profile has no source identity markers")
+
+    with fitz.open(pdf_path) as document:
+        metadata = document.metadata or {}
+        toc = document.get_toc(simple=True)
+        title_text = " ".join(
+            [str(metadata.get("title") or "")]
+            + [str(entry[1]) for entry in toc]
+            + [
+                document.load_page(page_number).get_text("text")
+                for page_number in range(min(5, document.page_count))
+            ]
+        )
+
+    searchable = re.sub(r"[^a-z0-9]+", " ", normalize_unicode(title_text).lower()).strip()
+    markers = [
+        re.sub(r"[^a-z0-9]+", " ", normalize_unicode(marker).lower()).strip()
+        for marker in title_markers
+    ]
+    if not any(marker and marker in searchable for marker in markers):
+        expected = ", ".join(repr(marker) for marker in title_markers)
+        raise ValueError(
+            f"PDF identity check failed; expected one of [{expected}] in metadata, "
+            "outline, or the first five pages"
+        )
 
 
 def chapter_specs(outline: Sequence[OutlineEntry]) -> dict[str, dict[str, Any]]:
@@ -485,7 +518,12 @@ def chapter_specs(outline: Sequence[OutlineEntry]) -> dict[str, dict[str, Any]]:
             if position_index + 1 < len(chapter_positions)
             else None
         )
-        title = re.sub(r"^Chapter\s+\d+\s*", "", entry.title, flags=re.IGNORECASE).strip()
+        title = re.sub(
+            r"^(?:Chapter\s+)?\d+(?!\.\d)[.:\s-]*",
+            "",
+            entry.title,
+            flags=re.IGNORECASE,
+        ).strip()
         sections = [
             candidate
             for candidate in outline[outline_index + 1 : next_outline_index]

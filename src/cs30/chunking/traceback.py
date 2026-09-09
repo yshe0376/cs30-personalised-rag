@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import hashlib
 
-from cs30.contracts import Chunk, OpenStaxDocument
+from cs30.contracts import Chunk, TextbookDocument
 
 
 def resolve_small_to_big(
-    document: OpenStaxDocument,
+    document: TextbookDocument,
     chunk: Chunk,
 ) -> dict[str, object]:
     """Resolve a small chunk to its exact source span and structural parent."""

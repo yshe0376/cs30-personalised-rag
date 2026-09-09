@@ -21,6 +21,14 @@ class HFTokenCounter:
     def __init__(self, model: SentenceTransformer, name: str) -> None:
         self._tokenizer = model.tokenizer
         self.name = name
+        model_limit = getattr(model, "max_seq_length", None)
+        special_token_counter = getattr(self._tokenizer, "num_special_tokens_to_add", None)
+        special_tokens = 0
+        if callable(special_token_counter):
+            special_tokens = int(special_token_counter(pair=False))
+        self.max_input_tokens = (
+            max(1, int(model_limit) - special_tokens) if model_limit else None
+        )
 
     def count(self, text: str) -> int:
         """Return the number of tokens without truncation."""
@@ -51,16 +59,17 @@ class FaissIndexBuilder:
         self._chunks: list[Chunk] = []
         self._chunk_map: list[dict[str, object]] = []
 
-    def _warn_if_truncated(self, chunks: list[Chunk]) -> None:
-        """Warn when chunk inputs exceed the embedding model sequence limit."""
+    def _validate_no_truncation(self, chunks: list[Chunk]) -> None:
+        """Reject chunk inputs that the model would silently truncate."""
 
         model = self._load_model()
         limit = getattr(model, "max_seq_length", None)
-
-        if not limit:
+        if not limit or not hasattr(model, "tokenizer"):
             return
-
         counter = self.token_counter()
+        limit = counter.max_input_tokens
+        if limit is None:
+            return
 
         over_limit = [
             chunk.chunk_id
@@ -69,11 +78,9 @@ class FaissIndexBuilder:
         ]
 
         if over_limit:
-            LOGGER.warning(
-                "%d/%d chunks exceed max_seq_length=%d and may be truncated",
-                len(over_limit),
-                len(chunks),
-                limit,
+            raise IndexUnavailableError(
+                f"{len(over_limit)}/{len(chunks)} chunks exceed the embedding "
+                f"input limit of {limit} tokens; rebuild with smaller chunks"
             )
 
     def _embed_chunks(self, chunks: list[Chunk]) -> np.ndarray:
@@ -86,7 +93,7 @@ class FaissIndexBuilder:
         texts = [chunk.embedding_input for chunk in chunks]
 
         model = self._load_model()
-        self._warn_if_truncated(chunks)
+        self._validate_no_truncation(chunks)
         embeddings = model.encode(
             texts,
             convert_to_numpy=True,

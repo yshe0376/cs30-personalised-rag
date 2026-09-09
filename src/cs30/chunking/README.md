@@ -3,7 +3,7 @@
 `BlockAwareChunker` implements the existing `cs30.ports.Chunker` interface:
 
 ```python
-chunk(document: OpenStaxDocument) -> list[Chunk]
+chunk(document: TextbookDocument) -> list[Chunk]
 ```
 
 ## Revised Week 1 strategy
@@ -27,7 +27,7 @@ where possible.
 
 ## Contract guarantees
 
-- Accepts `OpenStaxDocument`, including parser-provided `TextBlock` structure.
+- Accepts `TextbookDocument`, including parser-provided `TextBlock` structure.
 - Never re-derives sections, content types, pages, or chapter membership from text.
 - Never mixes chapters; sections are also isolated by default.
 - Stores document-wide half-open character offsets.
@@ -135,7 +135,7 @@ distribution, empty/duplicate/short/oversized checks, and explicitly states
 that these are engineering statistics rather than retrieval evaluation.
 
 `build_traceability_samples()` selects up to ten deterministic chunks and
-checks each character span against `OpenStaxDocument.text`.
+checks each character span against `TextbookDocument.text`.
 
 `resolve_small_to_big()` verifies a retrieved chunk's text hash and exact
 document span, then returns the complete parser section that contains it. If a
@@ -183,5 +183,5 @@ contained in the still-unmerged M4 feature branch.
 The implementation and unit tests do not wait for Member 2. Provisional
 multi-chapter evidence may be generated through a documented adapter, but a
 production corpus must be rebuilt from Member 2's frozen, contract-valid
-`OpenStaxDocument` export. The manifest's document hashes and parser versions
+`TextbookDocument` export. The manifest's document hashes and parser versions
 make that replacement observable.

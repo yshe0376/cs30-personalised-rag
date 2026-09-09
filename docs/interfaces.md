@@ -23,8 +23,14 @@ mismatched span fails immediately instead of surfacing during a demo.
 
 ## Document structure: blocks
 
-`OpenStaxDocument` carries two things: `text`, the coordinate system every span
+`TextbookDocument` carries two things: `text`, the coordinate system every span
 refers to, and `blocks`, the structure the parser recovered.
+
+`TextbookDocument` and `TextbookChapter` are the provider-neutral public names.
+For contract v1.0 they are aliases of the original `OpenStaxDocument` and
+`OpenStaxChapter` classes, so existing payloads remain byte- and schema-compatible.
+OpenStax and all five CK-12 books therefore cross the same module boundary; the
+provider, textbook ID, subject, and licence are recorded in block/chunk metadata.
 
 A `TextBlock` holds **offsets only, never its own copy of the text**. Two copies
 of the same string can drift apart; one string plus a span cannot. Read a
@@ -79,7 +85,7 @@ The contract layer **never rewrites text that a span points at**.
 
 | Kind | Fields | Behaviour |
 |---|---|---|
-| `SpanText` | `OpenStaxDocument.text`, `Chunk.text`, `Chunk.embed_text`, `RetrievalHit.text` | Kept verbatim. Never stripped — stripping would move the text without moving the offsets |
+| `SpanText` | `TextbookDocument.text`, `Chunk.text`, `Chunk.embed_text`, `RetrievalHit.text` | Kept verbatim. Never stripped — stripping would move the text without moving the offsets |
 | `Identifier` | all `*_id`, `source`, `version`, `document_hash`, `parser_version`, citation entries | Surrounding whitespace removed, so `"ch01 "` and `"ch01"` cannot become two chapters |
 | `NonEmptyText` | `question`, `support`, `explanation`, `title` | Stripped; no span semantics |
 
@@ -115,7 +121,8 @@ they do not add fields to the shared `Chunk` contract.
 | `source_locator` | Source URI plus chapter and half-open character span |
 | `source_chapter_ids` | Comma-separated source chapter IDs used by anomaly reporting |
 | `parent_scope` | `section` or `chapter` for small-to-big expansion |
-| `parent_char_start`, `parent_char_end` | Half-open parent span in `OpenStaxDocument.text` |
+| `parent_char_start`, `parent_char_end` | Half-open parent span in `TextbookDocument.text` |
+| `textbook_id`, `provider`, `subject`, `license` | Source-catalogue provenance copied from the parser block |
 | `parent_source_block_ids` | Parser block IDs covered by the parent span |
 | `candidate_id` | Stable candidate name such as `main` or `S1`–`S6` |
 | `include_types` | Canonical comma-separated content filter, or `*` for all types |
@@ -126,12 +133,39 @@ Member 5's configuration provenance distinguishes two custom `main` runs that
 use different content filters, even before M5 explicitly adds `include_types`
 to its own configuration-key list.
 
+## Evaluation contracts v0.1
+
+`src/cs30/evaluation/` freezes the W5 boundary shared by M1, M3, and M8.
+`GoldSample.gold_core_evidence_sets` is an outer-OR, inner-AND structure: every
+span in one inner set must be retrieved for that path to be complete, while
+any complete inner set is an acceptable alternative path. `partial_evidence`
+is diagnostic only and never counts as a complete Gold hit.
+
+Gold spans use the repository-wide half-open `[char_start, char_end)` rule over
+canonical `document.text`. The Gold loader can receive a `document_id -> text`
+mapping and rejects missing documents, out-of-range spans, and any
+`verbatim_text` that does not replay exactly. `answerable` is relative to the
+frozen corpus; disputed or unresolved items use `null`, not `false`.
+
+`EvaluationRunResult` records five distinct terminal states:
+`retrieval_error`, `generation_error`, `parse_error`, `abstained`, and
+`answered`. Technical errors cannot carry a final answer or citation result.
+Normal refusal is represented only by `status=abstained` together with a
+successfully parsed `GeneratedAnswer(abstained=True)`. The trace separately
+stores retrieval output, evidence sent to the model, raw output, optional
+repaired output, final answer, citation validation, and structured errors.
+
+The hand-computable JSONL fixtures under `tests/fixtures/evaluation/` exercise
+joint evidence, alternative evidence, partial evidence, unresolved Gold, and
+all five run states. They validate the interface and must not be reported as
+formal evaluation results.
+
 ## Ownership
 
 | Contract | Producer | Primary consumers |
 |---|---|---|
-| `OpenStaxDocument` | Member 2 | Member 4, Leader |
-| `TextBlock` (inside `OpenStaxDocument`) | Member 2 | Member 4, Member 5 |
+| `TextbookDocument` (`OpenStaxDocument` compatibility alias) | Member 2 | Member 4, Leader |
+| `TextBlock` (inside `TextbookDocument`) | Member 2 | Member 4, Member 5 |
 | `Chunk` | Member 4 | Members 5 and 6 |
 | `IndexArtifact` | Member 5 | Member 6 |
 | `SciQQuestion` | Member 3 | Members 6 and 7 |
@@ -140,6 +174,8 @@ to its own configuration-key list.
 | `StudentProfile` | Member 7 / UI | Prompt builder |
 | `GeneratedAnswer` | Member 7 | Member 8 citation resolver, UI |
 | `PipelineRun` | Leader | Member 8, ablation table |
+| `GoldSample` | Member 3 | Leader/M1 retrieval evaluator, Member 8 answer evaluator |
+| `EvaluationRunResult` | Leader/M1 runner | Member 8 scorers, report pipeline |
 
 Member numbers follow the week 1 division of labour held in the team Drive.
 

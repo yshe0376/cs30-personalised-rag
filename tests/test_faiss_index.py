@@ -1,6 +1,7 @@
 """Tests for the FAISS index builder."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
@@ -138,6 +139,33 @@ def test_build_creates_faiss_index(
 
     assert builder.index.ntotal == 2
     assert builder.index.d == 4
+
+
+def test_build_rejects_chunks_that_would_be_truncated(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    class LimitedSentenceTransformer(FakeSentenceTransformer):
+        def __init__(self, model_name: str) -> None:
+            super().__init__(model_name)
+            self.max_seq_length = 4
+            self.tokenizer = SimpleNamespace(
+                encode=lambda text, **kwargs: text.split(),
+            )
+
+    monkeypatch.setattr(
+        faiss_index,
+        "SentenceTransformer",
+        LimitedSentenceTransformer,
+    )
+    builder = faiss_index.FaissIndexBuilder(
+        model_name="limited-model",
+        index_dir=str(tmp_path),
+    )
+
+    with pytest.raises(IndexUnavailableError, match="embedding input limit"):
+        builder.build(make_test_chunks())
+    assert not (tmp_path / "index.faiss").exists()
 
 
 def test_build_creates_required_files(

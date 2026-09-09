@@ -1,8 +1,20 @@
-# Member 2 - OpenStax data engineering
+# Member 2 - textbook data engineering
 
 Implement `cs30.ports.DocumentParser`:
 
-    `parse(source: Path) -> OpenStaxDocument`
+    `parse(source: Path) -> TextbookDocument`
+
+`TextbookDocument` is the provider-neutral name for the frozen v1.0 document
+contract. `OpenStaxDocument` remains as a compatibility alias. Supported source
+profiles are listed by `cs30-list-textbooks`: one OpenStax profile and the five
+physics-related CK-12 books cited in the SciQ paper's Appendix A.
+
+The catalogue records provenance but does not download books. Pass a local PDF
+to `cs30-build --textbook ...`, or pass an already-normalised contract JSON.
+Legacy CK-12 source URLs may have moved; the local file hash remains the build's
+authoritative source identity. PDF input is checked against the selected
+profile's title markers before parsing, then still requires the per-title parser
+QA gate described in `docs/real-build.md`.
 
 Drop the real implementation next to `fixture.py`. The Leader supplies it as the
 `parser` field of `BuildDeps`; `run_build_pipeline()` itself does not change.
@@ -18,7 +30,7 @@ Drop the real implementation next to `fixture.py`. The Leader supplies it as the
 
 ## Notes
 
-`OpenStaxDocument.text` is never stripped by the contract layer: it is the
+`TextbookDocument.text` is never stripped by the contract layer: it is the
 coordinate system every char span refers to. Emit it exactly as the parser
 produced it, and never re-normalise it later without bumping
 `parser_version` and regenerating chunks and indexes.
