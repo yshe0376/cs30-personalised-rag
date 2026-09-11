@@ -133,6 +133,36 @@ def _normalized_gold(*, status: str) -> GoldSample:
     return GoldSample.model_validate(payload)
 
 
+def _m3_initial_normalized_gold() -> GoldSample:
+    payload = _normalized_gold(status="resolved").model_dump(mode="json")
+    payload.update(
+        source_split="test",
+        gold_answer_text="one",
+        annotation_status="m3_initial",
+        source={
+            "dataset": "fixture dataset",
+            "source_question_id": "q-1",
+            "support": "fixture support",
+        },
+    )
+    for evidence_set in payload["gold_core_evidence_sets"]:
+        for span in evidence_set:
+            span.update(
+                chapter_id="chapter-1",
+                block_id=f"block-{span['span_id']}",
+                sufficiency="core_sufficient",
+                annotation_note="fixture evidence",
+            )
+    for span in payload["partial_evidence"]:
+        span.update(
+            chapter_id="chapter-1",
+            block_id=f"block-{span['span_id']}",
+            sufficiency="partial",
+            annotation_note="fixture evidence",
+        )
+    return GoldSample.model_validate(payload)
+
+
 def _mapping() -> QuestionChunkMapping:
     return QuestionChunkMapping(
         question_id="q-1",
@@ -452,6 +482,47 @@ def test_reportable_scoring_rejects_stale_normalized_gold_coordinates() -> None:
     with pytest.raises(ValueError, match="resolved.*global coordinates"):
         score_saved_run(
             [_normalized_gold(status="stale")],
+            [run],
+            GoldChunkMapping(
+                mapping_version="mapping-1",
+                corpus_version="corpus-1",
+                chunk_config_hash="chunks-1",
+                items=[_mapping()],
+            ),
+            k_values=[1],
+            manifest=manifest,
+        )
+
+
+def test_reportable_scoring_requires_reviewed_gold() -> None:
+    run = EvaluationRunResult(
+        schema_version="0.2",
+        run_id="run-m3-initial-gold",
+        question_id="q-1",
+        condition_id="condition-1",
+        execution_mode="retrieval_only",
+        status="retrieved",
+        retrieval=_retrieval("c1"),
+        evidence_sent_to_model=None,
+        raw_model_output=None,
+        repaired_model_output=None,
+        final_answer=None,
+        citation_validation=None,
+        error=None,
+        model_call_count=0,
+        abstention_cause=None,
+    )
+    manifest = _manifest("retrieval_only").model_copy(
+        update={
+            "gold_annotation_version": "gold-1",
+            "mapping_version": "mapping-1",
+            "parser_version": "parser-1",
+        }
+    )
+
+    with pytest.raises(ValueError, match="annotation_status=reviewed"):
+        score_saved_run(
+            [_m3_initial_normalized_gold()],
             [run],
             GoldChunkMapping(
                 mapping_version="mapping-1",

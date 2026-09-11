@@ -78,6 +78,42 @@ def test_normalized_gold_sample_requires_complete_coordinate_contract(
         evaluation.GoldSample.model_validate(payload)
 
 
+def test_normalized_gold_requires_status_on_the_first_core_span() -> None:
+    payload = _complete_normalized_gold_payload()
+    payload["gold_core_evidence_sets"][0][0].pop("resolution_status")
+
+    with pytest.raises(ValidationError, match="resolution_status"):
+        evaluation.GoldSample.model_validate(payload)
+
+
+def test_normalized_gold_requires_chapter_mirrors_on_the_second_core_span() -> None:
+    payload = _complete_normalized_gold_payload()
+    span = payload["gold_core_evidence_sets"][0][1]
+    span.pop("chapter_char_start")
+    span.pop("chapter_char_end")
+
+    with pytest.raises(ValidationError, match="chapter_char_start"):
+        evaluation.GoldSample.model_validate(payload)
+
+
+def test_normalized_gold_rejects_mismatched_chapter_end_on_the_third_core_span() -> None:
+    payload = _complete_normalized_gold_payload()
+    payload["gold_core_evidence_sets"][0][2]["chapter_char_end"] = 5
+
+    with pytest.raises(ValidationError, match="chapter_char_end"):
+        evaluation.GoldSample.model_validate(payload)
+
+
+def test_normalized_gold_requires_global_offsets_on_partial_evidence() -> None:
+    payload = _complete_normalized_gold_payload()
+    partial = payload["partial_evidence"][0]
+    partial.pop("corpus_char_start")
+    partial.pop("corpus_char_end")
+
+    with pytest.raises(ValidationError, match="corpus_char_start"):
+        evaluation.GoldSample.model_validate(payload)
+
+
 def test_gold_loader_rejects_a_span_that_cannot_replay_verbatim() -> None:
     with pytest.raises(ValueError, match="span_alpha.*does not match"):
         evaluation.load_gold_samples(
@@ -190,6 +226,63 @@ def _minimal_gold_payload() -> dict[str, object]:
         "annotation_status": "reviewed",
         "review_record_id": "review_fixture_joint",
     }
+
+
+def _complete_normalized_gold_payload() -> dict[str, object]:
+    payload = _minimal_gold_payload()
+    payload["schema_version"] = "0.2"
+    payload["gold_core_evidence_sets"] = [
+        [
+            {
+                "span_id": "span_alpha",
+                "document_id": "fixture_openstax",
+                "char_start": 0,
+                "char_end": 6,
+                "verbatim_text": "Alpha.",
+            },
+            {
+                "span_id": "span_beta",
+                "document_id": "fixture_openstax",
+                "char_start": 0,
+                "char_end": 5,
+                "verbatim_text": "Beta.",
+            },
+            {
+                "span_id": "span_gamma",
+                "document_id": "fixture_openstax",
+                "char_start": 0,
+                "char_end": 6,
+                "verbatim_text": "Gamma.",
+            },
+        ]
+    ]
+    payload["partial_evidence"] = [
+        {
+            "span_id": "span_partial",
+            "document_id": "fixture_openstax",
+            "char_start": 0,
+            "char_end": 8,
+            "verbatim_text": "Partial.",
+        }
+    ]
+    for evidence_set in payload["gold_core_evidence_sets"]:
+        for span in evidence_set:
+            span.update(
+                chapter_char_start=span["char_start"],
+                chapter_char_end=span["char_end"],
+                corpus_char_start=span["char_start"],
+                corpus_char_end=span["char_end"],
+                resolution_status="resolved",
+            )
+    for span in payload["partial_evidence"]:
+        span.update(
+            chapter_char_start=span["char_start"],
+            chapter_char_end=span["char_end"],
+            corpus_char_start=span["char_start"],
+            corpus_char_end=span["char_end"],
+            resolution_status="resolved",
+        )
+    return payload
 
 
 def _retrieval_payload(*, with_hit: bool) -> dict[str, object]:

@@ -8,7 +8,12 @@ from typing import Any, Protocol, runtime_checkable
 from .manifest import RunManifest
 from .mapping import GoldChunkMapping, QuestionChunkMapping
 from .metrics import compute_retrieval_metrics, validate_artifact_compatibility
-from .models import EvaluationRunResult, GoldSample, SpanResolutionStatus
+from .models import (
+    AnnotationStatus,
+    EvaluationRunResult,
+    GoldSample,
+    SpanResolutionStatus,
+)
 
 
 @runtime_checkable
@@ -28,6 +33,11 @@ def assert_reportable_gold_coordinates(gold_samples: Sequence[GoldSample]) -> No
     """Reject formal scoring unless every Gold span has global coordinates."""
 
     for sample in gold_samples:
+        if sample.annotation_status is not AnnotationStatus.REVIEWED:
+            raise ValueError(
+                "reportable Gold requires annotation_status=reviewed; "
+                f"sample {sample.question_id} is not reportable"
+            )
         spans = (
             span
             for evidence_set in sample.gold_core_evidence_sets

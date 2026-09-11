@@ -171,6 +171,7 @@ normalization-derived fields absent.
 Reportable scoring is fail-closed: every Gold span must be `resolved` with
 non-null corpus-global coordinates. Raw v0.1 and stale or ambiguous normalized
 Gold may be used only for non-reportable development or fixture checks.
+Every reportable Gold sample must also have `annotation_status=reviewed`.
 
 `abstained` requires an `abstention_cause`: `no_retrieval_hits` means the
 retriever returned an empty result and no model call was attempted;

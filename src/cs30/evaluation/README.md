@@ -65,8 +65,9 @@ to make the provenance of the M1 transformation explicit. M3 v0.1 remains
 loadable without any of these derived fields.
 
 Formal (reportable) scoring is fail-closed: every Gold span must be resolved
-and carry corpus-global coordinates. Development and fixture scoring may still
-use raw v0.1 Gold for contract and pipeline checks.
+and carry corpus-global coordinates, and every sample must have
+`annotation_status=reviewed`. Development and fixture scoring may still use raw
+v0.1 Gold for contract and pipeline checks.
 
 ## Run-result semantics (v0.2)
 
