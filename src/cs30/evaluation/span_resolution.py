@@ -106,6 +106,17 @@ def resolve_span_to_corpus(
     containing_blocks = [
         block for block in blocks if _contains(block, match_start, match_end)
     ]
+    overlapping_blocks = [
+        block
+        for block in blocks
+        if block.char_start < match_end and match_start < block.char_end
+    ]
+    if len(overlapping_blocks) > 1:
+        return _unresolved(
+            base,
+            SpanResolutionStatus.AMBIGUOUS,
+            "unique verbatim match crosses multiple text blocks",
+        )
     if len(containing_blocks) != 1:
         return _unresolved(
             base,

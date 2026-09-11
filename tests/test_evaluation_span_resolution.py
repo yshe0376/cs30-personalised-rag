@@ -109,7 +109,7 @@ def test_rejects_wrong_chapter_block(test_corpus: OpenStaxDocument) -> None:
         chapter_id="two",
         char_start=0,
         char_end=6,
-        verbatim_text="Alpha.",
+        verbatim_text="Gamma.",
         block_id="one-alpha",
     )
 
@@ -117,7 +117,8 @@ def test_rejects_wrong_chapter_block(test_corpus: OpenStaxDocument) -> None:
 
     assert result.status is SpanResolutionStatus.STALE
     assert result.corpus_char_start is None
-    assert "chapter" in result.message.lower()
+    assert "block_id" in result.message.lower()
+    assert "different chapter" in result.message.lower()
 
 
 def test_rejects_verbatim_text_mismatch(test_corpus: OpenStaxDocument) -> None:
@@ -183,6 +184,6 @@ def test_cross_block_span_requires_manual_review(test_corpus: OpenStaxDocument) 
 
     result = resolve_span_to_corpus(cross_block_span, test_corpus)
 
-    assert result.status is SpanResolutionStatus.STALE
+    assert result.status is SpanResolutionStatus.AMBIGUOUS
     assert result.corpus_char_start is None
     assert "block" in result.message.lower()
