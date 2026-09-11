@@ -104,6 +104,22 @@ def test_normalized_gold_rejects_mismatched_chapter_end_on_the_third_core_span()
         evaluation.GoldSample.model_validate(payload)
 
 
+def test_normalized_gold_requires_status_on_partial_evidence() -> None:
+    payload = _complete_normalized_gold_payload()
+    payload["partial_evidence"][0].pop("resolution_status")
+
+    with pytest.raises(ValidationError, match="resolution_status"):
+        evaluation.GoldSample.model_validate(payload)
+
+
+def test_normalized_gold_rejects_mismatched_chapter_start_on_partial_evidence() -> None:
+    payload = _complete_normalized_gold_payload()
+    payload["partial_evidence"][0]["chapter_char_start"] = 1
+
+    with pytest.raises(ValidationError, match="chapter_char_start"):
+        evaluation.GoldSample.model_validate(payload)
+
+
 def test_normalized_gold_requires_global_offsets_on_partial_evidence() -> None:
     payload = _complete_normalized_gold_payload()
     partial = payload["partial_evidence"][0]
