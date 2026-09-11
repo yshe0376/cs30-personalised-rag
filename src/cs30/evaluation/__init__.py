@@ -5,8 +5,10 @@ from .io import (
     load_gold_samples,
     load_inprogress_run_results,
     load_mappings,
+    load_normalized_gold,
     load_run_results,
     write_final_jsonl,
+    write_normalized_gold,
 )
 from .manifest import (
     GitState,
@@ -60,6 +62,7 @@ from .models import (
     SpanResolutionMethod,
     SpanResolutionStatus,
 )
+from .normalization import NormalizationReport, normalize_gold_samples
 from .openstax_archive import (
     OpenStaxArchiveCorpus,
     load_openstax_archive,
@@ -123,6 +126,7 @@ __all__ = [
     "load_gold_samples",
     "load_inprogress_run_results",
     "load_mappings",
+    "load_normalized_gold",
     "load_openstax_archive",
     "load_openstax_document",
     "load_run_results",
@@ -133,6 +137,8 @@ __all__ = [
     "recall_at_k",
     "returned_count_at_k",
     "resolve_span_to_corpus",
+    "normalize_gold_samples",
+    "NormalizationReport",
     "run_results_are_comparable",
     "run_batch",
     "run_evaluation",
@@ -142,5 +148,6 @@ __all__ = [
     "RetrievalScoreRow",
     "validate_artifact_compatibility",
     "write_final_jsonl",
+    "write_normalized_gold",
     "write_prepared_corpus",
 ]
