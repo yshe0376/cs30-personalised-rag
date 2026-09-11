@@ -126,6 +126,91 @@ Member 5's configuration provenance distinguishes two custom `main` runs that
 use different content filters, even before M5 explicitly adds `include_types`
 to its own configuration-key list.
 
+## Evaluation contracts v0.2
+
+`src/cs30/evaluation/` freezes the W5 boundary shared by M1, M3, and M8.
+`GoldSample.gold_core_evidence_sets` is an outer-OR, inner-AND structure: every
+span in one inner set must be retrieved for that path to be complete, while
+any complete inner set is an acceptable alternative path. `partial_evidence`
+is diagnostic only and never counts as a complete Gold hit.
+
+Gold spans use the repository-wide half-open `[char_start, char_end)` rule over
+their canonical text. The Gold loader can receive a `document_id -> text`
+mapping for whole-document fixtures and rejects missing documents, out-of-range
+spans, and any `verbatim_text` that does not replay exactly. `answerable` is
+relative to the frozen corpus; disputed or unresolved items use `null`, not
+`false`.
+
+`GoldSample` uses schema version `0.1` for raw M3 input and `0.2` for
+M1-normalized output; the per-question `EvaluationRunResult` is version `0.2`.
+It records six distinct terminal
+states: `retrieval_error`, `generation_error`, `parse_error`, `retrieved`,
+`abstained`, and `answered`. `retrieved` is the successful terminal state for
+`execution_mode=retrieval_only`. Technical errors cannot carry a final answer
+or citation result.
+
+The M3 W5 Gold v0.1 artifact is the source JSON contract consumed by the
+evaluation loader. Its options retain `text` and `source_field`, and its Gold
+spans retain `chapter_id`, `block_id`, `sufficiency`, and `annotation_note`.
+M3 character offsets are chapter-local, so span replay must use a
+`(document_id, chapter_id) -> chapter text` mapping rather than the merged
+document text alone. The loader keeps the legacy string-option fixture shape
+for engineering tests, but does not silently discard M3 metadata.
+
+M1's normalized Gold v0.2 representation preserves raw M3 `char_start` and
+`char_end` as chapter-local coordinates. It must copy them to
+`chapter_char_start` and `chapter_char_end`; the generic fields are never
+repurposed as corpus-global offsets. Each normalized span reports
+`resolution_status` as `resolved`, `stale`, or `ambiguous`, and can record a
+`resolution_method` of `block_id` or `verbatim_unique`. A resolved span must
+provide `corpus_char_start` and `corpus_char_end`, and may retain a
+`resolved_block_id`. Normalized samples may include `source_corpus_version`
+and `normalizer_version` provenance. Raw v0.1 M3 records remain valid with all
+normalization-derived fields absent.
+
+`abstained` requires an `abstention_cause`: `no_retrieval_hits` means the
+retriever returned an empty result and no model call was attempted;
+`model_abstained_with_evidence` means the model received evidence and returned
+an explicit refusal. `model_call_count` is the source of truth for the derived
+`model_invoked` convenience flag. The trace separately stores retrieval
+output, generation evidence, raw output, optional repaired output, final
+answer, citation validation, and structured errors.
+
+If profile preparation or evidence assembly fails after retrieval, the runner
+saves a `generation_error` with the retrieval result and leaves prompt/model
+fields empty. This keeps one bad question checkpointable and prevents a
+technical failure from being interpreted as a correct abstention.
+
+If the answer and citation validation succeed but optional prompt provenance is
+malformed, the runner keeps the normal `answered`/`abstained` outcome and drops
+only the invalid diagnostic fields. A valid parse-error trace retains its raw
+output, prompt chunk IDs, and prompt hash.
+
+Until the bundle-consumer seam is approved, M7's prompt builder consumes the
+same `RetrievalResult` as the citation bundle builder. `GenerationTrace` records
+the prompt evidence chunk IDs and prompt hash so a later prompt/bundle change
+cannot silently invalidate citation scoring.
+
+The W5 `RunManifest` is version `0.2`. It records dataset, parser, Gold
+annotation, and M4 mapping identities in addition to corpus/chunk and backend
+versions. Reportable manifests must use a clean, non-fixture run with a real
+generation trace. Batch resume compares the complete manifest sidecar rather
+than only the condition ID. A torn trailing JSONL write may be recovered once,
+but the recovery is recorded in a `*.recovery.json` audit marker.
+
+Offline retrieval scoring emits one `retrieval_scores` row per saved question.
+Rows explicitly state whether they enter the answerable-and-gold denominator;
+unanswerable, unresolved, disputed, technical-error, and missing-mapping rows
+remain visible with exclusion reasons. Empty retrieval makes precision/noise
+and no-relevant-hit undefined, with defined counts reported separately. The
+aggregate `excluded_runs.total` is authoritative; its reason counters are
+mutually exclusive and sum to that total.
+
+The hand-computable JSONL fixtures under `tests/fixtures/evaluation/` exercise
+joint evidence, alternative evidence, partial evidence, unresolved Gold, and
+all six run states. They validate the interface and must not be reported as
+formal evaluation results.
+
 ## Ownership
 
 | Contract | Producer | Primary consumers |
@@ -140,6 +225,8 @@ to its own configuration-key list.
 | `StudentProfile` | Member 7 / UI | Prompt builder |
 | `GeneratedAnswer` | Member 7 | Member 8 citation resolver, UI |
 | `PipelineRun` | Leader | Member 8, ablation table |
+| `GoldSample` | Member 3 | Leader/M1 retrieval evaluator, Member 8 answer evaluator |
+| `EvaluationRunResult` | Leader/M1 runner | Member 8 scorers, report pipeline |
 
 Member numbers follow the week 1 division of labour held in the team Drive.
 
