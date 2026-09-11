@@ -73,6 +73,7 @@ from .scoring import (
     run_scoring_extensions,
     score_saved_run,
 )
+from .span_resolution import SpanResolution, resolve_span_to_corpus
 
 __all__ = [
     "AbstentionCause",
@@ -101,6 +102,7 @@ __all__ = [
     "SpanResolutionStatus",
     "ScoringExtension",
     "SpanChunkMapping",
+    "SpanResolution",
     "append_jsonl_record",
     "assert_reportable_gold_coordinates",
     "assert_clean_for_report",
@@ -130,6 +132,7 @@ __all__ = [
     "partial_evidence_count_at_k",
     "recall_at_k",
     "returned_count_at_k",
+    "resolve_span_to_corpus",
     "run_results_are_comparable",
     "run_batch",
     "run_evaluation",
