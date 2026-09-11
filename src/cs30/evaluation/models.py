@@ -197,6 +197,32 @@ class GoldSample(ContractModel):
         if len(span_ids) != len(set(span_ids)):
             raise ValueError("span_id values must be unique across core and partial evidence")
 
+        if self.schema_version == "0.2":
+            for span in all_spans:
+                if span.resolution_status is None:
+                    raise ValueError(
+                        "normalized Gold samples require resolution_status "
+                        f"for span {span.span_id}"
+                    )
+                if span.chapter_char_start != span.char_start:
+                    raise ValueError(
+                        "normalized Gold samples require chapter_char_start to mirror "
+                        f"raw char_start for span {span.span_id}"
+                    )
+                if span.chapter_char_end != span.char_end:
+                    raise ValueError(
+                        "normalized Gold samples require chapter_char_end to mirror "
+                        f"raw char_end for span {span.span_id}"
+                    )
+                if (
+                    span.resolution_status is SpanResolutionStatus.RESOLVED
+                    and (span.corpus_char_start is None or span.corpus_char_end is None)
+                ):
+                    raise ValueError(
+                        "resolved normalized Gold spans require "
+                        "corpus_char_start/corpus_char_end"
+                    )
+
         if self.answerable is True:
             if self.gold_answer is None:
                 raise ValueError("answerable samples require gold_answer")

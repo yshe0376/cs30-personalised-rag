@@ -52,6 +52,32 @@ def test_normalized_span_requires_explicit_global_coordinates() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("span_update", "message"),
+    [
+        ({}, "resolution_status"),
+        ({"resolution_status": "stale"}, "chapter_char_start"),
+        (
+            {
+                "resolution_status": "resolved",
+                "chapter_char_start": 0,
+                "chapter_char_end": 6,
+            },
+            "corpus_char_start",
+        ),
+    ],
+)
+def test_normalized_gold_sample_requires_complete_coordinate_contract(
+    span_update: dict[str, object], message: str
+) -> None:
+    payload = _minimal_gold_payload()
+    payload["schema_version"] = "0.2"
+    payload["gold_core_evidence_sets"][0][0].update(span_update)
+
+    with pytest.raises(ValidationError, match=message):
+        evaluation.GoldSample.model_validate(payload)
+
+
 def test_gold_loader_rejects_a_span_that_cannot_replay_verbatim() -> None:
     with pytest.raises(ValueError, match="span_alpha.*does not match"):
         evaluation.load_gold_samples(

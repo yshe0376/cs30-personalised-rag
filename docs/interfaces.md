@@ -168,6 +168,10 @@ provide `corpus_char_start` and `corpus_char_end`, and may retain a
 and `normalizer_version` provenance. Raw v0.1 M3 records remain valid with all
 normalization-derived fields absent.
 
+Reportable scoring is fail-closed: every Gold span must be `resolved` with
+non-null corpus-global coordinates. Raw v0.1 and stale or ambiguous normalized
+Gold may be used only for non-reportable development or fixture checks.
+
 `abstained` requires an `abstention_cause`: `no_retrieval_hits` means the
 retriever returned an empty result and no model call was attempted;
 `model_abstained_with_evidence` means the model received evidence and returned

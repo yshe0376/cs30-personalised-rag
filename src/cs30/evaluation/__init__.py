@@ -67,7 +67,12 @@ from .openstax_archive import (
     write_prepared_corpus,
 )
 from .runner import run_batch, run_evaluation
-from .scoring import ScoringExtension, run_scoring_extensions, score_saved_run
+from .scoring import (
+    ScoringExtension,
+    assert_reportable_gold_coordinates,
+    run_scoring_extensions,
+    score_saved_run,
+)
 
 __all__ = [
     "AbstentionCause",
@@ -97,6 +102,7 @@ __all__ = [
     "ScoringExtension",
     "SpanChunkMapping",
     "append_jsonl_record",
+    "assert_reportable_gold_coordinates",
     "assert_clean_for_report",
     "assert_manifests_comparable",
     "capture_git_state",
