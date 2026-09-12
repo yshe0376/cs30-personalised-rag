@@ -28,6 +28,47 @@ compatibility with the current port and pipeline.
 - Batch isolation so one failed request does not abort later questions.
 - A combined, provenance-labelled smoke run across original, teammate, and
   locally available datasets, plus a three-level comparison.
+- Four stable conditions: `P0R0_plain`, `P1R0_prompt_only`,
+  `P0R1_reranking_only`, and `P1R1_combined`.
+- A fixture-first, level-aware soft reranker using
+  `lambda_effective = lambda_weight * profile.confidence` and min-max-normalised
+  retrieval scores. Original retrieval scores are retained; only candidate
+  order and rank are changed.
+- Sidecar role labels keyed by `chunk_id`, so the shared evidence contracts do
+  not gain an unfrozen required field. Missing and ambiguous labels use the
+  recorded `retrieval_only` fallback.
+- Structured attempt records containing each raw provider output, repair status,
+  failure type, model, usage and response ID. Saved batch rows retain both the
+  rejected output and the repaired output.
+
+## Four-condition fixture run
+
+Run all four conditions against one fixed question, candidate set, profile and
+model:
+
+```bash
+python -m cs30.generation.ablation_demo --provider mock
+```
+
+Add `--output artifacts/task7-week5/four_conditions.json` to retain the exact
+structured run, including raw provider attempts. The output records generation,
+evidence, and role-label modes separately, so an Ollama/OpenAI call over fixture
+evidence cannot be mistaken for either a fully real run or a reportable result.
+
+Use `--condition plain`, `--condition prompt-only`,
+`--condition reranking-only`, or `--condition combined` to expose one stable
+switch to an external runner. `--lambda-weight` is accepted only as an
+engineering fixture value in this demo. `RerankConfig.parameter_source`
+accepts only `fixture` or `dev`, preventing Test from being recorded as a
+tuning source.
+
+The personalised Prompt path is byte-for-byte unchanged. Plain and
+reranking-only use a separate base Prompt that keeps the grounding, JSON and
+citation rules but contains no student level or profile identifier.
+
+The role mapping in this demonstration is explicitly a fixture using the six
+candidate role names from the project design. It is not a frozen taxonomy and
+must not be used for model-effectiveness claims.
 
 ## Offline smoke run
 
@@ -145,6 +186,22 @@ or unknown IDs, bounded repair, and real BM25 → M8 bundle → mock generation 
 M8 citation validation. Shared retry and batch-failure tests cover both input
 types. These are engineering checks, not answer-quality measurements or proof
 that a live OpenAI/Ollama endpoint is available.
+
+`tests/test_generation_reranking.py` checks the score formula, confidence,
+zero-lambda baseline restoration, missing/ambiguous-label fallback, bundle
+integrity, four independent condition switches, unchanged model/candidate
+inputs, and separate raw records for rejected and repaired outputs.
+
+## Waiting on team artefacts
+
+The following W5 integration work is intentionally not claimed complete:
+
+- Loading M5's role labels, until the taxonomy decision and versioned labels
+  are available.
+- Choosing `lambda_weight` on the Dev split, until M3/M4 provide the versioned
+  Dev data and gold mapping. The Test split must not be used for this choice.
+- Publishing formal four-condition results, until M1 supplies the shared run
+  harness and M8 confirms the result-consumption workflow.
 
 ## Integration boundaries
 

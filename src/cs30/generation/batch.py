@@ -32,7 +32,7 @@ class BatchResult:
             "question_id": self.question_id,
             "status": self.status,
             "answer": self.answer.model_dump(mode="json") if self.answer else None,
-            "trace": self.trace.to_metadata() if self.trace else None,
+            "trace": self.trace.model_dump() if self.trace else None,
             "error": self.error,
         }
 
