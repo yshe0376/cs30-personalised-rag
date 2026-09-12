@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "spans": [
+    {
+      "schema_version": "1.0",
+      "gold_span_id": "gold_acceleration_definition_001",
+      "question_id": "question_acceleration_001",
+      "document_id": "openstax_physics_fixture",
+      "chapter_id": "ch01_motion",
+      "char_start": 0,
+      "char_end": 57,
+      "text": "Acceleration is the rate of change of velocity with time.",
+      "coverage_role": "necessary",
+      "alternative_group_id": null,
+      "metadata": {
+        "purpose": "format example only; not W5 production gold"
+      }
+    }
+  ]
+}
+
