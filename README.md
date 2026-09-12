@@ -260,7 +260,7 @@ src/cs30/configs/       Packaged development and staging configuration
 src/cs30/logging.py     Shared logging setup
 src/cs30/errors.py      Typed errors
 src/cs30/fixtures/      Small, non-sensitive fixtures, shipped with the package
-src/cs30/ingest/        Member 2  - OpenStax parsing
+src/cs30/ingest/        Member 2  - textbook catalogue and parsing boundary
 src/cs30/questions/     Member 3  - validated SciQ demo questions
 src/cs30/chunking/      Member 4  - chunking and metadata
 src/cs30/indexing/      Member 5  - embeddings and FAISS
@@ -301,7 +301,7 @@ and week 1 acceptance criteria.
 
 The first contract version includes:
 
-- `OpenStaxDocument`
+- `TextbookDocument` (`OpenStaxDocument` compatibility alias)
 - `Chunk`
 - `IndexArtifact`
 - `SciQQuestion`

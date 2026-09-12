@@ -23,8 +23,17 @@ mismatched span fails immediately instead of surfacing during a demo.
 
 ## Document structure: blocks
 
-`OpenStaxDocument` carries two things: `text`, the coordinate system every span
+`TextbookDocument` carries two things: `text`, the coordinate system every span
 refers to, and `blocks`, the structure the parser recovered.
+
+`TextbookDocument` and `TextbookChapter` are provider-neutral compatibility names
+for the v1.0 `OpenStaxDocument` and `OpenStaxChapter` classes. Existing payloads
+and downstream code remain valid while the ingestion catalogue adds OpenStax and
+CK-12 source profiles.
+These aliases provide naming compatibility only; they do not identify the
+provider or add provider-specific validation. Adding provider-specific fields or
+validation to the serialized contract requires a separately reviewed schema
+revision and migration.
 
 A `TextBlock` holds **offsets only, never its own copy of the text**. Two copies
 of the same string can drift apart; one string plus a span cannot. Read a
@@ -79,7 +88,7 @@ The contract layer **never rewrites text that a span points at**.
 
 | Kind | Fields | Behaviour |
 |---|---|---|
-| `SpanText` | `OpenStaxDocument.text`, `Chunk.text`, `Chunk.embed_text`, `RetrievalHit.text` | Kept verbatim. Never stripped — stripping would move the text without moving the offsets |
+| `SpanText` | `TextbookDocument.text`, `Chunk.text`, `Chunk.embed_text`, `RetrievalHit.text` | Kept verbatim. Never stripped — stripping would move the text without moving the offsets |
 | `Identifier` | all `*_id`, `source`, `version`, `document_hash`, `parser_version`, citation entries | Surrounding whitespace removed, so `"ch01 "` and `"ch01"` cannot become two chapters |
 | `NonEmptyText` | `question`, `support`, `explanation`, `title` | Stripped; no span semantics |
 
@@ -115,7 +124,7 @@ they do not add fields to the shared `Chunk` contract.
 | `source_locator` | Source URI plus chapter and half-open character span |
 | `source_chapter_ids` | Comma-separated source chapter IDs used by anomaly reporting |
 | `parent_scope` | `section` or `chapter` for small-to-big expansion |
-| `parent_char_start`, `parent_char_end` | Half-open parent span in `OpenStaxDocument.text` |
+| `parent_char_start`, `parent_char_end` | Half-open parent span in `TextbookDocument.text` |
 | `parent_source_block_ids` | Parser block IDs covered by the parent span |
 | `candidate_id` | Stable candidate name such as `main` or `S1`–`S6` |
 | `include_types` | Canonical comma-separated content filter, or `*` for all types |
@@ -256,8 +265,8 @@ formal evaluation results.
 
 | Contract | Producer | Primary consumers |
 |---|---|---|
-| `OpenStaxDocument` | Member 2 | Member 4, Leader |
-| `TextBlock` (inside `OpenStaxDocument`) | Member 2 | Member 4, Member 5 |
+| `TextbookDocument` (`OpenStaxDocument` compatibility alias) | Member 2 | Member 4, Leader |
+| `TextBlock` (inside `TextbookDocument`) | Member 2 | Member 4, Member 5 |
 | `Chunk` | Member 4 | Members 5 and 6 |
 | `IndexArtifact` | Member 5 | Member 6 |
 | `SciQQuestion` | Member 3 | Members 6 and 7 |
