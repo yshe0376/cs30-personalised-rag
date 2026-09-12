@@ -76,6 +76,16 @@ def resolve_span_to_corpus(
 
     corpus_start = chapter.char_start + span.char_start
     corpus_end = chapter.char_start + span.char_end
+    if span.block_id is None:
+        return SpanResolution(
+            **base,
+            status=SpanResolutionStatus.RESOLVED,
+            method=SpanResolutionMethod.CHAPTER_OFFSET,
+            corpus_char_start=corpus_start,
+            corpus_char_end=corpus_end,
+            resolved_block_id=None,
+            message="resolved from the replayed chapter-local coordinates",
+        )
     if identified_block is not None and _contains(identified_block, corpus_start, corpus_end):
         return SpanResolution(
             **base,

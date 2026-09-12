@@ -476,6 +476,7 @@ def test_reportable_scoring_rejects_stale_normalized_gold_coordinates() -> None:
             "gold_annotation_version": "gold-1",
             "mapping_version": "mapping-1",
             "parser_version": "parser-1",
+            "reportable": True,
         }
     )
 
@@ -517,6 +518,7 @@ def test_reportable_scoring_requires_reviewed_gold() -> None:
             "gold_annotation_version": "gold-1",
             "mapping_version": "mapping-1",
             "parser_version": "parser-1",
+            "reportable": True,
         }
     )
 
@@ -763,6 +765,7 @@ def test_scoring_uses_manifest_top_k_when_not_explicitly_supplied() -> None:
             "gold_annotation_version": "gold-1",
             "mapping_version": "mapping-1",
             "parser_version": "parser-1",
+            "reportable": True,
         }
     )
 
@@ -1159,6 +1162,7 @@ def _manifest(execution_mode: str) -> RunManifest:
         git_commit="abc123",
         git_dirty=False,
         git_snapshot_sha256="snapshot-1",
+        reportable=False,
     )
 
 
@@ -1225,6 +1229,20 @@ def test_synthetic_generation_trace_requires_a_non_reportable_manifest() -> None
                 profile_id="profile-1", level=StudentLevel.INTERMEDIATE
             ),
             require_generation_trace=False,
+        )
+
+
+def test_reportable_batch_rejects_provisional_gold_before_retrieval() -> None:
+    class _MustNotBeCalledRetriever:
+        def retrieve(self, query: str, top_k: int, mode: str) -> RetrievalResult:
+            del query, top_k, mode
+            raise AssertionError("retriever must not be called for provisional Gold")
+
+    with pytest.raises(ValueError, match="annotation_status=reviewed"):
+        run_batch(
+            [_m3_initial_normalized_gold()],
+            _manifest("retrieval_only").model_copy(update={"reportable": True}),
+            _MustNotBeCalledRetriever(),
         )
 
 

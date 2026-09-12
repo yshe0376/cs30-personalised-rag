@@ -71,6 +71,7 @@ class SpanResolutionMethod(StrEnum):
     """Evidence used to resolve an M3 Gold span against the corpus."""
 
     BLOCK_ID = "block_id"
+    CHAPTER_OFFSET = "chapter_offset"
     VERBATIM_UNIQUE = "verbatim_unique"
 
 

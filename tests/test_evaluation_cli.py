@@ -158,7 +158,11 @@ def test_cli_run_writes_completed_jsonl_and_manifest(tmp_path: Path) -> None:
     assert output.is_file()
     assert not Path(str(output) + ".inprogress").exists()
     manifest = output.with_suffix(".manifest.json")
-    assert json.loads(manifest.read_text(encoding="utf-8"))["git_dirty"] is True
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    assert isinstance(manifest_payload["git_dirty"], bool)
+    assert manifest_payload["fixture_mode"] is True
+    assert manifest_payload["reportable"] is False
+    assert not (manifest_payload["git_dirty"] and manifest_payload["reportable"])
 
 
 def test_cli_score_reloads_saved_run_without_a_model_call(tmp_path: Path) -> None:

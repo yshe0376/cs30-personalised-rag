@@ -162,16 +162,52 @@ M1's normalized Gold v0.2 representation preserves raw M3 `char_start` and
 `chapter_char_start` and `chapter_char_end`; the generic fields are never
 repurposed as corpus-global offsets. Each normalized span reports
 `resolution_status` as `resolved`, `stale`, or `ambiguous`, and can record a
-`resolution_method` of `block_id` or `verbatim_unique`. A resolved span must
-provide `corpus_char_start` and `corpus_char_end`, and may retain a
-`resolved_block_id`. Normalized samples may include `source_corpus_version`
-and `normalizer_version` provenance. Raw v0.1 M3 records remain valid with all
-normalization-derived fields absent.
+`resolution_method` of `block_id`, `chapter_offset`, or `verbatim_unique`. A
+span without a block ID may use `chapter_offset` after its chapter-local text
+replays exactly; a non-empty stale block ID still requires the guarded unique
+verbatim fallback. A resolved span must provide `corpus_char_start` and
+`corpus_char_end`, and may retain a `resolved_block_id`. Normalized samples may
+include `source_corpus_version` and `normalizer_version` provenance. Raw v0.1
+M3 records remain valid with all normalization-derived fields absent.
 
-Reportable scoring is fail-closed: every Gold span must be `resolved` with
-non-null corpus-global coordinates. Raw v0.1 and stale or ambiguous normalized
-Gold may be used only for non-reportable development or fixture checks.
+Reportable run and scoring paths are fail-closed: every Gold span must be
+`resolved` with non-null corpus-global coordinates. Raw v0.1 and stale or
+ambiguous normalized Gold may be used only for non-reportable development or
+fixture checks.
 Every reportable Gold sample must also have `annotation_status=reviewed`.
+
+### Coordinate ownership and M4 mapping regeneration
+
+M3 owns the immutable semantic annotation. In the raw v0.1 artifact,
+`char_start`/`char_end` are chapter-local half-open offsets and are interpreted
+with `(document_id, chapter_id, block_id, verbatim_text)`. M1 owns the derived
+normalization: `chapter_char_start`/`chapter_char_end` make the local coordinate
+explicit, while `corpus_char_start`/`corpus_char_end` are calculated only from
+the selected frozen merged corpus. The generic `char_start`/`char_end` fields
+are never repurposed as global offsets.
+
+M4 consumes the normalized Gold together with the prepared corpus manifest to
+build its block-to-chunk mapping. M4 does not need to replace block-based
+mapping with global character coordinates: `span_id`, `chapter_id`,
+`resolved_block_id` (or the reviewed original `block_id`), and
+`verbatim_text` are sufficient inputs. The output mapping remains keyed by
+`span_id` and records `corpus_version`, `chunk_config_hash`, and
+`mapping_version`.
+
+Mapping regeneration follows the artifact dependency boundary:
+
+- A chunker or chunk configuration change keeps the normalized Gold and
+  `corpus_version`, but requires a new M4 mapping and `chunk_config_hash`.
+- A chapter-order, separator, parser, or source-text change creates a new
+  `corpus_version`; M1 must normalize the unchanged raw M3 Gold again and M4
+  must produce a new mapping.
+- A block split/merge or changed block text is resolved block-first by M1.
+  Stale, ambiguous, or cross-block matches are listed by `span_id` for M3
+  review; they are never silently migrated into a formal report.
+
+Raw Gold, normalized Gold, corpus manifests, and mapping artifacts are
+append-only versioned outputs. A new version is written beside the old one so
+historical scores remain bound to the corpus and mapping that produced them.
 
 `abstained` requires an `abstention_cause`: `no_retrieval_hits` means the
 retriever returned an empty result and no model call was attempted;

@@ -29,8 +29,8 @@ class ScoringExtension(Protocol):
     ) -> Mapping[str, Any]: ...
 
 
-def assert_reportable_gold_coordinates(gold_samples: Sequence[GoldSample]) -> None:
-    """Reject formal scoring unless every Gold span has global coordinates."""
+def assert_reportable_gold(gold_samples: Sequence[GoldSample]) -> None:
+    """Reject formal evaluation unless Gold is reviewed and corpus-bound."""
 
     for sample in gold_samples:
         if sample.annotation_status is not AnnotationStatus.REVIEWED:
@@ -104,7 +104,7 @@ def score_saved_run(
                 "reportable manifests must record mapping_version before scoring"
             )
         if manifest.reportable:
-            assert_reportable_gold_coordinates(gold_samples)
+            assert_reportable_gold(gold_samples)
     else:
         validate_artifact_compatibility(
             gold_samples,

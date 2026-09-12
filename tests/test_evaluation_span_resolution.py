@@ -145,7 +145,7 @@ def test_unique_verbatim_fallback_is_explicit(test_corpus: OpenStaxDocument) -> 
         char_start=7,
         char_end=12,
         verbatim_text="Beta.",
-        block_id=None,
+        block_id="stale-block-id",
     )
 
     result = resolve_span_to_corpus(span_without_valid_block, test_corpus)
@@ -155,6 +155,26 @@ def test_unique_verbatim_fallback_is_explicit(test_corpus: OpenStaxDocument) -> 
     assert result.resolved_block_id == "one-beta"
 
 
+def test_missing_block_id_uses_replayed_chapter_offset(
+    test_corpus: OpenStaxDocument,
+) -> None:
+    span_without_block = _span(
+        "chapter-offset",
+        chapter_id="three",
+        char_start=0,
+        char_end=7,
+        verbatim_text="Repeat.",
+        block_id=None,
+    )
+
+    result = resolve_span_to_corpus(span_without_block, test_corpus)
+
+    assert result.status is SpanResolutionStatus.RESOLVED
+    assert result.method is SpanResolutionMethod.CHAPTER_OFFSET
+    assert result.resolved_block_id is None
+    assert test_corpus.text[result.corpus_char_start : result.corpus_char_end] == "Repeat."
+
+
 def test_ambiguous_verbatim_fallback_is_not_silent(test_corpus: OpenStaxDocument) -> None:
     repeated_text_span = _span(
         "ambiguous",
@@ -162,7 +182,7 @@ def test_ambiguous_verbatim_fallback_is_not_silent(test_corpus: OpenStaxDocument
         char_start=0,
         char_end=7,
         verbatim_text="Repeat.",
-        block_id=None,
+        block_id="missing-block-id",
     )
 
     result = resolve_span_to_corpus(repeated_text_span, test_corpus)

@@ -72,7 +72,7 @@ from .openstax_archive import (
 from .runner import run_batch, run_evaluation
 from .scoring import (
     ScoringExtension,
-    assert_reportable_gold_coordinates,
+    assert_reportable_gold,
     run_scoring_extensions,
     score_saved_run,
 )
@@ -107,7 +107,7 @@ __all__ = [
     "SpanChunkMapping",
     "SpanResolution",
     "append_jsonl_record",
-    "assert_reportable_gold_coordinates",
+    "assert_reportable_gold",
     "assert_clean_for_report",
     "assert_manifests_comparable",
     "capture_git_state",

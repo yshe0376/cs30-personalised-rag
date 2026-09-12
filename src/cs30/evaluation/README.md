@@ -58,16 +58,43 @@ copies them to `chapter_char_start` and `chapter_char_end`; generic offsets
 never become corpus-global coordinates. A span records its normalization
 outcome as `resolved`, `stale`, or `ambiguous`. Resolved spans must also carry
 `corpus_char_start` and `corpus_char_end`, plus optional `resolved_block_id`
-and the method (`block_id` or `verbatim_unique`) when available.
+and the method (`block_id`, `chapter_offset`, or `verbatim_unique`) when
+available. If a source has no `block_id`, a chapter-local coordinate that
+replays its `verbatim_text` is resolved directly with `chapter_offset`; a
+non-empty but stale block ID still goes through the guarded unique-text
+fallback.
 
 Normalized samples may record `source_corpus_version` and `normalizer_version`
 to make the provenance of the M1 transformation explicit. M3 v0.1 remains
 loadable without any of these derived fields.
 
-Formal (reportable) scoring is fail-closed: every Gold span must be resolved
-and carry corpus-global coordinates, and every sample must have
+Formal (reportable) run and scoring paths are fail-closed: every Gold span must
+be resolved and carry corpus-global coordinates, and every sample must have
 `annotation_status=reviewed`. Development and fixture scoring may still use raw
 v0.1 Gold for contract and pipeline checks.
+
+## M4 mapping handoff and artifact versions
+
+M3's raw JSONL is immutable. Its `char_start`/`char_end` values are chapter
+coordinates, while M1's normalized v0.2 artifact adds explicit
+`chapter_char_start`/`chapter_char_end` and derives
+`corpus_char_start`/`corpus_char_end` from the prepared merged corpus. M4 can
+continue to build mappings from `span_id`, chapter/block identity, and
+`verbatim_text`; it does not need to switch to global coordinates.
+
+The regeneration rules are:
+
+| Change | Normalized Gold | M4 mapping |
+|---|---|---|
+| Chunker or chunk configuration only | Keep it | Regenerate with a new `chunk_config_hash` and `mapping_version` |
+| Chapter order, separator, parser, or source text | Normalize the unchanged raw M3 JSONL again for the new `corpus_version` | Regenerate for the new corpus and mapping versions |
+| Block split/merge or changed block text | M1 reports stale/ambiguous spans by `span_id`; M3 reviews failed migrations | Regenerate only after the reviewed Gold is normalized |
+
+Never overwrite an old Gold, corpus, manifest, or mapping artifact. Formal
+compatibility checks require the same full `corpus_version` in normalized Gold,
+mapping, and run manifest, and the same `chunk_config_hash` in mapping and
+manifest. The detailed M4 handoff example and checklist are in
+[`docs/m4-gold-mapping-handoff.md`](../../../docs/m4-gold-mapping-handoff.md).
 
 ## Run-result semantics (v0.2)
 
