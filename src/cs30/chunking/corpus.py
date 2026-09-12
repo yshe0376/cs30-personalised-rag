@@ -4,12 +4,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
 from pydantic import TypeAdapter
 
-from cs30.chunking.reporting import build_chunk_statistics
+from cs30.chunking.reporting import (
+    build_chunk_anomalies,
+    build_chunk_statistics,
+    traceback_selection,
+)
 from cs30.chunking.traceback import resolve_small_to_big
 from cs30.contracts import Chunk, OpenStaxDocument
 
@@ -60,6 +65,9 @@ def export_retrieval_corpus(
     *,
     rebuild_command: str,
     sample_count: int = 20,
+    embedding_max_tokens: int | None = None,
+    embedding_model_max_sequence_length: int | None = None,
+    embedding_special_token_count: int | None = None,
 ) -> dict[str, object]:
     """Export one reproducible Chunk JSONL corpus plus schema and evidence."""
 
@@ -113,10 +121,12 @@ def export_retrieval_corpus(
             raise ValueError(f"chunk has no source_locator: {chunk.chunk_id}")
 
     tracebacks: list[dict[str, object]] = []
-    for index in _sample_indices(len(ordered_chunks), sample_count):
+    for index, selection_reasons in traceback_selection(ordered_chunks, sample_count):
         chunk = ordered_chunks[index]
         document = documents_by_id[chunk.document_id]
-        tracebacks.append(resolve_small_to_big(document, chunk))
+        traceback = resolve_small_to_big(document, chunk)
+        traceback["selection_reasons"] = selection_reasons
+        tracebacks.append(traceback)
 
     output_dir.mkdir(parents=True, exist_ok=True)
     record_payloads = [chunk.model_dump(mode="json") for chunk in ordered_chunks]
@@ -128,22 +138,36 @@ def export_retrieval_corpus(
         "schema_version": "1.0",
         "json_schema": Chunk.model_json_schema(),
     }
-    statistics_payload = build_chunk_statistics(ordered_chunks)
+    statistics_payload = build_chunk_statistics(
+        ordered_chunks,
+        documents=documents,
+        embedding_max_tokens=embedding_max_tokens,
+    )
+    anomalies_payload = build_chunk_anomalies(
+        ordered_chunks,
+        documents=documents,
+        embedding_max_tokens=embedding_max_tokens,
+    )
     statistics_payload["traceback_sample_count"] = len(tracebacks)
     statistics_payload["traceback_validation"] = "fail_fast"
+    statistics_payload["anomaly_count"] = len(anomalies_payload)
+    statistics_payload["anomaly_distribution"] = dict(
+        sorted(Counter(str(item["type"]) for item in anomalies_payload).items())
+    )
 
     file_payloads = {
         "records.jsonl": _jsonl_bytes(record_payloads),
         "sample_records.jsonl": _jsonl_bytes(sample_payloads),
         "schema.json": _json_bytes(schema_payload),
         "statistics.json": _json_bytes(statistics_payload),
+        "anomalies.json": _json_bytes(anomalies_payload),
         "traceback_records.json": _json_bytes(tracebacks),
     }
     for name, data in file_payloads.items():
         (output_dir / name).write_bytes(data)
 
     manifest = {
-        "manifest_version": "1.0",
+        "manifest_version": "1.1",
         "corpus_id": _sha256(file_payloads["records.jsonl"]),
         "record_schema": "cs30.contracts.Chunk@1.0",
         "record_count": len(ordered_chunks),
@@ -160,6 +184,20 @@ def export_retrieval_corpus(
             dict(zip(configuration_keys, values, strict=True))
             for values in configurations
         ],
+        "chunk_config_id": _sha256(
+            _json_bytes(
+                dict(zip(configuration_keys, configurations[0], strict=True))
+            )
+        ),
+        "embedding": {
+            "tokenizer_name": ordered_chunks[0].metadata["tokenizer_name"],
+            "content_token_ceiling": embedding_max_tokens,
+            "model_max_sequence_length": embedding_model_max_sequence_length,
+            "special_token_count": embedding_special_token_count,
+            "overlong_input_disposition": statistics_payload["embedding_limit"][
+                "disposition"
+            ],
+        },
         "consumers": {
             "dense": "records.jsonl",
             "bm25": "records.jsonl",
@@ -175,3 +213,24 @@ def export_retrieval_corpus(
     }
     (output_dir / "manifest.json").write_bytes(_json_bytes(manifest))
     return manifest
+
+
+def verify_corpus_identity(
+    expected: dict[str, object], actual: dict[str, object]
+) -> None:
+    """Fail when a rebuild changes any retrieval-relevant corpus identity."""
+
+    keys = (
+        "corpus_id",
+        "record_count",
+        "chapter_ids",
+        "documents",
+        "chunk_configurations",
+        "chunk_config_id",
+        "embedding",
+    )
+    changed = [key for key in keys if expected.get(key) != actual.get(key)]
+    if changed:
+        raise ValueError(
+            "corpus rebuild identity mismatch: " + ", ".join(changed)
+        )

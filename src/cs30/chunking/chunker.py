@@ -198,6 +198,9 @@ class BlockAwareChunker:
         section_titles = self._ordered_unique(block.section_title or "" for block in blocks)
         content_types = self._ordered_unique(block.content_type.value for block in blocks)
         block_ids = [block.block_id for block in blocks if block.block_id is not None]
+        source_block_token_counts = [
+            self.token_counter.count(document.block_text(block)) for block in blocks
+        ]
         pages = [
             page
             for block in blocks
@@ -247,6 +250,11 @@ class BlockAwareChunker:
             "section_titles": " | ".join(section_titles),
             "content_types": ",".join(content_types),
             "source_block_ids": ",".join(block_ids),
+            "source_block_token_counts": ",".join(
+                str(count) for count in source_block_token_counts
+            ),
+            "min_source_block_token_count": str(min(source_block_token_counts)),
+            "max_source_block_token_count": str(max(source_block_token_counts)),
             "block_count": str(len(blocks)),
             "page_start": str(min(pages)) if pages else "",
             "page_end": str(max(pages)) if pages else "",

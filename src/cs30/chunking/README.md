@@ -173,15 +173,17 @@ python scripts/build_retrieval_corpus.py \
 
 ## Chunker version
 
-Version `0.4.0` is intentional. Version `0.3.0` added embedding-input and
-duplicate-rejection provenance during the M5 hand-off; `0.4.0` adds candidate,
-content-filter, parent-span and unified-corpus semantics. Both revisions are
-contained in the still-unmerged M4 feature branch.
+Version `0.5.0` adds source-block token counts used by the W5 trace-back
+coverage report. Version `0.4.0` added candidate, content-filter, parent-span
+and unified-corpus semantics. The version changes only when emitted chunk
+semantics or metadata change; a documentation-only revision does not bump it.
 
-## Current integration status
+## Week 5 official delivery
 
-The implementation and unit tests do not wait for Member 2. Provisional
-multi-chapter evidence may be generated through a documented adapter, but a
-production corpus must be rebuilt from Member 2's frozen, contract-valid
-`OpenStaxDocument` export. The manifest's document hashes and parser versions
-make that replacement observable.
+W5 uses one fixed configuration rather than running S1-S6 experiments. The
+configuration, production commands, output layout and gold-span mapping rule
+are documented in [`docs/w5/m4/README.md`](../../../docs/w5/m4/README.md).
+
+The implementation is merged, but production artifacts still require M2's
+frozen, contract-valid `OpenStaxDocument` and M3's reviewed gold spans. The
+repository fixture remains test-only and cannot substitute for either input.

@@ -24,7 +24,7 @@ class BlockChunkingStrategy:
     reject_duplicate_text: bool = True
     candidate_id: str = "main"
     include_types: tuple[ContentType, ...] | None = None
-    chunker_version: str = "0.4.0"
+    chunker_version: str = "0.5.0"
 
     def __post_init__(self) -> None:
         if self.min_tokens <= 0:
