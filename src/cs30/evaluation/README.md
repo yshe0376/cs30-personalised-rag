@@ -178,15 +178,36 @@ separator.  It
 does not create Gold samples or gold-to-chunk mappings; M3 and M4 still supply
 those artifacts before a formal retrieval score can be reported.
 
+Normalize M3's immutable chapter-local Gold into a separate, corpus-bound
+artifact before a formal run. The prepared manifest is required because its
+separator is part of the full corpus identity:
+
+```text
+cs30-evaluate normalize-gold \
+  --gold m3_gold/gold_v0_1.jsonl \
+  --document data/processed/openstax-w5-v2/openstax_document.json \
+  --corpus-manifest data/processed/openstax-w5-v2/corpus_manifest.json \
+  --output gold/gold_normalized_corpus_v1.jsonl
+```
+
+Formal `run` and `score` commands require this schema-0.2 artifact together
+with `--document` and the matching `--corpus-manifest`; their Gold, run
+manifest, and M4 mapping must all use the same full `corpus_version`. M3's
+short document ID is never used as a formal corpus identity. Engineering
+fixture/development flows may continue using the small raw fixtures, but their
+manifests remain non-reportable.
+
 The batch commands are available through `cs30-evaluate` (or
 `python -m cs30.evaluation.cli`):
 
 ```text
-cs30-evaluate run --gold gold.jsonl --output run.jsonl \
+cs30-evaluate run --gold gold_normalized_corpus_v1.jsonl --output run.jsonl \
   --document data/processed/openstax-w5-v2/openstax_document.json \
+  --corpus-manifest data/processed/openstax-w5-v2/corpus_manifest.json \
   --execution-mode retrieval_only --retrieval-mode bm25 --top-k 5 --k-values 1 3 5
-cs30-evaluate score --gold gold.jsonl --runs run.jsonl --mapping mapping.json \
+cs30-evaluate score --gold gold_normalized_corpus_v1.jsonl --runs run.jsonl --mapping mapping.json \
   --document data/processed/openstax-w5-v2/openstax_document.json \
+  --corpus-manifest data/processed/openstax-w5-v2/corpus_manifest.json \
   --k-values 1 3 5 --scores-output retrieval_scores.jsonl
 ```
 
