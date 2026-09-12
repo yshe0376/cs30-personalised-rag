@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import time
 from dataclasses import dataclass, field
 
@@ -30,6 +31,10 @@ class GenerationTrace:
     failure_types: tuple[str, ...] = ()
     response_id: str | None = None
     abstained: bool = False
+    raw_model_output: str | None = None
+    repaired_model_output: str | None = None
+    prompt_evidence_chunk_ids: tuple[str, ...] = ()
+    prompt_sha256: str | None = None
 
     def to_metadata(self) -> dict[str, str]:
         return {
@@ -45,6 +50,12 @@ class GenerationTrace:
             "generation_failures": ",".join(self.failure_types) or "none",
             "generation_response_id": self.response_id or "none",
             "generation_abstained": str(self.abstained).lower(),
+            "generation_raw_output_present": str(self.raw_model_output is not None).lower(),
+            "generation_repaired_output_present": str(
+                self.repaired_model_output is not None
+            ).lower(),
+            "prompt_evidence_chunk_ids": ",".join(self.prompt_evidence_chunk_ids),
+            "prompt_sha256": self.prompt_sha256 or "none",
         }
 
 
@@ -85,18 +96,28 @@ class PersonalisedAnswerGenerator:
 
         original_prompt = self.prompt_builder.build(question, profile, retrieval)
         prompt = original_prompt
+        prompt_evidence_chunk_ids = tuple(hit.chunk_id for hit in retrieval.hits)
+        prompt_sha256 = hashlib.sha256(original_prompt.encode("utf-8")).hexdigest()
         total_usage = TokenUsage()
         failure_types: list[str] = []
         last_error: Exception | None = None
         last_response_id: str | None = None
+        first_model_output: str | None = None
+        repaired_model_output: str | None = None
+        next_call_is_repair = False
 
         for attempt in range(1, self.max_retries + 2):
             invalid_output = ""
+            call_is_repair = next_call_is_repair
             try:
                 response = self.client.complete(prompt, openai_text_format())
                 last_response_id = response.response_id
                 total_usage += response.usage
                 invalid_output = response.text
+                if first_model_output is None:
+                    first_model_output = response.text
+                if call_is_repair:
+                    repaired_model_output = response.text
                 payload = parse_answer_payload(response.text)
                 answer = GeneratedAnswer(
                     final_choice=payload.final_choice,
@@ -112,6 +133,10 @@ class PersonalisedAnswerGenerator:
                     usage=total_usage,
                     failure_types=tuple(failure_types),
                     response_id=response.response_id,
+                    raw_model_output=first_model_output,
+                    repaired_model_output=repaired_model_output,
+                    prompt_evidence_chunk_ids=prompt_evidence_chunk_ids,
+                    prompt_sha256=prompt_sha256,
                 )
                 return answer
             except (LLMOutputValidationError, CitationIntegrityError) as exc:
@@ -123,10 +148,12 @@ class PersonalisedAnswerGenerator:
                     exc,
                     retrieval,
                 )
+                next_call_is_repair = True
             except GenerationError as exc:
                 last_error = exc
                 failure_types.append(type(exc).__name__)
                 prompt = original_prompt
+                next_call_is_repair = False
 
         self.last_trace = GenerationTrace(
             model=self.client.model,
@@ -136,6 +163,10 @@ class PersonalisedAnswerGenerator:
             usage=total_usage,
             failure_types=tuple(failure_types),
             response_id=last_response_id,
+            raw_model_output=first_model_output,
+            repaired_model_output=repaired_model_output,
+            prompt_evidence_chunk_ids=prompt_evidence_chunk_ids,
+            prompt_sha256=prompt_sha256,
         )
         raise GenerationError(
             f"generation failed after {self.max_retries + 1} attempts: {last_error}"

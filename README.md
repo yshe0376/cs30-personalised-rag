@@ -142,18 +142,22 @@ a real retrieval or model result. The W5 evidence layer assigns display IDs (`E1
 Saved run files can be scored without rerunning retrieval or calling a model:
 
 ```powershell
-python -m cs30.evaluation.cli `
-  --runs tests/fixtures/evaluation/hand_checked_runs.jsonl `
-  --output-dir artifacts/m8-evaluation
+python -m cs30.evaluation.cli score `
+  --gold tests/fixtures/evaluation/gold_v0_1.jsonl `
+  --runs tests/fixtures/evaluation/run_results_scorable_v0_2.jsonl `
+  --mapping tests/fixtures/evaluation/mapping_v0_1.json `
+  --k-values 1 3 `
+  --output artifacts/evaluation/scores.json `
+  --answer-citation-output-dir artifacts/evaluation
 ```
 
 The evaluator reports answer-choice accuracy, an abstention confusion table and metrics, separate
 first/repaired-output validity, retry/repair counts, per-citation and per-answer validity,
-gold-citation hits when mappings exist, and coexisting failure labels. It exports per-question
-JSONL plus summary JSON, CSV and Markdown, grouped by mode, condition, dataset, split and corpus.
-Every metric includes its numerator, denominator, excluded count, and definition. Current M3
-`correct_choice` data is supported through `--gold`; unresolved answerability and missing gold
-evidence remain visibly excluded instead of being guessed from `in_scope` or SciQ `support`.
+complete Gold-evidence citation coverage, and coexisting failure labels. It exports per-question
+JSONL plus summary JSON, CSV and Markdown, grouped by execution mode, condition, Gold version,
+split and corpus. Every metric includes its numerator, denominator, excluded count, and definition.
+The extension consumes the shared `GoldSample` and `EvaluationRunResult` contracts; unresolved
+answerability and missing mappings remain visibly excluded instead of being guessed.
 
 Ask something the sample chapter does not cover and the system refuses instead
 of inventing an answer:
@@ -278,7 +282,7 @@ src/cs30/configs/       Packaged development and staging configuration
 src/cs30/logging.py     Shared logging setup
 src/cs30/errors.py      Typed errors
 src/cs30/fixtures/      Small, non-sensitive fixtures, shipped with the package
-src/cs30/ingest/        Member 2  - OpenStax parsing
+src/cs30/ingest/        Member 2  - textbook catalogue and parsing boundary
 src/cs30/questions/     Member 3  - validated SciQ demo questions
 src/cs30/chunking/      Member 4  - chunking and metadata
 src/cs30/indexing/      Member 5  - embeddings and FAISS
@@ -320,7 +324,7 @@ and week 1 acceptance criteria.
 
 The first contract version includes:
 
-- `OpenStaxDocument`
+- `TextbookDocument` (`OpenStaxDocument` compatibility alias)
 - `Chunk`
 - `IndexArtifact`
 - `SciQQuestion`

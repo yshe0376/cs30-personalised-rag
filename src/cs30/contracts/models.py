@@ -93,7 +93,7 @@ class ContentType(StrEnum):
 class TextBlock(ContractModel):
     """One structural unit the parser recovered, addressed by span.
 
-    A block carries no text of its own. ``OpenStaxDocument.text`` is the single
+    A block carries no text of its own. ``document.text`` is the single
     source of truth and ``block_text()`` slices it; storing the same text twice
     would let the copies drift apart, which is what the span convention exists
     to prevent.
@@ -179,6 +179,13 @@ class OpenStaxDocument(ContractModel):
         """The verbatim text a block points at."""
 
         return self.text[block.char_start : block.char_end]
+
+
+# Provider-neutral names for the shared textbook contract.  These are aliases,
+# rather than a schema revision, so existing OpenStax payloads and member code
+# remain compatible while CK-12 and later providers use the same boundary.
+TextbookChapter = OpenStaxChapter
+TextbookDocument = OpenStaxDocument
 
 
 class Chunk(ContractModel):

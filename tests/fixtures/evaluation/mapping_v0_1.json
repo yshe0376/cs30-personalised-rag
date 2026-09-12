@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1",
+  "mapping_version": "mapping-fixture-0.1",
+  "corpus_version": "fixture-corpus-0.1",
+  "chunk_config_hash": "fixture-chunks-0.1",
+  "items": [
+    {
+      "schema_version": "0.1",
+      "question_id": "fixture_joint",
+      "corpus_version": "fixture-corpus-0.1",
+      "chunk_config_hash": "fixture-chunks-0.1",
+      "mapping_version": "mapping-fixture-0.1",
+      "spans": [
+        {"span_id": "span_alpha", "acceptable_chunk_sets": [["chunk_alpha"]]},
+        {"span_id": "span_beta", "acceptable_chunk_sets": [["chunk_beta"]]},
+        {"span_id": "span_gamma", "acceptable_chunk_sets": [["chunk_gamma"]]},
+        {"span_id": "span_partial", "acceptable_chunk_sets": [["chunk_partial"]]}
+      ]
+    }
+  ]
+}
