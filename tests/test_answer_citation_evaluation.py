@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from pathlib import Path
 
@@ -33,14 +34,26 @@ def _score():
 def test_answer_abstention_format_and_citation_metrics_have_denominators() -> None:
     result = _score()
 
-    assert result["total_records"] == 2
+    assert result["total_records"] == 4
     assert result["metrics"]["answer_choice_accuracy_all"]["numerator"] == 1
-    assert result["metrics"]["answer_choice_accuracy_all"]["denominator"] == 2
+    assert result["metrics"]["answer_choice_accuracy_all"]["denominator"] == 4
     assert result["metrics"]["answer_choice_accuracy_answered"]["value"] == 1.0
-    assert result["metrics"]["abstention_accuracy"]["value"] == 1.0
-    assert result["metrics"]["abstention_precision"]["value"] == 1.0
+    assert result["metrics"]["abstention_accuracy"]["value"] == 0.75
+    assert result["metrics"]["abstention_precision"]["value"] == pytest.approx(2 / 3)
     assert result["metrics"]["abstention_recall"]["value"] == 1.0
-    assert result["metrics"]["abstention_f1"]["value"] == 1.0
+    assert result["metrics"]["abstention_f1"]["value"] == pytest.approx(0.8)
+    assert result["metrics"]["abstention_f1"]["numerator"] == 4
+    assert result["metrics"]["abstention_f1"]["denominator"] == 5
+    assert result["metrics"]["abstention_f1"]["excluded"] == 0
+    assert result["metrics"]["model_abstention_accuracy"]["value"] == pytest.approx(
+        2 / 3
+    )
+    assert result["metrics"]["model_abstention_precision"]["value"] == 0.5
+    assert result["metrics"]["model_abstention_recall"]["value"] == 1.0
+    assert result["metrics"]["model_abstention_f1"]["value"] == pytest.approx(2 / 3)
+    assert result["metrics"]["model_abstention_f1"]["numerator"] == 2
+    assert result["metrics"]["model_abstention_f1"]["denominator"] == 3
+    assert result["metrics"]["model_abstention_f1"]["excluded"] == 1
     assert result["metrics"]["raw_json_validity"]["value"] == 1.0
     assert result["metrics"]["raw_schema_validity"]["value"] == 1.0
     assert result["metrics"]["citation_validity"]["value"] == 1.0
@@ -54,12 +67,74 @@ def test_abstention_confusion_uses_gold_answerable_and_keeps_failures_separate()
     result = _score()
 
     assert result["abstention_confusion"] == {
-        "correct_abstention": 1,
-        "wrong_abstention": 0,
+        "correct_abstention": 2,
+        "wrong_abstention": 1,
         "answered_when_unanswerable": 0,
         "answered_when_answerable": 1,
         "technical_failure": 0,
         "unresolved": 0,
+    }
+
+
+def test_abstention_cause_is_scored_at_system_and_model_levels() -> None:
+    result = _score()
+    records = {record["question_id"]: record for record in result["records"]}
+
+    assert records["fixture_unanswerable"]["abstention_cause"] == "no_retrieval_hits"
+    assert (
+        records["fixture_model_abstain_unanswerable"]["abstention_cause"]
+        == "model_abstained_with_evidence"
+    )
+    assert records["fixture_model_abstain_unanswerable"]["abstention_correct"] is True
+    assert records["fixture_model_abstain_answerable"]["abstention_correct"] is False
+    assert result["abstention_cause_counts"] == {
+        "no_retrieval_hits": 1,
+        "model_abstained_with_evidence": 2,
+    }
+    assert result["abstention_confusion_by_cause"] == {
+        "no_retrieval_hits": {
+            "correct_abstention": 1,
+            "wrong_abstention": 0,
+            "unresolved": 0,
+        },
+        "model_abstained_with_evidence": {
+            "correct_abstention": 1,
+            "wrong_abstention": 1,
+            "unresolved": 0,
+        },
+    }
+
+    system_definition = result["metrics"]["abstention_precision"]["definition"]
+    model_definition = result["metrics"]["model_abstention_precision"]["definition"]
+    assert "no_retrieval_hits" in system_definition
+    assert "model_abstained_with_evidence" in system_definition
+    assert "no_retrieval_hits" in model_definition
+    assert "resolved Gold" in model_definition
+    assert "excluded" in model_definition
+
+
+def test_unresolved_abstention_remains_visible_in_cause_breakdown() -> None:
+    gold, runs, mappings = _inputs()
+    unresolved_gold = gold[2]
+    unresolved_run = runs[1].model_copy(
+        update={
+            "question_id": unresolved_gold.question_id,
+            "run_id": "run_unresolved_no_retrieval_hits",
+        }
+    )
+
+    result = AnswerCitationScorer(mappings).score(
+        [unresolved_gold], [unresolved_run]
+    )
+
+    assert result["records"][0]["abstention_cause"] == "no_retrieval_hits"
+    assert result["metrics"]["abstention_precision"]["value"] is None
+    assert result["abstention_confusion"]["unresolved"] == 1
+    assert result["abstention_cause_counts"]["no_retrieval_hits"] == 1
+    assert result["abstention_confusion_by_cause"]["no_retrieval_hits"] == {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "unresolved": 1,
     }
 
 
@@ -400,8 +475,51 @@ def test_reports_are_deterministic_and_keep_failure_queue(tmp_path: Path) -> Non
 
     assert first == second
     assert "Numerator | Denominator" in paths["markdown"].read_text(encoding="utf-8")
-    assert len(paths["per_question"].read_text(encoding="utf-8").splitlines()) == 2
+    per_question = paths["per_question"].read_text(encoding="utf-8")
+    markdown = paths["markdown"].read_text(encoding="utf-8")
+    csv_report = paths["csv"].read_text(encoding="utf-8")
+    failures = paths["failures"].read_text(encoding="utf-8")
+
+    assert len(per_question.splitlines()) == 4
+    assert '"abstention_cause": "model_abstained_with_evidence"' in per_question
     assert paths["csv"].read_text(encoding="utf-8").startswith("metric,numerator")
+    assert "Abstention confusion by cause" in markdown
+    assert "Overall diagnostic aggregate" in markdown
+    assert "### dev | fixture | fixture_condition" in markdown
+    assert "### test | fixture | fixture_condition" in markdown
+    assert "model_abstained_with_evidence" in markdown
+    assert "cause,outcome" in csv_report.splitlines()[0]
+    assert "model_abstained_with_evidence" in csv_report
+    assert '"abstention_cause": "model_abstained_with_evidence"' in failures
+
+    csv_rows = list(csv.DictReader(csv_report.splitlines()))
+    cause_rows = {
+        (row["cause"], row["outcome"]): row
+        for row in csv_rows
+        if row["cause"] and row["scope"] == "overall"
+    }
+    assert cause_rows[("no_retrieval_hits", "correct_abstention")]["denominator"] == "1"
+    assert cause_rows[("no_retrieval_hits", "correct_abstention")]["excluded"] == "3"
+    assert (
+        cause_rows[("model_abstained_with_evidence", "wrong_abstention")][
+            "denominator"
+        ]
+        == "2"
+    )
+    grouped_metrics = [
+        row
+        for row in csv_rows
+        if row["scope"] == "group" and row["metric"] == "abstention_precision"
+    ]
+    assert {row["split"] for row in grouped_metrics} == {"dev", "test"}
+    assert all(row["mode"] == "fixture" for row in grouped_metrics)
+    assert all(row["condition_id"] == "fixture_condition" for row in grouped_metrics)
+    assert all(row["data_version"] == "gold-fixture-0.1" for row in grouped_metrics)
+    assert all(row["corpus_version"] == "fixture-corpus-0.1" for row in grouped_metrics)
+    assert (
+        cause_rows[("model_abstained_with_evidence", "wrong_abstention")]["excluded"]
+        == "2"
+    )
 
 
 def test_cli_runs_extension_and_writes_all_report_artifacts(tmp_path: Path) -> None:

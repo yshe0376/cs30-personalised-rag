@@ -151,7 +151,8 @@ python -m cs30.evaluation.cli score `
   --answer-citation-output-dir artifacts/evaluation
 ```
 
-The evaluator reports answer-choice accuracy, an abstention confusion table and metrics, separate
+The evaluator reports answer-choice accuracy, separate system-level and evidence-seen model-level
+abstention metrics with cause-aware confusion tables, separate
 first/repaired-output validity, retry/repair counts, per-citation and per-answer validity,
 complete Gold-evidence citation coverage, and coexisting failure labels. It exports per-question
 JSONL plus summary JSON, CSV and Markdown, grouped by retrieval mode, condition, Gold version,

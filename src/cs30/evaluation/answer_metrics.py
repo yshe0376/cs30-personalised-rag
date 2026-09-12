@@ -12,7 +12,14 @@ from pydantic import ValidationError
 from cs30.contracts import GeneratedAnswer, RetrievalMode
 
 from .mapping import GoldChunkMapping, QuestionChunkMapping
-from .models import EvaluationRunResult, EvaluationSplit, ExecutionMode, GoldSample, RunStatus
+from .models import (
+    AbstentionCause,
+    EvaluationRunResult,
+    EvaluationSplit,
+    ExecutionMode,
+    GoldSample,
+    RunStatus,
+)
 
 _TECHNICAL_STATUSES = {
     RunStatus.RETRIEVAL_ERROR,
@@ -304,6 +311,9 @@ def _score_pair(
             else expected_mode.value if expected_mode is not None else "unknown"
         ),
         "status": run.status.value,
+        "abstention_cause": (
+            run.abstention_cause.value if run.abstention_cause is not None else None
+        ),
         "split": gold.split.value,
         "corpus_version": gold.corpus_version,
         "gold_annotation_version": gold.gold_annotation_version,
@@ -339,12 +349,16 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             definition=definition,
         )
 
-    predicted_abstentions = [
+    all_system_abstentions = [
         record
         for record in records
         if record["execution_mode"] == ExecutionMode.RETRIEVAL_AND_GENERATION.value
         and record["status"] == RunStatus.ABSTAINED.value
-        and record["abstention_correct"] is not None
+    ]
+    system_predicted_abstentions = [
+        record
+        for record in all_system_abstentions
+        if record["abstention_correct"] is not None
     ]
     gold_unanswerable = [
         record
@@ -353,19 +367,51 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         and record["abstention_correct"] is not None
         and record["gold_answerable"] is False
     ]
-    true_abstentions = sum(
-        record["abstention_correct"] is True for record in predicted_abstentions
+    true_system_abstentions = sum(
+        record["abstention_correct"] is True for record in system_predicted_abstentions
     )
-    precision_denominator = len(predicted_abstentions)
-    recall_denominator = len(gold_unanswerable)
-    precision = None if precision_denominator == 0 else true_abstentions / precision_denominator
-    recall = None if recall_denominator == 0 else true_abstentions / recall_denominator
-    if precision is None or recall is None:
-        f1_numerator, f1_denominator = 0.0, 0.0
-    elif precision + recall == 0:
-        f1_numerator, f1_denominator = 0.0, 1.0
-    else:
-        f1_numerator, f1_denominator = 2 * precision * recall, precision + recall
+    system_precision_denominator = len(system_predicted_abstentions)
+    system_recall_denominator = len(gold_unanswerable)
+    system_false_abstentions = (
+        system_precision_denominator - true_system_abstentions
+    )
+    system_missed_abstentions = system_recall_denominator - true_system_abstentions
+
+    model_decisions = [
+        record
+        for record in records
+        if record["execution_mode"] == ExecutionMode.RETRIEVAL_AND_GENERATION.value
+        and record["status"] in {RunStatus.ANSWERED.value, RunStatus.ABSTAINED.value}
+        and record["model_call_count"] > 0
+        and record["abstention_correct"] is not None
+    ]
+    model_predicted_abstentions = [
+        record
+        for record in model_decisions
+        if record["abstention_cause"]
+        == AbstentionCause.MODEL_ABSTAINED_WITH_EVIDENCE.value
+    ]
+    model_gold_unanswerable = [
+        record for record in model_decisions if record["gold_answerable"] is False
+    ]
+    true_model_abstentions = sum(
+        record["abstention_correct"] is True for record in model_predicted_abstentions
+    )
+    model_precision_denominator = len(model_predicted_abstentions)
+    model_recall_denominator = len(model_gold_unanswerable)
+    model_false_abstentions = model_precision_denominator - true_model_abstentions
+    model_missed_abstentions = model_recall_denominator - true_model_abstentions
+
+    system_f1_numerator = 2 * true_system_abstentions
+    system_f1_denominator = (
+        system_f1_numerator
+        + system_false_abstentions
+        + system_missed_abstentions
+    )
+    model_f1_numerator = 2 * true_model_abstentions
+    model_f1_denominator = (
+        model_f1_numerator + model_false_abstentions + model_missed_abstentions
+    )
 
     metrics = {
         "answer_choice_accuracy_all": boolean_metric(
@@ -383,29 +429,81 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         ),
         "abstention_accuracy": boolean_metric(
             "abstention_correct",
-            "Correct abstain/non-abstain decisions divided by generation runs with resolved "
-            "answerability; technical failures count as incorrect.",
+            "System-level correct abstain/non-abstain decisions divided by generation runs "
+            "with resolved answerability. Both no_retrieval_hits and "
+            "model_abstained_with_evidence are system abstentions; technical failures count "
+            "as incorrect.",
         ),
         "abstention_precision": _metric(
-            true_abstentions,
-            precision_denominator,
-            eligible=precision_denominator,
+            true_system_abstentions,
+            system_precision_denominator,
+            eligible=system_precision_denominator,
             total=total,
-            definition="Correct abstentions divided by all predicted abstentions.",
+            definition="System-level correct abstentions divided by all system-predicted "
+            "abstentions with resolved Gold answerability. The numerator and denominator "
+            "include both no_retrieval_hits and model_abstained_with_evidence; abstentions "
+            "with unresolved Gold answerability are reported by cause but excluded here.",
         ),
         "abstention_recall": _metric(
-            true_abstentions,
-            recall_denominator,
-            eligible=recall_denominator,
+            true_system_abstentions,
+            system_recall_denominator,
+            eligible=system_recall_denominator,
             total=total,
-            definition="Correct abstentions divided by gold-unanswerable generation runs.",
+            definition="System-level correct abstentions, including both no_retrieval_hits "
+            "and model_abstained_with_evidence, divided by all gold-unanswerable generation "
+            "runs with resolved answerability; technical failures remain in the denominator.",
         ),
         "abstention_f1": _metric(
-            f1_numerator,
-            f1_denominator,
-            eligible=min(precision_denominator, recall_denominator),
+            system_f1_numerator,
+            system_f1_denominator,
+            eligible=sum(
+                record["execution_mode"]
+                == ExecutionMode.RETRIEVAL_AND_GENERATION.value
+                and record["abstention_correct"] is not None
+                for record in records
+            ),
             total=total,
-            definition="Harmonic mean of abstention precision and recall.",
+            definition="System-level abstention F1 computed as 2TP / (2TP + FP + FN), "
+            "where both abstention causes are predicted positives, TP is a correct "
+            "abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that "
+            "did not abstain correctly. Only resolved Gold answerability is eligible.",
+        ),
+        "model_abstention_accuracy": _metric(
+            sum(record["abstention_correct"] is True for record in model_decisions),
+            len(model_decisions),
+            eligible=len(model_decisions),
+            total=total,
+            definition="Model-level correct abstain/non-abstain decisions divided by "
+            "successful generation runs with resolved Gold answerability where the model "
+            "was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and "
+            "technical failures are excluded.",
+        ),
+        "model_abstention_precision": _metric(
+            true_model_abstentions,
+            model_precision_denominator,
+            eligible=model_precision_denominator,
+            total=total,
+            definition="Correct model_abstained_with_evidence outcomes divided by all "
+            "model_abstained_with_evidence outcomes with resolved Gold answerability. "
+            "no_retrieval_hits and unresolved Gold are excluded.",
+        ),
+        "model_abstention_recall": _metric(
+            true_model_abstentions,
+            model_recall_denominator,
+            eligible=model_recall_denominator,
+            total=total,
+            definition="Correct model_abstained_with_evidence outcomes divided by "
+            "gold-unanswerable successful generation runs where the model was invoked with "
+            "evidence. no_retrieval_hits and technical failures are excluded.",
+        ),
+        "model_abstention_f1": _metric(
+            model_f1_numerator,
+            model_f1_denominator,
+            eligible=len(model_decisions),
+            total=total,
+            definition="Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where "
+            "model_abstained_with_evidence is the predicted positive. Only successful model "
+            "decisions with evidence and resolved Gold answerability are eligible.",
         ),
         "raw_json_validity": boolean_metric(
             "raw_json_valid",
@@ -476,6 +574,32 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             )
             confusion[key] += 1
 
+    abstention_causes = (
+        AbstentionCause.NO_RETRIEVAL_HITS.value,
+        AbstentionCause.MODEL_ABSTAINED_WITH_EVIDENCE.value,
+    )
+    abstention_cause_counts = Counter({cause: 0 for cause in abstention_causes})
+    abstention_confusion_by_cause = {
+        cause: {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "unresolved": 0,
+        }
+        for cause in abstention_causes
+    }
+    for record in all_system_abstentions:
+        cause = record["abstention_cause"]
+        if cause not in abstention_confusion_by_cause:
+            continue
+        abstention_cause_counts[cause] += 1
+        if record["abstention_correct"] is None:
+            outcome = "unresolved"
+        elif record["abstention_correct"] is True:
+            outcome = "correct_abstention"
+        else:
+            outcome = "wrong_abstention"
+        abstention_confusion_by_cause[cause][outcome] += 1
+
     answer_outcomes = Counter(
         {
             "correct": 0,
@@ -492,6 +616,8 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "metrics": metrics,
         "answer_outcome_counts": dict(answer_outcomes),
         "abstention_confusion": dict(confusion),
+        "abstention_cause_counts": dict(abstention_cause_counts),
+        "abstention_confusion_by_cause": abstention_confusion_by_cause,
         "failure_label_counts": dict(
             sorted(
                 Counter(

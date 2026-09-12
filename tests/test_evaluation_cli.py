@@ -261,7 +261,7 @@ def test_cli_score_reloads_saved_run_without_a_model_call(tmp_path: Path) -> Non
     )
 
     assert score_exit == 0
-    assert json.loads(score_output.read_text(encoding="utf-8"))["retrieval"]["sample_count"] == 1
+    assert json.loads(score_output.read_text(encoding="utf-8"))["retrieval"]["sample_count"] == 2
 
 
 def test_cli_score_can_write_per_question_retrieval_scores(tmp_path: Path) -> None:
@@ -340,8 +340,8 @@ def test_cli_scores_the_one_row_per_question_fixture(tmp_path: Path) -> None:
     )
 
     scored = json.loads(score_output.read_text(encoding="utf-8"))
-    assert scored["retrieval"]["sample_count"] == 1
-    assert scored["retrieval"]["excluded_runs"]["total"] == 1
+    assert scored["retrieval"]["sample_count"] == 2
+    assert scored["retrieval"]["excluded_runs"]["total"] == 2
 
 
 def test_cli_rejects_synthetic_trace_outside_fixture_mode(

@@ -117,6 +117,21 @@ retriever returned no hits (the model was not called), or the model abstained
 after receiving evidence. Infrastructure failures are never scored as correct
 refusals.
 
+Answer/citation scoring reports abstention at two explicit levels. The existing
+`abstention_accuracy`, `abstention_precision`, `abstention_recall`, and
+`abstention_f1` metrics are system-level: both `no_retrieval_hits` and
+`model_abstained_with_evidence` count as predicted system abstentions. The
+`model_abstention_*` metrics evaluate only successful decisions made after the
+model received evidence and Gold answerability is resolved, so no-hit runs,
+unresolved Gold, and technical failures are excluded.
+Per-question records retain `abstention_cause`, and aggregate JSON, CSV, and
+Markdown reports break correct, wrong, and unresolved abstentions down by that
+cause. Each metric's `definition` states its precise denominator and exclusions.
+F1 rows use the count form `2TP / (2TP + FP + FN)` so their reported numerator
+and denominator remain interpretable as counts. Markdown and CSV label the
+cross-group result as an overall diagnostic aggregate and also emit complete
+group-specific metrics and cause breakdowns; formal comparisons use the latter.
+
 The run trace stores retrieval output, evidence used by the generation seam,
 raw output, optional repaired output, model-call count, the final answer,
 citation validation, and structured error details. GenerationTrace can also
