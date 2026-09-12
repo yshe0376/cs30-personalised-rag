@@ -46,6 +46,8 @@ def test_answer_abstention_format_and_citation_metrics_have_denominators() -> No
     assert result["metrics"]["citation_validity"]["value"] == 1.0
     assert result["metrics"]["per_citation_validity"]["value"] == 1.0
     assert result["metrics"]["repaired_json_validity"]["value"] is None
+    assert result["missing_run_count"] == 0
+    assert result["missing_run_question_ids"] == []
 
 
 def test_abstention_confusion_uses_gold_answerable_and_keeps_failures_separate() -> None:
@@ -66,7 +68,7 @@ def test_citations_are_checked_against_evidence_actually_sent() -> None:
     payload = runs[0].model_dump(mode="json")
     answer = {
         "schema_version": "1.0",
-        "final_choice": "B",
+        "final_choice": "A",
         "explanation": "The answer cites a retrieval hit that was not sent.",
         "citations": ["chunk_not_sent"],
         "abstained": False,
@@ -85,7 +87,9 @@ def test_citations_are_checked_against_evidence_actually_sent() -> None:
 
     assert record["citation_valid"] is False
     assert record["citation_checks"][0]["belongs_to_sent_evidence"] is False
-    assert "invalid_citation" in record["failure_labels"]
+    assert {"gold_missed", "wrong_option", "invalid_citation"}.issubset(
+        record["failure_labels"]
+    )
 
 
 def test_gold_evidence_coverage_respects_or_of_ands_mapping() -> None:
@@ -126,6 +130,123 @@ def test_duplicate_final_runs_fail_explicitly() -> None:
         AnswerCitationScorer(mappings).score(gold, [runs[0], runs[0]])
 
 
+def test_call_failure_without_output_is_not_invalid_json() -> None:
+    gold, _, mappings = _inputs()
+    run = EvaluationRunResult.model_validate(
+        {
+            "schema_version": "0.2",
+            "run_id": "run-call-failure",
+            "question_id": "fixture_joint",
+            "condition_id": "fixture_condition",
+            "execution_mode": "retrieval_and_generation",
+            "status": "retrieval_error",
+            "retrieval": None,
+            "evidence_sent_to_model": None,
+            "raw_model_output": None,
+            "repaired_model_output": None,
+            "final_answer": None,
+            "citation_validation": None,
+            "error": {
+                "stage": "retrieval",
+                "error_type": "FixtureError",
+                "message": "The fixture retriever failed.",
+            },
+            "model_call_count": 0,
+            "abstention_cause": None,
+        }
+    )
+
+    result = AnswerCitationScorer(mappings).score(gold, [run])
+    record = result["records"][0]
+
+    assert record["answer_outcome"] == "call_failed"
+    assert record["failure_labels"] == ["call_failure"]
+    assert result["metrics"]["raw_json_validity"]["denominator"] == 0
+    assert "invalid_output" not in record["failure_labels"]
+
+
+def test_zero_citation_answer_is_visible_after_schema_rejection() -> None:
+    gold, runs, mappings = _inputs()
+    payload = runs[0].model_dump(mode="json")
+    payload.update(
+        status="parse_error",
+        raw_model_output=json.dumps(
+            {
+                "schema_version": "1.0",
+                "final_choice": "B",
+                "explanation": "An answer without required evidence.",
+                "citations": [],
+                "abstained": False,
+            }
+        ),
+        final_answer=None,
+        citation_validation=None,
+        error={
+            "stage": "parsing",
+            "error_type": "ValidationError",
+            "message": "A non-abstained answer must cite evidence.",
+        },
+    )
+    run = EvaluationRunResult.model_validate(payload)
+
+    result = AnswerCitationScorer(mappings).score(gold, [run])
+    record = result["records"][0]
+
+    assert record["answer_outcome"] == "format_failed"
+    assert record["raw_json_valid"] is True
+    assert record["raw_schema_valid"] is False
+    assert record["citation_valid"] is False
+    assert {"invalid_output", "invalid_citation", "missing_citation"}.issubset(
+        record["failure_labels"]
+    )
+
+
+def test_all_abstain_and_no_computable_denominator_cases_remain_visible() -> None:
+    gold, runs, mappings = _inputs()
+    unanswerable_gold = gold[1]
+    unanswerable_run = runs[1]
+    second_gold = unanswerable_gold.model_copy(update={"question_id": "fixture_unanswerable_2"})
+    second_run = unanswerable_run.model_copy(
+        update={
+            "question_id": "fixture_unanswerable_2",
+            "run_id": "run_scorable_unanswerable_2",
+        }
+    )
+
+    all_abstain = AnswerCitationScorer(mappings).score(
+        [unanswerable_gold, second_gold], [unanswerable_run, second_run]
+    )
+    no_positive_class = AnswerCitationScorer(mappings).score([gold[0]], [runs[0]])
+
+    assert all_abstain["answer_outcome_counts"] == {"abstained": 2}
+    assert all_abstain["metrics"]["abstention_precision"]["value"] == 1.0
+    assert all_abstain["metrics"]["answer_choice_accuracy_all"]["value"] == 0.0
+    assert no_positive_class["metrics"]["abstention_precision"]["value"] is None
+    assert no_positive_class["metrics"]["abstention_recall"]["value"] is None
+    assert no_positive_class["metrics"]["abstention_f1"]["value"] is None
+
+
+def test_groups_use_retrieval_mode_not_only_execution_mode() -> None:
+    result = _score()
+
+    modes = {group["mode"] for group in result["groups"]}
+    splits = {group["split"] for group in result["groups"]}
+    assert modes == {"fixture"}
+    assert splits == {"dev", "test"}
+
+
+def test_missing_runs_are_reported_only_within_the_expected_split() -> None:
+    gold, runs, mappings = _inputs()
+    missing_dev = gold[0].model_copy(update={"question_id": "missing_dev"})
+
+    result = AnswerCitationScorer(mappings, expected_split="dev").score(
+        [gold[0], missing_dev, gold[1]], [runs[0]]
+    )
+
+    assert result["missing_run_count"] == 1
+    assert result["missing_run_question_ids"] == ["missing_dev"]
+
+
 def test_reports_are_deterministic_and_keep_failure_queue(tmp_path: Path) -> None:
     result = _score()
     paths = write_answer_citation_reports(result, tmp_path)
@@ -141,8 +262,8 @@ def test_reports_are_deterministic_and_keep_failure_queue(tmp_path: Path) -> Non
 
 
 def test_cli_runs_extension_and_writes_all_report_artifacts(tmp_path: Path) -> None:
-    output = tmp_path / "scores.json"
-    reports = tmp_path / "answer-reports"
+    output = tmp_path / "new-output" / "scores.json"
+    reports = tmp_path / "new-output" / "answer-reports"
 
     exit_code = main(
         [

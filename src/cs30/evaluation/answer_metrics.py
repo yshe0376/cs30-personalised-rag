@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from cs30.contracts import GeneratedAnswer
 
 from .mapping import GoldChunkMapping, QuestionChunkMapping
-from .models import EvaluationRunResult, ExecutionMode, GoldSample, RunStatus
+from .models import EvaluationRunResult, EvaluationSplit, ExecutionMode, GoldSample, RunStatus
 
 _TECHNICAL_STATUSES = {
     RunStatus.RETRIEVAL_ERROR,
@@ -52,6 +52,22 @@ def _output_validity(text: str | None) -> tuple[bool | None, bool | None]:
     except ValidationError:
         return True, False
     return True, True
+
+
+def _raw_answer_is_missing_required_citation(text: str | None) -> bool:
+    """Expose a zero-citation answer even when contract validation rejects it."""
+
+    if text is None:
+        return False
+    try:
+        payload = json.loads(text)
+    except (TypeError, ValueError):
+        return False
+    return bool(
+        isinstance(payload, dict)
+        and payload.get("abstained") is False
+        and payload.get("citations") == []
+    )
 
 
 def _question_mapping(
@@ -130,8 +146,10 @@ def _gold_evidence_coverage(
 def _answer_outcome(gold: GoldSample, run: EvaluationRunResult) -> str:
     if run.execution_mode is ExecutionMode.RETRIEVAL_ONLY:
         return "not_applicable"
-    if run.status in _TECHNICAL_STATUSES:
-        return run.status.value
+    if run.status in {RunStatus.RETRIEVAL_ERROR, RunStatus.GENERATION_ERROR}:
+        return "call_failed"
+    if run.status is RunStatus.PARSE_ERROR:
+        return "format_failed"
     if run.status is RunStatus.ABSTAINED:
         return "abstained"
     if gold.gold_answer is None:
@@ -186,6 +204,9 @@ def _score_pair(
     repaired_json_valid, repaired_schema_valid = _output_validity(
         run.repaired_model_output
     )
+    missing_required_citation = _raw_answer_is_missing_required_citation(
+        run.raw_model_output
+    )
 
     citation_checks = _citation_checks(run)
     citation_valid = None
@@ -196,6 +217,8 @@ def _score_pair(
             and run.citation_validation is not None
             and run.citation_validation.citation_status == "passed"
         )
+    elif missing_required_citation:
+        citation_valid = False
 
     gold_evidence_covered = None
     mapping_missing = False
@@ -210,16 +233,14 @@ def _score_pair(
         )
 
     labels: set[str] = set()
-    if run.status is RunStatus.RETRIEVAL_ERROR:
-        labels.add("retrieval_failure")
-    elif run.status is RunStatus.GENERATION_ERROR:
-        labels.add("generation_failure")
+    if run.status in {RunStatus.RETRIEVAL_ERROR, RunStatus.GENERATION_ERROR}:
+        labels.add("call_failure")
     elif run.status is RunStatus.PARSE_ERROR:
-        labels.update({"parse_failure", "invalid_output"})
+        labels.add("invalid_output")
     if answered_choice_correct is False:
-        labels.add("wrong_option")
+        labels.update({"gold_missed", "wrong_option"})
     if gold.answerable is True and run.status is RunStatus.ABSTAINED:
-        labels.add("wrong_abstention")
+        labels.update({"gold_missed", "wrong_abstention"})
     if gold.answerable is False and run.status is RunStatus.ANSWERED:
         labels.add("answered_when_unanswerable")
     if any(
@@ -234,6 +255,8 @@ def _score_pair(
         labels.add("invalid_output")
     if citation_valid is False:
         labels.add("invalid_citation")
+    if missing_required_citation:
+        labels.add("missing_citation")
     if gold.answerable is None:
         labels.add("unresolved_answerability")
     if mapping_missing:
@@ -244,6 +267,7 @@ def _score_pair(
         "run_id": run.run_id,
         "condition_id": run.condition_id,
         "execution_mode": run.execution_mode.value,
+        "mode": run.retrieval.mode.value if run.retrieval is not None else "unknown",
         "status": run.status.value,
         "split": gold.split.value,
         "corpus_version": gold.corpus_version,
@@ -258,6 +282,7 @@ def _score_pair(
         "repaired_json_valid": repaired_json_valid,
         "repaired_schema_valid": repaired_schema_valid,
         "citation_valid": citation_valid,
+        "missing_required_citation": missing_required_citation,
         "gold_evidence_covered": gold_evidence_covered,
         "citation_checks": citation_checks,
         "failure_labels": sorted(labels),
@@ -451,8 +476,15 @@ class AnswerCitationScorer:
     def __init__(
         self,
         mappings: GoldChunkMapping | Mapping[str, QuestionChunkMapping],
+        *,
+        expected_split: EvaluationSplit | str | None = None,
+        dataset_version: str | None = None,
     ) -> None:
         self._mappings = mappings
+        self._expected_split = (
+            EvaluationSplit(expected_split) if expected_split is not None else None
+        )
+        self._dataset_version = dataset_version
 
     def score(
         self,
@@ -480,15 +512,33 @@ class AnswerCitationScorer:
                 raise ValueError(f"run result has no matching Gold sample: {run.question_id}")
             record = _score_pair(gold, run, self._mappings)
             record["gold_answerable"] = gold.answerable
+            record["data_version"] = self._dataset_version or gold.gold_annotation_version
             records.append(record)
+
+        if self._expected_split is not None:
+            expected_ids = {
+                sample.question_id
+                for sample in gold_samples
+                if sample.split is self._expected_split
+            }
+        elif run_ids:
+            observed_splits = {gold_by_id[question_id].split for question_id in run_ids}
+            expected_ids = {
+                sample.question_id
+                for sample in gold_samples
+                if sample.split in observed_splits
+            }
+        else:
+            expected_ids = set(gold_by_id)
+        missing_run_question_ids = sorted(expected_ids - set(run_ids))
 
         summary = _summarise(records)
         grouped: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = {}
         for record in records:
             key = (
-                record["execution_mode"],
+                record["mode"],
                 record["condition_id"],
-                record["gold_annotation_version"],
+                record["data_version"],
                 record["split"],
                 record["corpus_version"],
             )
@@ -498,12 +548,18 @@ class AnswerCitationScorer:
         for key in sorted(grouped):
             groups.append(
                 {
-                    "execution_mode": key[0],
+                    "mode": key[0],
                     "condition_id": key[1],
-                    "gold_annotation_version": key[2],
+                    "data_version": key[2],
                     "split": key[3],
                     "corpus_version": key[4],
                     **_summarise(grouped[key]),
                 }
             )
-        return {**summary, "groups": groups, "records": records}
+        return {
+            **summary,
+            "missing_run_count": len(missing_run_question_ids),
+            "missing_run_question_ids": missing_run_question_ids,
+            "groups": groups,
+            "records": records,
+        }

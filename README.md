@@ -154,7 +154,7 @@ python -m cs30.evaluation.cli score `
 The evaluator reports answer-choice accuracy, an abstention confusion table and metrics, separate
 first/repaired-output validity, retry/repair counts, per-citation and per-answer validity,
 complete Gold-evidence citation coverage, and coexisting failure labels. It exports per-question
-JSONL plus summary JSON, CSV and Markdown, grouped by execution mode, condition, Gold version,
+JSONL plus summary JSON, CSV and Markdown, grouped by retrieval mode, condition, Gold version,
 split and corpus. Every metric includes its numerator, denominator, excluded count, and definition.
 The extension consumes the shared `GoldSample` and `EvaluationRunResult` contracts; unresolved
 answerability and missing mappings remain visibly excluded instead of being guessed.

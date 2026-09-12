@@ -52,22 +52,27 @@ def _markdown(result: Mapping[str, Any]) -> str:
         else:
             lines.append("- None")
 
+    lines.extend(["", "## Missing saved results", ""])
+    lines.append(f"- `missing_run_count`: {result['missing_run_count']}")
+    for question_id in result["missing_run_question_ids"]:
+        lines.append(f"- `{question_id}`")
+
     lines.extend(
         [
             "",
             "## Comparable groups",
             "",
-            "Development and formal Test slices remain separate by execution mode, condition, "
+            "Development and formal Test slices remain separate by retrieval mode, condition, "
             "Gold version, split, and corpus version.",
             "",
-            "| Mode | Condition | Gold | Split | Corpus | Records | Failure labels |",
+            "| Mode | Condition | Data version | Split | Corpus | Records | Failure labels |",
             "| --- | --- | --- | --- | --- | ---: | ---: |",
         ]
     )
     for group in result["groups"]:
         lines.append(
-            f"| {group['execution_mode']} | {group['condition_id']} | "
-            f"{group['gold_annotation_version']} | {group['split']} | "
+            f"| {group['mode']} | {group['condition_id']} | "
+            f"{group['data_version']} | {group['split']} | "
             f"{group['corpus_version']} | {group['total_records']} | "
             f"{sum(group['failure_label_counts'].values())} |"
         )

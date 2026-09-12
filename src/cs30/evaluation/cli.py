@@ -501,11 +501,18 @@ def _score_command(args: argparse.Namespace) -> int:
         mappings,
         k_values=k_values,
         top_k=manifest.top_k if manifest is not None else None,
-        extensions=(AnswerCitationScorer(mappings),),
+        extensions=(
+            AnswerCitationScorer(
+                mappings,
+                expected_split=manifest.split if manifest is not None else None,
+                dataset_version=manifest.dataset_version if manifest is not None else None,
+            ),
+        ),
         manifest=manifest,
     )
     encoded = json.dumps(scored, indent=2, ensure_ascii=False)
     if args.output:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(encoded + "\n", encoding="utf-8")
     else:
         print(encoded)

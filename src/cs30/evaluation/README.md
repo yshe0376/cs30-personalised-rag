@@ -255,6 +255,8 @@ accuracy/precision/recall/F1, raw and repaired JSON/schema validity, citation
 validity against `evidence_sent_to_model`, per-citation validity, complete Gold
 evidence-path citation coverage, failure labels, and comparable experiment
 groups. Technical failures remain separate from model abstentions.
+Gold questions missing from the saved run file are listed explicitly rather
+than silently disappearing from the report.
 
 Pass `--answer-citation-output-dir` to write the review artifacts:
 
