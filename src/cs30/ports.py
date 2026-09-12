@@ -15,20 +15,20 @@ from cs30.contracts import (
     Chunk,
     GeneratedAnswer,
     IndexArtifact,
-    OpenStaxDocument,
     RetrievalMode,
     RetrievalResult,
     SciQQuestion,
     StudentLevel,
     StudentProfile,
+    TextbookDocument,
 )
 
 
 @runtime_checkable
 class DocumentParser(Protocol):
-    """Member 2: OpenStax parsing, cleaning, and chaptering."""
+    """Member 2: textbook parsing, cleaning, and chaptering."""
 
-    def parse(self, source: Path) -> OpenStaxDocument: ...
+    def parse(self, source: Path) -> TextbookDocument: ...
 
 
 @runtime_checkable
@@ -42,7 +42,7 @@ class QuestionProvider(Protocol):
 class Chunker(Protocol):
     """Member 4: structure-aware chunking with block metadata and char spans."""
 
-    def chunk(self, document: OpenStaxDocument) -> list[Chunk]: ...
+    def chunk(self, document: TextbookDocument) -> list[Chunk]: ...
 
 
 @runtime_checkable

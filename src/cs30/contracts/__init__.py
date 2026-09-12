@@ -22,6 +22,8 @@ from .models import (
     StudentLevel,
     StudentProfile,
     TextBlock,
+    TextbookChapter,
+    TextbookDocument,
     ValidatedAnswer,
 )
 
@@ -46,6 +48,8 @@ __all__ = [
     "SpanText",
     "StudentLevel",
     "StudentProfile",
+    "TextbookChapter",
+    "TextbookDocument",
     "TextBlock",
     "ValidatedAnswer",
 ]

@@ -13,13 +13,13 @@ from `src/cs30/contracts`; computational boundaries are Protocols in
 ```mermaid
 flowchart TB
     subgraph offline["Offline — build the knowledge base"]
-        RAW[("OpenStax source<br/>data/raw/ · git-ignored")]
+        RAW[("registered textbook source<br/>data/raw/ · git-ignored")]
         M2["<b>Member 2</b><br/>cs30.ingest<br/><i>DocumentParser</i>"]
         M4["<b>Member 4</b><br/>cs30.chunking<br/><i>Chunker</i>"]
         M5["<b>Member 5</b><br/>cs30.indexing<br/><i>IndexBuilder</i>"]
         IDX[("FAISS IndexFlatIP<br/>indexes/ · git-ignored")]
         RAW --> M2
-        M2 -->|"OpenStaxDocument"| M4
+        M2 -->|"TextbookDocument"| M4
         M4 -->|"list[Chunk]"| M5
         M5 --> IDX
     end
@@ -53,7 +53,7 @@ flowchart TB
 
 | Stage | Producer | Payload | Consumer |
 |---|---|---|---|
-| Parse | Member 2 | `OpenStaxDocument` | Member 4 |
+| Parse | Member 2 | `TextbookDocument` | Member 4 |
 | Chunk | Member 4 | `list[Chunk]` | Member 5, Member 6 |
 | Index | Member 5 | `IndexArtifact` → FAISS index + `chunk_id` map | Member 6 |
 | Question | Member 3 | `SciQQuestion` | Members 6, 7 |
@@ -62,7 +62,7 @@ flowchart TB
 | Generate | Member 7 | `GeneratedAnswer` | citation check, UI |
 | Run | Leader | `PipelineRun` | Member 8, ablation table |
 
-The character-span convention that ties `Chunk` back to `OpenStaxDocument` is
+The character-span convention that ties `Chunk` back to `TextbookDocument` is
 specified in [interfaces.md](interfaces.md) and enforced by the contract layer.
 
 ## 3. End-to-end call path

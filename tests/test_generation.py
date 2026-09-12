@@ -310,6 +310,16 @@ def test_generator_returns_schema_valid_grounded_answer() -> None:
     assert generator.last_trace is not None
     assert generator.last_trace.attempts == 1
     assert generator.last_trace.usage.total_tokens > 0
+    assert generator.last_trace.raw_model_output is not None
+    assert json.loads(generator.last_trace.raw_model_output)["citations"] == [
+        "chunk_acceleration"
+    ]
+    assert generator.last_trace.repaired_model_output is None
+    assert generator.last_trace.prompt_evidence_chunk_ids == (
+        "chunk_acceleration",
+        "chunk_velocity",
+    )
+    assert len(generator.last_trace.prompt_sha256) == 64
 
 
 def test_generator_returns_chunk_ids_accepted_by_member8_resolver() -> None:
@@ -382,6 +392,22 @@ def test_invalid_json_is_repaired_within_finite_retry_budget(generation_evidence
     assert generator.last_trace.attempts == 2
     assert generator.last_trace.failure_types == ("LLMOutputValidationError",)
     assert generator.last_trace.usage.total_tokens == 240
+    assert generator.last_trace.raw_model_output == "not json"
+    assert generator.last_trace.repaired_model_output == valid_output()
+
+
+def test_provider_failure_before_a_response_does_not_create_a_repaired_output() -> None:
+    client = ScriptedClient([LLMProviderError("temporary failure"), valid_output()])
+    generator = PersonalisedAnswerGenerator(client, max_retries=1)
+    profile = Week1ProfileProvider().get(StudentLevel.INTERMEDIATE)
+
+    answer = generator.generate(QUESTION, profile, retrieval())
+
+    assert answer.final_choice == "A"
+    assert generator.last_trace is not None
+    assert generator.last_trace.failure_types == ("LLMProviderError",)
+    assert generator.last_trace.raw_model_output == valid_output()
+    assert generator.last_trace.repaired_model_output is None
 
 
 def test_unknown_citation_is_repaired_before_answer_is_returned(generation_evidence) -> None:
