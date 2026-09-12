@@ -1,0 +1,59 @@
+{
+  "delivery_status": "engineering_complete_mapping_blocked",
+  "delivery_date": "2026-09-12",
+  "source_corpus": {
+    "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+    "document_id": "openstax-cp2e-a052d9fae2a90e13",
+    "document_hash": "a052d9fae2a90e135a74d70c001a78bb49b83280be58191e108d5de577699bb6",
+    "parser_version": "1.2.0",
+    "chapter_count": 34,
+    "block_count": 35905,
+    "character_count": 4981016
+  },
+  "chunk_corpus": {
+    "corpus_id": "sha256:896432aa0db5ce84f52971369f40b605115de44fe5d3c6e203af5923d9535fbf",
+    "chunk_config_id": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+    "chunk_count": 3684,
+    "empty_chunks": 0,
+    "duplicate_chunk_ids": 0,
+    "cross_chapter_chunks": 0,
+    "filtered_content_leakage_count": 0,
+    "unmapped_included_block_count": 0,
+    "exact_duplicate_text_groups_preserved": 17,
+    "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+    "model_max_sequence_length": 256,
+    "content_token_ceiling": 254,
+    "overlong_input_count_for_m5_review": 1446,
+    "traceback_sample_count": 20
+  },
+  "gold": {
+    "raw_m3_sha256": "sha256:92add8b4742739a15dd15f4dd51ce78e1965da91424fe0e952e22244223a18f6",
+    "normalized_gold_sha256": "sha256:cc78190dc55783fac2940fd1b14c2dd17d585f06d0ab20ba581738ce105f4a55",
+    "annotation_status": "m3_initial",
+    "span_count": 20,
+    "normalization_resolved": 20,
+    "normalization_stale": 0,
+    "normalization_ambiguous": 0
+  },
+  "mapping": {
+    "mapping_id": "sha256:8b41c6fca540bf3008315fbfe3793db6cce94e7ac1baa0fbb16598d6bc08dff7",
+    "matching_rule": "same_source_half_open_overlap@1.0",
+    "fully_covered_span_count": 17,
+    "incomplete_span_count": 3,
+    "m1_compatible_mapping_emitted": false,
+    "blocker_document": "M3_ALIGNMENT_ISSUES.md"
+  },
+  "reproducibility": {
+    "prepared_source_document_byte_identical": true,
+    "prepared_source_manifest_byte_identical": true,
+    "normalized_gold_byte_identical": true,
+    "chunk_corpus_identity_identical": true,
+    "gold_mapping_identity_identical": true
+  },
+  "limitations": [
+    "M2 automatic QA passed for all 34 chapters, but the supplied manual sample reviews remain pending.",
+    "M3 Gold v0.1 is labelled m3_initial and is not independently reviewed.",
+    "Three M3 spans reference parser content types excluded by the fixed M4 filter.",
+    "The corpus is engineering evidence and must not be described as a reportable production evaluation corpus."
+  ]
+}
