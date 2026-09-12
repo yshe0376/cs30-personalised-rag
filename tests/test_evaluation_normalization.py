@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+import cs30.evaluation.io as evaluation_io
 from cs30.contracts import OpenStaxChapter, OpenStaxDocument, TextBlock
 from cs30.evaluation import (
     GoldSample,
@@ -275,3 +276,53 @@ def test_normalized_output_is_byte_deterministic(
     write_normalized_gold(second, second_report, second_path)
 
     assert first_path.read_bytes() == second_path.read_bytes()
+
+
+def test_normalized_writer_never_replaces_artifact_created_during_promotion(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    test_corpus: OpenStaxArchiveCorpus,
+    raw_samples: list[GoldSample],
+) -> None:
+    normalized, report = normalize_gold_samples(raw_samples, test_corpus)
+    destination = tmp_path / "gold.jsonl"
+    competing_bytes = b'{"writer":"competing"}\n'
+    original_link = evaluation_io.os.link
+
+    def link_after_competing_write(source: str | Path, target: str | Path) -> None:
+        Path(target).write_bytes(competing_bytes)
+        original_link(source, target)
+
+    monkeypatch.setattr(evaluation_io.os, "link", link_after_competing_write)
+
+    with pytest.raises(FileExistsError):
+        write_normalized_gold(normalized, report, destination)
+
+    assert destination.read_bytes() == competing_bytes
+
+
+@pytest.mark.parametrize(
+    ("corpus_char_start", "corpus_char_end", "message"),
+    [
+        (5, 5, "end must be greater"),
+        (0, 5, "length must match"),
+    ],
+)
+def test_normalized_loader_rejects_invalid_global_coordinate_shape_without_document(
+    tmp_path: Path,
+    test_corpus: OpenStaxArchiveCorpus,
+    raw_samples: list[GoldSample],
+    corpus_char_start: int,
+    corpus_char_end: int,
+    message: str,
+) -> None:
+    normalized, _ = normalize_gold_samples(raw_samples, test_corpus)
+    malformed = normalized[0].model_copy(deep=True)
+    span = malformed.gold_core_evidence_sets[0][0]
+    span.corpus_char_start = corpus_char_start
+    span.corpus_char_end = corpus_char_end
+    path = tmp_path / "malformed.jsonl"
+    path.write_text(json.dumps(malformed.model_dump(mode="json")) + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        load_normalized_gold(path)

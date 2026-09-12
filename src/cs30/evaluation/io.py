@@ -87,9 +87,13 @@ def write_normalized_gold(
                 stream.write(encoded + b"\n")
             stream.flush()
             os.fsync(stream.fileno())
-        if destination.exists():
-            raise FileExistsError(f"refusing to overwrite normalized Gold artifact: {destination}")
-        os.replace(temporary_path, destination)
+        try:
+            os.link(temporary_path, destination)
+        except FileExistsError as exc:
+            raise FileExistsError(
+                f"refusing to overwrite normalized Gold artifact: {destination}"
+            ) from exc
+        temporary_path.unlink()
         temporary_path = None
     finally:
         if temporary_path is not None:
@@ -369,6 +373,16 @@ def _validate_formal_normalized_gold(samples: Sequence[GoldSample]) -> None:
                 raise ValueError(
                     "formal normalized Gold requires every span to be resolved; "
                     f"span {span.span_id} is {span.resolution_status}"
+                )
+            if span.corpus_char_end <= span.corpus_char_start:
+                raise ValueError(
+                    "formal normalized Gold requires corpus_char_end must be greater than "
+                    f"corpus_char_start; span {span.span_id} has invalid global coordinates"
+                )
+            if span.corpus_char_end - span.corpus_char_start != len(span.verbatim_text):
+                raise ValueError(
+                    "formal normalized Gold requires corpus coordinate length must match "
+                    f"verbatim_text; span {span.span_id} has invalid global coordinates"
                 )
 
 
