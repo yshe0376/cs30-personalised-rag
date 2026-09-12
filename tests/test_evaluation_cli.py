@@ -2,12 +2,38 @@ import json
 import zipfile
 from pathlib import Path
 
-from cs30.contracts import OpenStaxChapter, OpenStaxDocument, TextBlock
+import cs30.evaluation.cli as evaluation_cli
+from cs30.config import AppConfig, GenerationConfig, RetrievalConfig
+from cs30.contracts import OpenStaxChapter, OpenStaxDocument, RetrievalMode, TextBlock
 from cs30.evaluation import load_normalized_gold, load_openstax_archive, write_prepared_corpus
 from cs30.evaluation.cli import main
 from cs30.evaluation.manifest import RunManifest
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "evaluation"
+
+
+def _fixture_run_args(output: Path, *extra: str) -> list[str]:
+    return [
+        "run",
+        "--gold",
+        str(FIXTURE_DIR / "gold_v0_1.jsonl"),
+        "--output",
+        str(output),
+        "--fixture",
+        "--allow-dirty",
+        "--execution-mode",
+        "retrieval_only",
+        "--retrieval-mode",
+        "fixture",
+        "--top-k",
+        "3",
+        "--k-values",
+        "1",
+        "3",
+        "--split",
+        "dev",
+        *extra,
+    ]
 
 
 def _prepared_m3_inputs(tmp_path: Path) -> tuple[Path, Path, Path]:
@@ -163,6 +189,32 @@ def test_cli_run_writes_completed_jsonl_and_manifest(tmp_path: Path) -> None:
     assert manifest_payload["fixture_mode"] is True
     assert manifest_payload["reportable"] is False
     assert not (manifest_payload["git_dirty"] and manifest_payload["reportable"])
+
+
+def test_cli_refuses_to_overwrite_an_existing_manifest(
+    tmp_path: Path, capsys
+) -> None:
+    output = tmp_path / "run.jsonl"
+    manifest = tmp_path / "existing.manifest.json"
+    sentinel = "keep this artifact"
+    manifest.write_text(sentinel, encoding="utf-8")
+
+    exit_code = main(_fixture_run_args(output, "--manifest", str(manifest)))
+
+    assert exit_code == 2
+    assert "refusing to overwrite run manifest" in capsys.readouterr().err
+    assert manifest.read_text(encoding="utf-8") == sentinel
+    assert not output.exists()
+
+
+def test_cli_rejects_manifest_path_equal_to_run_output(tmp_path: Path, capsys) -> None:
+    output = tmp_path / "run.jsonl"
+
+    exit_code = main(_fixture_run_args(output, "--manifest", str(output)))
+
+    assert exit_code == 2
+    assert "same path as --output" in capsys.readouterr().err
+    assert not output.exists()
 
 
 def test_cli_score_reloads_saved_run_without_a_model_call(tmp_path: Path) -> None:
@@ -341,6 +393,76 @@ def test_cli_reports_missing_input_before_git_cleanliness(tmp_path: Path, capsys
     error = capsys.readouterr().err
     assert "Gold sample file not found" in error
     assert "clean git worktree" not in error
+
+
+def test_cli_retrieval_only_skips_generation_dependency_initialization(
+    tmp_path: Path, monkeypatch
+) -> None:
+    raw_gold, document, corpus_manifest = _prepared_m3_inputs(tmp_path)
+    normalized = tmp_path / "gold_normalized.jsonl"
+    assert (
+        main(
+            [
+                "normalize-gold",
+                "--gold",
+                str(raw_gold),
+                "--document",
+                str(document),
+                "--corpus-manifest",
+                str(corpus_manifest),
+                "--output",
+                str(normalized),
+            ]
+        )
+        == 0
+    )
+
+    index_dir = Path(__file__).parent / "fixtures" / "index"
+    config = AppConfig(
+        fixture_mode=False,
+        retrieval=RetrievalConfig(
+            mode=RetrievalMode.BM25,
+            index_dir=str(index_dir),
+        ),
+        generation=GenerationConfig(provider="openai", model="gpt-test"),
+    )
+    monkeypatch.setattr(evaluation_cli, "load_config", lambda environment: config)
+
+    def fail_generation_builder(config: AppConfig) -> None:
+        del config
+        raise AssertionError("retrieval-only evaluation must not build generation deps")
+
+    monkeypatch.setattr(evaluation_cli, "build_real_deps", fail_generation_builder)
+    output = tmp_path / "retrieval-only.jsonl"
+
+    assert (
+        main(
+            [
+                "run",
+                "--gold",
+                str(normalized),
+                "--document",
+                str(document),
+                "--corpus-manifest",
+                str(corpus_manifest),
+                "--output",
+                str(output),
+                "--execution-mode",
+                "retrieval_only",
+                "--retrieval-mode",
+                "bm25",
+                "--top-k",
+                "1",
+                "--k-values",
+                "1",
+                "--allow-dirty",
+                "--environment",
+                "test",
+            ]
+        )
+        == 0
+    )
+    assert output.is_file()
 
 
 def test_cli_score_reports_missing_run_results_file(tmp_path: Path, capsys) -> None:

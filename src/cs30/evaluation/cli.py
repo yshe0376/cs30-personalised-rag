@@ -9,7 +9,12 @@ from pathlib import Path
 
 from cs30.config import load_config
 from cs30.contracts import OpenStaxDocument, RetrievalMode, StudentLevel, StudentProfile
-from cs30.pipeline import build_fixture_deps, build_real_deps
+from cs30.pipeline import (
+    build_fixture_deps,
+    build_real_deps,
+    build_real_retrieval_deps,
+)
+from cs30.ports import Retriever
 
 from .io import (
     load_gold_samples,
@@ -18,7 +23,13 @@ from .io import (
     load_run_results,
     write_normalized_gold,
 )
-from .manifest import GitState, RunManifest, assert_clean_for_report, capture_git_state
+from .manifest import (
+    GitState,
+    RunManifest,
+    assert_clean_for_report,
+    capture_git_state,
+    write_manifest,
+)
 from .metrics import validate_artifact_compatibility
 from .models import EvaluationSplit, ExecutionMode, GoldSample
 from .normalization import normalize_gold_samples
@@ -334,9 +345,16 @@ def _run_command(args: argparse.Namespace) -> int:
         ),
         gold_annotation_version=next(iter(annotations)),
     )
+    manifest_path = args.manifest or args.output.with_suffix(".manifest.json")
+    if manifest_path.resolve() == args.output.resolve():
+        raise ValueError("--manifest must not be the same path as --output")
+    if manifest_path.exists():
+        raise FileExistsError(f"refusing to overwrite run manifest: {manifest_path}")
 
+    generation_deps = None
     if args.fixture:
-        deps = build_fixture_deps()
+        generation_deps = build_fixture_deps()
+        retriever: Retriever = generation_deps.retriever
     else:
         config = load_config(args.environment)
         retrieval_updates: dict[str, object] = {
@@ -356,38 +374,46 @@ def _run_command(args: argparse.Namespace) -> int:
             **retrieval_updates,
         }
         config = type(config).model_validate(config_payload)
-        deps = build_real_deps(config)
-        if deps.mode != "real":
-            raise ValueError(
-                "evaluation run resolved to fixture dependencies; pass --fixture "
-                "explicitly for an engineering fixture run"
-            )
+        if manifest.execution_mode is ExecutionMode.RETRIEVAL_ONLY:
+            retrieval_deps = build_real_retrieval_deps(config)
+            if retrieval_deps.mode != "real":
+                raise ValueError(
+                    "evaluation run resolved to fixture dependencies; pass --fixture "
+                    "explicitly for an engineering fixture run"
+                )
+            retriever = retrieval_deps.retriever
+        else:
+            generation_deps = build_real_deps(config)
+            if generation_deps.mode != "real":
+                raise ValueError(
+                    "evaluation run resolved to fixture dependencies; pass --fixture "
+                    "explicitly for an engineering fixture run"
+                )
+            retriever = generation_deps.retriever
 
     profile_provider = None
     generator = None
     if manifest.execution_mode is ExecutionMode.RETRIEVAL_AND_GENERATION:
-        generator = deps.generator
+        if generation_deps is None:
+            raise RuntimeError("generation dependencies were not constructed")
+        generator = generation_deps.generator
         level = StudentLevel(args.profile)
 
         def profile_provider(sample: GoldSample) -> StudentProfile:
             del sample
-            return deps.profile_provider.get(level)
+            return generation_deps.profile_provider.get(level)
 
     results = run_batch(
         gold,
         manifest,
-        deps.retriever,
+        retriever,
         generator=generator,
         profile_provider=profile_provider,
         output_path=args.output,
         resume=args.resume,
         require_generation_trace=not args.allow_synthetic_trace,
     )
-    manifest_path = args.manifest or args.output.with_suffix(".manifest.json")
-    manifest_path.write_text(
-        json.dumps(manifest.model_dump(mode="json"), indent=2),
-        encoding="utf-8",
-    )
+    write_manifest(manifest, manifest_path)
     print(
         json.dumps(
             {

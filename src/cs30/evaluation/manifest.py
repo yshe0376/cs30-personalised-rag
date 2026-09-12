@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import hashlib
+import json
+import os
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -73,6 +76,43 @@ class RunManifest(ContractModel):
         if any(k > self.top_k for k in self.k_values):
             raise ValueError("k_values must not exceed manifest top_k")
         return self
+
+
+def write_manifest(manifest: RunManifest, output_path: str | Path) -> None:
+    """Publish a manifest atomically without replacing an existing artifact."""
+
+    destination = Path(output_path)
+    if destination.exists():
+        raise FileExistsError(f"refusing to overwrite run manifest: {destination}")
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path: Path | None = None
+    try:
+        encoded = (
+            json.dumps(manifest.model_dump(mode="json"), indent=2, ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            dir=destination.parent,
+            delete=False,
+        ) as stream:
+            temporary_path = Path(stream.name)
+            stream.write(encoded)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.link(temporary_path, destination)
+        except FileExistsError as exc:
+            raise FileExistsError(
+                f"refusing to overwrite run manifest: {destination}"
+            ) from exc
+        temporary_path.unlink()
+        temporary_path = None
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 @dataclass(frozen=True)
