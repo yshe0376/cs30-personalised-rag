@@ -9,7 +9,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from cs30.contracts import GeneratedAnswer
+from cs30.contracts import GeneratedAnswer, RetrievalMode
 
 from .mapping import GoldChunkMapping, QuestionChunkMapping
 from .models import EvaluationRunResult, EvaluationSplit, ExecutionMode, GoldSample, RunStatus
@@ -54,20 +54,43 @@ def _output_validity(text: str | None) -> tuple[bool | None, bool | None]:
     return True, True
 
 
-def _raw_answer_is_missing_required_citation(text: str | None) -> bool:
-    """Expose a zero-citation answer even when contract validation rejects it."""
+def _output_missing_required_citation(text: str | None) -> bool | None:
+    """Inspect one parseable output for a missing required citation."""
 
     if text is None:
-        return False
+        return None
     try:
         payload = json.loads(text)
     except (TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
         return False
     return bool(
-        isinstance(payload, dict)
-        and payload.get("abstained") is False
-        and payload.get("citations") == []
+        payload.get("abstained") is False and not payload.get("citations")
     )
+
+
+def _latest_missing_required_citation(run: EvaluationRunResult) -> bool:
+    """Check the latest parseable attempt, falling back to the first output."""
+
+    for text in (run.repaired_model_output, run.raw_model_output):
+        missing = _output_missing_required_citation(text)
+        if missing is not None:
+            return missing
+    return False
+
+
+def _latest_schema_valid_answer(run: EvaluationRunResult) -> GeneratedAnswer | None:
+    """Recover a diagnostic answer when a failed run has no final answer."""
+
+    for text in (run.repaired_model_output, run.raw_model_output):
+        if text is None:
+            continue
+        try:
+            return GeneratedAnswer.model_validate_json(text)
+        except (TypeError, ValueError, ValidationError):
+            continue
+    return None
 
 
 def _question_mapping(
@@ -83,7 +106,8 @@ def _question_mapping(
 
 
 def _citation_checks(run: EvaluationRunResult) -> list[dict[str, Any]]:
-    if run.final_answer is None:
+    answer = run.final_answer or _latest_schema_valid_answer(run)
+    if answer is None:
         return []
 
     by_identifier = {}
@@ -93,7 +117,7 @@ def _citation_checks(run: EvaluationRunResult) -> list[dict[str, Any]]:
             by_identifier[item.chunk_id] = item
 
     checks = []
-    for citation_id in run.final_answer.citations:
+    for citation_id in answer.citations:
         evidence = by_identifier.get(citation_id)
         belongs = evidence is not None
         checks.append(
@@ -125,12 +149,15 @@ def _gold_evidence_coverage(
         return None, True
 
     mapped_spans = {item.span_id: item for item in question_mapping.spans}
+    mapping_missing = False
     for evidence_set in gold.gold_core_evidence_sets:
         path_complete = True
         for span in evidence_set:
             span_mapping = mapped_spans.get(span.span_id)
             if span_mapping is None:
-                return None, True
+                mapping_missing = True
+                path_complete = False
+                break
             span_covered = any(
                 set(chunk_set).issubset(cited_chunk_ids)
                 for chunk_set in span_mapping.acceptable_chunk_sets
@@ -140,7 +167,7 @@ def _gold_evidence_coverage(
                 break
         if path_complete:
             return True, False
-    return False, False
+    return (None, True) if mapping_missing else (False, False)
 
 
 def _answer_outcome(gold: GoldSample, run: EvaluationRunResult) -> str:
@@ -163,6 +190,7 @@ def _score_pair(
     gold: GoldSample,
     run: EvaluationRunResult,
     mappings: GoldChunkMapping | Mapping[str, QuestionChunkMapping],
+    expected_mode: RetrievalMode | None = None,
 ) -> dict[str, Any]:
     generation_run = run.execution_mode is ExecutionMode.RETRIEVAL_AND_GENERATION
     successful = run.status in {RunStatus.ANSWERED, RunStatus.ABSTAINED}
@@ -204,9 +232,7 @@ def _score_pair(
     repaired_json_valid, repaired_schema_valid = _output_validity(
         run.repaired_model_output
     )
-    missing_required_citation = _raw_answer_is_missing_required_citation(
-        run.raw_model_output
-    )
+    missing_required_citation = _latest_missing_required_citation(run)
 
     citation_checks = _citation_checks(run)
     citation_valid = None
@@ -218,6 +244,11 @@ def _score_pair(
             and run.citation_validation.citation_status == "passed"
         )
     elif missing_required_citation:
+        citation_valid = False
+    elif citation_checks and any(not check["valid"] for check in citation_checks):
+        # A failed generation can still retain a schema-valid attempted answer.
+        # Keep the run excluded from successful-answer validity unless an
+        # observable invalid citation needs to be surfaced for review.
         citation_valid = False
 
     gold_evidence_covered = None
@@ -267,7 +298,11 @@ def _score_pair(
         "run_id": run.run_id,
         "condition_id": run.condition_id,
         "execution_mode": run.execution_mode.value,
-        "mode": run.retrieval.mode.value if run.retrieval is not None else "unknown",
+        "mode": (
+            run.retrieval.mode.value
+            if run.retrieval is not None
+            else expected_mode.value if expected_mode is not None else "unknown"
+        ),
         "status": run.status.value,
         "split": gold.split.value,
         "corpus_version": gold.corpus_version,
@@ -441,12 +476,21 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             )
             confusion[key] += 1
 
+    answer_outcomes = Counter(
+        {
+            "correct": 0,
+            "wrong": 0,
+            "abstained": 0,
+            "call_failed": 0,
+            "format_failed": 0,
+        }
+    )
+    answer_outcomes.update(record["answer_outcome"] for record in records)
+
     return {
         "total_records": total,
         "metrics": metrics,
-        "answer_outcome_counts": dict(
-            sorted(Counter(record["answer_outcome"] for record in records).items())
-        ),
+        "answer_outcome_counts": dict(answer_outcomes),
         "abstention_confusion": dict(confusion),
         "failure_label_counts": dict(
             sorted(
@@ -479,12 +523,16 @@ class AnswerCitationScorer:
         *,
         expected_split: EvaluationSplit | str | None = None,
         dataset_version: str | None = None,
+        expected_mode: RetrievalMode | str | None = None,
     ) -> None:
         self._mappings = mappings
         self._expected_split = (
             EvaluationSplit(expected_split) if expected_split is not None else None
         )
         self._dataset_version = dataset_version
+        self._expected_mode = (
+            RetrievalMode(expected_mode) if expected_mode is not None else None
+        )
 
     def score(
         self,
@@ -510,7 +558,7 @@ class AnswerCitationScorer:
             gold = gold_by_id.get(run.question_id)
             if gold is None:
                 raise ValueError(f"run result has no matching Gold sample: {run.question_id}")
-            record = _score_pair(gold, run, self._mappings)
+            record = _score_pair(gold, run, self._mappings, self._expected_mode)
             record["gold_answerable"] = gold.answerable
             record["data_version"] = self._dataset_version or gold.gold_annotation_version
             records.append(record)

@@ -100,6 +100,47 @@ def test_gold_evidence_coverage_respects_or_of_ands_mapping() -> None:
     assert result["metrics"]["gold_evidence_citation_coverage"]["denominator"] == 1
 
 
+def test_gold_evidence_coverage_checks_later_or_path_after_missing_mapping() -> None:
+    gold, runs, mappings = _inputs()
+    question_mapping = mappings.items[0]
+    partial_mapping = mappings.model_copy(
+        update={
+            "items": [
+                question_mapping.model_copy(
+                    update={
+                        "spans": [
+                            span
+                            for span in question_mapping.spans
+                            if span.span_id == "span_gamma"
+                        ]
+                    }
+                )
+            ]
+        }
+    )
+    payload = runs[0].model_dump(mode="json")
+    payload["retrieval"]["hits"][0].update(
+        chunk_id="chunk_gamma",
+        text="Gamma.",
+        source_locator="[13,19)",
+    )
+    payload["evidence_sent_to_model"]["evidence_items"][0].update(
+        chunk_id="chunk_gamma",
+        text="Gamma.",
+        source_locator="[13,19)",
+    )
+    payload["evidence_sent_to_model"]["citation_map"] = {"E1": "chunk_gamma"}
+    payload["final_answer"]["citations"] = ["chunk_gamma"]
+    payload["citation_validation"]["answer"]["citations"] = ["chunk_gamma"]
+    payload["citation_validation"]["resolved_citations"] = ["chunk_gamma"]
+    run = EvaluationRunResult.model_validate(payload)
+
+    record = AnswerCitationScorer(partial_mapping).score([gold[0]], [run])["records"][0]
+
+    assert record["gold_evidence_covered"] is True
+    assert "mapping_missing" not in record["failure_labels"]
+
+
 def test_raw_and_repaired_validity_are_reported_separately() -> None:
     gold, runs, mappings = _inputs()
     payload = runs[0].model_dump(mode="json")
@@ -121,6 +162,100 @@ def test_raw_and_repaired_validity_are_reported_separately() -> None:
         "runs_repaired": 1,
     }
     assert "invalid_output" in result["records"][0]["failure_labels"]
+
+
+def test_repaired_zero_citation_answer_is_reported_as_missing() -> None:
+    gold, runs, mappings = _inputs()
+    payload = runs[0].model_dump(mode="json")
+    payload.update(
+        status="parse_error",
+        raw_model_output="{not-json",
+        repaired_model_output=json.dumps(
+            {
+                "schema_version": "1.0",
+                "final_choice": "B",
+                "explanation": "The repaired answer still omitted evidence.",
+                "citations": [],
+                "abstained": False,
+            }
+        ),
+        final_answer=None,
+        citation_validation=None,
+        error={
+            "stage": "parsing",
+            "error_type": "ValidationError",
+            "message": "A non-abstained answer must cite evidence.",
+        },
+        model_call_count=2,
+    )
+    run = EvaluationRunResult.model_validate(payload)
+
+    record = AnswerCitationScorer(mappings).score([gold[0]], [run])["records"][0]
+
+    assert record["repaired_json_valid"] is True
+    assert record["repaired_schema_valid"] is False
+    assert record["missing_required_citation"] is True
+    assert record["citation_valid"] is False
+    assert {"invalid_output", "invalid_citation", "missing_citation"}.issubset(
+        record["failure_labels"]
+    )
+
+
+def test_successful_repair_clears_the_missing_citation_diagnostic() -> None:
+    gold, runs, mappings = _inputs()
+    payload = runs[0].model_dump(mode="json")
+    payload["raw_model_output"] = json.dumps(
+        {
+            "schema_version": "1.0",
+            "final_choice": "B",
+            "explanation": "The first attempt omitted evidence.",
+            "citations": [],
+            "abstained": False,
+        }
+    )
+    payload["repaired_model_output"] = json.dumps(payload["final_answer"])
+    payload["model_call_count"] = 2
+    run = EvaluationRunResult.model_validate(payload)
+
+    record = AnswerCitationScorer(mappings).score([gold[0]], [run])["records"][0]
+
+    assert record["raw_schema_valid"] is False
+    assert record["repaired_schema_valid"] is True
+    assert record["missing_required_citation"] is False
+    assert record["citation_valid"] is True
+    assert "missing_citation" not in record["failure_labels"]
+
+
+def test_invalid_citation_survives_failed_generation_for_review() -> None:
+    gold, runs, mappings = _inputs()
+    payload = runs[0].model_dump(mode="json")
+    invalid_answer = {
+        "schema_version": "1.0",
+        "final_choice": "B",
+        "explanation": "The attempted answer cites evidence that was not sent.",
+        "citations": ["chunk_not_sent"],
+        "abstained": False,
+    }
+    payload.update(
+        status="generation_error",
+        raw_model_output=json.dumps(invalid_answer),
+        repaired_model_output=json.dumps(invalid_answer),
+        final_answer=None,
+        citation_validation=None,
+        error={
+            "stage": "generation",
+            "error_type": "GenerationError",
+            "message": "Citation validation failed after retries.",
+        },
+        model_call_count=2,
+    )
+    run = EvaluationRunResult.model_validate(payload)
+
+    record = AnswerCitationScorer(mappings).score([gold[0]], [run])["records"][0]
+
+    assert record["citation_checks"][0]["belongs_to_sent_evidence"] is False
+    assert record["citation_valid"] is False
+    assert {"call_failure", "invalid_citation"}.issubset(record["failure_labels"])
 
 
 def test_duplicate_final_runs_fail_explicitly() -> None:
@@ -156,10 +291,12 @@ def test_call_failure_without_output_is_not_invalid_json() -> None:
         }
     )
 
-    result = AnswerCitationScorer(mappings).score(gold, [run])
+    result = AnswerCitationScorer(mappings, expected_mode="bm25").score(gold, [run])
     record = result["records"][0]
 
     assert record["answer_outcome"] == "call_failed"
+    assert record["mode"] == "bm25"
+    assert result["groups"][0]["mode"] == "bm25"
     assert record["failure_labels"] == ["call_failure"]
     assert result["metrics"]["raw_json_validity"]["denominator"] == 0
     assert "invalid_output" not in record["failure_labels"]
@@ -218,7 +355,13 @@ def test_all_abstain_and_no_computable_denominator_cases_remain_visible() -> Non
     )
     no_positive_class = AnswerCitationScorer(mappings).score([gold[0]], [runs[0]])
 
-    assert all_abstain["answer_outcome_counts"] == {"abstained": 2}
+    assert all_abstain["answer_outcome_counts"] == {
+        "correct": 0,
+        "wrong": 0,
+        "abstained": 2,
+        "call_failed": 0,
+        "format_failed": 0,
+    }
     assert all_abstain["metrics"]["abstention_precision"]["value"] == 1.0
     assert all_abstain["metrics"]["answer_choice_accuracy_all"]["value"] == 0.0
     assert no_positive_class["metrics"]["abstention_precision"]["value"] is None

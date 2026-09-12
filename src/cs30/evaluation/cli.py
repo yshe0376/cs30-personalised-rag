@@ -506,6 +506,7 @@ def _score_command(args: argparse.Namespace) -> int:
                 mappings,
                 expected_split=manifest.split if manifest is not None else None,
                 dataset_version=manifest.dataset_version if manifest is not None else None,
+                expected_mode=manifest.retrieval_mode if manifest is not None else None,
             ),
         ),
         manifest=manifest,
