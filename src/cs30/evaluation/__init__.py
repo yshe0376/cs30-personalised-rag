@@ -1,6 +1,6 @@
 """M1 evaluation contracts, mappings, metrics, and persisted run helpers."""
 
-from .answer_metrics import AnswerCitationScorer
+from .answer_metrics import AnswerCitationScorer, ScoringMode
 from .answer_reporting import write_answer_citation_reports
 from .io import (
     append_jsonl_record,
@@ -107,6 +107,7 @@ __all__ = [
     "SpanResolutionMethod",
     "SpanResolutionStatus",
     "ScoringExtension",
+    "ScoringMode",
     "SpanChunkMapping",
     "SpanResolution",
     "append_jsonl_record",

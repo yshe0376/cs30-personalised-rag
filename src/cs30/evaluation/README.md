@@ -126,7 +126,9 @@ model received evidence and Gold answerability is resolved, so no-hit runs,
 unresolved Gold, and technical failures are excluded.
 Per-question records retain `abstention_cause`, and aggregate JSON, CSV, and
 Markdown reports break correct, wrong, and unresolved abstentions down by that
-cause. Each metric's `definition` states its precise denominator and exclusions.
+cause. Metric definitions are stored once in the top-level
+`metric_definitions`; overall and grouped metric values contain only numerator,
+denominator, value, and excluded counts.
 F1 rows use the count form `2TP / (2TP + FP + FN)` so their reported numerator
 and denominator remain interpretable as counts. Markdown and CSV label the
 cross-group result as an overall diagnostic aggregate and also emit complete
@@ -269,9 +271,29 @@ The extension reports answer accuracy for explicit denominators, abstention
 accuracy/precision/recall/F1, raw and repaired JSON/schema validity, citation
 validity against `evidence_sent_to_model`, per-citation validity, complete Gold
 evidence-path citation coverage, failure labels, and comparable experiment
-groups. Technical failures remain separate from model abstentions.
+groups. `retrieval_error`, `generation_error`, and `parse_error` are attributed
+separately as retrieval failure, generation failure, and invalid output;
+technical failures remain separate from model abstentions. Scorer-resolved
+citation chunk IDs must exactly match the ordered
+`citation_validation.resolved_citations` sequence.
 Gold questions missing from the saved run file are listed explicitly rather
 than silently disappearing from the report.
+
+The scoring mode is determined once from the manifest. A manifest with
+`reportable=true` uses `reportable` mode; all other scoring uses `development`
+mode. In development mode, split, retrieval-mode, and condition mismatches are
+excluded with mutually exclusive counters and scoring continues. Reportable
+mode fails on those mismatches and on missing expected runs. A saved run with no
+matching Gold is excluded as `missing_gold` in both modes. Excluded runs enter
+no records, groups, answer metrics, abstention metrics, or citation metrics.
+Duplicate run or Gold IDs and invalid JSON/schema remain hard failures.
+
+Gold with unresolved answerability (`answerable=null`) remains visible in the
+per-question diagnostics and failure queue but is excluded from every formal
+answer-accuracy and abstention denominator. Retrieval-only batches report
+`applicability: not_applicable`, an empty answer `metrics` object, and a
+`not_applicable` outcome count instead of null answer, format, and citation
+metrics.
 
 Pass `--answer-citation-output-dir` to write the review artifacts:
 
@@ -285,6 +307,8 @@ cs30-evaluate score \
   --answer-citation-output-dir artifacts/evaluation
 ```
 
-The output directory contains aggregate JSON, per-question JSONL, summary CSV,
-a Markdown report, and a focused failure-review JSONL. Fixture outputs validate
-the implementation only and must not be reported as final model quality.
+The generic `--output` file contains retrieval and extension aggregates but
+omits answer/citation `records`. `--answer-citation-output-dir` writes the
+answer/citation aggregate JSON, per-question JSONL, summary CSV, Markdown report,
+and focused failure-review JSONL. Fixture outputs validate the implementation
+only and must not be reported as final model quality.

@@ -507,16 +507,30 @@ def _score_command(args: argparse.Namespace) -> int:
                 expected_split=manifest.split if manifest is not None else None,
                 dataset_version=manifest.dataset_version if manifest is not None else None,
                 expected_mode=manifest.retrieval_mode if manifest is not None else None,
+                expected_condition=(
+                    manifest.condition_id if manifest is not None else None
+                ),
             ),
         ),
         manifest=manifest,
     )
-    encoded = json.dumps(scored, indent=2, ensure_ascii=False)
     if args.output:
+        aggregate_only = {
+            **scored,
+            "extensions": {
+                name: {
+                    key: value
+                    for key, value in extension_result.items()
+                    if key != "records"
+                }
+                for name, extension_result in scored["extensions"].items()
+            },
+        }
+        encoded = json.dumps(aggregate_only, indent=2, ensure_ascii=False)
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(encoded + "\n", encoding="utf-8")
     else:
-        print(encoded)
+        print(json.dumps(scored, indent=2, ensure_ascii=False))
     if args.scores_output:
         rows = scored["retrieval"]["retrieval_scores"]
         args.scores_output.parent.mkdir(parents=True, exist_ok=True)

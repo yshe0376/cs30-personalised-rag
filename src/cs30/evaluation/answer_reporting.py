@@ -73,8 +73,8 @@ def _markdown(result: Mapping[str, Any]) -> str:
     _append_metric_table(lines, result["metrics"])
 
     lines.extend(["", "### Metric definitions", ""])
-    for name, metric in result["metrics"].items():
-        lines.append(f"- `{name}`: {metric['definition']}")
+    for name, definition in result["metric_definitions"].items():
+        lines.append(f"- `{name}`: {definition}")
 
     sections = (
         ("Answer outcomes", "answer_outcome_counts"),
@@ -97,6 +97,10 @@ def _markdown(result: Mapping[str, Any]) -> str:
     lines.append(f"- `missing_run_count`: {result['missing_run_count']}")
     for question_id in result["missing_run_question_ids"]:
         lines.append(f"- `{question_id}`")
+
+    lines.extend(["", "### Excluded runs", ""])
+    _append_counts(lines, result["excluded_runs"])
+    lines.append(f"- `unresolved_count`: {result['unresolved_count']}")
 
     lines.extend(
         [
@@ -223,7 +227,7 @@ def write_answer_citation_reports(
                         "denominator": metric["denominator"],
                         "value": metric["value"],
                         "excluded": metric["excluded"],
-                        "definition": metric["definition"],
+                        "definition": result["metric_definitions"][name],
                         "cause": "",
                         "outcome": "",
                         **identity,

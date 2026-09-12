@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ValidationError
 
@@ -26,6 +26,8 @@ _TECHNICAL_STATUSES = {
     RunStatus.GENERATION_ERROR,
     RunStatus.PARSE_ERROR,
 }
+
+ScoringMode = Literal["development", "reportable"]
 
 
 def _metric(
@@ -180,8 +182,10 @@ def _gold_evidence_coverage(
 def _answer_outcome(gold: GoldSample, run: EvaluationRunResult) -> str:
     if run.execution_mode is ExecutionMode.RETRIEVAL_ONLY:
         return "not_applicable"
-    if run.status in {RunStatus.RETRIEVAL_ERROR, RunStatus.GENERATION_ERROR}:
-        return "call_failed"
+    if run.status is RunStatus.RETRIEVAL_ERROR:
+        return "retrieval_failed"
+    if run.status is RunStatus.GENERATION_ERROR:
+        return "generation_failed"
     if run.status is RunStatus.PARSE_ERROR:
         return "format_failed"
     if run.status is RunStatus.ABSTAINED:
@@ -202,7 +206,11 @@ def _score_pair(
     generation_run = run.execution_mode is ExecutionMode.RETRIEVAL_AND_GENERATION
     successful = run.status in {RunStatus.ANSWERED, RunStatus.ABSTAINED}
     answer_correct = None
-    if generation_run and gold.gold_answer is not None:
+    if (
+        generation_run
+        and gold.answerable is not None
+        and gold.gold_answer is not None
+    ):
         answer_correct = bool(
             run.status is RunStatus.ANSWERED
             and run.final_answer is not None
@@ -210,7 +218,7 @@ def _score_pair(
         )
 
     parsed_answer_correct = None
-    if successful and gold.gold_answer is not None:
+    if successful and gold.answerable is not None and gold.gold_answer is not None:
         parsed_answer_correct = bool(
             run.status is RunStatus.ANSWERED
             and run.final_answer is not None
@@ -220,6 +228,7 @@ def _score_pair(
     answered_choice_correct = None
     if (
         run.status is RunStatus.ANSWERED
+        and gold.answerable is not None
         and gold.gold_answer is not None
         and run.final_answer is not None
         and run.final_answer.final_choice is not None
@@ -242,6 +251,17 @@ def _score_pair(
     missing_required_citation = _latest_missing_required_citation(run)
 
     citation_checks = _citation_checks(run)
+    resolved_citation_ids = [
+        check["chunk_id"]
+        for check in citation_checks
+        if check["chunk_id"] is not None
+    ]
+    citation_validation_matches = None
+    if run.citation_validation is not None:
+        citation_validation_matches = (
+            resolved_citation_ids == run.citation_validation.resolved_citations
+        )
+
     citation_valid = None
     if run.status is RunStatus.ANSWERED:
         citation_valid = bool(
@@ -249,6 +269,7 @@ def _score_pair(
             and all(check["valid"] for check in citation_checks)
             and run.citation_validation is not None
             and run.citation_validation.citation_status == "passed"
+            and citation_validation_matches
         )
     elif missing_required_citation:
         citation_valid = False
@@ -271,8 +292,10 @@ def _score_pair(
         )
 
     labels: set[str] = set()
-    if run.status in {RunStatus.RETRIEVAL_ERROR, RunStatus.GENERATION_ERROR}:
-        labels.add("call_failure")
+    if run.status is RunStatus.RETRIEVAL_ERROR:
+        labels.add("retrieval_failure")
+    elif run.status is RunStatus.GENERATION_ERROR:
+        labels.add("generation_failure")
     elif run.status is RunStatus.PARSE_ERROR:
         labels.add("invalid_output")
     if answered_choice_correct is False:
@@ -293,6 +316,8 @@ def _score_pair(
         labels.add("invalid_output")
     if citation_valid is False:
         labels.add("invalid_citation")
+    if citation_validation_matches is False:
+        labels.add("citation_validation_mismatch")
     if missing_required_citation:
         labels.add("missing_citation")
     if gold.answerable is None:
@@ -327,6 +352,7 @@ def _score_pair(
         "repaired_json_valid": repaired_json_valid,
         "repaired_schema_valid": repaired_schema_valid,
         "citation_valid": citation_valid,
+        "citation_validation_matches": citation_validation_matches,
         "missing_required_citation": missing_required_citation,
         "gold_evidence_covered": gold_evidence_covered,
         "citation_checks": citation_checks,
@@ -416,16 +442,18 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     metrics = {
         "answer_choice_accuracy_all": boolean_metric(
             "answer_correct",
-            "Correct choices divided by generation runs with a gold choice; technical "
-            "failures and abstentions count as incorrect.",
+            "Correct choices divided by generation runs with resolved Gold answerability "
+            "and a gold choice; technical failures and abstentions count as incorrect.",
         ),
         "answer_choice_accuracy_parsed": boolean_metric(
             "parsed_answer_correct",
-            "Correct choices divided by successfully parsed answer or abstention outcomes.",
+            "Correct choices divided by successfully parsed answer or abstention outcomes "
+            "with resolved Gold answerability and a gold choice.",
         ),
         "answer_choice_accuracy_answered": boolean_metric(
             "answered_choice_correct",
-            "Correct choices divided by non-abstained answers with a gold choice.",
+            "Correct choices divided by non-abstained answers with resolved Gold "
+            "answerability and a gold choice.",
         ),
         "abstention_accuracy": boolean_metric(
             "abstention_correct",
@@ -524,7 +552,8 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "citation_validity": boolean_metric(
             "citation_valid",
             "Answered runs whose non-empty citations resolve through evidence actually sent "
-            "to the model and pass upstream validation.",
+            "to the model, exactly match the upstream resolved citation sequence, and pass "
+            "upstream validation.",
         ),
         "gold_evidence_citation_coverage": boolean_metric(
             "gold_evidence_covered",
@@ -605,14 +634,28 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "correct": 0,
             "wrong": 0,
             "abstained": 0,
-            "call_failed": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
             "format_failed": 0,
         }
     )
     answer_outcomes.update(record["answer_outcome"] for record in records)
 
+    metric_definitions = {
+        name: str(metric.pop("definition")) for name, metric in metrics.items()
+    }
+    retrieval_only = bool(records) and all(
+        record["execution_mode"] == ExecutionMode.RETRIEVAL_ONLY.value
+        for record in records
+    )
+    if retrieval_only:
+        metrics = {}
+        answer_outcomes = Counter({"not_applicable": total})
+
     return {
         "total_records": total,
+        "applicability": "not_applicable" if retrieval_only else "applicable",
+        "metric_definitions": metric_definitions,
         "metrics": metrics,
         "answer_outcome_counts": dict(answer_outcomes),
         "abstention_confusion": dict(confusion),
@@ -635,6 +678,9 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             ),
             "runs_repaired": sum(record["repair_used"] for record in records),
         },
+        "unresolved_count": sum(
+            record["gold_answerable"] is None for record in records
+        ),
     }
 
 
@@ -650,6 +696,7 @@ class AnswerCitationScorer:
         expected_split: EvaluationSplit | str | None = None,
         dataset_version: str | None = None,
         expected_mode: RetrievalMode | str | None = None,
+        expected_condition: str | None = None,
     ) -> None:
         self._mappings = mappings
         self._expected_split = (
@@ -659,11 +706,14 @@ class AnswerCitationScorer:
         self._expected_mode = (
             RetrievalMode(expected_mode) if expected_mode is not None else None
         )
+        self._expected_condition = expected_condition
 
     def score(
         self,
         gold_samples: Sequence[GoldSample],
         run_results: Sequence[EvaluationRunResult],
+        *,
+        mode: ScoringMode,
     ) -> Mapping[str, Any]:
         gold_by_id = {sample.question_id: sample for sample in gold_samples}
         if len(gold_by_id) != len(gold_samples):
@@ -679,11 +729,43 @@ class AnswerCitationScorer:
                 + ", ".join(duplicates)
             )
 
+        excluded_runs = {
+            "total": 0,
+            "missing_gold": 0,
+            "split_mismatch": 0,
+            "mode_mismatch": 0,
+            "condition_mismatch": 0,
+        }
         records = []
         for run in run_results:
             gold = gold_by_id.get(run.question_id)
             if gold is None:
-                raise ValueError(f"run result has no matching Gold sample: {run.question_id}")
+                excluded_runs["total"] += 1
+                excluded_runs["missing_gold"] += 1
+                continue
+            exclusion_reason = None
+            if self._expected_split is not None and gold.split is not self._expected_split:
+                exclusion_reason = "split_mismatch"
+            elif (
+                self._expected_mode is not None
+                and run.retrieval is not None
+                and run.retrieval.mode is not self._expected_mode
+            ):
+                exclusion_reason = "mode_mismatch"
+            elif (
+                self._expected_condition is not None
+                and run.condition_id != self._expected_condition
+            ):
+                exclusion_reason = "condition_mismatch"
+            if exclusion_reason is not None:
+                if mode == "reportable":
+                    raise ValueError(
+                        f"reportable answer/citation scoring rejected "
+                        f"{exclusion_reason} for {run.question_id!r}"
+                    )
+                excluded_runs["total"] += 1
+                excluded_runs[exclusion_reason] += 1
+                continue
             record = _score_pair(gold, run, self._mappings, self._expected_mode)
             record["gold_answerable"] = gold.answerable
             record["data_version"] = self._dataset_version or gold.gold_annotation_version
@@ -696,7 +778,11 @@ class AnswerCitationScorer:
                 if sample.split is self._expected_split
             }
         elif run_ids:
-            observed_splits = {gold_by_id[question_id].split for question_id in run_ids}
+            observed_splits = {
+                gold_by_id[question_id].split
+                for question_id in run_ids
+                if question_id in gold_by_id
+            }
             expected_ids = {
                 sample.question_id
                 for sample in gold_samples
@@ -705,6 +791,16 @@ class AnswerCitationScorer:
         else:
             expected_ids = set(gold_by_id)
         missing_run_question_ids = sorted(expected_ids - set(run_ids))
+        if mode == "reportable" and missing_run_question_ids:
+            raise ValueError(
+                "reportable answer/citation scoring is missing expected run results: "
+                + ", ".join(missing_run_question_ids)
+            )
+
+        if sum(
+            count for reason, count in excluded_runs.items() if reason != "total"
+        ) != excluded_runs["total"]:
+            raise RuntimeError("answer/citation exclusion reasons are not mutually exclusive")
 
         summary = _summarise(records)
         grouped: dict[tuple[str, str, str, str, str], list[dict[str, Any]]] = {}
@@ -720,6 +816,10 @@ class AnswerCitationScorer:
 
         groups = []
         for key in sorted(grouped):
+            group_summary = _summarise(grouped[key])
+            group_definitions = group_summary.pop("metric_definitions")
+            if group_definitions != summary["metric_definitions"]:
+                raise RuntimeError("metric definitions differ between scoring groups")
             groups.append(
                 {
                     "mode": key[0],
@@ -727,11 +827,12 @@ class AnswerCitationScorer:
                     "data_version": key[2],
                     "split": key[3],
                     "corpus_version": key[4],
-                    **_summarise(grouped[key]),
+                    **group_summary,
                 }
             )
         return {
             **summary,
+            "excluded_runs": excluded_runs,
             "missing_run_count": len(missing_run_question_ids),
             "missing_run_question_ids": missing_run_question_ids,
             "groups": groups,
