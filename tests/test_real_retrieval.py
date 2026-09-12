@@ -4,8 +4,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import cs30.pipeline as pipeline
 import cs30.retrieval.real as real_retrieval
-from cs30.config import AppConfig, RetrievalConfig
+from cs30.config import AppConfig, GenerationConfig, RetrievalConfig
 from cs30.contracts import (
     EvidenceProvenance,
     IndexArtifact,
@@ -14,7 +15,7 @@ from cs30.contracts import (
     RetrievedEvidence,
 )
 from cs30.errors import ArtifactMismatchError, EmptyQueryError, RetrievalError
-from cs30.pipeline import build_real_deps
+from cs30.pipeline import build_real_deps, build_real_retrieval_deps
 
 
 def _chunks() -> list[dict]:
@@ -550,6 +551,32 @@ def test_pipeline_uses_shared_real_bm25_fixture() -> None:
         top_k=3,
     )
     assert result.hits
+
+
+def test_retrieval_only_dependencies_do_not_initialize_an_llm_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = AppConfig(
+        fixture_mode=False,
+        retrieval=RetrievalConfig(
+            mode=RetrievalMode.BM25,
+            index_dir=str(Path(__file__).parent / "fixtures" / "index"),
+        ),
+        generation=GenerationConfig(provider="openai", model="gpt-test"),
+    )
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    def fail_if_constructed(*args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise AssertionError("retrieval-only dependencies must not build an LLM client")
+
+    monkeypatch.setattr(pipeline, "OpenAIResponsesClient", fail_if_constructed)
+
+    deps = build_real_retrieval_deps(config)
+
+    assert deps.mode == "real"
+    assert isinstance(deps.retriever, real_retrieval.BM25Retriever)
+
 
 def test_pipeline_passes_thresholds_to_hybrid_retrievers(
     tmp_path: Path,
