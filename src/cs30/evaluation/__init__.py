@@ -1,5 +1,7 @@
 """M1 evaluation contracts, mappings, metrics, and persisted run helpers."""
 
+from .answer_metrics import AnswerCitationScorer, ScoringMode
+from .answer_reporting import write_answer_citation_reports
 from .io import (
     append_jsonl_record,
     load_gold_samples,
@@ -80,6 +82,7 @@ from .span_resolution import SpanResolution, resolve_span_to_corpus
 
 __all__ = [
     "AbstentionCause",
+    "AnswerCitationScorer",
     "AnnotationStatus",
     "EvidenceSufficiency",
     "ErrorStage",
@@ -104,6 +107,7 @@ __all__ = [
     "SpanResolutionMethod",
     "SpanResolutionStatus",
     "ScoringExtension",
+    "ScoringMode",
     "SpanChunkMapping",
     "SpanResolution",
     "append_jsonl_record",
@@ -148,6 +152,7 @@ __all__ = [
     "RetrievalScoreRow",
     "validate_artifact_compatibility",
     "write_final_jsonl",
+    "write_answer_citation_reports",
     "write_normalized_gold",
     "write_prepared_corpus",
 ]

@@ -137,6 +137,29 @@ runs in fixture mode and labels that mode prominently; it must not be presented 
 a real retrieval or model result. The W5 evidence layer assigns display IDs (`E1`,
 `E2`, ...), maps them back to chunk IDs, and records a compact trace for each run.
 
+### Member 8 offline evaluation
+
+Saved run files can be scored without rerunning retrieval or calling a model:
+
+```powershell
+python -m cs30.evaluation.cli score `
+  --gold tests/fixtures/evaluation/gold_v0_1.jsonl `
+  --runs tests/fixtures/evaluation/run_results_scorable_v0_2.jsonl `
+  --mapping tests/fixtures/evaluation/mapping_v0_1.json `
+  --k-values 1 3 `
+  --output artifacts/evaluation/scores.json `
+  --answer-citation-output-dir artifacts/evaluation
+```
+
+The evaluator reports answer-choice accuracy, separate system-level and evidence-seen model-level
+abstention metrics with cause-aware confusion tables, separate
+first/repaired-output validity, retry/repair counts, per-citation and per-answer validity,
+complete Gold-evidence citation coverage, and coexisting failure labels. It exports per-question
+JSONL plus summary JSON, CSV and Markdown, grouped by retrieval mode, condition, Gold version,
+split and corpus. Every metric includes its numerator, denominator, excluded count, and definition.
+The extension consumes the shared `GoldSample` and `EvaluationRunResult` contracts; unresolved
+answerability and missing mappings remain visibly excluded instead of being guessed.
+
 Ask something the sample chapter does not cover and the system refuses instead
 of inventing an answer:
 
@@ -267,6 +290,7 @@ src/cs30/indexing/      Member 5  - embeddings and FAISS
 src/cs30/retrieval/     Member 6  - Dense, BM25, and RRF hybrid retrieval
 src/cs30/profile/       Member 7  - student profile
 src/cs30/generation/    Member 7  - prompting and LLM generation
+src/cs30/evaluation/    Member 8  - offline answer, abstention, format, and citation metrics
 src/cs30/ui/            Member 8  - demo interface
 tests/                  Contract, pipeline, port, and config tests
 docs/adr/               Architecture decision records

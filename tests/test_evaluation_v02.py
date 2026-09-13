@@ -18,6 +18,7 @@ from cs30.contracts import (
 from cs30.errors import GenerationError
 from cs30.evaluation import (
     AbstentionCause,
+    AnswerCitationScorer,
     ExecutionMode,
     GoldChunkMapping,
     GoldEvidenceSpan,
@@ -610,6 +611,45 @@ def test_missing_mapping_is_reported_as_an_excluded_question() -> None:
     assert row["exclusion_reason"] == "mapping_missing"
 
 
+def test_orphan_run_is_excluded_consistently_by_retrieval_and_answer_scoring() -> None:
+    run = EvaluationRunResult(
+        schema_version="0.2",
+        run_id="run-orphan",
+        question_id="q-orphan",
+        condition_id="condition-1",
+        execution_mode="retrieval_only",
+        status="retrieved",
+        retrieval=_retrieval("c1"),
+        evidence_sent_to_model=None,
+        raw_model_output=None,
+        repaired_model_output=None,
+        final_answer=None,
+        citation_validation=None,
+        error=None,
+        model_call_count=0,
+        abstention_cause=None,
+    )
+    mappings = GoldChunkMapping(
+        mapping_version="mapping-1",
+        corpus_version="corpus-1",
+        chunk_config_hash="chunks-1",
+        items=[_mapping()],
+    )
+
+    scored = score_saved_run(
+        [_gold()],
+        [run],
+        mappings,
+        k_values=[1],
+        extensions=(AnswerCitationScorer(mappings),),
+    )
+
+    assert scored["retrieval"]["excluded_runs"]["missing_gold"] == 1
+    answer = scored["extensions"]["answer_citation"]
+    assert answer["excluded_runs"]["missing_gold"] == 1
+    assert answer["records"] == []
+
+
 def test_gold_and_mapping_corpus_versions_must_match() -> None:
     run = EvaluationRunResult(
         schema_version="0.2",
@@ -738,8 +778,91 @@ def test_strict_mapping_mode_fails_before_scoring() -> None:
         abstention_cause=None,
     )
 
+    manifest = _manifest("retrieval_only").model_copy(
+        update={
+            "gold_annotation_version": "gold-1",
+            "mapping_version": "mapping-1",
+            "parser_version": "parser-1",
+            "reportable": True,
+        }
+    )
+
     with pytest.raises(ValueError, match="mapping_missing"):
-        score_saved_run([_gold()], [run], {}, k_values=[1], strict_mapping=True)
+        score_saved_run(
+            [_normalized_gold(status="resolved")],
+            [run],
+            GoldChunkMapping(
+                mapping_version="mapping-1",
+                corpus_version="corpus-1",
+                chunk_config_hash="chunks-1",
+                items=[_mapping().model_copy(update={"question_id": "q-other"})],
+            ),
+            k_values=[1],
+            manifest=manifest,
+        )
+
+
+@pytest.mark.parametrize(
+    ("case", "message"),
+    [
+        ("split", "split_mismatch"),
+        ("mode", "mode_mismatch"),
+        ("condition", "condition_mismatch"),
+        ("missing", "missing expected run results"),
+    ],
+)
+def test_reportable_scoring_enforces_batch_scope(case: str, message: str) -> None:
+    gold = _normalized_gold(status="resolved")
+    run = EvaluationRunResult(
+        schema_version="0.2",
+        run_id="run-reportable-scope",
+        question_id="q-1",
+        condition_id="condition-1",
+        execution_mode="retrieval_only",
+        status="retrieved",
+        retrieval=_retrieval("c1"),
+        evidence_sent_to_model=None,
+        raw_model_output=None,
+        repaired_model_output=None,
+        final_answer=None,
+        citation_validation=None,
+        error=None,
+        model_call_count=0,
+        abstention_cause=None,
+    )
+    manifest = _manifest("retrieval_only").model_copy(
+        update={
+            "gold_annotation_version": "gold-1",
+            "mapping_version": "mapping-1",
+            "parser_version": "parser-1",
+            "reportable": True,
+        }
+    )
+    mappings = GoldChunkMapping(
+        mapping_version="mapping-1",
+        corpus_version="corpus-1",
+        chunk_config_hash="chunks-1",
+        items=[_mapping()],
+    )
+
+    if case == "split":
+        gold = gold.model_copy(update={"split": "test"})
+    elif case == "mode":
+        assert run.retrieval is not None
+        run = run.model_copy(
+            update={"retrieval": run.retrieval.model_copy(update={"mode": "bm25"})}
+        )
+    elif case == "condition":
+        run = run.model_copy(update={"condition_id": "another-condition"})
+
+    with pytest.raises(ValueError, match=message):
+        score_saved_run(
+            [gold],
+            [] if case == "missing" else [run],
+            mappings,
+            k_values=[1],
+            manifest=manifest,
+        )
 
 
 def test_scoring_uses_manifest_top_k_when_not_explicitly_supplied() -> None:

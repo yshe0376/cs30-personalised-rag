@@ -117,6 +117,23 @@ retriever returned no hits (the model was not called), or the model abstained
 after receiving evidence. Infrastructure failures are never scored as correct
 refusals.
 
+Answer/citation scoring reports abstention at two explicit levels. The existing
+`abstention_accuracy`, `abstention_precision`, `abstention_recall`, and
+`abstention_f1` metrics are system-level: both `no_retrieval_hits` and
+`model_abstained_with_evidence` count as predicted system abstentions. The
+`model_abstention_*` metrics evaluate only successful decisions made after the
+model received evidence and Gold answerability is resolved, so no-hit runs,
+unresolved Gold, and technical failures are excluded.
+Per-question records retain `abstention_cause`, and aggregate JSON, CSV, and
+Markdown reports break correct, wrong, and unresolved abstentions down by that
+cause. Metric definitions are stored once in the top-level
+`metric_definitions`; overall and grouped metric values contain only numerator,
+denominator, value, and excluded counts.
+F1 rows use the count form `2TP / (2TP + FP + FN)` so their reported numerator
+and denominator remain interpretable as counts. Markdown and CSV label the
+cross-group result as an overall diagnostic aggregate and also emit complete
+group-specific metrics and cause breakdowns; formal comparisons use the latter.
+
 The run trace stores retrieval output, evidence used by the generation seam,
 raw output, optional repaired output, model-call count, the final answer,
 citation validation, and structured error details. GenerationTrace can also
@@ -242,3 +259,56 @@ cs30-evaluate score --gold gold_normalized_corpus_v1.jsonl --runs run.jsonl --ma
 records validate. Synthetic traces are allowed only for explicit fixture runs
 and are never reportable. `score` reads saved results and never invokes a
 generator; `--scores-output` writes the per-question retrieval rows as JSONL.
+
+## Answer, abstention, format, and citation extension
+
+The score command registers `AnswerCitationScorer` through the shared
+`ScoringExtension` seam. It consumes the same `GoldSample`,
+`EvaluationRunResult`, and span-to-chunk mapping objects as retrieval scoring;
+it does not define a competing run schema or invoke retrieval or generation.
+
+The extension reports answer accuracy for explicit denominators, abstention
+accuracy/precision/recall/F1, raw and repaired JSON/schema validity, citation
+validity against `evidence_sent_to_model`, per-citation validity, complete Gold
+evidence-path citation coverage, failure labels, and comparable experiment
+groups. `retrieval_error`, `generation_error`, and `parse_error` are attributed
+separately as retrieval failure, generation failure, and invalid output;
+technical failures remain separate from model abstentions. Scorer-resolved
+citation chunk IDs must exactly match the ordered
+`citation_validation.resolved_citations` sequence.
+Gold questions missing from the saved run file are listed explicitly rather
+than silently disappearing from the report.
+
+The scoring mode is determined once from the manifest. A manifest with
+`reportable=true` uses `reportable` mode; all other scoring uses `development`
+mode. In development mode, split, retrieval-mode, and condition mismatches are
+excluded with mutually exclusive counters and scoring continues. Reportable
+mode fails on those mismatches and on missing expected runs. A saved run with no
+matching Gold is excluded as `missing_gold` in both modes. Excluded runs enter
+no records, groups, answer metrics, abstention metrics, or citation metrics.
+Duplicate run or Gold IDs and invalid JSON/schema remain hard failures.
+
+Gold with unresolved answerability (`answerable=null`) remains visible in the
+per-question diagnostics and failure queue but is excluded from every formal
+answer-accuracy and abstention denominator. Retrieval-only batches report
+`applicability: not_applicable`, an empty answer `metrics` object, and a
+`not_applicable` outcome count instead of null answer, format, and citation
+metrics.
+
+Pass `--answer-citation-output-dir` to write the review artifacts:
+
+```text
+cs30-evaluate score \
+  --gold tests/fixtures/evaluation/gold_v0_1.jsonl \
+  --runs tests/fixtures/evaluation/run_results_scorable_v0_2.jsonl \
+  --mapping tests/fixtures/evaluation/mapping_v0_1.json \
+  --k-values 1 3 \
+  --output artifacts/evaluation/scores.json \
+  --answer-citation-output-dir artifacts/evaluation
+```
+
+The generic `--output` file contains retrieval and extension aggregates but
+omits answer/citation `records`. `--answer-citation-output-dir` writes the
+answer/citation aggregate JSON, per-question JSONL, summary CSV, Markdown report,
+and focused failure-review JSONL. Fixture outputs validate the implementation
+only and must not be reported as final model quality.
