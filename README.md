@@ -271,6 +271,7 @@ with `CS30_LOG_DIR` if required.
 - [Customer and tutor demonstration runbook](docs/customer-demo-runbook.md)
 - [Common errors, log locations and recovery steps](docs/troubleshooting.md)
 - [Real staging integration proposal](docs/staging-integration-plan.md)
+- [Pull Request Change and Integration Ledger](docs/github-pr-contribution-report.md)
 
 ## Repository layout
 
