@@ -420,14 +420,22 @@ def build_evaluation_mapping(
         question_id = str(entry.get("question_id", ""))
         span_id = str(entry.get("gold_span_id", ""))
         chunk_ids = entry.get("matching_chunk_ids")
-        if not isinstance(chunk_ids, list) or not chunk_ids:
-            raise ValueError(f"span mapping contains no matching chunks: {span_id}")
+        if not question_id or not span_id:
+            raise ValueError("span mapping identities must not be empty")
+        if not isinstance(chunk_ids, list):
+            raise ValueError(f"span mapping has invalid matching chunks: {span_id}")
+        coverage_status = entry.get("coverage_status")
+        if not chunk_ids or coverage_status not in (None, "full"):
+            continue
         by_question.setdefault(question_id, []).append(
             {
                 "span_id": span_id,
                 "acceptable_chunk_sets": [chunk_ids],
             }
         )
+
+    if not by_question:
+        raise ValueError("detailed mapping contains no fully covered questions")
 
     items = [
         {
