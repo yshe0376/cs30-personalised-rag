@@ -5,10 +5,10 @@ This is an M3 provisional question-level screen. It does not replace M5 Evidence
 ## Summary
 
 - Records screened: 20
-- `full`: 1
-- `endpoint_only`: 8
-- `none`: 8
-- `pending`: 3
+- `full`: 0
+- `endpoint_only`: 9
+- `none`: 9
+- `pending`: 2
 
 ## Screening Signals
 
@@ -20,6 +20,8 @@ This is an M3 provisional question-level screen. It does not replace M5 Evidence
 - The first candidate pool favored questions whose answer string appeared in a
   top OpenStax span, so the next expansion pass should deliberately include
   questions where the answer is paraphrased or distributed across spans.
+- Three rows were manually replaced to avoid forbidden evidence content types
+  (`problem` or `summary`) while keeping the records answerable.
 
 ## Candidate Rows
 
@@ -134,11 +136,11 @@ This is an M3 provisional question-level screen. It does not replace M5 Evidence
 ### sciq-test-00614 - endpoint_only
 
 - Split: `proposed_dev`
-- Concept: `explosive_bolts_probe_separation_problem`
+- Concept: `inelastic_collision_exploding_bolts`
 - Question: By exploding what the space probes get separated from their launchers?
 - Answer: `bolts`
-- Alignment: `high_token_overlap` (1.0)
-- Reason: Core evidence is reliable and likely supports Beginner vs Advanced contrast, but Intermediate may be unstable without M5 role review.
+- Alignment: `manual_allowed_span_replacement` (not_recomputed)
+- Reason: Allowed body evidence is reliable and explanatory, but full three-level personalisation is not asserted without M5 role review.
 
 ### sciq-test-00315 - none
 
@@ -158,14 +160,14 @@ This is an M3 provisional question-level screen. It does not replace M5 Evidence
 - Alignment: `high_token_overlap` (0.9789)
 - Reason: Core evidence is reliable and likely supports Beginner vs Advanced contrast, but Intermediate may be unstable without M5 role review.
 
-### sciq-test-00620 - full
+### sciq-test-00620 - endpoint_only
 
 - Split: `proposed_dev`
-- Concept: `downhill_ski_energy_comparison_problem`
+- Concept: `gravitational_potential_energy_body`
 - Question: Downhill skiiers gain little advantage from a running start because the initial kinetic energy is small compared with the gain in what other energy form?
 - Answer: `gravitational potential energy`
-- Alignment: `high_token_overlap` (0.8868)
-- Reason: Core evidence is reliable and the concept appears rich enough for Beginner/Intermediate/Advanced retrieval differences.
+- Alignment: `manual_allowed_span_replacement` (not_recomputed)
+- Reason: Allowed body evidence supports the energy-form answer; full three-level personalisation is not asserted without M5 review.
 
 ### sciq-test-00068 - none
 
@@ -194,11 +196,11 @@ This is an M3 provisional question-level screen. It does not replace M5 Evidence
 - Alignment: `evidence_exact_substring_of_support` (0.3243)
 - Reason: Core fact is reliable but too direct/thin for meaningful retrieval-side personalisation.
 
-### sciq-test-00955 - pending
+### sciq-test-00955 - none
 
 - Split: `proposed_dev`
-- Concept: `temperature_scales_section_summary`
+- Concept: `temperature_scales_body`
 - Question: Fahrenheit, celsius, and kelvin are all units which measure what?
 - Answer: `temperature`
-- Alignment: `low_token_overlap` (0.5385)
-- Reason: OpenStax evidence is accepted, but SciQ support alignment is low; inspect before using for personalisation.
+- Alignment: `manual_allowed_span_replacement` (not_recomputed)
+- Reason: Allowed body evidence is reliable, but the question remains a direct fact item with limited retrieval-side personalisation value.

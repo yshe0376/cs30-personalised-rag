@@ -218,6 +218,7 @@
       "required": [
         "span_id",
         "block_id",
+        "content_type",
         "document_id",
         "chapter_id",
         "char_start",
@@ -265,6 +266,17 @@
         "block_id": {
           "type": "string",
           "minLength": 1
+        },
+        "content_type": {
+          "type": "string",
+          "enum": [
+            "body",
+            "example",
+            "figure_caption",
+            "glossary",
+            "table",
+            "equation"
+          ]
         }
       }
     }

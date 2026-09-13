@@ -44,9 +44,9 @@ Topic-specialized concept groups avoid cross-chapter generic-label leakage:
 
 - `chemical_energy_glossary`
 - `electromagnetic_spectrum_glossary`
-- `temperature_scales_section_summary`
-- `explosive_bolts_probe_separation_problem`
-- `downhill_ski_energy_comparison_problem`
+- `temperature_scales_body`
+- `inelastic_collision_exploding_bolts`
+- `gravitational_potential_energy_body`
 
 ## Near-Duplicate Rule
 

@@ -29,6 +29,14 @@ QUESTION_TYPES = {
 ELIGIBILITY = {"full", "endpoint_only", "none", "pending"}
 SPLITS = {"proposed_dev", "proposed_test", "dev", "test", "holdout", "pending"}
 STATUSES = {"draft", "m3_initial", "reviewed", "disputed", "unresolved"}
+ALLOWED_EVIDENCE_CONTENT_TYPES = {
+    "body",
+    "equation",
+    "example",
+    "figure_caption",
+    "glossary",
+    "table",
+}
 SUFFICIENCY = {
     "core_sufficient",
     "joint_core",
@@ -131,6 +139,7 @@ def validate_span(
     for key in (
         "span_id",
         "block_id",
+        "content_type",
         "document_id",
         "chapter_id",
         "char_start",
@@ -143,6 +152,10 @@ def validate_span(
 
     require(span["sufficiency"] in SUFFICIENCY, f"{location}.sufficiency invalid")
     require(isinstance(span["block_id"], str), f"{location}.block_id must be str")
+    require(
+        span["content_type"] in ALLOWED_EVIDENCE_CONTENT_TYPES,
+        f"{location}.content_type is not allowed: {span['content_type']}",
+    )
     require(isinstance(span["char_start"], int), f"{location}.char_start must be int")
     require(isinstance(span["char_end"], int), f"{location}.char_end must be int")
     require(span["char_start"] < span["char_end"], f"{location} has empty span")
