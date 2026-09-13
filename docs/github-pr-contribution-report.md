@@ -2,20 +2,21 @@
 
 > Last synchronised: 2026-09-13
 > Repository: [yshe0376/cs30-personalised-rag](https://github.com/yshe0376/cs30-personalised-rag)
-> Scope: All 31 pull requests currently recorded in GitHub.
+> Scope: All 32 pull requests currently recorded in GitHub.
 > Purpose: Record who delivered each change, what changed, what problems were found, how they were resolved, and which interface owner receives the next hand-off.
 
 This is a living engineering ledger, not a substitute for the GitHub diff or review thread. GitHub is the source of truth for state, authorship, commits, and CI. Technical summaries below are based on PR descriptions, changed files, commits, repository contracts, and recorded review findings. An item marked **inferred** is an integration conclusion rather than a statement made by the PR author.
 
 ## 1. Current status and critical hand-offs
 
-As of the synchronisation date, 23 PRs are merged, 6 are closed without merge, and 2 remain open.
+As of the synchronisation date, 23 PRs are merged, 6 are closed without merge, and 3 remain open.
 
 | PR | Owner | State | Current decision or blocker | Next owner/action |
 |---:|---|---|---|---|
 | [#115](https://github.com/yshe0376/cs30-personalised-rag/pull/115) | `skyshylsylsy` | Open | Generation supports the four W5 conditions and native `EvidenceBundle`, but the shared Pipeline still passes `RetrievalResult`. M5 role labels are also not frozen. | Shared Pipeline/integration owner must switch the orchestration seam; M5 must freeze role labels; M1/M8 must run formal evaluation. |
 | [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft, mergeable, CI passing | The original 17/20 Gold coverage blocker was resolved by versioning the corpus filter to include `problem` and `summary`. The mapping now covers 20/20 spans, but this accepts a documented evaluation-leakage risk. The PR body still reports the superseded v1 figures. | M4 must update the PR body. M2 manual QA and M3 independent Gold review remain pending. M5 must address 1,911 embedding inputs above the model ceiling. |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | The initial abstention-cause attribution problem was fixed before merge. Reports now preserve the cause and expose system-level, model-level, and cause-specific views. | M1/M3/M4 must provide reportable Gold, mapping, and saved runs before formal benchmark values can be produced. |
+| [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Open | Publishes this living PR ledger and makes it discoverable from the README. | Review and merge the documentation; update this entry from Open to Merged after landing. |
 
 ### Important decision recorded for PR #137
 
@@ -25,7 +26,7 @@ The team selected the second of the two available M3/M4 alignment options: chang
 
 | GitHub account | PRs | Primary ownership shown by the PR history |
 |---|---:|---|
-| [yshe0376](https://github.com/yshe0376) | 15 | Shared framework, contracts, Pipeline integration, CI, configuration, project documentation, and M1 evaluation infrastructure |
+| [yshe0376](https://github.com/yshe0376) | 16 | Shared framework, contracts, Pipeline integration, CI, configuration, project documentation, and M1 evaluation infrastructure |
 | [novel-peng](https://github.com/novel-peng) | 4 | M4 structure-aware chunking, corpus construction, trace-back, and Gold-to-chunk mapping |
 | [chongshao223](https://github.com/chongshao223) | 4 | M2 OpenStax College Physics parser iterations and final parser delivery |
 | [leahwang126](https://github.com/leahwang126) | 2 | M3 SciQ questions and Gold Evidence data |
@@ -71,6 +72,7 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 | [#136](https://github.com/yshe0376/cs30-personalised-rag/pull/136) | `yshe0376` | Merged | Corpus-bound Gold normalisation, evaluation runner, and retrieval scoring |
 | [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft | Official 34-chapter M4 corpus and complete Gold mapping; leakage risk accepted and documented |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | Cause-aware answer, abstention, format, and citation scoring |
+| [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Open | Publishes the living PR change and integration ledger |
 
 ## 4. Detailed change ledger
 
@@ -330,6 +332,14 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 - **Resolution:** Commit `0303412` preserved the cause per question, added cause counts/confusion views, and separated system-level abstention from model-only abstention metrics. Commit `75ec759` aligned the remaining answer-scoring rules and tests with the review contract.
 - **Interface hand-off:** Consumes M1 v0.2 run results, M3 answerability/answers, and M4 OR-of-AND mapping; produces auditable evaluation artifacts for experiment and report owners. It does not rerun retrieval or generation.
 - **Verification/outcome:** Merged on 2026-09-13 after all four GitHub CI checks passed. The PR reports Ruff passing and 344 tests. Formal numbers still require frozen/reviewed Gold, a valid mapping, and reportable saved runs.
+
+### PR #139 — Pull request change and integration ledger
+
+- **Owner:** `yshe0376`
+- **Delivered:** This English living ledger, a 32-PR index, current hand-off dashboard, contributor overview, interface ownership register, maintenance rules, and a README link.
+- **Problem and resolution:** PR work, review findings, superseding changes, and downstream ownership were previously spread across PR pages and conversations. This PR consolidates them into one version-controlled reference. No material implementation issue is recorded.
+- **Interface hand-off:** All module owners update their own PR facts; the shared integration/documentation owner maintains cross-module status and ownership links.
+- **Verification/outcome:** Open as of 2026-09-13. Before creation, the branch passed 334 tests, Ruff, whitespace checks, relative-link checks, and a complete comparison against the 31 pre-existing GitHub PR IDs. This self-entry was added after GitHub assigned PR #139.
 
 ## 5. Interface ownership and dependency register
 
