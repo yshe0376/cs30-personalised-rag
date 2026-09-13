@@ -5,11 +5,13 @@ from __future__ import annotations
 from cs30.chunking.strategy import BlockChunkingStrategy
 from cs30.contracts import ContentType
 
-W5_CONFIG_ID = "w5-m4-official-v1"
+W5_CONFIG_ID = "w5-m4-official-v2"
 W5_EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Exclude assessment-like material from retrieval evidence.  Tables and equations
-# remain eligible because they can be necessary support for physics questions.
+# M3's Gold evidence includes problem and summary blocks. Keep those source
+# types in the shared corpus so the Gold-to-chunk mapping and M5 index use
+# exactly the same evidence universe. Other non-evidence navigation material
+# remains excluded.
 W5_INCLUDED_TYPES = (
     ContentType.BODY,
     ContentType.EXAMPLE,
@@ -17,6 +19,8 @@ W5_INCLUDED_TYPES = (
     ContentType.GLOSSARY,
     ContentType.TABLE,
     ContentType.EQUATION,
+    ContentType.PROBLEM,
+    ContentType.SUMMARY,
 )
 
 W5_CHUNKING_STRATEGY = BlockChunkingStrategy(
