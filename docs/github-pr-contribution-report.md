@@ -14,13 +14,17 @@ As of the synchronisation date, 23 PRs are merged, 6 are closed without merge, a
 | PR | Owner | State | Current decision or blocker | Next owner/action |
 |---:|---|---|---|---|
 | [#115](https://github.com/yshe0376/cs30-personalised-rag/pull/115) | `skyshylsylsy` | Open | Generation supports the four W5 conditions and native `EvidenceBundle`, but the shared Pipeline still passes `RetrievalResult`. M5 role labels are also not frozen. | Shared Pipeline/integration owner must switch the orchestration seam; M5 must freeze role labels; M1/M8 must run formal evaluation. |
-| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft, mergeable, CI passing | The original 17/20 Gold coverage blocker was resolved by versioning the corpus filter to include `problem` and `summary`. The mapping now covers 20/20 spans, but this accepts a documented evaluation-leakage risk. The PR body still reports the superseded v1 figures. | M4 must update the PR body. M2 manual QA and M3 independent Gold review remain pending. M5 must address 1,911 embedding inputs above the model ceiling. |
+| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft, mergeable, CI passing | The corpus filter stays as frozen; `problem` and `summary` remain excluded. M4 delivers an audited 17-question partial mapping and the three uncovered spans go back to M3. The PR body still describes the withdrawn widened-filter attempt. | M4 must update the PR body and leave draft. M3 must re-annotate three spans. M2 manual QA remains pending. M5 must address 1,446 embedding inputs above the model ceiling. |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | The initial abstention-cause attribution problem was fixed before merge. Reports now preserve the cause and expose system-level, model-level, and cause-specific views. | M1/M3/M4 must provide reportable Gold, mapping, and saved runs before formal benchmark values can be produced. |
 | [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Open | Publishes this living PR ledger and makes it discoverable from the README. | Review and merge the documentation; update this entry from Open to Merged after landing. |
 
 ### Important decision recorded for PR #137
 
-The team selected the second of the two available M3/M4 alignment options: change and version the M4 corpus filter instead of asking M3 to replace three evidence spans. M4 v2 now includes `problem` and `summary`, increasing the corpus from 3,684 to 3,979 chunks and producing a complete 20/20 mapping. This preserves the existing Gold annotations, but SciQ questions may retrieve near-verbatim textbook exercise text. Every evaluation report using this corpus must disclose that limitation, and v1 and v2 results must not be compared as if the corpus were unchanged.
+The team selected the first of the two available M3/M4 alignment options: keep the frozen corpus filter and return the three uncovered evidence spans to M3, rather than widening the filter to rescue them. The filter stays at `body`, `example`, `figure_caption`, `glossary`, `table`, and `equation`; `conceptual_question`, `problem`, and `summary` remain excluded.
+
+The reason is evaluation leakage rather than relevance. SciQ questions are derived from this textbook, so indexing its exercises and section summaries would let a question match its own source almost verbatim. Adding the 5,769 `problem` blocks to rescue two provisional spans was rejected on those grounds, at the cost of three Gold questions (`sciq-test-00614`, `sciq-test-00620`, `sciq-test-00955`, all `proposed_dev`), which reduces the usable dev set from 12 to 9 until M3 re-annotates.
+
+A widened v2 filter was briefly published and then withdrawn (`221bd86`, `dab80a1`). The authoritative record of this decision is `docs/构思与待定.md` (2026-09-13) and the indexing-policy section of `docs/interfaces.md`.
 
 ## 2. Contributor overview
 
@@ -70,7 +74,7 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 | [#134](https://github.com/yshe0376/cs30-personalised-rag/pull/134) | `yshe0376` | Merged | Provider-neutral textbook interface and catalogue |
 | [#135](https://github.com/yshe0376/cs30-personalised-rag/pull/135) | `leahwang126` | Merged | M3 Gold Evidence v0.1 and validation material |
 | [#136](https://github.com/yshe0376/cs30-personalised-rag/pull/136) | `yshe0376` | Merged | Corpus-bound Gold normalisation, evaluation runner, and retrieval scoring |
-| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft | Official 34-chapter M4 corpus and complete Gold mapping; leakage risk accepted and documented |
+| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft | Official 34-chapter M4 corpus and audited 17-question partial Gold mapping; leakage rejected, three spans returned to M3 |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | Cause-aware answer, abstention, format, and citation scoring |
 | [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Open | Publishes the living PR change and integration ledger |
 
@@ -318,11 +322,12 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 - **Owner:** `novel-peng`
 - **Delivered:** Reproducible 34-chapter corpus build, real all-MiniLM-L6-v2 tokenisation, corpus QA, source trace-back, duplicate provenance, identity guards, Gold normalisation, and M1-compatible mapping.
 - **Initial problem:** M4 v1 excluded assessment-like `problem` blocks and `summary`, while three M3 Gold spans used exactly those types. It correctly failed closed at 17/20 and withheld the formal mapping instead of silently producing an incomplete artifact.
-- **Resolution:** Commits `29801e4`, `f67a51b`, and `7af8501` versioned M4 to v2, included `problem` and `summary`, rebuilt the corpus, and emitted a 20/20 mapping. This adopted the filter-change option instead of re-annotating M3.
-- **Documentation issue:** The GitHub PR body still states the superseded v1 results: 3,684 chunks, 17/20 coverage, 1,446 over-ceiling inputs, and a withheld mapping. M4 should replace those figures with the v2 results before merge.
-- **Accepted risk:** Including textbook problems can make SciQ evaluation retrieve near-verbatim source exercises. Reports must disclose leakage risk and keep v1/v2 results separate.
-- **Interface hand-off:** Consumes M2 canonical blocks and M3 spans; produces corpus records/manifests for M5 plus `GoldChunkMapping` for M1/M8. M5 owns the response to 1,911 inputs above the 254-content-token ceiling.
-- **Verification/outcome:** Open draft, mergeable, and all four GitHub CI checks pass as of 2026-09-13. Current verified totals are 35,905 blocks, 3,979 chunks, 20 resolved spans, 20 fully covered spans, and 0 incomplete mappings. M2 manual QA and M3 independent review remain pending.
+- **Resolution:** A widened v2 filter including `problem` and `summary` was published and then withdrawn (`221bd86`, `dab80a1`). M4 instead kept the frozen filter and made the partial delivery auditable: `320a185` skips uncovered spans when building the M1-compatible artifact, `e394b81` and `0620a57` emit and test the bundle, and `da1bbc1` publishes the 17-question mapping. The three uncovered spans are returned to M3 for re-annotation.
+- **Rejected risk:** Including textbook problems would let SciQ evaluation retrieve near-verbatim source exercises, so the filter was not widened. The cost is three Gold questions, all in `proposed_dev`, which reduces the usable dev set from 12 to 9 until M3 re-annotates.
+- **Downstream handling:** M1 already reports an unmapped question as a `mapping_missing` exclusion, so development scoring proceeds with the gap visible while `strict_mapping` blocks reportable scoring. No M1 change was required.
+- **Documentation issue:** The GitHub PR body still describes the withdrawn widened-filter attempt. M4 should restore the current figures before merge.
+- **Interface hand-off:** Consumes M2 canonical blocks and M3 spans; produces corpus records/manifests for M5 plus `GoldChunkMapping` for M1/M8. M5 owns the response to 1,446 inputs above the 254-content-token ceiling.
+- **Verification/outcome:** Open draft, mergeable, and all four GitHub CI checks pass as of 2026-09-13. The delivery manifest records 35,905 blocks, 3,684 chunks, 20 resolved spans, 17 fully covered spans, 3 incomplete spans, and a 17-question evaluation mapping. M2 manual QA and M3 re-annotation remain pending.
 
 ### PR #138 — Cause-aware answer, abstention, format, and citation scoring
 
@@ -350,8 +355,8 @@ This table describes the current practical ownership inferred from PR authorship
 | Shared contracts and `ports.py` | `yshe0376` | M2-M8 | Contract changes require compatibility review and ADR/update discipline. |
 | Canonical textbook document and blocks | M2: `chongshao223`; shared/catalogue integration: `yshe0376` | M4 | M2 manual QA for the official corpus remains pending. |
 | Gold questions, spans, answers, and review status | M3: `leahwang126` | M4, M1, M8 | v0.1 is `m3_initial`, all answers are `D`, and no records are unanswerable. |
-| Chunking strategy, corpus records, manifest, Gold mapping | M4: `novel-peng` | M5, M6, M1, M8 | v2 includes problems/summaries and carries evaluation-leakage risk. |
-| Dense index and embedding configuration | M5: `Ntan0927` | M6 | #137 reports 1,911 inputs above the selected model's content-token ceiling. |
+| Chunking strategy, corpus records, manifest, Gold mapping | M4: `novel-peng` | M5, M6, M1, M8 | Filter excludes `problem`, `summary`, and `conceptual_question`; the mapping covers 17 of 20 Gold questions. |
+| Dense index and embedding configuration | M5: `Ntan0927` | M6 | #137 reports 1,446 inputs above the selected model's content-token ceiling. |
 | Retrieval service and evidence provenance | M6: `syj-111-s`; contract/config integration: `yshe0376` | EvidenceBundle, M7, M1, M8 | Thresholds and stopword behaviour must remain wired and recorded per run. |
 | EvidenceBundle, citation validation, UI | M8: `ZOEY-YUNYI` | M7, demo users, evaluation | Shared Pipeline still needs the native EvidenceBundle hand-off used by #115. |
 | Personalised prompt, reranking, and generation | M7: `skyshylsylsy`; prompt-field integration: `yshe0376` | M1 runner, M8 scorer | Role-label taxonomy and production Pipeline integration remain open. |
