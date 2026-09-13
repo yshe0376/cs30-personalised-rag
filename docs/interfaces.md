@@ -54,10 +54,21 @@ supporting evidence produces an answer that looks grounded but rests on the
 wrong material, and `validate_citations` cannot detect that: it checks where a
 citation came from, not what kind of text it is.
 
-Indexing policy is configuration, not contract. The agreed Week 2 default is to
-index `body`, `example`, `figure_caption`, and `glossary`; to keep
-`conceptual_question` and `problem` in a separate index; and to attach `heading`
-to its following block rather than indexing it alone.
+Indexing policy is configuration, not contract. The Week 5 frozen configuration
+`w5-m4-official-v1` supersedes the earlier Week 2 default: retrieval evidence is
+built from `body`, `example`, `figure_caption`, `glossary`, `table`, and
+`equation`. Tables and equations are included because they are often the
+necessary support for a physics question.
+
+`conceptual_question`, `problem`, and `summary` are excluded. This is an
+evaluation decision, not only a relevance one: the SciQ questions are derived
+from this textbook, so indexing its exercises and section summaries would let a
+question match its own source almost verbatim. `heading` is attached to its
+following block rather than indexed alone.
+
+A Gold span that falls outside this filter is not rescued by widening the
+filter. It is reported as a `mapping_missing` exclusion and returned to
+Member 3 for re-annotation.
 
 Blocks exist so structure survives the module seam. Without them a chunker
 receives undifferentiated text and has to re-derive section, page, and role
