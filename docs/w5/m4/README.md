@@ -164,6 +164,21 @@ python scripts/map_gold_spans.py \
 
 ## Downstream handoff
 
+Build separate, checksum-protected packages for M3 and M5:
+
+```bash
+python scripts/package_w5_m4_handoffs.py \
+  --artifact-root artifacts/w5/m4 \
+  --output-dir artifacts/w5/m4/handoffs/2026-09-13 \
+  --delivery-date 2026-09-13
+```
+
+The command refuses to write into a non-empty output folder. It creates an M3
+package containing only the unified source document and its corpus manifest,
+and an M5 package containing only the retrieval corpus and its QA evidence.
+Upload these generated ZIP files to the team Google Drive, not to GitHub, in
+accordance with the repository data policy.
+
 - M5 and M6 consume the same `corpus/records.jsonl` named by the manifest.
 - M5 reviews every `overlong_embedding_input` disposition before accepting the
   index.
