@@ -53,6 +53,8 @@ artifacts/w5/m4/
 │   └── traceback_records.json
 └── gold_mapping_diagnostic/
     ├── alignment_issues.json
+    ├── delivery_manifest.json
+    ├── evaluation_mapping_v0_1.json
     ├── gold_to_chunk_mapping.json
     └── matching_rule.json
 ```
@@ -124,7 +126,8 @@ python scripts/map_gold_spans.py \
   --corpus-dir artifacts/w5/m4/corpus \
   --document artifacts/w5/m4/source_corpus/openstax_document.json \
   --source-corpus-manifest artifacts/w5/m4/source_corpus/corpus_manifest.json \
-  --output-dir artifacts/w5/m4/gold_mapping
+  --output-dir artifacts/w5/m4/gold_mapping_diagnostic \
+  --allow-partial
 ```
 
 The fixed rule is `same_source_half_open_overlap@1.0`: a chunk matches a gold
@@ -133,15 +136,17 @@ character intervals overlap. All matching chunk IDs are retained. Whitespace
 between adjacent parser blocks does not make an otherwise complete evidence
 span partial.
 
-The normal command fails if any gold span lacks full substantive-character
-coverage. `--allow-partial` exists only for diagnosing M2/M3 alignment errors.
-It must not be used for the production M1 metric input.
+Without `--allow-partial`, the command fails if any Gold span lacks full
+substantive-character coverage. The reviewed partial-delivery mode retains all
+20 results in the detailed mapping but skips uncovered spans in the M1 artifact.
+If a question has no remaining covered spans, it is omitted from `items` so the
+M1 contract remains valid and the run is counted as `mapping_missing`.
 
-The 2026-09-12 diagnostic resolves all 20 spans against M2's source document,
+The 2026-09-13 partial delivery resolves all 20 spans against M2's source document,
 but the M4 filter covers only 17. Two spans point to `problem` blocks and one
-points to a `summary` block. Those categories are intentionally excluded, so
-M4 does not emit `evaluation_mapping_v0_1.json` until M3 supplies reviewed
-in-filter evidence or the team approves a versioned filter change. See
+points to a `summary` block. Those categories remain excluded. The partial M1
+mapping therefore contains 17 questions, while the diagnostic and delivery
+manifest retain the three exclusions and their reasons. See
 `M3_ALIGNMENT_ISSUES.md`.
 
 To prove that a rebuild did not silently change Recall units:
@@ -153,7 +158,8 @@ python scripts/map_gold_spans.py \
   --document artifacts/w5/m4/source_corpus/openstax_document.json \
   --source-corpus-manifest artifacts/w5/m4/source_corpus/corpus_manifest.json \
   --output-dir artifacts/w5/m4/gold-mapping-rebuild \
-  --expected-mapping artifacts/w5/m4/gold_mapping/gold_to_chunk_mapping.json
+  --expected-mapping artifacts/w5/m4/gold_mapping_diagnostic/gold_to_chunk_mapping.json \
+  --allow-partial
 ```
 
 ## Downstream handoff
@@ -161,7 +167,8 @@ python scripts/map_gold_spans.py \
 - M5 and M6 consume the same `corpus/records.jsonl` named by the manifest.
 - M5 reviews every `overlong_embedding_input` disposition before accepting the
   index.
-- M1 consumes `evaluation_mapping_v0_1.json` only after every span is fully
-  covered; `gold_to_chunk_mapping.json` remains the detailed M4 audit record.
+- M1 consumes the 17-question `evaluation_mapping_v0_1.json` and reports the
+  three omitted questions as `mapping_missing`; the 20-row detailed mapping
+  remains the M4 audit record.
 - Any corpus, chunk-config, tokenizer, gold-data or rule change produces a new
   identity and requires rebuilding both the index and the gold mapping.

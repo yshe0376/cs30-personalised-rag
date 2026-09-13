@@ -1,13 +1,13 @@
 # Week 5 Member 4 delivery status
 
-Date: 2026-09-12
+Date: 2026-09-13
 
 ## Outcome
 
 The 34-chapter M2 archive was prepared into one deterministic source corpus,
 M3 Gold v0.1 was normalized against that corpus, and the fixed M4 chunk corpus
-was built with M5's real tokenizer. A second clean run reproduced the source
-document, manifest, normalized Gold, chunk corpus identity and mapping identity.
+was built with M5's real tokenizer. The detailed diagnostic retains all 20 Gold
+spans, while the M1-compatible mapping contains the 17 fully covered questions.
 
 ## Verified results
 
@@ -23,7 +23,9 @@ document, manifest, normalized Gold, chunk corpus identity and mapping identity.
   254-content-token ceiling after two special tokens; 1,446 inputs are listed
   for M5 truncation or reconfiguration review.
 - Gold normalization: 20 resolved, 0 stale and 0 ambiguous.
-- Gold mapping: 17 fully covered and 3 blocked by the fixed content filter.
+- Gold mapping: 17 fully covered and 3 excluded by the fixed content filter.
+- M1 delivery: 17 questions and 17 spans; the 3 questions without a covered
+  span are omitted and reported as `mapping_missing`.
 - Verification: Ruff passed, M3's validator accepted all 20 records, and the
   complete repository test suite passed all 307 collected tests.
 
@@ -35,16 +37,15 @@ document, manifest, normalized Gold, chunk corpus identity and mapping identity.
   `sha256:896432aa0db5ce84f52971369f40b605115de44fe5d3c6e203af5923d9535fbf`
 - Chunk configuration ID:
   `sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61`
-- Diagnostic mapping ID:
+- Detailed mapping ID:
   `sha256:8b41c6fca540bf3008315fbfe3793db6cce94e7ac1baa0fbb16598d6bc08dff7`
+- M1-compatible mapping file SHA-256:
+  `7dba9892565a2639bd4d8482a83f9b494eff3469db4d503d3ced39633b114ff5`
 
 ## Remaining handoffs
 
-M3 must replace or independently review the three evidence spans listed in
-`M3_ALIGNMENT_ISSUES.md`, or the team must approve a new filter version. M5
-must decide the disposition of the 1,446 embedding inputs above the real model
-ceiling. M2's manual QA samples also remain pending in the supplied archive.
-
-The M1-compatible evaluation mapping is intentionally not emitted while any
-Gold span is uncovered. This prevents a partial mapping from silently changing
-retrieval Recall.
+M1 should use `evaluation_mapping_v0_1.json` and report
+`excluded_runs.mapping_missing = 3`. The three exclusions and their source
+content types are recorded in the delivery manifest and
+`M3_ALIGNMENT_ISSUES.md`. M5 must decide the disposition of the 1,446 embedding
+inputs above the real model ceiling. M2's manual QA samples remain pending.

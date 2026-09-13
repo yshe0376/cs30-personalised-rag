@@ -1,6 +1,6 @@
 {
-  "delivery_status": "engineering_complete_mapping_blocked",
-  "delivery_date": "2026-09-12",
+  "delivery_status": "engineering_complete_partial_mapping_emitted",
+  "delivery_date": "2026-09-13",
   "source_corpus": {
     "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
     "document_id": "openstax-cp2e-a052d9fae2a90e13",
@@ -40,8 +40,33 @@
     "matching_rule": "same_source_half_open_overlap@1.0",
     "fully_covered_span_count": 17,
     "incomplete_span_count": 3,
-    "m1_compatible_mapping_emitted": false,
-    "blocker_document": "M3_ALIGNMENT_ISSUES.md"
+    "m1_compatible_mapping_emitted": true,
+    "m1_compatible_mapping_sha256": "sha256:7dba9892565a2639bd4d8482a83f9b494eff3469db4d503d3ced39633b114ff5",
+    "evaluation_question_count": 17,
+    "evaluation_span_count": 17,
+    "excluded_question_count": 3,
+    "m1_exclusion_reason": "mapping_missing",
+    "excluded_questions": [
+      {
+        "question_id": "sciq-test-00614",
+        "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch08_p0374_b003_gold_0013",
+        "source_content_type": "problem",
+        "reason": "Gold evidence uses source content excluded by the fixed corpus filter: problem"
+      },
+      {
+        "question_id": "sciq-test-00620",
+        "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0336_b013_gold_0016",
+        "source_content_type": "problem",
+        "reason": "Gold evidence uses source content excluded by the fixed corpus filter: problem"
+      },
+      {
+        "question_id": "sciq-test-00955",
+        "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch13_p0592_b036_gold_0020",
+        "source_content_type": "summary",
+        "reason": "Gold evidence uses source content excluded by the fixed corpus filter: summary"
+      }
+    ],
+    "exclusion_document": "M3_ALIGNMENT_ISSUES.md"
   },
   "reproducibility": {
     "prepared_source_document_byte_identical": true,
