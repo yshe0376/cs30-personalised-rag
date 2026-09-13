@@ -5,7 +5,7 @@ This folder documents the M4 outputs for:
 - [#122 — Rebuild the unified corpus on the frozen document](https://github.com/yshe0376/cs30-personalised-rag/issues/122)
 - [#123 — Map gold spans to stable chunk sets](https://github.com/yshe0376/cs30-personalised-rag/issues/123)
 
-The implementation and 34-chapter engineering corpus were built on 2026-09-12
+The implementation and 34-chapter engineering corpus were rebuilt on 2026-09-13
 from M2's local archive and M3 Gold v0.1 merged in PR #135. M3 labels all 20
 records `m3_initial`, and M2's supplied QA files still mark their manual samples
 pending. The generated bundle is therefore reproducible engineering evidence,
@@ -17,12 +17,12 @@ not a reportable production evaluation corpus.
 
 | Setting | Value |
 | --- | --- |
-| Config ID | `w5-m4-official-v1` |
+| Config ID | `w5-m4-official-v2` |
 | Chunker version | `0.5.0` |
 | Target / minimum / maximum | `500 / 100 / 600` model-token counts |
 | Boundary policy | Whole parser blocks; never cross a chapter; isolate sections |
-| Included content | body, example, figure caption, glossary, table, equation |
-| Excluded content | headings, objectives, exercises, checks, sidebars, summaries, other |
+| Included content | body, example, figure caption, glossary, table, equation, problem, summary |
+| Excluded content | headings, objectives, checks, conceptual questions, sidebars, other |
 | Embedding context | Off; cited text and embedding input are identical |
 | Duplicate policy | Preserve source-distinct copies and report duplicate-text groups |
 | M5 model | `sentence-transformers/all-MiniLM-L6-v2` |
@@ -37,7 +37,7 @@ grouping target.
 Keep generated files together and separate from source code:
 
 ```text
-artifacts/w5/m4/
+artifacts/w5/m4-v2/
 ├── source_corpus/
 │   ├── corpus_manifest.json
 │   └── openstax_document.json
@@ -51,8 +51,8 @@ artifacts/w5/m4/
 │   ├── schema.json
 │   ├── statistics.json
 │   └── traceback_records.json
-└── gold_mapping_diagnostic/
-    ├── alignment_issues.json
+└── gold_mapping/
+    ├── evaluation_mapping_v0_1.json
     ├── gold_to_chunk_mapping.json
     └── matching_rule.json
 ```
@@ -70,13 +70,13 @@ the resulting corpus version:
 ```bash
 python -m cs30.evaluation.cli prepare-corpus \
   --archive PATH/TO/M2/data.zip \
-  --output-dir artifacts/w5/m4/source_corpus
+  --output-dir artifacts/w5/m4-v2/source_corpus
 
 python -m cs30.evaluation.cli normalize-gold \
   --gold m3_gold/gold_v0_1.jsonl \
-  --document artifacts/w5/m4/source_corpus/openstax_document.json \
-  --corpus-manifest artifacts/w5/m4/source_corpus/corpus_manifest.json \
-  --output artifacts/w5/m4/gold_normalized/gold_v0_2.jsonl
+  --document artifacts/w5/m4-v2/source_corpus/openstax_document.json \
+  --corpus-manifest artifacts/w5/m4-v2/source_corpus/corpus_manifest.json \
+  --output artifacts/w5/m4-v2/gold_normalized/gold_v0_2.jsonl
 ```
 
 ## Build the shared corpus
@@ -87,8 +87,8 @@ Install the M5 dependencies, then run:
 python -m pip install -e ".[dev,ml]"
 
 python scripts/build_w5_m4_delivery.py \
-  --document artifacts/w5/m4/source_corpus/openstax_document.json \
-  --output-dir artifacts/w5/m4/corpus
+  --document artifacts/w5/m4-v2/source_corpus/openstax_document.json \
+  --output-dir artifacts/w5/m4-v2/corpus
 ```
 
 For a reproducibility check, preserve the first manifest and rebuild to a new
@@ -97,8 +97,8 @@ folder:
 ```bash
 python scripts/build_w5_m4_delivery.py \
   --document PATH/TO/M2/openstax_document.json \
-  --output-dir artifacts/w5/m4/corpus-rebuild \
-  --expected-manifest artifacts/w5/m4/corpus/manifest.json
+  --output-dir artifacts/w5/m4-v2/corpus-rebuild \
+  --expected-manifest artifacts/w5/m4-v2/corpus/manifest.json
 ```
 
 The command fails before accepting the delivery if:
@@ -120,11 +120,11 @@ membership as mapping provenance and never changes M3's answers or annotations.
 
 ```bash
 python scripts/map_gold_spans.py \
-  --gold artifacts/w5/m4/gold_normalized/gold_v0_2.jsonl \
-  --corpus-dir artifacts/w5/m4/corpus \
-  --document artifacts/w5/m4/source_corpus/openstax_document.json \
-  --source-corpus-manifest artifacts/w5/m4/source_corpus/corpus_manifest.json \
-  --output-dir artifacts/w5/m4/gold_mapping
+  --gold artifacts/w5/m4-v2/gold_normalized/gold_v0_2.jsonl \
+  --corpus-dir artifacts/w5/m4-v2/corpus \
+  --document artifacts/w5/m4-v2/source_corpus/openstax_document.json \
+  --source-corpus-manifest artifacts/w5/m4-v2/source_corpus/corpus_manifest.json \
+  --output-dir artifacts/w5/m4-v2/gold_mapping
 ```
 
 The fixed rule is `same_source_half_open_overlap@1.0`: a chunk matches a gold
@@ -137,23 +137,22 @@ The normal command fails if any gold span lacks full substantive-character
 coverage. `--allow-partial` exists only for diagnosing M2/M3 alignment errors.
 It must not be used for the production M1 metric input.
 
-The 2026-09-12 diagnostic resolves all 20 spans against M2's source document,
-but the M4 filter covers only 17. Two spans point to `problem` blocks and one
-points to a `summary` block. Those categories are intentionally excluded, so
-M4 does not emit `evaluation_mapping_v0_1.json` until M3 supplies reviewed
-in-filter evidence or the team approves a versioned filter change. See
+The 2026-09-13 v2 configuration resolves the M3/M4 scope mismatch by including
+`problem` and `summary`, because M3's Gold evidence uses both types. All 20
+spans are now fully covered, and M4 emits `evaluation_mapping_v0_1.json`. The
+decision and its evaluation-leakage caveat are recorded in
 `M3_ALIGNMENT_ISSUES.md`.
 
 To prove that a rebuild did not silently change Recall units:
 
 ```bash
 python scripts/map_gold_spans.py \
-  --gold artifacts/w5/m4/gold_normalized/gold_v0_2.jsonl \
-  --corpus-dir artifacts/w5/m4/corpus-rebuild \
-  --document artifacts/w5/m4/source_corpus/openstax_document.json \
-  --source-corpus-manifest artifacts/w5/m4/source_corpus/corpus_manifest.json \
-  --output-dir artifacts/w5/m4/gold-mapping-rebuild \
-  --expected-mapping artifacts/w5/m4/gold_mapping/gold_to_chunk_mapping.json
+  --gold artifacts/w5/m4-v2/gold_normalized/gold_v0_2.jsonl \
+  --corpus-dir artifacts/w5/m4-v2/corpus-rebuild \
+  --document artifacts/w5/m4-v2/source_corpus/openstax_document.json \
+  --source-corpus-manifest artifacts/w5/m4-v2/source_corpus/corpus_manifest.json \
+  --output-dir artifacts/w5/m4-v2/gold-mapping-rebuild \
+  --expected-mapping artifacts/w5/m4-v2/gold_mapping/gold_to_chunk_mapping.json
 ```
 
 ## Downstream handoff
