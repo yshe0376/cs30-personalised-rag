@@ -245,6 +245,48 @@ def test_gold_mapping_fails_closed_on_uncovered_span(tmp_path: Path) -> None:
         )
 
 
+def test_evaluation_mapping_skips_uncovered_spans_and_empty_questions() -> None:
+    document = make_document()
+    chunks = make_chunks(document)
+    included = document.blocks[0]
+    excluded = document.blocks[2]
+    mapping = map_gold_spans_to_chunks(
+        [
+            GoldSpan(
+                gold_span_id="gold-included",
+                question_id="question-included",
+                document_id=document.document_id,
+                chapter_id=included.chapter_id,
+                char_start=included.char_start,
+                char_end=included.char_end,
+            ),
+            GoldSpan(
+                gold_span_id="gold-excluded",
+                question_id="question-excluded",
+                document_id=document.document_id,
+                chapter_id=excluded.chapter_id,
+                char_start=excluded.char_start,
+                char_end=excluded.char_end,
+            ),
+        ],
+        chunks,
+        corpus_id="sha256:corpus",
+        chunk_config_id="sha256:config",
+        documents=[document],
+        require_full_coverage=False,
+    )
+
+    evaluation_mapping = build_evaluation_mapping(
+        mapping,
+        corpus_version="fixture-corpus-v1",
+    )
+
+    assert [item["question_id"] for item in evaluation_mapping["items"]] == [
+        "question-included"
+    ]
+    assert evaluation_mapping["items"][0]["spans"][0]["span_id"] == "gold-included"
+
+
 def test_identity_guards_name_changed_dimensions() -> None:
     with pytest.raises(ValueError, match="corpus_id"):
         verify_corpus_identity(
@@ -337,3 +379,117 @@ def test_gold_mapping_cli_writes_only_the_versioned_mapping_bundle(
         "gold_to_chunk_mapping.json",
         "matching_rule.json",
     ]
+
+
+def test_gold_mapping_cli_partial_delivery_lists_omitted_questions(
+    tmp_path: Path,
+) -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    document = make_document()
+    document_path = tmp_path / "document.json"
+    document_path.write_text(document.model_dump_json(indent=2), encoding="utf-8")
+    corpus_dir = tmp_path / "corpus"
+    export_retrieval_corpus(
+        [document],
+        make_chunks(document),
+        corpus_dir,
+        rebuild_command="test rebuild",
+    )
+    included = document.blocks[0]
+    excluded = document.blocks[2]
+
+    def record(question_id: str, span_id: str, block) -> dict[str, object]:
+        return {
+            "schema_version": "0.2",
+            "question_id": question_id,
+            "corpus_version": "fixture-corpus-v1",
+            "annotation_status": "m3_initial",
+            "gold_core_evidence_sets": [
+                [
+                    {
+                        "span_id": span_id,
+                        "document_id": document.document_id,
+                        "chapter_id": block.chapter_id,
+                        "corpus_char_start": block.char_start,
+                        "corpus_char_end": block.char_end,
+                        "verbatim_text": document.block_text(block),
+                        "resolution_status": "resolved",
+                        "resolved_block_id": block.block_id,
+                        "sufficiency": "core_sufficient",
+                    }
+                ]
+            ],
+            "partial_evidence": [],
+        }
+
+    gold_path = tmp_path / "gold.jsonl"
+    gold_path.write_text(
+        "\n".join(
+            json.dumps(item)
+            for item in (
+                record("question-included", "gold-included", included),
+                record("question-excluded", "gold-excluded", excluded),
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    source_manifest_path = tmp_path / "source_corpus_manifest.json"
+    source_manifest_path.write_text(
+        json.dumps({"corpus_version": "fixture-corpus-v1"}),
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "mapping"
+    subprocess.run(
+        [
+            sys.executable,
+            str(repository_root / "scripts" / "map_gold_spans.py"),
+            "--gold",
+            str(gold_path),
+            "--corpus-dir",
+            str(corpus_dir),
+            "--document",
+            str(document_path),
+            "--output-dir",
+            str(output_dir),
+            "--source-corpus-manifest",
+            str(source_manifest_path),
+            "--allow-partial",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert sorted(path.name for path in output_dir.iterdir()) == [
+        "alignment_issues.json",
+        "delivery_manifest.json",
+        "evaluation_mapping_v0_1.json",
+        "gold_to_chunk_mapping.json",
+        "matching_rule.json",
+    ]
+    evaluation_mapping = json.loads(
+        (output_dir / "evaluation_mapping_v0_1.json").read_text(encoding="utf-8")
+    )
+    delivery_manifest = json.loads(
+        (output_dir / "delivery_manifest.json").read_text(encoding="utf-8")
+    )
+    assert [item["question_id"] for item in evaluation_mapping["items"]] == [
+        "question-included"
+    ]
+    assert delivery_manifest["evaluation_question_count"] == 1
+    assert delivery_manifest["evaluation_span_count"] == 1
+    assert delivery_manifest["excluded_question_count"] == 1
+    assert delivery_manifest["excluded_questions"] == [
+        {
+            "question_id": "question-excluded",
+            "gold_span_ids": ["gold-excluded"],
+            "coverage_statuses": ["none"],
+            "source_content_types": ["problem"],
+            "reason": (
+                "Gold evidence uses source content excluded by the fixed corpus "
+                "filter: problem"
+            ),
+        }
+    ]
+    assert delivery_manifest["m1_exclusion_reason"] == "mapping_missing"
