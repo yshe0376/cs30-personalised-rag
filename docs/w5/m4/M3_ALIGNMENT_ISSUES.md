@@ -1,11 +1,11 @@
-# M3-to-M4 alignment decision
+# M3-to-M4 alignment issues
 
-Status: resolved by the versioned M4 configuration on 2026-09-13.
+Status: blocked handoff identified by the 2026-09-12 fail-closed mapping run.
 
 M1 normalization resolved all 20 M3 Gold v0.1 spans against the prepared
-34-chapter M2 corpus: 20 resolved, 0 stale and 0 ambiguous. The original M4 v1
-filter covered 17 spans. The remaining three spans established that M3's Gold
-evidence universe includes `problem` and `summary`:
+34-chapter M2 corpus: 20 resolved, 0 stale and 0 ambiguous. The fixed M4 corpus
+filter then fully covered 17 spans. The following three spans are outside that
+filter:
 
 | Question ID | Span ID | Parser content type | Reason |
 | --- | --- | --- | --- |
@@ -13,13 +13,18 @@ evidence universe includes `problem` and `summary`:
 | `sciq-test-00620` | `openstax-cp2e-a052d9fae2a90e13_ch07_p0336_b013_gold_0016` | `problem` | M3 selected evidence from Problems & Exercises. |
 | `sciq-test-00955` | `openstax-cp2e-a052d9fae2a90e13_ch13_p0592_b036_gold_0020` | `summary` | M3 selected evidence from the section summary. |
 
-M4 v2 now includes both content types. The rebuilt corpus contains 3,979 chunks,
-and the mapping covers all 20 Gold spans with 0 incomplete spans. The formal
-`evaluation_mapping_v0_1.json` is emitted for M1, and M5 can index the same v2
-corpus.
+The M4 filter intentionally excludes assessment-like material and summaries.
+Adding 5,769 `problem` blocks to satisfy two provisional spans would materially
+change the retrieval corpus and make the affected SciQ questions close to
+verbatim textbook-question matches. M4 therefore does not silently expand the
+filter or modify M3's annotations.
 
-This decision preserves consistency with M3 without changing M3's annotations.
-It also introduces a known evaluation limitation: SciQ questions derived from
-the same textbook problems may retrieve near-verbatim problem text. Reports
-must disclose this risk and must not compare v1 and v2 results as if they used
-the same retrieval corpus.
+One of the following versioned decisions is required:
+
+1. M3 supplies independently reviewed replacement evidence inside the current
+   body/example/figure-caption/glossary/table/equation filter; or
+2. the team approves a new corpus-filter version and accepts the evaluation
+   leakage implications.
+
+Until then, `gold_mapping_diagnostic/gold_to_chunk_mapping.json` records all 20
+outcomes, while the M1-compatible evaluation mapping is deliberately withheld.

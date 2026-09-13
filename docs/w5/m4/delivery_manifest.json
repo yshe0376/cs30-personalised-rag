@@ -1,6 +1,6 @@
 {
-  "delivery_status": "engineering_complete_mapping_emitted",
-  "delivery_date": "2026-09-13",
+  "delivery_status": "engineering_complete_mapping_blocked",
+  "delivery_date": "2026-09-12",
   "source_corpus": {
     "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
     "document_id": "openstax-cp2e-a052d9fae2a90e13",
@@ -11,19 +11,19 @@
     "character_count": 4981016
   },
   "chunk_corpus": {
-    "corpus_id": "sha256:f9cd500ed16ec9866ecd3acaae179a6d845f003b8a8e0de1afc855f14a6c663c",
-    "chunk_config_id": "sha256:18f6f63e1fd1b7523fc4a49901ee944fd8702e029408c89821b1c8986e345bc9",
-    "chunk_count": 3979,
+    "corpus_id": "sha256:896432aa0db5ce84f52971369f40b605115de44fe5d3c6e203af5923d9535fbf",
+    "chunk_config_id": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+    "chunk_count": 3684,
     "empty_chunks": 0,
     "duplicate_chunk_ids": 0,
     "cross_chapter_chunks": 0,
     "filtered_content_leakage_count": 0,
     "unmapped_included_block_count": 0,
-    "exact_duplicate_text_groups_preserved": 11,
+    "exact_duplicate_text_groups_preserved": 17,
     "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
     "model_max_sequence_length": 256,
     "content_token_ceiling": 254,
-    "overlong_input_count_for_m5_review": 1911,
+    "overlong_input_count_for_m5_review": 1446,
     "traceback_sample_count": 20
   },
   "gold": {
@@ -36,12 +36,12 @@
     "normalization_ambiguous": 0
   },
   "mapping": {
-    "mapping_id": "sha256:f4743820217944edb32389c2499e6cf678db243a090c4b1af8ff8096864084c0",
+    "mapping_id": "sha256:8b41c6fca540bf3008315fbfe3793db6cce94e7ac1baa0fbb16598d6bc08dff7",
     "matching_rule": "same_source_half_open_overlap@1.0",
-    "fully_covered_span_count": 20,
-    "incomplete_span_count": 0,
-    "m1_compatible_mapping_emitted": true,
-    "alignment_decision_document": "M3_ALIGNMENT_ISSUES.md"
+    "fully_covered_span_count": 17,
+    "incomplete_span_count": 3,
+    "m1_compatible_mapping_emitted": false,
+    "blocker_document": "M3_ALIGNMENT_ISSUES.md"
   },
   "reproducibility": {
     "prepared_source_document_byte_identical": true,
@@ -53,7 +53,7 @@
   "limitations": [
     "M2 automatic QA passed for all 34 chapters, but the supplied manual sample reviews remain pending.",
     "M3 Gold v0.1 is labelled m3_initial and is not independently reviewed.",
-    "Problem and summary content are included to match M3's Gold evidence scope, which may increase evaluation leakage for textbook-derived questions.",
+    "Three M3 spans reference parser content types excluded by the fixed M4 filter.",
     "The corpus is engineering evidence and must not be described as a reportable production evaluation corpus."
   ]
 }
