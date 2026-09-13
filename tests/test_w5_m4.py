@@ -36,7 +36,7 @@ def make_document() -> OpenStaxDocument:
     specs = [
         ("1", "1.1", ContentType.BODY, "Alpha evidence."),
         ("1", "1.1", ContentType.EQUATION, "F = m a."),
-        ("1", "1.1", ContentType.PROBLEM, "Excluded exercise."),
+        ("1", "1.1", ContentType.LEARNING_OBJECTIVE, "Excluded objective."),
         ("1", "1.2", ContentType.BODY, "Beta evidence."),
         ("2", "2.1", ContentType.BODY, "Gamma evidence."),
     ]
@@ -100,10 +100,11 @@ def make_chunks(document: OpenStaxDocument):
 
 
 def test_w5_configuration_is_one_fixed_non_experimental_strategy() -> None:
-    assert W5_CHUNKING_STRATEGY.candidate_id == "w5-m4-official-v1"
+    assert W5_CHUNKING_STRATEGY.candidate_id == "w5-m4-official-v2"
     assert W5_CHUNKING_STRATEGY.respect_section_boundaries is True
     assert W5_CHUNKING_STRATEGY.enrich_embed_text is False
-    assert ContentType.PROBLEM not in W5_CHUNKING_STRATEGY.include_types
+    assert ContentType.PROBLEM in W5_CHUNKING_STRATEGY.include_types
+    assert ContentType.SUMMARY in W5_CHUNKING_STRATEGY.include_types
     assert ContentType.CONCEPTUAL_QUESTION not in W5_CHUNKING_STRATEGY.include_types
     assert ContentType.EQUATION in W5_CHUNKING_STRATEGY.include_types
 
@@ -166,7 +167,7 @@ def test_filtered_content_leakage_is_reported() -> None:
             "chunk_id": leaked.chunk_id,
             "document_id": document.document_id,
             "block_id": "block-3",
-            "content_type": "problem",
+            "content_type": "learning_objective",
         }
     ]
 
