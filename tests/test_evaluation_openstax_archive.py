@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from cs30.contracts import OpenStaxChapter, OpenStaxDocument, TextBlock
-from cs30.evaluation import load_openstax_archive, write_prepared_corpus
+from cs30.evaluation import load_openstax_archive, load_prepared_corpus, write_prepared_corpus
 from cs30.evaluation.cli import main
 
 
@@ -144,12 +144,34 @@ def test_prepared_corpus_writes_portable_artifacts_once(tmp_path: Path) -> None:
     paths = write_prepared_corpus(corpus, output_dir)
 
     document_path = Path(paths["document"])
-    manifest_path = Path(paths["manifest"])
     assert json.loads(document_path.read_text(encoding="utf-8"))["text"] == "First."
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest = json.loads((output_dir / "corpus_manifest.json").read_text(encoding="utf-8"))
     assert manifest["corpus_version"] == corpus.corpus_version
+    assert manifest["evidence_policy_id"] == "w5-evidence-v1"
+    assert manifest["evidence_block_count"] == 1
+    assert (output_dir / "evidence_source_blocks.jsonl").is_file()
+    prepared = load_prepared_corpus(output_dir)
+    assert prepared.evidence_blocks_by_id["block-1"].chapter_char_start == 0
     with pytest.raises(FileExistsError, match="refusing to overwrite"):
         write_prepared_corpus(corpus, output_dir)
+
+
+def test_evidence_source_blocks_serialization_is_deterministic(tmp_path: Path) -> None:
+    archive_path = tmp_path / "data.zip"
+    _archive(archive_path, [("1", _document("1", "First."))])
+    corpus = load_openstax_archive(archive_path)
+    first_dir = tmp_path / "first"
+    second_dir = tmp_path / "second"
+
+    write_prepared_corpus(corpus, first_dir)
+    write_prepared_corpus(corpus, second_dir)
+
+    first_bytes = (first_dir / "evidence_source_blocks.jsonl").read_bytes()
+    second_bytes = (second_dir / "evidence_source_blocks.jsonl").read_bytes()
+    assert first_bytes == second_bytes
+    first_manifest = json.loads((first_dir / "corpus_manifest.json").read_text())
+    second_manifest = json.loads((second_dir / "corpus_manifest.json").read_text())
+    assert first_manifest["evidence_blocks_sha256"] == second_manifest["evidence_blocks_sha256"]
 
 
 def test_prepare_corpus_cli_writes_the_real_handoff_shape(tmp_path: Path, capsys) -> None:
@@ -172,4 +194,5 @@ def test_prepare_corpus_cli_writes_the_real_handoff_shape(tmp_path: Path, capsys
     summary = json.loads(capsys.readouterr().out)
     assert summary["chapter_count"] == 1
     assert (output_dir / "openstax_document.json").is_file()
+    assert (output_dir / "evidence_source_blocks.jsonl").is_file()
     assert (output_dir / "corpus_manifest.json").is_file()
