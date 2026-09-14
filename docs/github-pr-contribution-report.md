@@ -343,7 +343,7 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 ### PR #139 — Pull request change and integration ledger
 
 - **Owner:** `yshe0376`
-- **Delivered:** This English living ledger, a 32-PR index, current hand-off dashboard, contributor overview, interface ownership register, maintenance rules, and a README link.
+- **Delivered:** This English living ledger, initially a 32-PR index and now synchronised to 33 PRs, with a current hand-off dashboard, contributor overview, interface ownership register, maintenance rules, and a README link.
 - **Problem and resolution:** PR work, review findings, superseding changes, and downstream ownership were previously spread across PR pages and conversations. This PR consolidates them into one version-controlled reference. No material implementation issue is recorded.
 - **Interface hand-off:** All module owners update their own PR facts; the shared integration/documentation owner maintains cross-module status and ownership links.
 - **Verification/outcome:** Merged on 2026-09-13. Before creation, the branch passed 334 tests, Ruff, whitespace checks, relative-link checks, and a complete comparison against the 31 pre-existing GitHub PR IDs. This self-entry was added after GitHub assigned PR #139.
