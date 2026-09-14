@@ -1,17 +1,16 @@
-# M3 Gold Evidence v0.1
+# M3 Gold Evidence v0.1.1
 
 This directory contains the local contract for W5 M3 Gold Evidence annotation.
 
 ## Files
 
-- `gold_v0_1.jsonl`: original M3 Gold v0.1 JSONL, kept for traceability.
-- `gold_v0_1_1.jsonl`: v0.1.1 Gold JSONL normalized to the M4 unified
-  34-chapter source corpus; use this file for the current handoff.
-- `gold_v0_1.schema.json`: JSON Schema for one JSONL record.
-- `candidate_pool_v0_1.review_labeled.csv`: M3 manual review record for accepted candidates.
-- `dev_test_split_plan_v0_1.md`: deterministic proposed Dev/Test split plan.
-- `personalisation_candidate_list_v0_1.csv`: provisional M3 personalisation candidate screen.
-- `personalisation_candidate_list_v0_1.md`: narrative summary of the personalisation screen.
+- `gold_v0_1_1.jsonl`: M3 Gold v0.1.1 JSONL normalized to the M4
+  unified 34-chapter source corpus.
+- `gold_v0_1_1.schema.json`: JSON Schema for one JSONL record.
+- `candidate_pool_v0_1_1.review_labeled.csv`: M3 manual review record for accepted candidates.
+- `dev_test_split_plan_v0_1_1.md`: deterministic proposed Dev/Test split plan.
+- `personalisation_candidate_list_v0_1_1.csv`: provisional M3 personalisation candidate screen.
+- `personalisation_candidate_list_v0_1_1.md`: narrative summary of the personalisation screen.
 - `validate_gold.py`: dependency-free validator for schema-adjacent checks and OpenStax char-span audits.
 
 ## Record Semantics
@@ -20,6 +19,9 @@ This directory contains the local contract for W5 M3 Gold Evidence annotation.
 
 - Outer list: alternative sufficient evidence paths.
 - Inner list: spans that must be jointly retrieved for that path.
+
+For example, `[[span_A, span_B], [span_C]]` means either both `span_A` and
+`span_B` are retrieved together, or `span_C` alone is retrieved.
 
 `partial_evidence` is related but insufficient evidence. It must not be counted as a complete Gold hit.
 
@@ -35,7 +37,9 @@ Gold v0.1.1 is bound to the M4 unified source corpus:
 Consumers must use `document_id + char_start + char_end` against the unified
 document `text` to replay a span exactly. Each span also carries `chapter_id`
 and `block_id` so M4/M5 can map Gold evidence to chunks without reconstructing
-block membership from character offsets alone.
+block membership from character offsets alone. The span object does not carry
+`content_type`; consumers should read the block type from the source corpus by
+`block_id`.
 
 Evidence spans are restricted to six source content types:
 
@@ -52,7 +56,7 @@ sufficient allowed evidence exists, move the item to the unresolved pool rather
 than marking it unanswerable from support mismatch alone.
 
 `annotation_status` is `m3_initial` for this package. The
-`candidate_pool_v0_1.review_labeled.csv` file records M3's manual accept
+`candidate_pool_v0_1_1.review_labeled.csv` file records M3's manual accept
 decisions, but it is not an independent M2 provenance review.
 
 `personalisation_eligibility` is intentionally `pending` in `gold_v0_1_1.jsonl`
@@ -60,7 +64,7 @@ until M1 confirms the A3 taxonomy definition.
 
 ## Known Limitations
 
-These are deliberate limits of the v0.1 batch, not data errors. Read them
+These are deliberate limits of the v0.1.1 batch, not data errors. Read them
 before consuming the file.
 
 - **Answer position is not randomised.** Every record has `gold_answer: "D"`,
@@ -71,11 +75,7 @@ before consuming the file.
 - **No unanswerable records.** All 20 records are `answerable: true`, so this
   batch cannot exercise the abstention confusion table (correct abstention,
   answered-when-unanswerable).
-- **Lexical selection bias.** Candidates were kept when the answer string
-  appeared verbatim in a top OpenStax span, which favours 18 identification
-  questions out of 20. Do not use this batch to compare BM25, dense, and
-  hybrid retrieval quality.
-- **Accepted candidates only.** `candidate_pool_v0_1.review_labeled.csv`
+- **Accepted candidates only.** `candidate_pool_v0_1_1.review_labeled.csv`
   records the 20 accepted items; rejected and unalignable candidates are not
   logged here, so selection bias cannot be audited from it.
 - **Selection remains lexical.** This batch still favours questions whose
@@ -128,7 +128,7 @@ Loader smoke check:
 import json
 from pathlib import Path
 
-from m3_gold.validate_gold import load_gold_samples
+from cs30.evaluation import load_gold_samples
 
 document = json.loads(
     Path("m3_unified_source_corpus/source_corpus/openstax_document.json").read_text()

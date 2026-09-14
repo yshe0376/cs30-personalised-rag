@@ -54,10 +54,11 @@ supporting evidence produces an answer that looks grounded but rests on the
 wrong material, and `validate_citations` cannot detect that: it checks where a
 citation came from, not what kind of text it is.
 
-Indexing policy is configuration, not contract. The agreed Week 2 default is to
-index `body`, `example`, `figure_caption`, and `glossary`; to keep
-`conceptual_question` and `problem` in a separate index; and to attach `heading`
-to its following block rather than indexing it alone.
+Indexing policy is configuration, not contract. The current main evidence
+scope indexes `body`, `equation`, `example`, `figure_caption`, `glossary`, and
+`table`; it keeps `summary`, `learning_objective`, `conceptual_question`, and
+`problem` out of core evidence. `heading` is attached to its following block
+rather than indexed alone.
 
 Blocks exist so structure survives the module seam. Without them a chunker
 receives undifferentiated text and has to re-derive section, page, and role

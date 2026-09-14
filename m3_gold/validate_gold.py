@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CORPUS_ROOT = ROOT / "m3_unified_source_corpus" / "source_corpus"
 LEGACY_CORPUS_ROOT = ROOT / "data" / "processed" / "openstax"
 FALLBACK_CORPUS_ROOT = ROOT / "Openstax"
-SCHEMA_PATH = Path(__file__).with_name("gold_v0_1.schema.json")
+SCHEMA_PATH = Path(__file__).with_name("gold_v0_1_1.schema.json")
 OPTION_IDS = ("A", "B", "C", "D")
 SOURCE_SPLITS = {"train", "validation", "test"}
 DIFFICULTIES = {"easy", "medium", "hard", "pending"}
@@ -30,14 +30,6 @@ QUESTION_TYPES = {
 ELIGIBILITY = {"full", "endpoint_only", "none", "pending"}
 SPLITS = {"proposed_dev", "proposed_test", "dev", "test", "holdout", "pending"}
 STATUSES = {"draft", "m3_initial", "reviewed", "disputed", "unresolved"}
-ALLOWED_EVIDENCE_CONTENT_TYPES = {
-    "body",
-    "equation",
-    "example",
-    "figure_caption",
-    "glossary",
-    "table",
-}
 SUFFICIENCY = {
     "core_sufficient",
     "joint_core",
@@ -180,7 +172,6 @@ def validate_span(
     for key in (
         "span_id",
         "block_id",
-        "content_type",
         "document_id",
         "chapter_id",
         "char_start",
@@ -193,10 +184,6 @@ def validate_span(
 
     require(span["sufficiency"] in SUFFICIENCY, f"{location}.sufficiency invalid")
     require(isinstance(span["block_id"], str), f"{location}.block_id must be str")
-    require(
-        span["content_type"] in ALLOWED_EVIDENCE_CONTENT_TYPES,
-        f"{location}.content_type is not allowed: {span['content_type']}",
-    )
     require(isinstance(span["char_start"], int), f"{location}.char_start must be int")
     require(isinstance(span["char_end"], int), f"{location}.char_end must be int")
     require(span["char_start"] < span["char_end"], f"{location} has empty span")
@@ -210,15 +197,14 @@ def validate_span(
         f"{location}.document_id/chapter_id not found: {document_key}",
     )
     document = documents[document_key]
-    block = document.get("block_index", {}).get(span["block_id"])
+    block_index = document.get("block_index")
+    block = block_index.get(span["block_id"]) if block_index is not None else None
+    if block_index is not None:
+        require(block is not None, f"{location}.block_id not found")
     if block is not None:
         require(
             str(block["chapter_id"]) == str(span["chapter_id"]),
             f"{location}.chapter_id does not match block_id",
-        )
-        require(
-            block["content_type"] == span["content_type"],
-            f"{location}.content_type does not match block_id",
         )
         require(
             block["char_start"]
