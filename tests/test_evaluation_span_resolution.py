@@ -171,7 +171,7 @@ def test_missing_block_id_uses_replayed_chapter_offset(
 
     assert result.status is SpanResolutionStatus.RESOLVED
     assert result.method is SpanResolutionMethod.CHAPTER_OFFSET
-    assert result.resolved_block_id is None
+    assert result.resolved_block_id == "three-first-repeat"
     assert test_corpus.text[result.corpus_char_start : result.corpus_char_end] == "Repeat."
 
 

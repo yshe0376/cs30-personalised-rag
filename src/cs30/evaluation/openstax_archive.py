@@ -17,11 +17,13 @@ import hashlib
 import json
 import re
 import zipfile
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from cs30.contracts import OpenStaxChapter, OpenStaxDocument, TextBlock
+from cs30.evidence_policy import EVIDENCE_CONTENT_TYPES, EVIDENCE_POLICY_ID
 
 _CHAPTER_ENTRY = re.compile(r"^parsed_openstax_ch[^/]+/openstax_document\.json$")
 
@@ -98,6 +100,22 @@ class _ChapterFragment:
     blocks: tuple[TextBlock, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class EvidenceSourceBlock:
+    """A policy-eligible source block with both coordinate systems."""
+
+    block_id: str
+    chapter_id: str
+    section_id: str | None
+    section_title: str | None
+    content_type: str
+    chapter_char_start: int
+    chapter_char_end: int
+    corpus_char_start: int
+    corpus_char_end: int
+    text: str
+
+
 @dataclass(frozen=True)
 class OpenStaxArchiveCorpus:
     """Unified corpus plus the immutable identities needed by M1 manifests."""
@@ -107,11 +125,14 @@ class OpenStaxArchiveCorpus:
     archive_sha256: str
     separator: str
     chapter_entries: dict[str, str]
+    evidence_blocks: tuple[EvidenceSourceBlock, ...] = ()
+    evidence_blocks_by_id: dict[str, EvidenceSourceBlock] = field(default_factory=dict)
 
     def manifest(self) -> dict[str, Any]:
         """Return a portable manifest; no absolute local path is included."""
 
         document = self.document
+        evidence_payload = _evidence_jsonl_bytes(self.document)
         return {
             "manifest_version": "1.0",
             "corpus_version": self.corpus_version,
@@ -126,6 +147,12 @@ class OpenStaxArchiveCorpus:
             "character_count": len(document.text),
             "block_count": len(document.blocks),
             "archive_sha256": self.archive_sha256,
+            "evidence_policy_id": EVIDENCE_POLICY_ID,
+            "evidence_block_count": len(_evidence_records(self.document)),
+            "excluded_block_count": len(document.blocks)
+            - len(_evidence_records(self.document)),
+            "excluded_by_type": _excluded_by_type(self.document),
+            "evidence_blocks_sha256": _sha256_bytes(evidence_payload),
             "separator": self.separator,
             "chapter_entries": dict(
                 sorted(
@@ -326,18 +353,32 @@ def load_openstax_document(path: str | Path) -> OpenStaxDocument:
 
 
 def load_prepared_corpus(
-    document_path: str | Path,
+    prepared_dir: str | Path,
     manifest_path: str | Path | None = None,
 ) -> OpenStaxArchiveCorpus:
-    """Load a prepared corpus only when its manifest still verifies its identity."""
+    """Load the three-file prepared corpus and verify its evidence handoff.
 
-    document_source = Path(document_path).expanduser().resolve()
+    The public form accepts the prepared directory.  The optional legacy
+    manifest argument keeps existing CLI invocations source-compatible while
+    all files in the normal form remain fixed to that directory.
+    """
+
+    source = Path(prepared_dir).expanduser().resolve()
+    if source.is_dir():
+        document_source = source / "openstax_document.json"
+        manifest_source = (
+            Path(manifest_path).expanduser().resolve()
+            if manifest_path is not None
+            else source / "corpus_manifest.json"
+        )
+    else:
+        document_source = source
+        manifest_source = (
+            Path(manifest_path).expanduser().resolve()
+            if manifest_path is not None
+            else source.parent / "corpus_manifest.json"
+        )
     document = load_openstax_document(document_source)
-    manifest_source = (
-        Path(manifest_path).expanduser().resolve()
-        if manifest_path is not None
-        else document_source.parent / "corpus_manifest.json"
-    )
     if not manifest_source.is_file():
         raise FileNotFoundError(
             "prepared corpus manifest not found: "
@@ -392,12 +433,32 @@ def load_prepared_corpus(
     if set(chapter_entries) != set(chapter_ids):
         raise ValueError("prepared corpus manifest chapter_entries do not match the document")
 
+    evidence_path = document_source.parent / "evidence_source_blocks.jsonl"
+    if not evidence_path.is_file():
+        raise FileNotFoundError(
+            "prepared corpus evidence file not found: "
+            f"{evidence_path}; formal evaluation requires evidence_source_blocks.jsonl"
+        )
+    try:
+        evidence_bytes = evidence_path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"failed to read prepared evidence blocks: {exc}") from exc
+    if payload.get("evidence_policy_id") != EVIDENCE_POLICY_ID:
+        raise ValueError("prepared corpus evidence_policy_id does not match the shared policy")
+    if payload.get("evidence_blocks_sha256") != _sha256_bytes(evidence_bytes):
+        raise ValueError("prepared evidence blocks do not match the manifest checksum")
+    evidence_blocks = _parse_evidence_blocks(evidence_bytes, document)
+    if payload.get("evidence_block_count") != len(evidence_blocks):
+        raise ValueError("prepared corpus evidence_block_count does not match the evidence file")
+
     return OpenStaxArchiveCorpus(
         document=document,
         corpus_version=expected_version,
         archive_sha256=payload["archive_sha256"],
         separator=separator,
         chapter_entries=chapter_entries,
+        evidence_blocks=tuple(evidence_blocks),
+        evidence_blocks_by_id={block.block_id: block for block in evidence_blocks},
     )
 
 
@@ -408,10 +469,13 @@ def write_prepared_corpus(
     """Write a unified contract document and manifest without overwriting files."""
 
     destination = Path(output_dir)
+    if destination.exists() and (not destination.is_dir() or any(destination.iterdir())):
+        raise FileExistsError(f"refusing to overwrite prepared corpus directory: {destination}")
     destination.mkdir(parents=True, exist_ok=True)
     document_path = destination / "openstax_document.json"
+    evidence_path = destination / "evidence_source_blocks.jsonl"
     manifest_path = destination / "corpus_manifest.json"
-    existing = [path for path in (document_path, manifest_path) if path.exists()]
+    existing = [path for path in (document_path, evidence_path, manifest_path) if path.exists()]
     if existing:
         shown = ", ".join(str(path) for path in existing)
         raise FileExistsError(f"refusing to overwrite prepared corpus files: {shown}")
@@ -419,8 +483,201 @@ def write_prepared_corpus(
         json.dumps(corpus.document.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
+    evidence_bytes = _evidence_jsonl_bytes(corpus.document)
+    evidence_path.write_bytes(evidence_bytes)
+    manifest = corpus.manifest()
+    if manifest["evidence_blocks_sha256"] != _sha256_bytes(evidence_bytes):
+        raise AssertionError("evidence manifest checksum was not generated from the output bytes")
     manifest_path.write_text(
-        json.dumps(corpus.manifest(), indent=2, ensure_ascii=False) + "\n",
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
-    return {"document": str(document_path), "manifest": str(manifest_path)}
+    return {
+        "document": str(document_path),
+        "evidence": str(evidence_path),
+        "manifest": str(manifest_path),
+    }
+
+
+def _excluded_by_type(document: OpenStaxDocument) -> dict[str, int]:
+    """Count blocks the evidence policy leaves out, so a report can cite them."""
+
+    eligible = {content_type.value for content_type in EVIDENCE_CONTENT_TYPES}
+    counts: Counter[str] = Counter(
+        block.content_type.value
+        for block in document.blocks
+        if block.content_type.value not in eligible
+    )
+    return dict(sorted(counts.items()))
+
+
+def _evidence_records(document: OpenStaxDocument) -> list[dict[str, Any]]:
+    chapters = {chapter.chapter_id: chapter for chapter in document.chapters}
+    records: list[dict[str, Any]] = []
+    for source_block in document.blocks:
+        if source_block.content_type.value not in {
+            content_type.value for content_type in EVIDENCE_CONTENT_TYPES
+        }:
+            continue
+        if source_block.block_id is None:
+            raise ValueError("policy-eligible block has no block_id")
+        chapter = chapters.get(source_block.chapter_id)
+        if chapter is None:
+            raise ValueError(f"evidence block references unknown chapter: {source_block.block_id}")
+        local_start = source_block.char_start - chapter.char_start
+        local_end = source_block.char_end - chapter.char_start
+        if local_start < 0 or local_end > chapter.char_end - chapter.char_start:
+            raise ValueError(f"evidence block falls outside chapter: {source_block.block_id}")
+        records.append(
+            {
+                "block_id": source_block.block_id,
+                "chapter_id": source_block.chapter_id,
+                "content_type": source_block.content_type.value,
+                "section_id": source_block.section_id,
+                "section_title": source_block.section_title,
+                "chapter_char_start": local_start,
+                "chapter_char_end": local_end,
+                "corpus_char_start": source_block.char_start,
+                "corpus_char_end": source_block.char_end,
+                "text": document.text[source_block.char_start : source_block.char_end],
+            }
+        )
+    return sorted(records, key=lambda item: (item["corpus_char_start"], item["block_id"]))
+
+
+def _evidence_jsonl_bytes(document: OpenStaxDocument) -> bytes:
+    return b"".join(
+        (
+            json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+            + "\n"
+        ).encode("utf-8")
+        for record in _evidence_records(document)
+    )
+
+
+def _parse_evidence_blocks(
+    evidence_bytes: bytes,
+    document: OpenStaxDocument,
+) -> list[EvidenceSourceBlock]:
+    try:
+        lines = evidence_bytes.decode("utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        raise ValueError("prepared evidence blocks are not valid UTF-8") from exc
+    chapters = {chapter.chapter_id: chapter for chapter in document.chapters}
+    source_blocks = {
+        block.block_id: block for block in document.blocks if block.block_id is not None
+    }
+    expected_keys = {
+        "block_id",
+        "chapter_id",
+        "content_type",
+        "section_id",
+        "section_title",
+        "chapter_char_start",
+        "chapter_char_end",
+        "corpus_char_start",
+        "corpus_char_end",
+        "text",
+    }
+    parsed: list[EvidenceSourceBlock] = []
+    seen: set[str] = set()
+    previous_start: int | None = None
+    for line_number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+            if not isinstance(payload, dict) or set(payload) != expected_keys:
+                raise ValueError("record fields do not match the evidence contract")
+            block = EvidenceSourceBlock(
+                block_id=_required_string(payload, "block_id"),
+                chapter_id=_required_string(payload, "chapter_id"),
+                section_id=_optional_string(payload, "section_id"),
+                section_title=_optional_string(payload, "section_title"),
+                content_type=_required_string(payload, "content_type"),
+                chapter_char_start=_required_int(payload, "chapter_char_start"),
+                chapter_char_end=_required_int(payload, "chapter_char_end"),
+                corpus_char_start=_required_int(payload, "corpus_char_start"),
+                corpus_char_end=_required_int(payload, "corpus_char_end"),
+                text=_required_string(payload, "text"),
+            )
+            source_block = source_blocks.get(block.block_id)
+            chapter = chapters.get(block.chapter_id)
+            if source_block is None or chapter is None:
+                raise ValueError("block_id or chapter_id is absent from the document")
+            if previous_start is not None and block.corpus_char_start < previous_start:
+                raise ValueError("records are not sorted by corpus_char_start")
+            if block.block_id in seen:
+                raise ValueError("duplicate block_id")
+            seen.add(block.block_id)
+            expected = _evidence_record_for_block(document, source_block, chapter)
+            if block != _evidence_block_from_record(expected):
+                raise ValueError("record does not match the canonical document block")
+            if block.content_type not in {item.value for item in EVIDENCE_CONTENT_TYPES}:
+                raise ValueError("record uses an ineligible content_type")
+            previous_start = block.corpus_char_start
+            parsed.append(block)
+        except (json.JSONDecodeError, TypeError, ValueError, KeyError) as exc:
+            raise ValueError(f"evidence_source_blocks.jsonl:{line_number}: {exc}") from exc
+    return parsed
+
+
+def _evidence_record_for_block(
+    document: OpenStaxDocument,
+    block: TextBlock,
+    chapter: OpenStaxChapter,
+) -> dict[str, Any]:
+    local_start = block.char_start - chapter.char_start
+    local_end = block.char_end - chapter.char_start
+    return {
+        "block_id": block.block_id,
+        "chapter_id": block.chapter_id,
+        "content_type": block.content_type.value,
+        "section_id": block.section_id,
+        "section_title": block.section_title,
+        "chapter_char_start": local_start,
+        "chapter_char_end": local_end,
+        "corpus_char_start": block.char_start,
+        "corpus_char_end": block.char_end,
+        "text": document.text[block.char_start : block.char_end],
+    }
+
+
+def _evidence_block_from_record(payload: dict[str, Any]) -> EvidenceSourceBlock:
+    return EvidenceSourceBlock(
+        block_id=payload["block_id"],
+        chapter_id=payload["chapter_id"],
+        section_id=payload["section_id"],
+        section_title=payload["section_title"],
+        content_type=payload["content_type"],
+        chapter_char_start=payload["chapter_char_start"],
+        chapter_char_end=payload["chapter_char_end"],
+        corpus_char_start=payload["corpus_char_start"],
+        corpus_char_end=payload["corpus_char_end"],
+        text=payload["text"],
+    )
+
+
+def _required_string(payload: dict[str, Any], field_name: str) -> str:
+    value = payload[field_name]
+    if not isinstance(value, str):
+        raise TypeError(f"{field_name} must be a string")
+    return value
+
+
+def _optional_string(payload: dict[str, Any], field_name: str) -> str | None:
+    value = payload[field_name]
+    if value is not None and not isinstance(value, str):
+        raise TypeError(f"{field_name} must be a string or null")
+    return value
+
+
+def _required_int(payload: dict[str, Any], field_name: str) -> int:
+    value = payload[field_name]
+    if type(value) is not int:
+        raise TypeError(f"{field_name} must be an integer")
+    return value
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
