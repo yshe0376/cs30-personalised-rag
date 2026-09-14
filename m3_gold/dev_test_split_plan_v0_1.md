@@ -2,8 +2,8 @@
 
 ## Scope
 
-This plan applies to `m3_gold/gold_v0_1.jsonl`, the current 20-record M3 Gold
-v0.1 set produced from `standardized/test.jsonl`.
+This plan applies to `m3_gold/gold_v0_1_1.jsonl`, the current 20-record M3 Gold
+v0.1.1 set produced from `standardized/test.jsonl`.
 
 These split labels are proposed only. They should not be treated as the frozen
 formal evaluation split until the formal Gold set is expanded and reviewed.
@@ -21,7 +21,7 @@ split and avoids random leakage across near-duplicate chapter concepts. Generic
 section labels such as glossary, section summary, and problems/exercises are
 not used as standalone concept groups; they are specialized by topic.
 
-## Current v0.1 Distribution
+## Current v0.1.1 Distribution
 
 Current record count: 20.
 
@@ -75,8 +75,8 @@ Recommended expansion procedure:
 The current proposed split file is:
 
 ```text
-m3_gold/gold_v0_1.jsonl
+m3_gold/gold_v0_1_1.jsonl
 ```
 
 No separate split report is included in this cleaned PR. The deterministic rule
-and current distribution above are the split audit record for v0.1.
+and current distribution above are the split audit record for v0.1.1.

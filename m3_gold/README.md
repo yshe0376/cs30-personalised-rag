@@ -4,7 +4,9 @@ This directory contains the local contract for W5 M3 Gold Evidence annotation.
 
 ## Files
 
-- `gold_v0_1.jsonl`: final M3 Gold v0.1 JSONL for this W5 package.
+- `gold_v0_1.jsonl`: original M3 Gold v0.1 JSONL, kept for traceability.
+- `gold_v0_1_1.jsonl`: v0.1.1 Gold JSONL normalized to the M4 unified
+  34-chapter source corpus; use this file for the current handoff.
 - `gold_v0_1.schema.json`: JSON Schema for one JSONL record.
 - `candidate_pool_v0_1.review_labeled.csv`: M3 manual review record for accepted candidates.
 - `dev_test_split_plan_v0_1.md`: deterministic proposed Dev/Test split plan.
@@ -23,15 +25,38 @@ This directory contains the local contract for W5 M3 Gold Evidence annotation.
 
 `gold_answer` is the option id (`A`, `B`, `C`, or `D`), not the raw answer text. The correct answer text remains in `gold_answer_text`.
 
-In the current local OpenStax parse, each parsed chapter has its own canonical
-`text` field while sharing the same `document_id`. Consumers must use
-`document_id + chapter_id + char_start + char_end` to replay a span exactly.
-Each span also carries `block_id` so M4 can map Gold evidence to chunks without
-reconstructing block membership from character offsets alone.
+Gold v0.1.1 is bound to the M4 unified source corpus:
+
+- Corpus root: `m3_unified_source_corpus/source_corpus/`
+- Source document: `openstax_document.json`
+- Corpus version:
+  `openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864`
+
+Consumers must use `document_id + char_start + char_end` against the unified
+document `text` to replay a span exactly. Each span also carries `chapter_id`
+and `block_id` so M4/M5 can map Gold evidence to chunks without reconstructing
+block membership from character offsets alone.
+
+Evidence spans are restricted to six source content types:
+
+- `body`
+- `equation`
+- `example`
+- `figure_caption`
+- `glossary`
+- `table`
+
+If the best support lands in `summary`, `learning_objective`, `problem`, or
+another excluded type, replace it with allowed evidence where possible. If no
+sufficient allowed evidence exists, move the item to the unresolved pool rather
+than marking it unanswerable from support mismatch alone.
 
 `annotation_status` is `m3_initial` for this package. The
 `candidate_pool_v0_1.review_labeled.csv` file records M3's manual accept
 decisions, but it is not an independent M2 provenance review.
+
+`personalisation_eligibility` is intentionally `pending` in `gold_v0_1_1.jsonl`
+until M1 confirms the A3 taxonomy definition.
 
 ## Known Limitations
 
@@ -53,10 +78,9 @@ before consuming the file.
 - **Accepted candidates only.** `candidate_pool_v0_1.review_labeled.csv`
   records the 20 accepted items; rejected and unalignable candidates are not
   logged here, so selection bias cannot be audited from it.
-- **Char spans assume a per-chapter parse.** Offsets are relative to the
-  document `text` of a parser run covering one chapter. A multi-chapter run
-  produces different offsets; map through `block_id` when offsets cannot be
-  guaranteed.
+- **Selection remains lexical.** This batch still favours questions whose
+  answer string appears verbatim in an OpenStax span. It should not be used to
+  compare BM25, dense, and hybrid retrieval quality.
 
 Randomised option order and unanswerable records are the first targets for
 Gold v0.2.
@@ -91,11 +115,29 @@ Run:
 
 ```sh
 python3 m3_gold/validate_gold.py \
-  --corpus-root data/processed/openstax \
-  m3_gold/gold_v0_1.jsonl
+  --corpus-root m3_unified_source_corpus/source_corpus \
+  m3_gold/gold_v0_1_1.jsonl
 ```
 
 If the parsed OpenStax corpus lives elsewhere, pass that directory with
-`--corpus-root` or set `CS30_OPENSTAX_ROOT`. The validator also falls back to a
-local `Openstax/` directory when the repository-standard processed corpus path
-is not present.
+`--corpus-root` or set `CS30_OPENSTAX_ROOT`.
+
+Loader smoke check:
+
+```python
+import json
+from pathlib import Path
+
+from m3_gold.validate_gold import load_gold_samples
+
+document = json.loads(
+    Path("m3_unified_source_corpus/source_corpus/openstax_document.json").read_text()
+)
+samples = load_gold_samples(
+    "m3_gold/gold_v0_1_1.jsonl",
+    documents={document["document_id"]: document["text"]},
+)
+```
+
+Calling `load_gold_samples("m3_gold/gold_v0_1_1.jsonl")` only parses records and
+does not validate spans against source text.

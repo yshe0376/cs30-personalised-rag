@@ -10,7 +10,8 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CORPUS_ROOT = ROOT / "data" / "processed" / "openstax"
+DEFAULT_CORPUS_ROOT = ROOT / "m3_unified_source_corpus" / "source_corpus"
+LEGACY_CORPUS_ROOT = ROOT / "data" / "processed" / "openstax"
 FALLBACK_CORPUS_ROOT = ROOT / "Openstax"
 SCHEMA_PATH = Path(__file__).with_name("gold_v0_1.schema.json")
 OPTION_IDS = ("A", "B", "C", "D")
@@ -85,7 +86,32 @@ def validate_schema_if_available(record: Any, schema: dict[str, Any] | None) -> 
         import jsonschema
     except ImportError:
         return
-    jsonschema.validate(instance=record, schema=schema)
+    try:
+        jsonschema.validate(instance=record, schema=schema)
+    except jsonschema.ValidationError as exc:
+        raise ValidationError(str(exc)) from exc
+
+
+def load_gold_samples(
+    gold_path: Path | str, documents: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
+    with Path(gold_path).open(encoding="utf-8") as input_file:
+        for line_no, line in enumerate(input_file, start=1):
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            if documents is not None:
+                for evidence_set in record.get("gold_core_evidence_sets", []):
+                    for span in evidence_set:
+                        document_text = documents[span["document_id"]]
+                        actual = document_text[span["char_start"] : span["char_end"]]
+                        require(
+                            actual == span["verbatim_text"],
+                            f"line {line_no}: loader span replay failed",
+                        )
+            records.append(record)
+    return records
 
 
 def load_documents(corpus_root: Path) -> dict[tuple[str, str], dict[str, Any]]:
@@ -96,6 +122,19 @@ def load_documents(corpus_root: Path) -> dict[tuple[str, str], dict[str, Any]]:
         )
 
     documents: dict[tuple[str, str], dict[str, Any]] = {}
+
+    unified_path = corpus_root / "openstax_document.json"
+    if unified_path.exists():
+        document = json.loads(unified_path.read_text(encoding="utf-8"))
+        block_index = {block["block_id"]: block for block in document.get("blocks", [])}
+        manifest_path = corpus_root / "corpus_manifest.json"
+        if manifest_path.exists():
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            document["corpus_version"] = manifest.get("corpus_version")
+        document["block_index"] = block_index
+        documents[(document["document_id"], "__unified__")] = document
+        return documents
+
     for path in corpus_root.rglob("openstax_document.json"):
         document = json.loads(path.read_text(encoding="utf-8"))
         for chapter in document.get("chapters", []):
@@ -113,6 +152,8 @@ def default_corpus_root() -> Path:
         return Path(env_value)
     if DEFAULT_CORPUS_ROOT.exists():
         return DEFAULT_CORPUS_ROOT
+    if LEGACY_CORPUS_ROOT.exists():
+        return LEGACY_CORPUS_ROOT
     if FALLBACK_CORPUS_ROOT.exists():
         return FALLBACK_CORPUS_ROOT
     return DEFAULT_CORPUS_ROOT
@@ -161,12 +202,32 @@ def validate_span(
     require(span["char_start"] < span["char_end"], f"{location} has empty span")
 
     document_id = span["document_id"]
-    document_key = (document_id, str(span["chapter_id"]))
+    document_key = (document_id, "__unified__")
+    if document_key not in documents:
+        document_key = (document_id, str(span["chapter_id"]))
     require(
         document_key in documents,
         f"{location}.document_id/chapter_id not found: {document_key}",
     )
-    text = documents[document_key]["text"]
+    document = documents[document_key]
+    block = document.get("block_index", {}).get(span["block_id"])
+    if block is not None:
+        require(
+            str(block["chapter_id"]) == str(span["chapter_id"]),
+            f"{location}.chapter_id does not match block_id",
+        )
+        require(
+            block["content_type"] == span["content_type"],
+            f"{location}.content_type does not match block_id",
+        )
+        require(
+            block["char_start"]
+            <= span["char_start"]
+            <= span["char_end"]
+            <= block["char_end"],
+            f"{location}.span is not contained in block_id",
+        )
+    text = document["text"]
     require(span["char_end"] <= len(text), f"{location}.char_end beyond document")
     actual = text[span["char_start"] : span["char_end"]]
     require(
@@ -269,10 +330,7 @@ def main() -> int:
                 record = json.loads(line)
                 validate_schema_if_available(record, schema)
                 validate_record(record, documents, line_no)
-            except (json.JSONDecodeError, ValidationError) as exc:
-                print(f"FAIL {input_path}:{line_no}: {exc}", file=sys.stderr)
-                return 1
-            except Exception as exc:
+            except (json.JSONDecodeError, KeyError, TypeError, ValidationError) as exc:
                 print(f"FAIL {input_path}:{line_no}: {exc}", file=sys.stderr)
                 return 1
             count += 1
