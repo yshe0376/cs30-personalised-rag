@@ -1,22 +1,23 @@
 # Pull Request Change and Integration Ledger
 
-> Last synchronised: 2026-09-13
+> Last synchronised: 2026-09-14
 > Repository: [yshe0376/cs30-personalised-rag](https://github.com/yshe0376/cs30-personalised-rag)
-> Scope: All 32 pull requests currently recorded in GitHub.
+> Scope: All 33 pull requests currently recorded in GitHub.
 > Purpose: Record who delivered each change, what changed, what problems were found, how they were resolved, and which interface owner receives the next hand-off.
 
 This is a living engineering ledger, not a substitute for the GitHub diff or review thread. GitHub is the source of truth for state, authorship, commits, and CI. Technical summaries below are based on PR descriptions, changed files, commits, repository contracts, and recorded review findings. An item marked **inferred** is an integration conclusion rather than a statement made by the PR author.
 
 ## 1. Current status and critical hand-offs
 
-As of the synchronisation date, 23 PRs are merged, 6 are closed without merge, and 3 remain open.
+As of the synchronisation date, 25 PRs are merged, 6 are closed without merge, and 2 remain open.
 
 | PR | Owner | State | Current decision or blocker | Next owner/action |
 |---:|---|---|---|---|
 | [#115](https://github.com/yshe0376/cs30-personalised-rag/pull/115) | `skyshylsylsy` | Open | Generation supports the four W5 conditions and native `EvidenceBundle`, but the shared Pipeline still passes `RetrievalResult`. M5 role labels are also not frozen. | Shared Pipeline/integration owner must switch the orchestration seam; M5 must freeze role labels; M1/M8 must run formal evaluation. |
-| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft, mergeable, CI passing | The corpus filter stays as frozen; `problem` and `summary` remain excluded. M4 delivers an audited 17-question partial mapping and the three uncovered spans go back to M3. The PR body still describes the withdrawn widened-filter attempt. | M4 must update the PR body and leave draft. M3 must re-annotate three spans. M2 manual QA remains pending. M5 must address 1,446 embedding inputs above the model ceiling. |
+| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft, mergeable, CI passing | The corpus filter stays as frozen; `problem` and `summary` remain excluded. M4 delivers an audited 17-question partial mapping and the three uncovered spans go back to M3. The PR body now records this final decision and the exact hand-off. | M3 must re-annotate three spans. M2 manual QA remains pending. M5 must address 1,446 embedding inputs above the model ceiling. |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | The initial abstention-cause attribution problem was fixed before merge. Reports now preserve the cause and expose system-level, model-level, and cause-specific views. | M1/M3/M4 must provide reportable Gold, mapping, and saved runs before formal benchmark values can be produced. |
-| [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Open | Publishes this living PR ledger and makes it discoverable from the README. | Review and merge the documentation; update this entry from Open to Merged after landing. |
+| [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Merged | Publishes this living PR ledger and makes it discoverable from the README. | Keep the ledger synchronised when PRs, interfaces, or hand-offs change. |
+| [#140](https://github.com/yshe0376/cs30-personalised-rag/pull/140) | `yshe0376` | Merged | Freezes the W5 retrieval evidence filter and records why excluded textbook exercises and summaries must not be indexed. | M3 re-annotates the three out-of-scope spans; M4 rebuilds the mapping afterward. |
 
 ### Important decision recorded for PR #137
 
@@ -30,7 +31,7 @@ A widened v2 filter was briefly published and then withdrawn (`221bd86`, `dab80a
 
 | GitHub account | PRs | Primary ownership shown by the PR history |
 |---|---:|---|
-| [yshe0376](https://github.com/yshe0376) | 16 | Shared framework, contracts, Pipeline integration, CI, configuration, project documentation, and M1 evaluation infrastructure |
+| [yshe0376](https://github.com/yshe0376) | 17 | Shared framework, contracts, Pipeline integration, CI, configuration, project documentation, and M1 evaluation infrastructure |
 | [novel-peng](https://github.com/novel-peng) | 4 | M4 structure-aware chunking, corpus construction, trace-back, and Gold-to-chunk mapping |
 | [chongshao223](https://github.com/chongshao223) | 4 | M2 OpenStax College Physics parser iterations and final parser delivery |
 | [leahwang126](https://github.com/leahwang126) | 2 | M3 SciQ questions and Gold Evidence data |
@@ -76,7 +77,8 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 | [#136](https://github.com/yshe0376/cs30-personalised-rag/pull/136) | `yshe0376` | Merged | Corpus-bound Gold normalisation, evaluation runner, and retrieval scoring |
 | [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft | Official 34-chapter M4 corpus and audited 17-question partial Gold mapping; leakage rejected, three spans returned to M3 |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | Cause-aware answer, abstention, format, and citation scoring |
-| [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Open | Publishes the living PR change and integration ledger |
+| [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Merged | Publishes the living PR change and integration ledger |
+| [#140](https://github.com/yshe0376/cs30-personalised-rag/pull/140) | `yshe0376` | Merged | Freezes the W5 retrieval evidence filter and records its evaluation-leakage rationale |
 
 ## 4. Detailed change ledger
 
@@ -325,9 +327,9 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 - **Resolution:** A widened v2 filter including `problem` and `summary` was published and then withdrawn (`221bd86`, `dab80a1`). M4 instead kept the frozen filter and made the partial delivery auditable: `320a185` skips uncovered spans when building the M1-compatible artifact, `e394b81` and `0620a57` emit and test the bundle, and `da1bbc1` publishes the 17-question mapping. The three uncovered spans are returned to M3 for re-annotation.
 - **Rejected risk:** Including textbook problems would let SciQ evaluation retrieve near-verbatim source exercises, so the filter was not widened. The cost is three Gold questions, all in `proposed_dev`, which reduces the usable dev set from 12 to 9 until M3 re-annotates.
 - **Downstream handling:** M1 already reports an unmapped question as a `mapping_missing` exclusion, so development scoring proceeds with the gap visible while `strict_mapping` blocks reportable scoring. No M1 change was required.
-- **Documentation issue:** The GitHub PR body still describes the withdrawn widened-filter attempt. M4 should restore the current figures before merge.
+- **Documentation status:** The GitHub PR body has been synchronised with the final frozen-filter decision, the 17-question partial mapping, and the three-span M3 hand-off. It no longer presents the withdrawn widened-filter attempt as the current plan.
 - **Interface hand-off:** Consumes M2 canonical blocks and M3 spans; produces corpus records/manifests for M5 plus `GoldChunkMapping` for M1/M8. M5 owns the response to 1,446 inputs above the 254-content-token ceiling.
-- **Verification/outcome:** Open draft, mergeable, and all four GitHub CI checks pass as of 2026-09-13. The delivery manifest records 35,905 blocks, 3,684 chunks, 20 resolved spans, 17 fully covered spans, 3 incomplete spans, and a 17-question evaluation mapping. M2 manual QA and M3 re-annotation remain pending.
+- **Verification/outcome:** Open draft, mergeable, and all four GitHub CI checks pass as of 2026-09-14. The delivery manifest records 35,905 blocks, 3,684 chunks, 20 resolved spans, 17 fully covered spans, 3 incomplete spans, and a 17-question evaluation mapping. M2 manual QA and M3 re-annotation remain pending.
 
 ### PR #138 — Cause-aware answer, abstention, format, and citation scoring
 
@@ -344,7 +346,64 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 - **Delivered:** This English living ledger, a 32-PR index, current hand-off dashboard, contributor overview, interface ownership register, maintenance rules, and a README link.
 - **Problem and resolution:** PR work, review findings, superseding changes, and downstream ownership were previously spread across PR pages and conversations. This PR consolidates them into one version-controlled reference. No material implementation issue is recorded.
 - **Interface hand-off:** All module owners update their own PR facts; the shared integration/documentation owner maintains cross-module status and ownership links.
-- **Verification/outcome:** Open as of 2026-09-13. Before creation, the branch passed 334 tests, Ruff, whitespace checks, relative-link checks, and a complete comparison against the 31 pre-existing GitHub PR IDs. This self-entry was added after GitHub assigned PR #139.
+- **Verification/outcome:** Merged on 2026-09-13. Before creation, the branch passed 334 tests, Ruff, whitespace checks, relative-link checks, and a complete comparison against the 31 pre-existing GitHub PR IDs. This self-entry was added after GitHub assigned PR #139.
+
+### PR #140 — Frozen W5 retrieval evidence policy
+
+- **Owner:** `yshe0376`
+- **Delivered:** The frozen W5 retrieval evidence filter and its evaluation-leakage rationale in `docs/interfaces.md` and `docs/构思与待定.md`.
+- **Problem and resolution:** The repository needed one authoritative decision for which content types may enter retrieval. The PR records that `body`, `example`, `figure_caption`, `glossary`, `table`, and `equation` are included, while `conceptual_question`, `problem`, and `summary` remain excluded. It also records why textbook exercises and summaries must not be added merely to rescue provisional Gold spans.
+- **Interface hand-off:** The policy constrains M4 corpus construction and M5 indexing; M3 owns re-annotation of the three excluded spans; M1/M8 consume the resulting mapping and report the gap explicitly.
+- **Verification/outcome:** Merged on 2026-09-13. Documentation-only; Ruff and the full test suite passed on the branch.
+
+## Commit-level audit for the recent hand-off chain
+
+The PR index and detailed ledger cover all 33 repository PRs. The tables below add the requested commit-level audit for the current M3-M8 hand-off chain. Each row names the GitHub author, the concrete change, the problem or limitation exposed at that point, and the follow-up that resolved it or remains assigned. `No material issue recorded` is intentional where a commit only adds tests or documentation.
+
+### PR #137 commits — `novel-peng`
+
+| Commit | Change | Problem, resolution, or next hand-off |
+|---|---|---|
+| [`50180f9`](https://github.com/yshe0376/cs30-personalised-rag/commit/50180f9) | Added the W5 M4 corpus-build and mapping scripts. | Established the initial M4 implementation; the resulting corpus and mapping are handed to M5, M1, and M8. |
+| [`5c268d2`](https://github.com/yshe0376/cs30-personalised-rag/commit/5c268d2) | Implemented the official corpus and Gold mapping. | Established the initial evidence scope; later alignment review found three M3 spans outside that scope. |
+| [`80755a4`](https://github.com/yshe0376/cs30-personalised-rag/commit/80755a4) | Added M4 delivery tests. | Added regression coverage; the later partial-delivery path required additional explicit tests. |
+| [`f975f6f`](https://github.com/yshe0376/cs30-personalised-rag/commit/f975f6f) | Published M4 delivery evidence. | Made the artifact auditable; subsequent documentation commits recorded the changing alignment decision. |
+| [`2b1613d`](https://github.com/yshe0376/cs30-personalised-rag/commit/2b1613d) | Recorded M3 alignment blockers. | Exposed the three out-of-scope spans and handed them back to M3 rather than hiding the mismatch. |
+| [`eda3d13`](https://github.com/yshe0376/cs30-personalised-rag/commit/eda3d13) | Added the W5 M4 delivery manifest. | Added identity and count evidence for downstream consumers; no material issue recorded. |
+| [`29801e4`](https://github.com/yshe0376/cs30-personalised-rag/commit/29801e4) | Temporarily broadened the source scope to match M3 evidence content types. | This rescued the apparent 20/20 alignment but introduced the evaluation-leakage risk; the change was later superseded. |
+| [`f67a51b`](https://github.com/yshe0376/cs30-personalised-rag/commit/f67a51b) | Added tests for the temporarily aligned M3 content scope. | Locked the temporary behaviour in tests; those expectations were restored when the original policy was reinstated. |
+| [`7af8501`](https://github.com/yshe0376/cs30-personalised-rag/commit/7af8501) | Documented the temporary resolved alignment. | Recorded an intermediate state; it was superseded after the leakage risk was accepted as a release-blocking concern. |
+| [`e7e5c1c`](https://github.com/yshe0376/cs30-personalised-rag/commit/e7e5c1c) | Reverted to the original evidence filter. | Final root decision: do not index assessment-like or summary content just to rescue Gold spans; return the three spans to M3. |
+| [`221bd86`](https://github.com/yshe0376/cs30-personalised-rag/commit/221bd86) | Restored tests for the original evidence scope. | Kept regression coverage consistent with the final frozen filter; no material issue recorded. |
+| [`dab80a1`](https://github.com/yshe0376/cs30-personalised-rag/commit/dab80a1) | Restored the M3 alignment status documentation. | Corrected the written state so the repository no longer described the withdrawn widened scope as final. |
+| [`320a185`](https://github.com/yshe0376/cs30-personalised-rag/commit/320a185) | Skipped uncovered spans when building the M1-compatible mapping. | Prevented an apparently complete mapping from hiding missing evidence; `mapping_missing` remains visible to downstream scoring. |
+| [`e394b81`](https://github.com/yshe0376/cs30-personalised-rag/commit/e394b81) | Emitted the audited partial mapping bundle. | Created a usable 17-question development hand-off while preserving diagnostics for all 20 questions. |
+| [`0620a57`](https://github.com/yshe0376/cs30-personalised-rag/commit/0620a57) | Added tests for the 17-question partial delivery. | Proved that uncovered spans are reported rather than silently treated as retrieval failures. |
+| [`da1bbc1`](https://github.com/yshe0376/cs30-personalised-rag/commit/da1bbc1) | Published the audited 17-question mapping. | Completed the current M4 artifact; reportable scoring still waits for M3 to re-annotate the three spans. |
+| [`e35c866`](https://github.com/yshe0376/cs30-personalised-rag/commit/e35c866) | Added separate downstream hand-off packages. | Reduced the risk that M3 annotation inputs and M5 retrieval inputs are confused by giving each consumer its own package. |
+| [`1771848`](https://github.com/yshe0376/cs30-personalised-rag/commit/1771848) | Tested the separated hand-off packages. | Added regression coverage for the consumer-specific packaging; no material issue recorded. |
+| [`5da353d`](https://github.com/yshe0376/cs30-personalised-rag/commit/5da353d) | Documented the separated downstream packages. | Clarified package ownership and the next M3/M5 hand-offs; no material issue recorded. |
+
+### PR #138 commits — `ZOEY-YUNYI`
+
+| Commit | Change | Problem, resolution, or next hand-off |
+|---|---|---|
+| [`d2b7afd`](https://github.com/yshe0376/cs30-personalised-rag/commit/d2b7afd) | Added the offline M8 scoring framework. | Established answer, abstention, format, and citation scoring; later review found that abstention causes were not yet consumed. |
+| [`050392c`](https://github.com/yshe0376/cs30-personalised-rag/commit/050392c) | Completed the M8 scoring breakdowns. | Expanded the metric surface, but the cause distinction remained unrepresented in the calculation path. |
+| [`7efcda5`](https://github.com/yshe0376/cs30-personalised-rag/commit/7efcda5) | Integrated answer and citation scoring with evaluation v0.2. | Connected the scorer to the evaluation contracts; the abstention-attribution definition still needed correction. |
+| [`e8991a0`](https://github.com/yshe0376/cs30-personalised-rag/commit/e8991a0) | Aligned scoring with acceptance criteria. | Tightened contract behaviour; citation and reporting edge cases remained for follow-up tests. |
+| [`61ee3b8`](https://github.com/yshe0376/cs30-personalised-rag/commit/61ee3b8) | Covered citation and reporting edge cases. | Closed output-path gaps; no second issue of the same severity was identified. |
+| [`0303412`](https://github.com/yshe0376/cs30-personalised-rag/commit/0303412) | Distinguished abstention causes in reports. | Root fix for the main review finding: `no_retrieval_hits` is no longer treated as proof of model refusal with evidence. |
+| [`75ec759`](https://github.com/yshe0376/cs30-personalised-rag/commit/75ec759) | Aligned answer scoring with the review contract. | Completed the final contract/test alignment before merge; formal values still require reportable Gold and mapping inputs. |
+
+### PR #139 and #140 documentation commits
+
+| PR | Commit | Author | Change and follow-up |
+|---|---|---|---|
+| #139 | [`6762720`](https://github.com/yshe0376/cs30-personalised-rag/commit/6762720) | `yshe0376` | Added the initial English living ledger covering the repository PR history. |
+| #139 | [`5ac03dd`](https://github.com/yshe0376/cs30-personalised-rag/commit/5ac03dd) | `yshe0376` | Recorded the ledger PR itself so the index remained complete after GitHub assigned #139. |
+| #139 | [`d557b9b`](https://github.com/yshe0376/cs30-personalised-rag/commit/d557b9b) | `yshe0376` | Corrected the #137 filter decision and delivery figures after review; this update keeps those corrections current. |
+| #140 | [`7fe42e9`](https://github.com/yshe0376/cs30-personalised-rag/commit/7fe42e9) | `yshe0376` | Froze the retrieval evidence policy and documented the evaluation-leakage rationale; M3/M4 receive the next hand-off. |
 
 ## 5. Interface ownership and dependency register
 
@@ -355,6 +414,7 @@ This table describes the current practical ownership inferred from PR authorship
 | Shared contracts and `ports.py` | `yshe0376` | M2-M8 | Contract changes require compatibility review and ADR/update discipline. |
 | Canonical textbook document and blocks | M2: `chongshao223`; shared/catalogue integration: `yshe0376` | M4 | M2 manual QA for the official corpus remains pending. |
 | Gold questions, spans, answers, and review status | M3: `leahwang126` | M4, M1, M8 | v0.1 is `m3_initial`, all answers are `D`, and no records are unanswerable. |
+| Frozen retrieval evidence policy | Shared documentation: `yshe0376`; applied by M4 | M3 annotation, M4 mapping, M5 indexing, M1/M8 evaluation | The policy must remain identical across corpus construction, Gold annotation inputs, and evaluation mapping. |
 | Chunking strategy, corpus records, manifest, Gold mapping | M4: `novel-peng` | M5, M6, M1, M8 | Filter excludes `problem`, `summary`, and `conceptual_question`; the mapping covers 17 of 20 Gold questions. |
 | Dense index and embedding configuration | M5: `Ntan0927` | M6 | #137 reports 1,446 inputs above the selected model's content-token ceiling. |
 | Retrieval service and evidence provenance | M6: `syj-111-s`; contract/config integration: `yshe0376` | EvidenceBundle, M7, M1, M8 | Thresholds and stopword behaviour must remain wired and recorded per run. |
@@ -371,6 +431,8 @@ Update this file at three points in every PR lifecycle:
 2. **When review finds a problem:** record one root cause, its user/research impact, the requested change, and whether it blocks merge. Do not list several derived symptoms as unrelated defects.
 3. **When the PR merges or closes:** update the final state, name the resolving commit or superseding PR, record the verification result, and assign every remaining hand-off to an interface owner.
 
+For an active or recently reviewed PR, also append one commit-level row for every substantive commit: author, concrete change, problem or limitation exposed, and the resolving commit or next owner. Test-only and documentation-only commits may say `No material issue recorded`, but they should not be silently omitted from the audit.
+
 Use these rules to keep the document auditable:
 
 - Do not describe a closed, unmerged PR as delivered functionality.
@@ -378,7 +440,7 @@ Use these rules to keep the document auditable:
 - Record accepted limitations, especially evaluation leakage and fixture-only evidence.
 - Prefer stable PR, commit, contract, corpus, and mapping identities over prose such as “latest version”.
 - Write `No material issue recorded` when no review evidence exists; do not invent a defect to fill the field.
-- Update the date, totals, contributor counts, current-status table, PR index, detailed entry, and interface register together.
+- Update the date, totals, contributor counts, current-status table, PR index, detailed entry, commit-level audit, and interface register together.
 
 ### Entry template
 
