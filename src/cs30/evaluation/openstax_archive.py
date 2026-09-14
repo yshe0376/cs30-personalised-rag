@@ -17,6 +17,7 @@ import hashlib
 import json
 import re
 import zipfile
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -148,6 +149,9 @@ class OpenStaxArchiveCorpus:
             "archive_sha256": self.archive_sha256,
             "evidence_policy_id": EVIDENCE_POLICY_ID,
             "evidence_block_count": len(_evidence_records(self.document)),
+            "excluded_block_count": len(document.blocks)
+            - len(_evidence_records(self.document)),
+            "excluded_by_type": _excluded_by_type(self.document),
             "evidence_blocks_sha256": _sha256_bytes(evidence_payload),
             "separator": self.separator,
             "chapter_entries": dict(
@@ -493,6 +497,18 @@ def write_prepared_corpus(
         "evidence": str(evidence_path),
         "manifest": str(manifest_path),
     }
+
+
+def _excluded_by_type(document: OpenStaxDocument) -> dict[str, int]:
+    """Count blocks the evidence policy leaves out, so a report can cite them."""
+
+    eligible = {content_type.value for content_type in EVIDENCE_CONTENT_TYPES}
+    counts: Counter[str] = Counter(
+        block.content_type.value
+        for block in document.blocks
+        if block.content_type.value not in eligible
+    )
+    return dict(sorted(counts.items()))
 
 
 def _evidence_records(document: OpenStaxDocument) -> list[dict[str, Any]]:
