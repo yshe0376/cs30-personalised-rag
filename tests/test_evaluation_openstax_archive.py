@@ -163,12 +163,15 @@ def test_evidence_source_blocks_serialization_is_deterministic(tmp_path: Path) -
     first_dir = tmp_path / "first"
     second_dir = tmp_path / "second"
 
-    write_prepared_corpus(corpus, first_dir)
-    write_prepared_corpus(corpus, second_dir)
+    first = write_prepared_corpus(corpus, first_dir)
+    second = write_prepared_corpus(corpus, second_dir)
 
-    first_bytes = (first_dir / "evidence_source_blocks.jsonl").read_bytes()
-    second_bytes = (second_dir / "evidence_source_blocks.jsonl").read_bytes()
-    assert first_bytes == second_bytes
+    # Every prepared file is part of the checksum promise, so all three must be
+    # byte-identical and must not pick up platform newlines.
+    for key in ("document", "evidence", "manifest"):
+        first_bytes = Path(first[key]).read_bytes()
+        assert first_bytes == Path(second[key]).read_bytes()
+        assert b"\r\n" not in first_bytes
     first_manifest = json.loads((first_dir / "corpus_manifest.json").read_text())
     second_manifest = json.loads((second_dir / "corpus_manifest.json").read_text())
     assert first_manifest["evidence_blocks_sha256"] == second_manifest["evidence_blocks_sha256"]
