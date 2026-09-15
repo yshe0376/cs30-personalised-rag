@@ -24,17 +24,19 @@ cs30-evaluate prepare-corpus \
   --output-dir m3_unified_source_corpus/source_corpus
 ```
 
-Regenerate `SHA256SUMS` from all three prepared files:
+Regenerate `SHA256SUMS` from the two content artifacts.  The manifest is kept
+as provenance metadata for the prepared-corpus loader, but it is not an archive
+content checksum: fields such as `archive_sha256` and `chapter_entries` depend
+on the particular source ZIP container.
 
 ```sh
 sha256sum m3_unified_source_corpus/source_corpus/openstax_document.json \
   m3_unified_source_corpus/source_corpus/evidence_source_blocks.jsonl \
-  m3_unified_source_corpus/source_corpus/corpus_manifest.json \
   > m3_unified_source_corpus/SHA256SUMS
 ```
 
-Verify the rebuilt files before using them for M3 span checks or M4 mapping
-work:
+Verify the rebuilt content artifacts before using them for M3 span checks or
+M4 mapping work:
 
 ```sh
 sha256sum -c m3_unified_source_corpus/SHA256SUMS

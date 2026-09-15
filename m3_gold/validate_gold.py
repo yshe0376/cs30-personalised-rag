@@ -66,6 +66,21 @@ def _load_with_prepared_corpus(gold_path: Path, prepared_root: Path) -> Counter[
         chapter_documents=_chapter_documents(corpus),
     )
 
+    gold_corpus_versions = {sample.corpus_version for sample in samples}
+    if gold_corpus_versions != {corpus.corpus_version}:
+        raise ValueError(
+            "corpus_version mismatch between Gold and prepared corpus: "
+            f"{sorted(gold_corpus_versions)!r} != {corpus.corpus_version!r}"
+        )
+
+    gold_parser_versions = {sample.parser_version for sample in samples}
+    prepared_parser_version = corpus.document.parser_version
+    if gold_parser_versions != {prepared_parser_version}:
+        raise ValueError(
+            "parser_version mismatch between Gold and prepared corpus: "
+            f"{sorted(gold_parser_versions)!r} != {prepared_parser_version!r}"
+        )
+
     counts: Counter[str] = Counter()
     missing_block_ids: list[str] = []
     unresolved: list[str] = []
@@ -78,7 +93,10 @@ def _load_with_prepared_corpus(gold_path: Path, prepared_root: Path) -> Counter[
         for span in spans:
             resolution = resolve_span_to_corpus(span, corpus)
             counts[resolution.status.value] += 1
-            if resolution.resolved_block_id not in corpus.evidence_blocks_by_id:
+            if (
+                resolution.status.value == "resolved"
+                and resolution.resolved_block_id not in corpus.evidence_blocks_by_id
+            ):
                 missing_block_ids.append(span.span_id)
             if resolution.status.value != "resolved":
                 unresolved.append(f"{sample.question_id}:{span.span_id}:{resolution.message}")
