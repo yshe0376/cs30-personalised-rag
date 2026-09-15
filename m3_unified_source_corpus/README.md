@@ -15,16 +15,30 @@ source_corpus/
   evidence_source_blocks.jsonl
 ```
 
-Rebuild the local handoff from the M4 chapter archive when needed:
+After the M1 `write_prepared_corpus()` byte-output fix is merged to `main`,
+rebuild the local handoff from the M4 chapter archive:
 
 ```sh
 cs30-evaluate prepare-corpus \
-  --archive artifacts/w5/m4/source_corpus/data.zip \
+  --archive <data.zip> \
   --output-dir m3_unified_source_corpus/source_corpus
 ```
 
-Verify the rebuilt files against `SHA256SUMS` before using them for M3 span
-checks or M4 mapping work.
+Regenerate `SHA256SUMS` from all three prepared files:
+
+```sh
+sha256sum m3_unified_source_corpus/source_corpus/openstax_document.json \
+  m3_unified_source_corpus/source_corpus/evidence_source_blocks.jsonl \
+  m3_unified_source_corpus/source_corpus/corpus_manifest.json \
+  > m3_unified_source_corpus/SHA256SUMS
+```
+
+Verify the rebuilt files before using them for M3 span checks or M4 mapping
+work:
+
+```sh
+sha256sum -c m3_unified_source_corpus/SHA256SUMS
+```
 
 - Corpus version: `openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864`
 - Coordinate owner: M3 records chapter-local spans; normalization binds them to

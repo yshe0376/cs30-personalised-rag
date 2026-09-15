@@ -47,7 +47,9 @@ python3 m3_gold/validate_gold.py m3_gold/gold_v0_1_1.jsonl
 ```
 
 Full span replay requires the shared M4 prepared corpus directory and uses
-`load_prepared_corpus()` from the main evaluation package:
+`load_prepared_corpus()` from the main evaluation package. This mode also
+resolves every span against the prepared evidence block index and reports
+`resolved`, `stale`, and `ambiguous` counts:
 
 ```sh
 python3 m3_gold/validate_gold.py \
