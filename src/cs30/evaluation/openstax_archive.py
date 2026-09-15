@@ -479,18 +479,22 @@ def write_prepared_corpus(
     if existing:
         shown = ", ".join(str(path) for path in existing)
         raise FileExistsError(f"refusing to overwrite prepared corpus files: {shown}")
-    document_path.write_text(
-        json.dumps(corpus.document.model_dump(mode="json"), indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    # Every prepared file is written as bytes.  write_text would translate
+    # newlines on Windows, so the same corpus would hash differently there
+    # than on CI and recorded checksums would stop being portable.
+    document_path.write_bytes(
+        (
+            json.dumps(corpus.document.model_dump(mode="json"), indent=2, ensure_ascii=False)
+            + "\n"
+        ).encode("utf-8")
     )
     evidence_bytes = _evidence_jsonl_bytes(corpus.document)
     evidence_path.write_bytes(evidence_bytes)
     manifest = corpus.manifest()
     if manifest["evidence_blocks_sha256"] != _sha256_bytes(evidence_bytes):
         raise AssertionError("evidence manifest checksum was not generated from the output bytes")
-    manifest_path.write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
+    manifest_path.write_bytes(
+        (json.dumps(manifest, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     )
     return {
         "document": str(document_path),
