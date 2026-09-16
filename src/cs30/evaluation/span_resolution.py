@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from cs30.contracts import OpenStaxDocument, TextBlock
+from cs30.evidence_policy import EVIDENCE_CONTENT_TYPES
 
 from .models import GoldEvidenceSpan, SpanResolutionMethod, SpanResolutionStatus
 from .openstax_archive import OpenStaxArchiveCorpus
@@ -77,24 +78,29 @@ def resolve_span_to_corpus(
     corpus_start = chapter.char_start + span.char_start
     corpus_end = chapter.char_start + span.char_end
     if span.block_id is None:
-        return SpanResolution(
-            **base,
-            status=SpanResolutionStatus.RESOLVED,
-            method=SpanResolutionMethod.CHAPTER_OFFSET,
-            corpus_char_start=corpus_start,
-            corpus_char_end=corpus_end,
-            resolved_block_id=None,
-            message="resolved from the replayed chapter-local coordinates",
+        containing_blocks = [
+            block for block in blocks if _contains(block, corpus_start, corpus_end)
+        ]
+        if len(containing_blocks) != 1:
+            return _unresolved(
+                base,
+                SpanResolutionStatus.STALE,
+                "span could not be resolved to one source block",
+            )
+        return _resolved(
+            base,
+            SpanResolutionMethod.CHAPTER_OFFSET,
+            containing_blocks[0],
+            corpus_start,
+            corpus_end,
         )
     if identified_block is not None and _contains(identified_block, corpus_start, corpus_end):
-        return SpanResolution(
-            **base,
-            status=SpanResolutionStatus.RESOLVED,
-            method=SpanResolutionMethod.BLOCK_ID,
-            corpus_char_start=corpus_start,
-            corpus_char_end=corpus_end,
-            resolved_block_id=identified_block.block_id,
-            message="resolved from the chapter-local span and block_id",
+        return _resolved(
+            base,
+            SpanResolutionMethod.BLOCK_ID,
+            identified_block,
+            corpus_start,
+            corpus_end,
         )
 
     matches = _verbatim_matches(chapter_text, span.verbatim_text)
@@ -134,15 +140,38 @@ def resolve_span_to_corpus(
             "unique verbatim match is not contained in one text block",
         )
 
-    block = containing_blocks[0]
+    return _resolved(
+        base,
+        SpanResolutionMethod.VERBATIM_UNIQUE,
+        containing_blocks[0],
+        match_start,
+        match_end,
+    )
+
+
+def _resolved(
+    base: dict[str, object],
+    method: SpanResolutionMethod,
+    block: TextBlock,
+    corpus_start: int,
+    corpus_end: int,
+) -> SpanResolution:
+    if block.block_id is None:
+        return _unresolved(base, SpanResolutionStatus.STALE, "source block has no block_id")
+    if block.content_type not in EVIDENCE_CONTENT_TYPES:
+        return _unresolved(
+            base,
+            SpanResolutionStatus.STALE,
+            "block content type is not eligible evidence",
+        )
     return SpanResolution(
         **base,
         status=SpanResolutionStatus.RESOLVED,
-        method=SpanResolutionMethod.VERBATIM_UNIQUE,
-        corpus_char_start=match_start,
-        corpus_char_end=match_end,
+        method=method,
+        corpus_char_start=corpus_start,
+        corpus_char_end=corpus_end,
         resolved_block_id=block.block_id,
-        message="resolved from a unique same-chapter verbatim match",
+        message=f"resolved from {method.value}",
     )
 
 

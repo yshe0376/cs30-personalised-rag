@@ -69,6 +69,7 @@ from .openstax_archive import (
     OpenStaxArchiveCorpus,
     load_openstax_archive,
     load_openstax_document,
+    load_prepared_corpus,
     write_prepared_corpus,
 )
 from .runner import run_batch, run_evaluation
@@ -132,6 +133,7 @@ __all__ = [
     "load_mappings",
     "load_normalized_gold",
     "load_openstax_archive",
+    "load_prepared_corpus",
     "load_openstax_document",
     "load_run_results",
     "no_hit_rate_at_k",

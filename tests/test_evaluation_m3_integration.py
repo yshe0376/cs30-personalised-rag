@@ -79,6 +79,14 @@ def test_m3_record_preserves_the_published_gold_contract() -> None:
     assert span.sufficiency.value == "core_sufficient"
 
 
+def test_m3_v0_1_1_delivery_loads_with_main_loader() -> None:
+    samples = load_gold_samples(Path("m3_gold/gold_v0_1_1.jsonl"))
+
+    assert len(samples) == 20
+    assert samples[0].gold_annotation_version == "m3_gold_v0.1.1"
+    assert all(sample.annotation_status is AnnotationStatus.M3_INITIAL for sample in samples)
+
+
 def test_m3_loader_replays_chapter_local_coordinates(tmp_path: Path) -> None:
     path = tmp_path / "gold_v0_1.jsonl"
     path.write_text(json.dumps(_m3_payload()) + "\n", encoding="utf-8")

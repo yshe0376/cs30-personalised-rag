@@ -190,6 +190,23 @@ verbatim fallback. A resolved span must provide `corpus_char_start` and
 include `source_corpus_version` and `normalizer_version` provenance. Raw v0.1
 M3 records remain valid with all normalization-derived fields absent.
 
+For a Gold span covering a complete source block, M3 copies
+`chapter_char_start`/`chapter_char_end` from `evidence_source_blocks.jsonl`
+without subtracting a merged-document offset. If a span is only a subspan of a
+block, it keeps its own chapter-local coordinates. Chapter-local coordinates
+do not depend on chapter concatenation order, but Gold still binds
+`document_id`, `document_hash`, and `parser_version`. The normalizer produces
+`corpus_char_start`/`corpus_char_end` and records the resolution status and
+method.
+
+Identity boundaries are explicit: `document_hash` is the source PDF SHA-256,
+not a content hash of `openstax_document.json`; `parser_version` identifies
+the generation rules; and `evidence_blocks_sha256` protects the evidence
+JSONL bytes. The loader replays evidence metadata, text, and both coordinate
+systems against the canonical document. These checks establish consistency
+between the evidence list and the document, but do not provide a cryptographic
+anti-tamper guarantee for the prepared document itself.
+
 Reportable run and scoring paths are fail-closed: every Gold span must be
 `resolved` with non-null corpus-global coordinates. Raw v0.1 and stale or
 ambiguous normalized Gold may be used only for non-reportable development or
