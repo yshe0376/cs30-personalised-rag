@@ -78,6 +78,14 @@ class PipelineDeps:
 
 
 @dataclass(frozen=True)
+class RetrievalDeps:
+    """Retrieval-only dependencies for evaluation and other offline callers."""
+
+    mode: Literal["fixture", "real"]
+    retriever: Retriever
+
+
+@dataclass(frozen=True)
 class BuildDeps:
     """Modules in the offline parse -> chunk -> index path."""
 
@@ -130,8 +138,8 @@ def run_build_pipeline(source: Path, deps: BuildDeps) -> IndexArtifact:
     return artifact
 
 
-def build_real_deps(config: AppConfig) -> PipelineDeps:
-    """Use real retrieval when an index exists, otherwise preserve fixture mode."""
+def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
+    """Build retrieval dependencies without initializing an answer generator."""
 
     index_dir = Path(config.retrieval.index_dir)
     artifact_path = index_dir / "artifact.json"
@@ -195,6 +203,13 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         retriever = retrieval_service.backend(retrieval_mode)
         dependency_mode = "real"
 
+    return RetrievalDeps(mode=dependency_mode, retriever=retriever)
+
+
+def build_real_deps(config: AppConfig) -> PipelineDeps:
+    """Use real retrieval and configure generation for the online path."""
+
+    retrieval_deps = build_real_retrieval_deps(config)
     provider = config.generation.provider.casefold()
 
     if provider == "mock":
@@ -219,9 +234,9 @@ def build_real_deps(config: AppConfig) -> PipelineDeps:
         )
 
     return PipelineDeps(
-        mode=dependency_mode,
+        mode=retrieval_deps.mode,
         profile_provider=Week1ProfileProvider(profile_prefix="local-rag"),
-        retriever=retriever,
+        retriever=retrieval_deps.retriever,
         generator=PersonalisedAnswerGenerator(
             client,
             max_retries=config.generation.max_retries,

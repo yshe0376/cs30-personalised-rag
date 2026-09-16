@@ -142,6 +142,9 @@ def export_retrieval_corpus(
     for name, data in file_payloads.items():
         (output_dir / name).write_bytes(data)
 
+    chunk_configuration = dict(
+        zip(configuration_keys, configurations[0], strict=True)
+    )
     manifest = {
         "manifest_version": "1.0",
         "corpus_id": _sha256(file_payloads["records.jsonl"]),
@@ -156,10 +159,8 @@ def export_retrieval_corpus(
             }
             for document in sorted(documents, key=lambda item: item.document_id)
         ],
-        "chunk_configurations": [
-            dict(zip(configuration_keys, values, strict=True))
-            for values in configurations
-        ],
+        "chunk_configurations": [chunk_configuration],
+        "chunk_config_id": _sha256(_json_bytes(chunk_configuration)),
         "consumers": {
             "dense": "records.jsonl",
             "bm25": "records.jsonl",
