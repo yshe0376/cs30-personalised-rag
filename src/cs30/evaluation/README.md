@@ -313,30 +313,113 @@ answer/citation aggregate JSON, per-question JSONL, summary CSV, Markdown report
 and focused failure-review JSONL. Fixture outputs validate the implementation
 only and must not be reported as final model quality.
 
-## Six-textbook and personalisation reporting extension
+## Personalisation evaluation reporting
 
-The `report-extension` command consumes one or more saved
-`answer_citation_scores.jsonl` files and joins them to an M8-owned context
-sidecar. It groups results without mixing retrieval mode, data version, split,
-corpus version, textbook, learner level, condition, or lambda setting. It also
-supports blinded level-adaptation ratings and an identity/reference audit of an
-M3 Role-label package. These inputs do not change the shared run-result or
-manifest schemas.
+The `report-extension` command combines existing offline answer/citation scores
+with textbook, learner-level, condition, and lambda metadata. It does not rerun
+retrieval or generation, and its M8-owned sidecars do not change
+`EvaluationRunResult`, `RunManifest`, Gold, mapping, retrieval, generation, or
+Role-label contracts.
 
-The extension retains the original five answer/citation artifacts and writes a
-separate W6 package containing the combined Markdown report, experiment groups,
-lambda comparisons, grouped failure analysis, adaptation scores, and Role-label
-provenance. Missing
-manual ratings or Role labels remain explicitly pending; zero-denominator
-metrics are marked `not_applicable`. See
-[`docs/w6-evaluation-extension.md`](../../../docs/w6-evaluation-extension.md)
-for the input schemas, boundaries, and command example.
+The report keeps three evidence sources separate:
 
-Formal lambda comparisons require one frozen lambda value and identical unique
-question sets on both sides. Role provenance checks corpus/parser identity and
-question-to-evidence relationships as well as globally valid IDs.
-Missing baseline/frozen groups fail by default; partial development reports
-must opt in with `--allow-incomplete`. The `prepare-blind-ratings` command
-creates a single-rater anonymous CSV and a separate private key from saved run
-files. Completed rating sheets must cover every keyed answer before an
-adaptation aggregate is reported.
+1. automated per-question answer and citation scores;
+2. single-rater blinded level-adaptation scores;
+3. an identity and reference audit of the M3 Role-label package.
+
+M8 reports Role-label provenance but does not assess Role semantics or compute
+Evidence Role IAA.
+
+### Experiment context
+
+`--contexts` is a JSONL sidecar with exactly one row for every scored `run_id`.
+It supplies the reporting dimensions that are intentionally absent from the
+shared run-result contract:
+
+```json
+{"schema_version":"0.1","run_id":"run-001","question_id":"q-001","condition_id":"plain","comparison_id":"prompt-controlled-reranking","textbook_id":"openstax_college_physics_2e","student_level":"beginner","lambda_weight":0.0,"lambda_status":"baseline"}
+```
+
+`comparison_id` pairs the two conditions being compared. Baseline rows must use
+`lambda_weight=0`; frozen rows use the one global `lambda*` selected on Dev.
+Formal reporting requires both sides of every declared comparison, identical
+unique question sets, and one globally frozen lambda value. Partial development
+reports must opt in with `--allow-incomplete`.
+
+### Single-rater blind assessment
+
+Create the blind sheet from saved run files after the team freezes the rating
+rubric. Only normally answered runs enter the sheet; abstentions and technical
+failures remain in automated error analysis.
+
+```powershell
+cs30-evaluate prepare-blind-ratings `
+  --runs artifacts/plain/run_results.jsonl artifacts/reranked/run_results.jsonl `
+  --gold artifacts/gold_v1.jsonl `
+  --contexts artifacts/experiment_contexts.jsonl `
+  --seed 5703 `
+  --output-dir artifacts/blind_rating
+```
+
+The command writes:
+
+- `blind_rating_sheet.csv`, containing the question, assigned level, answer
+  choice, and explanation but no run, condition, lambda, prompt, retrieval, or
+  model identifiers;
+- `blinded_answer_key.jsonl`, the private post-rating mapping to run IDs;
+- `blind_rating_manifest.json`, with expected/excluded counts and hashes.
+
+Keep the key and randomisation seed private until the sheet is complete. The
+filled CSV supplies `score`, `rubric_version`, and `rater_id`. The corresponding
+rubric manifest records the agreed version and score range:
+
+```json
+{"schema_version":"0.1","rubric_version":"level-fit-v1","score_min":1,"score_max":5}
+```
+
+Every answer in the private key must receive exactly one score. Missing ratings,
+duplicate ratings, level/question mismatches, unknown blind IDs, and scores
+outside the frozen range fail before aggregation.
+
+### Role-label provenance
+
+Pass `--role-manifest`, `--role-gold`, and `--role-mapping` together. The
+M8-owned manifest records the Role schema/taxonomy/annotation versions, corpus
+and parser identities, annotation date, the single annotator, label-file hash,
+record count, configured field names, and whether references target Gold
+mapping spans or the full frozen chunk universe.
+
+For full chunk-universe validation, also pass M4's final `records.jsonl` through
+`--role-records` and authoritative candidate `question_id`/`chunk_id` pairs
+through `--role-question-references`. The audit checks identities, hashes,
+counts, schema versions, valid IDs, and question-to-evidence relationships
+without judging Role-label quality.
+
+### Combined report
+
+First retain the `answer_citation_scores.jsonl` output for every frozen run,
+then build the combined package:
+
+```powershell
+cs30-evaluate report-extension `
+  --scores artifacts/plain/answer_citation_scores.jsonl artifacts/reranked/answer_citation_scores.jsonl `
+  --contexts artifacts/experiment_contexts.jsonl `
+  --ratings artifacts/blind_rating/blind_rating_sheet.csv `
+  --rating-key artifacts/blind_rating/blinded_answer_key.jsonl `
+  --rating-rubric artifacts/level_adaptation_rubric.json `
+  --role-manifest artifacts/role_label_provenance_manifest.json `
+  --role-gold artifacts/gold_v1.jsonl `
+  --role-mapping artifacts/gold_chunk_mapping_v1.json `
+  --role-records artifacts/records.jsonl `
+  --role-question-references artifacts/question_chunk_relationships.jsonl `
+  --output-dir artifacts/evaluation_report
+```
+
+The original five answer/citation artifacts remain unchanged. The combined
+package adds aggregate JSON, experiment and lambda CSVs, grouped failure
+analysis, level-adaptation scores, Role provenance, and a client-readable
+Markdown report. Automated metrics, human ratings, and provenance findings stay
+separate. Metric cells retain numerator, denominator, and value; empty valid
+denominators are `not_applicable`, including refusal Recall/F1 when the Gold set
+has no unanswerable samples. Ratings and Role inputs may be omitted during
+development, in which case their report sections remain explicitly `pending`.

@@ -726,5 +726,5 @@ def test_cli_writes_extension_package(tmp_path: Path) -> None:
     )
 
     assert exit_code == 0
-    assert (output / "w6_evaluation_report.md").is_file()
+    assert (output / "evaluation_report.md").is_file()
     assert (output / "role_label_provenance_report.json").is_file()

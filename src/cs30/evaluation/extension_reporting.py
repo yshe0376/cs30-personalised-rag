@@ -1,4 +1,4 @@
-"""Cross-run W6 reporting for textbooks, levels, lambda, and provenance."""
+"""Cross-run reporting for textbooks, levels, lambda, and provenance."""
 
 from __future__ import annotations
 
@@ -656,9 +656,9 @@ def write_blind_rating_materials(
 
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = {
-        "sheet": output_dir / "w6_blind_rating_sheet.csv",
-        "key": output_dir / "w6_blinded_answer_key.jsonl",
-        "manifest": output_dir / "w6_blind_rating_manifest.json",
+        "sheet": output_dir / "blind_rating_sheet.csv",
+        "key": output_dir / "blinded_answer_key.jsonl",
+        "manifest": output_dir / "blind_rating_manifest.json",
     }
     with paths["sheet"].open("w", encoding="utf-8-sig", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=list(sheet_rows[0]))
@@ -875,7 +875,7 @@ def _metric_display(metric: Mapping[str, Any]) -> str:
 
 def _markdown(result: Mapping[str, Any]) -> str:
     lines = [
-        "# W6 Evaluation Extension Report",
+        "# Personalisation Evaluation Report",
         "",
         "This report combines existing offline answer/citation scores with "
         "textbook, learner-level, condition, and lambda metadata. Automated "
@@ -1112,7 +1112,7 @@ def write_extension_reports(
     role_provenance: Mapping[str, Any] | None = None,
     allow_incomplete: bool = False,
 ) -> dict[str, Path]:
-    """Build the W6 package without altering the existing five M8 artifacts."""
+    """Build the combined package without altering existing score artifacts."""
 
     records = load_score_records(score_paths)
     contexts = load_experiment_conditions(context_path)
@@ -1158,13 +1158,13 @@ def write_extension_reports(
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     paths = {
-        "summary": output_dir / "w6_evaluation_summary.json",
-        "groups": output_dir / "w6_experiment_groups.csv",
-        "lambda": output_dir / "w6_lambda_comparison.csv",
-        "failures": output_dir / "w6_failure_analysis.csv",
-        "adaptation": output_dir / "w6_level_adaptation_scores.json",
+        "summary": output_dir / "evaluation_summary.json",
+        "groups": output_dir / "experiment_groups.csv",
+        "lambda": output_dir / "lambda_comparison.csv",
+        "failures": output_dir / "failure_analysis.csv",
+        "adaptation": output_dir / "level_adaptation_scores.json",
         "role_provenance": output_dir / "role_label_provenance_report.json",
-        "markdown": output_dir / "w6_evaluation_report.md",
+        "markdown": output_dir / "evaluation_report.md",
     }
     paths["summary"].write_text(
         json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
