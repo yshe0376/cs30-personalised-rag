@@ -9,7 +9,10 @@ import numpy as np
 import pytest
 
 from cs30 import build
+from cs30.chunking.official import W5_CHUNKING_STRATEGY
 from cs30.contracts import IndexArtifact
+from cs30.errors import IndexUnavailableError
+from cs30.evidence_policy import EVIDENCE_CONTENT_TYPES
 from cs30.pipeline import BuildDeps
 from cs30.retrieval import BM25Retriever
 
@@ -135,3 +138,35 @@ def test_cli_reports_a_chunking_failure_as_a_clean_error(monkeypatch, tmp_path, 
 
     assert exit_code == 1
     assert "exact duplicate chunk text detected" in capsys.readouterr().err
+
+
+def test_default_candidate_is_the_frozen_official_configuration():
+    """The default must match the policy Gold is annotated against.
+
+    Member 4's mapping binds chunk IDs produced by the frozen configuration.
+    An index built with any other candidate cannot be scored against it, so the
+    default has to be the one that corresponds -- not the unfiltered one.
+    """
+
+    assert build._chunking_strategy("official") is W5_CHUNKING_STRATEGY
+    assert build._chunking_strategy("official").include_types == EVIDENCE_CONTENT_TYPES
+    assert build._chunking_strategy("official").reject_duplicate_text is False
+
+
+def test_main_candidate_still_reaches_the_unfiltered_strategy():
+    assert build._chunking_strategy("main").include_types is None
+
+
+def test_cli_defaults_to_official_when_no_candidate_is_given(monkeypatch, tmp_path):
+    """A build run without --candidate must still match Gold's policy."""
+
+    seen = {}
+
+    def deps(**kwargs):
+        seen.update(kwargs)
+        raise IndexUnavailableError("stop before loading a model")
+
+    monkeypatch.setattr(build, "build_real_build_deps", deps)
+    build.main([str(DOCUMENT), "--index-dir", str(tmp_path / "index")])
+
+    assert seen["candidate"] == "official"

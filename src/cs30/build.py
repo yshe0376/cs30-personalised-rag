@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from cs30.chunking import BlockAwareChunker, BlockChunkingStrategy, get_chunking_candidate
+from cs30.chunking.official import W5_CHUNKING_STRATEGY
 from cs30.contracts import OpenStaxDocument
 from cs30.errors import CS30Error, IndexUnavailableError
 from cs30.pipeline import BuildDeps, run_build_pipeline
@@ -46,21 +47,35 @@ class RealDocumentParser:
         return OpenStaxDocument.model_validate(openstax_parser.build_contract_payload(parsed))
 
 
+def _chunking_strategy(candidate: str) -> BlockChunkingStrategy:
+    """Resolve the chunking configuration a build should use.
+
+    ``official`` is the frozen W5 configuration and the only one that matches
+    the evidence policy Gold is annotated against, so it is the default. The
+    ablation candidates are kept reachable but abort on the real corpus: they
+    filter by content type, the surviving blocks repeat verbatim, and they all
+    still set ``reject_duplicate_text=True``.
+    """
+
+    name = candidate.lower()
+    if name == "official":
+        return W5_CHUNKING_STRATEGY
+    if name == "main":
+        return BlockChunkingStrategy()
+    return get_chunking_candidate(candidate.upper()).strategy
+
+
 def build_real_build_deps(
     *,
     index_dir: Path,
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
-    candidate: str = "main",
+    candidate: str = "official",
     chapters: tuple[str, ...] = (),
     source_url: str = "https://openstax.org/details/books/college-physics-2e",
     download_date: str = "",
 ) -> BuildDeps:
     """Share the embedding model's tokenizer with M4; never fall back to fixtures."""
-    strategy = (
-        BlockChunkingStrategy()
-        if candidate.lower() == "main"
-        else get_chunking_candidate(candidate.upper()).strategy
-    )
+    strategy = _chunking_strategy(candidate)
     try:
         from cs30.indexing.faiss_index import FaissIndexBuilder
     except ImportError as exc:
@@ -83,7 +98,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--index-dir", type=Path, required=True, help="New, empty output directory")
     parser.add_argument("--model", default="sentence-transformers/all-MiniLM-L6-v2")
     parser.add_argument(
-        "--candidate", choices=["main", "S1", "S2", "S3", "S4", "S5", "S6"], default="main"
+        "--candidate",
+        choices=["official", "main", "S1", "S2", "S3", "S4", "S5", "S6"],
+        default="official",
+        help="official is the frozen W5 configuration; use it for the real corpus",
     )
     parser.add_argument("--chapters", nargs="+", default=[], help="PDF chapter numbers, e.g. 2 3 4")
     parser.add_argument("--source-url", default=RealDocumentParser.source_url)

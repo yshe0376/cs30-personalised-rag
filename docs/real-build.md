@@ -8,7 +8,7 @@ Build from M2's shared contract file (not its extended `records.jsonl`):
 
 ```sh
 cs30-build data/processed/openstax-w5-v2/openstax_document.json \
-  --index-dir data/index-w5 --candidate main
+  --index-dir data/index-w5 --candidate official
 ```
 
 If M2 supplies the per-chapter archive used for the W5 handoff, prepare the
@@ -20,7 +20,7 @@ cs30-evaluate prepare-corpus \
   --archive D:/path/to/data.zip \
   --output-dir data/processed/openstax-w5-v2
 cs30-build data/processed/openstax-w5-v2/openstax_document.json \
-  --index-dir data/index-w5 --candidate main
+  --index-dir data/index-w5 --candidate official
 ```
 
 The prepared corpus manifest records the source document hash, parser version,
@@ -30,18 +30,24 @@ sample or an evaluation result.
 Or parse an OpenStax College Physics 2e PDF and build in one command:
 
 ```sh
-cs30-build college-physics.pdf --chapters 2 3 4 --index-dir data/index-w5 --candidate main
+cs30-build college-physics.pdf --chapters 2 3 4 --index-dir data/index-w5 --candidate official
 ```
 
-Use `--candidate main` for the real corpus. The `S1`-`S6` ablation candidates
-apply a content-type filter, and the blocks that survive it contain verbatim
-repeats — short equations, figure captions and glossary entries recur at
-different source locations in the textbook. Every candidate still sets
-`reject_duplicate_text=True`, so `S2`-`S6` abort with `exact duplicate chunk
-text detected` on the 34-chapter corpus. Member 4 hit the same wall and their
-frozen W5 configuration sets `reject_duplicate_text=False` with that reasoning
-recorded; the shared candidates have not been updated to match, so the
-retrieval ablation cannot use them against real text yet.
+`official` is the default, and is the frozen W5 configuration
+`w5-m4-official-v1`. It is the only candidate whose content filter matches the
+evidence policy Gold is annotated against, so an index built any other way
+cannot be scored against Member 4's mapping — the chunk IDs will not correspond.
+
+The `S1`-`S6` ablation candidates stay reachable but abort on the real corpus.
+They filter by content type, and the surviving blocks repeat verbatim — short
+equations, figure captions and glossary entries recur at different source
+locations in the textbook — while every one of them still sets
+`reject_duplicate_text=True`. The frozen configuration sets it to `False` for
+exactly that reason. Until the shared candidates are updated, the retrieval
+ablation cannot run against real text.
+
+`main` applies no content filter, so it indexes the `problem` and `summary`
+blocks the evidence policy excludes. Use it only for quick local checks.
 
 `python -m cs30.build` is equivalent to `cs30-build`. Run `--help` for all options.
 `--model` selects the embedding model, not the answer-generation LLM.
