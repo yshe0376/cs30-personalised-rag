@@ -97,6 +97,7 @@ class FaissIndexBuilder:
         embeddings = model.encode(
             texts,
             convert_to_numpy=True,
+            batch_size=4,
         )
 
         return np.asarray(embeddings)

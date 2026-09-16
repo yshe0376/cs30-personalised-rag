@@ -18,11 +18,11 @@ CORPUS_PATH = (
     / "artifacts"
     / "w5"
     / "m4"
-    / "corpus"
+    / "corpus_latest"
     / "records.jsonl"
 )
 
-OUTPUT_ROOT = REPOSITORY_ROOT / "artifacts" / "w5" / "m5"
+OUTPUT_ROOT = REPOSITORY_ROOT / "artifacts" / "w5" / "m5_latest"
 
 MODELS = {
     "mpnet": "sentence-transformers/all-mpnet-base-v2",

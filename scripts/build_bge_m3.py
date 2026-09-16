@@ -27,10 +27,10 @@ INDEX_DIR = (
     / "artifacts"
     / "w5"
     / "m5_latest"
-    / "minilm"
+    / "bge_m3"
 )
 
-MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+MODEL_NAME = "BAAI/bge-m3"
 
 
 def load_chunks(path: Path) -> list[Chunk]:
