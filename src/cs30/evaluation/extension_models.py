@@ -45,7 +45,7 @@ class LevelAdaptationRating(ContractModel):
     question_id: Identifier
     blinded_answer_id: Identifier
     assigned_level: StudentLevel
-    score: float = Field(ge=1.0, le=5.0)
+    score: float = Field(allow_inf_nan=False)
     rubric_version: Identifier
     rater_id: Identifier
     notes: NonEmptyText | None = None
@@ -57,6 +57,21 @@ class BlindedAnswerKey(ContractModel):
     schema_version: Literal["0.1"] = "0.1"
     blinded_answer_id: Identifier
     run_id: Identifier
+
+
+class LevelAdaptationRubricManifest(ContractModel):
+    """Team-frozen scoring range for the manual adaptation assessment."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    rubric_version: Identifier
+    score_min: float = Field(allow_inf_nan=False)
+    score_max: float = Field(allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> LevelAdaptationRubricManifest:
+        if self.score_max <= self.score_min:
+            raise ValueError("score_max must be greater than score_min")
+        return self
 
 
 class RoleLabelProvenanceManifest(ContractModel):

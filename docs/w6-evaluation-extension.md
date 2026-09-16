@@ -53,7 +53,9 @@ record, so Dev and Test or different corpora cannot be mixed.
 The optional `--ratings` JSONL contains the manual scores. It deliberately has
 no run, condition, or lambda field: the rater receives a random blinded answer
 identifier. A separate private `--rating-key` file joins that identifier back
-to the saved run only after scoring is complete.
+to the saved run only after scoring is complete. A third `--rating-rubric`
+manifest freezes the rubric version and score range instead of hard-coding an
+unapproved scale in the evaluator.
 
 ```json
 {"schema_version":"0.1","rating_id":"rating-001","question_id":"q-001","blinded_answer_id":"answer-A17","assigned_level":"beginner","score":4,"rubric_version":"level-fit-v1","rater_id":"rater-1"}
@@ -63,9 +65,13 @@ to the saved run only after scoring is complete.
 {"schema_version":"0.1","blinded_answer_id":"answer-A17","run_id":"run-001"}
 ```
 
-Scores use a 1-5 scale. The team must freeze the rubric before formal rating.
-If no rating file is supplied, the report marks the section `pending`; it does
-not infer adaptation quality from answer accuracy.
+```json
+{"schema_version":"0.1","rubric_version":"level-fit-v1","score_min":1,"score_max":5}
+```
+
+The team must freeze the rubric and range before formal rating. If no rating
+package is supplied, the report marks the section `pending`; it does not infer
+adaptation quality from answer accuracy.
 
 ## Role-label provenance audit
 
@@ -116,6 +122,7 @@ cs30-evaluate report-extension `
   --contexts artifacts/w6_experiment_contexts.jsonl `
   --ratings artifacts/w6_level_adaptation_ratings.jsonl `
   --rating-key artifacts/w6_blinded_answer_key.jsonl `
+  --rating-rubric artifacts/w6_level_adaptation_rubric.json `
   --role-manifest artifacts/role_label_provenance_manifest.json `
   --role-gold artifacts/gold_v1.jsonl `
   --role-mapping artifacts/gold_chunk_mapping_v1.json `

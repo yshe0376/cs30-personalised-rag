@@ -154,6 +154,18 @@ def test_extension_reports_keep_automated_manual_and_provenance_outputs_separate
             },
         ],
     )
+    rubric = tmp_path / "rubric.json"
+    rubric.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "rubric_version": "adaptation-v1",
+                "score_min": 1,
+                "score_max": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
 
     paths = write_extension_reports(
         [scores],
@@ -161,6 +173,7 @@ def test_extension_reports_keep_automated_manual_and_provenance_outputs_separate
         tmp_path / "reports",
         ratings_path=ratings,
         rating_key_path=rating_key,
+        rating_rubric_path=rubric,
     )
 
     assert set(paths) == {
@@ -275,7 +288,7 @@ def test_blinded_ratings_require_a_separate_key(tmp_path: Path) -> None:
     )
     ratings = _write_jsonl(tmp_path / "ratings.jsonl", [])
 
-    with pytest.raises(ValueError, match="both ratings and rating-key"):
+    with pytest.raises(ValueError, match="ratings, rating-key, and rubric"):
         write_extension_reports(
             [scores], contexts, tmp_path / "reports", ratings_path=ratings
         )

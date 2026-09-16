@@ -6,6 +6,7 @@ from .extension_models import (
     BlindedAnswerKey,
     ExperimentCondition,
     LevelAdaptationRating,
+    LevelAdaptationRubricManifest,
     RoleLabelProvenanceManifest,
 )
 from .extension_reporting import (
@@ -109,6 +110,7 @@ __all__ = [
     "GoldOption",
     "GoldSource",
     "LevelAdaptationRating",
+    "LevelAdaptationRubricManifest",
     "GoldSample",
     "MappingArtifact",
     "OpenStaxArchiveCorpus",

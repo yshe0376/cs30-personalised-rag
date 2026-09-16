@@ -191,6 +191,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="private post-rating mapping from blinded answer IDs to run IDs",
     )
     extension.add_argument(
+        "--rating-rubric",
+        type=Path,
+        help="team-frozen level-adaptation rubric version and score range",
+    )
+    extension.add_argument(
         "--role-manifest",
         type=Path,
         help="optional M8 provenance sidecar for the M3 Role-label package",
@@ -671,6 +676,7 @@ def _report_extension_command(args: argparse.Namespace) -> int:
         args.output_dir,
         ratings_path=args.ratings,
         rating_key_path=args.rating_key,
+        rating_rubric_path=args.rating_rubric,
         role_provenance=role_provenance,
     )
     print(

@@ -16,6 +16,7 @@ from .extension_models import (
     BlindedAnswerKey,
     ExperimentCondition,
     LevelAdaptationRating,
+    LevelAdaptationRubricManifest,
     RoleLabelProvenanceManifest,
 )
 from .mapping import GoldChunkMapping
@@ -117,6 +118,15 @@ def load_blinded_answer_keys(path: Path) -> list[BlindedAnswerKey]:
         return [BlindedAnswerKey.model_validate(row) for row in _read_jsonl(path)]
     except ValidationError as exc:
         raise ValueError(f"{path}: invalid blinded-answer key: {exc}") from exc
+
+
+def load_level_adaptation_rubric(path: Path) -> LevelAdaptationRubricManifest:
+    try:
+        return LevelAdaptationRubricManifest.model_validate_json(
+            path.read_text(encoding="utf-8")
+        )
+    except ValidationError as exc:
+        raise ValueError(f"{path}: invalid level-adaptation rubric: {exc}") from exc
 
 
 def _metric(values: Iterable[bool | None]) -> dict[str, Any]:
@@ -265,10 +275,13 @@ def _adaptation_summary(
     records: Sequence[dict[str, Any]],
     ratings: Sequence[LevelAdaptationRating],
     answer_keys: Sequence[BlindedAnswerKey],
+    rubric: LevelAdaptationRubricManifest | None,
 ) -> dict[str, Any]:
     if not ratings:
         return {"status": "pending", "rating_count": 0, "groups": []}
     records_by_run = {str(record["run_id"]): record for record in records}
+    if rubric is None:
+        raise ValueError("level-adaptation ratings require a frozen rubric manifest")
     keys_by_answer: dict[str, str] = {}
     keyed_runs: set[str] = set()
     for answer_key in answer_keys:
@@ -289,6 +302,14 @@ def _adaptation_summary(
         if rating.rating_id in seen_rating_ids:
             raise ValueError(f"duplicate level-adaptation rating_id: {rating.rating_id}")
         seen_rating_ids.add(rating.rating_id)
+        if rating.rubric_version != rubric.rubric_version:
+            raise ValueError(
+                f"rating {rating.rating_id} does not use the frozen rubric version"
+            )
+        if not rubric.score_min <= rating.score <= rubric.score_max:
+            raise ValueError(
+                f"rating {rating.rating_id} falls outside the frozen score range"
+            )
         run_id = keys_by_answer.get(rating.blinded_answer_id)
         if run_id is None:
             raise ValueError(
@@ -321,6 +342,8 @@ def _adaptation_summary(
         "status": "available",
         "rating_count": len(ratings),
         "rubric_versions": sorted(rubric_versions),
+        "score_min": rubric.score_min,
+        "score_max": rubric.score_max,
         "rater_count": len(rater_ids),
         "groups": groups,
     }
@@ -691,6 +714,7 @@ def write_extension_reports(
     *,
     ratings_path: Path | None = None,
     rating_key_path: Path | None = None,
+    rating_rubric_path: Path | None = None,
     role_provenance: Mapping[str, Any] | None = None,
 ) -> dict[str, Path]:
     """Build the W6 package without altering the existing five M8 artifacts."""
@@ -699,11 +723,21 @@ def write_extension_reports(
     contexts = load_experiment_conditions(context_path)
     joined = _join_records(records, contexts)
     groups = _group_records(joined)
-    if (ratings_path is None) != (rating_key_path is None):
-        raise ValueError("blinded ratings require both ratings and rating-key files")
+    rating_paths = (ratings_path, rating_key_path, rating_rubric_path)
+    if any(path is not None for path in rating_paths) and not all(
+        path is not None for path in rating_paths
+    ):
+        raise ValueError(
+            "blinded ratings require ratings, rating-key, and rubric files together"
+        )
     ratings = load_level_adaptation_ratings(ratings_path) if ratings_path else []
     answer_keys = load_blinded_answer_keys(rating_key_path) if rating_key_path else []
-    adaptation = _adaptation_summary(joined, ratings, answer_keys)
+    rubric = (
+        load_level_adaptation_rubric(rating_rubric_path)
+        if rating_rubric_path
+        else None
+    )
+    adaptation = _adaptation_summary(joined, ratings, answer_keys, rubric)
     comparisons = _lambda_comparisons(groups, adaptation)
     role = dict(role_provenance or {"status": "pending"})
     result = {
