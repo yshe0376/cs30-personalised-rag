@@ -18,6 +18,10 @@ from cs30.ports import Retriever
 
 from .answer_metrics import AnswerCitationScorer
 from .answer_reporting import write_answer_citation_reports
+from .extension_reporting import (
+    audit_role_label_provenance,
+    write_extension_reports,
+)
 from .io import (
     load_gold_samples,
     load_mappings,
@@ -154,6 +158,58 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     score.add_argument("--k-values", nargs="+")
     score.add_argument("--manifest", type=Path)
+
+    extension = commands.add_parser(
+        "report-extension",
+        help=(
+            "combine saved M8 score artifacts with textbook, level, lambda, "
+            "manual-rating, and Role-label provenance inputs"
+        ),
+    )
+    extension.add_argument(
+        "--scores",
+        required=True,
+        nargs="+",
+        type=Path,
+        help="one or more answer_citation_scores.jsonl files",
+    )
+    extension.add_argument(
+        "--contexts",
+        required=True,
+        type=Path,
+        help="M8 experiment-context JSONL keyed by run_id",
+    )
+    extension.add_argument("--output-dir", required=True, type=Path)
+    extension.add_argument(
+        "--ratings",
+        type=Path,
+        help="optional blinded level-adaptation rating JSONL",
+    )
+    extension.add_argument(
+        "--rating-key",
+        type=Path,
+        help="private post-rating mapping from blinded answer IDs to run IDs",
+    )
+    extension.add_argument(
+        "--role-manifest",
+        type=Path,
+        help="optional M8 provenance sidecar for the M3 Role-label package",
+    )
+    extension.add_argument(
+        "--role-gold",
+        type=Path,
+        help="Gold JSONL used to validate Role-label question and span IDs",
+    )
+    extension.add_argument(
+        "--role-mapping",
+        type=Path,
+        help="M4 mapping used to validate Role-label chunk IDs",
+    )
+    extension.add_argument(
+        "--role-records",
+        type=Path,
+        help="optional M4 records.jsonl used as the full valid chunk-ID universe",
+    )
 
     prepare = commands.add_parser(
         "prepare-corpus",
@@ -578,6 +634,54 @@ def _normalize_gold_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _report_extension_command(args: argparse.Namespace) -> int:
+    role_paths = (args.role_manifest, args.role_gold, args.role_mapping)
+    if any(path is not None for path in role_paths) and not all(
+        path is not None for path in role_paths
+    ):
+        raise ValueError(
+            "Role provenance requires --role-manifest, --role-gold, and "
+            "--role-mapping together"
+        )
+    role_provenance = None
+    if args.role_manifest is not None:
+        corpus_record_ids = None
+        if args.role_records is not None:
+            corpus_record_ids = set()
+            with args.role_records.open(encoding="utf-8") as stream:
+                for line_number, line in enumerate(stream, start=1):
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    chunk_id = payload.get("chunk_id")
+                    if not isinstance(chunk_id, str) or not chunk_id.strip():
+                        raise ValueError(
+                            f"{args.role_records}:{line_number}: missing chunk_id"
+                        )
+                    corpus_record_ids.add(chunk_id)
+        role_provenance = audit_role_label_provenance(
+            args.role_manifest,
+            load_gold_samples(args.role_gold),
+            load_mappings(args.role_mapping),
+            corpus_record_ids=corpus_record_ids,
+        )
+    paths = write_extension_reports(
+        args.scores,
+        args.contexts,
+        args.output_dir,
+        ratings_path=args.ratings,
+        rating_key_path=args.rating_key,
+        role_provenance=role_provenance,
+    )
+    print(
+        json.dumps(
+            {name: str(path) for name, path in paths.items()},
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
 def _prepare_corpus_command(args: argparse.Namespace) -> int:
     corpus = load_openstax_archive(args.archive, chapters=args.chapters)
     paths = write_prepared_corpus(corpus, args.output_dir)
@@ -604,6 +708,8 @@ def main(argv: list[str] | None = None) -> int:
             return _run_command(args)
         if args.command == "score":
             return _score_command(args)
+        if args.command == "report-extension":
+            return _report_extension_command(args)
         if args.command == "normalize-gold":
             return _normalize_gold_command(args)
         return _prepare_corpus_command(args)

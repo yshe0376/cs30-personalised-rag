@@ -312,3 +312,22 @@ omits answer/citation `records`. `--answer-citation-output-dir` writes the
 answer/citation aggregate JSON, per-question JSONL, summary CSV, Markdown report,
 and focused failure-review JSONL. Fixture outputs validate the implementation
 only and must not be reported as final model quality.
+
+## Six-textbook and personalisation reporting extension
+
+The `report-extension` command consumes one or more saved
+`answer_citation_scores.jsonl` files and joins them to an M8-owned context
+sidecar. It groups results without mixing retrieval mode, data version, split,
+corpus version, textbook, learner level, condition, or lambda setting. It also
+supports blinded level-adaptation ratings and an identity/reference audit of an
+M3 Role-label package. These inputs do not change the shared run-result or
+manifest schemas.
+
+The extension retains the original five answer/citation artifacts and writes a
+separate W6 package containing the combined Markdown report, experiment groups,
+lambda comparisons, grouped failure analysis, adaptation scores, and Role-label
+provenance. Missing
+manual ratings or Role labels remain explicitly pending; zero-denominator
+metrics are marked `not_applicable`. See
+[`docs/w6-evaluation-extension.md`](../../../docs/w6-evaluation-extension.md)
+for the input schemas, boundaries, and command example.

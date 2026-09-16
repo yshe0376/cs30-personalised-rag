@@ -2,6 +2,16 @@
 
 from .answer_metrics import AnswerCitationScorer, ScoringMode
 from .answer_reporting import write_answer_citation_reports
+from .extension_models import (
+    BlindedAnswerKey,
+    ExperimentCondition,
+    LevelAdaptationRating,
+    RoleLabelProvenanceManifest,
+)
+from .extension_reporting import (
+    audit_role_label_provenance,
+    write_extension_reports,
+)
 from .io import (
     append_jsonl_record,
     load_gold_samples,
@@ -84,18 +94,21 @@ from .span_resolution import SpanResolution, resolve_span_to_corpus
 __all__ = [
     "AbstentionCause",
     "AnswerCitationScorer",
+    "BlindedAnswerKey",
     "AnnotationStatus",
     "EvidenceSufficiency",
     "ErrorStage",
     "EvaluationRunError",
     "EvaluationRunResult",
     "EvaluationSplit",
+    "ExperimentCondition",
     "ExecutionMode",
     "GitState",
     "GoldChunkMapping",
     "GoldEvidenceSpan",
     "GoldOption",
     "GoldSource",
+    "LevelAdaptationRating",
     "GoldSample",
     "MappingArtifact",
     "OpenStaxArchiveCorpus",
@@ -104,6 +117,7 @@ __all__ = [
     "RetrievalMetricSummary",
     "RunManifest",
     "RunStatus",
+    "RoleLabelProvenanceManifest",
     "SourceSplit",
     "SpanResolutionMethod",
     "SpanResolutionStatus",
@@ -115,6 +129,7 @@ __all__ = [
     "assert_reportable_gold",
     "assert_clean_for_report",
     "assert_manifests_comparable",
+    "audit_role_label_provenance",
     "capture_git_state",
     "complete_evidence_hit_at_k",
     "complete_evidence_mrr",
@@ -155,6 +170,7 @@ __all__ = [
     "validate_artifact_compatibility",
     "write_final_jsonl",
     "write_answer_citation_reports",
+    "write_extension_reports",
     "write_normalized_gold",
     "write_prepared_corpus",
 ]
