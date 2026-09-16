@@ -331,3 +331,12 @@ manual ratings or Role labels remain explicitly pending; zero-denominator
 metrics are marked `not_applicable`. See
 [`docs/w6-evaluation-extension.md`](../../../docs/w6-evaluation-extension.md)
 for the input schemas, boundaries, and command example.
+
+Formal lambda comparisons require one frozen lambda value and identical unique
+question sets on both sides. Role provenance checks corpus/parser identity and
+question-to-evidence relationships as well as globally valid IDs.
+Missing baseline/frozen groups fail by default; partial development reports
+must opt in with `--allow-incomplete`. The `prepare-blind-ratings` command
+creates a single-rater anonymous CSV and a separate private key from saved run
+files. Completed rating sheets must cover every keyed answer before an
+adaptation aggregate is reported.

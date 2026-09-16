@@ -11,6 +11,7 @@ from .extension_models import (
 )
 from .extension_reporting import (
     audit_role_label_provenance,
+    write_blind_rating_materials,
     write_extension_reports,
 )
 from .io import (
@@ -172,6 +173,7 @@ __all__ = [
     "validate_artifact_compatibility",
     "write_final_jsonl",
     "write_answer_citation_reports",
+    "write_blind_rating_materials",
     "write_extension_reports",
     "write_normalized_gold",
     "write_prepared_corpus",

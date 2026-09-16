@@ -86,8 +86,10 @@ class RoleLabelProvenanceManifest(ContractModel):
     role_taxonomy_version: Identifier
     annotation_version: Identifier
     corpus_version: Identifier
+    parser_version: Identifier
     annotation_date: date
     annotator_ids: list[Identifier] = Field(min_length=1)
+    double_annotated: Literal[False] = False
     labels_file: Path
     labels_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     declared_record_count: int = Field(ge=0)
@@ -97,3 +99,9 @@ class RoleLabelProvenanceManifest(ContractModel):
     reference_universe: Literal["gold_mapping", "corpus_records"] = "corpus_records"
     role_field: Identifier = "role"
     record_schema_version_field: Identifier = "schema_version"
+
+    @model_validator(mode="after")
+    def validate_annotation_scope(self) -> RoleLabelProvenanceManifest:
+        if len(self.annotator_ids) != 1:
+            raise ValueError("Role-label provenance requires one primary annotator")
+        return self

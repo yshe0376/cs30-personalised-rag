@@ -20,6 +20,8 @@ from .answer_metrics import AnswerCitationScorer
 from .answer_reporting import write_answer_citation_reports
 from .extension_reporting import (
     audit_role_label_provenance,
+    load_experiment_conditions,
+    write_blind_rating_materials,
     write_extension_reports,
 )
 from .io import (
@@ -214,6 +216,43 @@ def _build_parser() -> argparse.ArgumentParser:
         "--role-records",
         type=Path,
         help="optional M4 records.jsonl used as the full valid chunk-ID universe",
+    )
+    extension.add_argument(
+        "--role-question-references",
+        type=Path,
+        help=(
+            "normalized JSONL of valid question_id/chunk_id pairs from the "
+            "frozen candidate outputs"
+        ),
+    )
+    extension.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help=(
+            "development only: allow experiment buckets without both lambda=0 "
+            "and frozen-lambda groups"
+        ),
+    )
+
+    blind = commands.add_parser(
+        "prepare-blind-ratings",
+        help="create a single-rater anonymous level-adaptation sheet and private key",
+    )
+    blind.add_argument(
+        "--runs",
+        required=True,
+        nargs="+",
+        type=Path,
+        help="one or more saved EvaluationRunResult JSONL files",
+    )
+    blind.add_argument("--gold", required=True, type=Path)
+    blind.add_argument("--contexts", required=True, type=Path)
+    blind.add_argument("--output-dir", required=True, type=Path)
+    blind.add_argument(
+        "--seed",
+        required=True,
+        type=int,
+        help="private deterministic randomisation seed; do not give it to the rater",
     )
 
     prepare = commands.add_parser(
@@ -658,17 +697,54 @@ def _report_extension_command(args: argparse.Namespace) -> int:
                     if not line.strip():
                         continue
                     payload = json.loads(line)
+                    if not isinstance(payload, dict):
+                        raise ValueError(
+                            f"{args.role_records}:{line_number}: expected an object"
+                        )
                     chunk_id = payload.get("chunk_id")
                     if not isinstance(chunk_id, str) or not chunk_id.strip():
                         raise ValueError(
                             f"{args.role_records}:{line_number}: missing chunk_id"
                         )
                     corpus_record_ids.add(chunk_id)
+        question_reference_pairs = None
+        if args.role_question_references is not None:
+            question_reference_pairs = set()
+            with args.role_question_references.open(encoding="utf-8") as stream:
+                for line_number, line in enumerate(stream, start=1):
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    if not isinstance(payload, dict):
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "expected an object"
+                        )
+                    question_id = payload.get("question_id")
+                    chunk_id = payload.get("chunk_id")
+                    if not isinstance(question_id, str) or not question_id.strip():
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "missing question_id"
+                        )
+                    if not isinstance(chunk_id, str) or not chunk_id.strip():
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "missing chunk_id"
+                        )
+                    pair = (question_id, chunk_id)
+                    if pair in question_reference_pairs:
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "duplicate question/chunk relationship"
+                        )
+                    question_reference_pairs.add(pair)
         role_provenance = audit_role_label_provenance(
             args.role_manifest,
             load_gold_samples(args.role_gold),
             load_mappings(args.role_mapping),
             corpus_record_ids=corpus_record_ids,
+            question_reference_pairs=question_reference_pairs,
         )
     paths = write_extension_reports(
         args.scores,
@@ -678,6 +754,34 @@ def _report_extension_command(args: argparse.Namespace) -> int:
         rating_key_path=args.rating_key,
         rating_rubric_path=args.rating_rubric,
         role_provenance=role_provenance,
+        allow_incomplete=args.allow_incomplete,
+    )
+    print(
+        json.dumps(
+            {name: str(path) for name, path in paths.items()},
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _prepare_blind_ratings_command(args: argparse.Namespace) -> int:
+    runs = []
+    seen_run_ids: set[str] = set()
+    for path in args.runs:
+        for run in load_run_results(path):
+            if run.run_id in seen_run_ids:
+                raise ValueError(
+                    f"duplicate run_id across blind-rating inputs: {run.run_id}"
+                )
+            seen_run_ids.add(run.run_id)
+            runs.append(run)
+    paths = write_blind_rating_materials(
+        runs,
+        load_gold_samples(args.gold),
+        load_experiment_conditions(args.contexts),
+        args.output_dir,
+        seed=args.seed,
     )
     print(
         json.dumps(
@@ -716,6 +820,8 @@ def main(argv: list[str] | None = None) -> int:
             return _score_command(args)
         if args.command == "report-extension":
             return _report_extension_command(args)
+        if args.command == "prepare-blind-ratings":
+            return _prepare_blind_ratings_command(args)
         if args.command == "normalize-gold":
             return _normalize_gold_command(args)
         return _prepare_corpus_command(args)
