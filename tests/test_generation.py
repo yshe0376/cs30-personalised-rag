@@ -4,8 +4,15 @@ from collections import Counter
 
 import pytest
 
+from cs30.citation import build_evidence_bundle, resolve_and_validate
 from cs30.config import load_config
-from cs30.contracts import RetrievalHit, RetrievalMode, RetrievalResult, StudentLevel
+from cs30.contracts import (
+    EvidenceBundle,
+    RetrievalHit,
+    RetrievalMode,
+    RetrievalResult,
+    StudentLevel,
+)
 from cs30.errors import GenerationError
 from cs30.generation import (
     BatchItem,
@@ -67,6 +74,15 @@ def retrieval(question: str = QUESTION) -> RetrievalResult:
             ),
         ],
     )
+
+
+def evidence_bundle() -> EvidenceBundle:
+    return build_evidence_bundle(retrieval())
+
+
+@pytest.fixture(params=["retrieval", "bundle"])
+def generation_evidence(request):
+    return retrieval() if request.param == "retrieval" else evidence_bundle()
 
 
 class ScriptedClient:
@@ -135,6 +151,17 @@ def test_prompt_contains_profile_question_and_every_retrieved_chunk() -> None:
     assert "chunk_acceleration" in prompt
     assert "chunk_velocity" in prompt
     assert "untrusted source material" in prompt
+
+
+def test_prompt_consumes_native_bundle_without_changing_prompt_or_citation_namespace() -> None:
+    profile = Week1ProfileProvider().get(StudentLevel.BEGINNER)
+
+    prompt = PromptBuilder().build(QUESTION, profile, evidence_bundle())
+
+    assert prompt == PromptBuilder().build(QUESTION, profile, retrieval())
+    assert 'ALLOWED_CITATION_IDS:\n["chunk_acceleration", "chunk_velocity"]' in prompt
+    assert '"chunk_id": "chunk_acceleration"' in prompt
+    assert '"E1"' not in prompt
 
 
 def test_sciq_formatter_keeps_all_choices_for_generation() -> None:
@@ -295,12 +322,35 @@ def test_generator_returns_schema_valid_grounded_answer() -> None:
     assert len(generator.last_trace.prompt_sha256) == 64
 
 
-def test_three_levels_reach_prompt_and_change_explanation() -> None:
+def test_generator_returns_chunk_ids_accepted_by_member8_resolver() -> None:
+    generator = PersonalisedAnswerGenerator(MockJsonLLMClient())
+    profile = Week1ProfileProvider().get(StudentLevel.INTERMEDIATE)
+
+    answer = generator.generate(QUESTION, profile, evidence_bundle())
+
+    assert answer.citations == ["chunk_acceleration"]
+    assert answer.abstained is False
+    assert resolve_and_validate(answer, evidence_bundle()).citation_status == "passed"
+
+
+def test_unknown_bundle_citation_is_repaired() -> None:
+    client = ScriptedClient([valid_output("E1"), valid_output()])
+    generator = PersonalisedAnswerGenerator(client, max_retries=1)
+    profile = Week1ProfileProvider().get(StudentLevel.ADVANCED)
+
+    answer = generator.generate(QUESTION, profile, evidence_bundle())
+
+    assert answer.citations == ["chunk_acceleration"]
+    assert generator.last_trace is not None
+    assert generator.last_trace.failure_types == ("CitationIntegrityError",)
+
+
+def test_three_levels_reach_prompt_and_change_explanation(generation_evidence) -> None:
     generator = PersonalisedAnswerGenerator(MockJsonLLMClient())
     provider = Week1ProfileProvider()
 
     explanations = {
-        level: generator.generate(QUESTION, provider.get(level), retrieval()).explanation
+        level: generator.generate(QUESTION, provider.get(level), generation_evidence).explanation
         for level in StudentLevel
     }
 
@@ -329,12 +379,12 @@ def test_empty_retrieval_abstains_without_calling_model() -> None:
     assert generator.last_trace.attempts == 0
 
 
-def test_invalid_json_is_repaired_within_finite_retry_budget() -> None:
+def test_invalid_json_is_repaired_within_finite_retry_budget(generation_evidence) -> None:
     client = ScriptedClient(["not json", valid_output()])
     generator = PersonalisedAnswerGenerator(client, max_retries=2)
     profile = Week1ProfileProvider().get(StudentLevel.INTERMEDIATE)
 
-    answer = generator.generate(QUESTION, profile, retrieval())
+    answer = generator.generate(QUESTION, profile, generation_evidence)
 
     assert answer.final_choice == "A"
     assert client.calls == 2
@@ -360,19 +410,19 @@ def test_provider_failure_before_a_response_does_not_create_a_repaired_output() 
     assert generator.last_trace.repaired_model_output is None
 
 
-def test_unknown_citation_is_repaired_before_answer_is_returned() -> None:
+def test_unknown_citation_is_repaired_before_answer_is_returned(generation_evidence) -> None:
     client = ScriptedClient([valid_output("invented_chunk"), valid_output()])
     generator = PersonalisedAnswerGenerator(client, max_retries=1)
     profile = Week1ProfileProvider().get(StudentLevel.ADVANCED)
 
-    answer = generator.generate(QUESTION, profile, retrieval())
+    answer = generator.generate(QUESTION, profile, generation_evidence)
 
     assert answer.citations == ["chunk_acceleration"]
     assert generator.last_trace is not None
     assert generator.last_trace.failure_types == ("CitationIntegrityError",)
 
 
-def test_provider_failure_stops_after_configured_attempts() -> None:
+def test_provider_failure_stops_after_configured_attempts(generation_evidence) -> None:
     client = ScriptedClient(
         [
             LLMProviderError("temporary failure"),
@@ -384,7 +434,7 @@ def test_provider_failure_stops_after_configured_attempts() -> None:
     profile = Week1ProfileProvider().get(StudentLevel.BEGINNER)
 
     with pytest.raises(GenerationError, match="failed after 3 attempts"):
-        generator.generate(QUESTION, profile, retrieval())
+        generator.generate(QUESTION, profile, generation_evidence)
 
     assert client.calls == 3
     assert generator.last_trace is not None
@@ -392,13 +442,13 @@ def test_provider_failure_stops_after_configured_attempts() -> None:
     assert generator.last_trace.failure_types == ("LLMProviderError",) * 3
 
 
-def test_one_batch_failure_does_not_abort_later_questions() -> None:
+def test_one_batch_failure_does_not_abort_later_questions(generation_evidence) -> None:
     client = ScriptedClient([LLMProviderError("one failure"), valid_output()])
     generator = PersonalisedAnswerGenerator(client, max_retries=0)
     profile = Week1ProfileProvider().get(StudentLevel.INTERMEDIATE)
     items = [
-        BatchItem("q-fails", QUESTION, profile, retrieval()),
-        BatchItem("q-succeeds", QUESTION, profile, retrieval()),
+        BatchItem("q-fails", QUESTION, profile, generation_evidence),
+        BatchItem("q-succeeds", QUESTION, profile, generation_evidence),
     ]
 
     results = generate_batch(generator, items)
