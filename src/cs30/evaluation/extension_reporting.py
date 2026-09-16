@@ -190,7 +190,11 @@ def _summarise_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     false_negative = len(gold_unanswerable) - true_positive
     precision_denominator = true_positive + false_positive
     recall_denominator = true_positive + false_negative
-    f1_denominator = (2 * true_positive) + false_positive + false_negative
+    f1_denominator = (
+        (2 * true_positive) + false_positive + false_negative
+        if recall_denominator > 0
+        else 0
+    )
     metrics.update(
         {
             "abstention_precision": {

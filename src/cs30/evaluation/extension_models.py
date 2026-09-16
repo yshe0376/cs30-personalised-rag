@@ -1,4 +1,4 @@
-"""M8-owned inputs for the W6 evaluation reporting extension.
+"""M8-owned inputs for the personalisation evaluation reporting extension.
 
 These models deliberately sit outside the shared run-result contract.  They
 annotate saved scoring records for cross-run reporting without requiring M1,

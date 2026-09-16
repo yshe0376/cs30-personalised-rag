@@ -483,7 +483,7 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         ),
         "abstention_f1": _metric(
             system_f1_numerator,
-            system_f1_denominator,
+            system_f1_denominator if system_recall_denominator > 0 else 0,
             eligible=sum(
                 record["execution_mode"]
                 == ExecutionMode.RETRIEVAL_AND_GENERATION.value
@@ -494,7 +494,8 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             definition="System-level abstention F1 computed as 2TP / (2TP + FP + FN), "
             "where both abstention causes are predicted positives, TP is a correct "
             "abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that "
-            "did not abstain correctly. Only resolved Gold answerability is eligible.",
+            "did not abstain correctly. Only resolved Gold answerability is eligible; "
+            "F1 is not applicable when the Gold set has no unanswerable runs.",
         ),
         "model_abstention_accuracy": _metric(
             sum(record["abstention_correct"] is True for record in model_decisions),
@@ -526,12 +527,13 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         ),
         "model_abstention_f1": _metric(
             model_f1_numerator,
-            model_f1_denominator,
+            model_f1_denominator if model_recall_denominator > 0 else 0,
             eligible=len(model_decisions),
             total=total,
             definition="Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where "
             "model_abstained_with_evidence is the predicted positive. Only successful model "
-            "decisions with evidence and resolved Gold answerability are eligible.",
+            "decisions with evidence and resolved Gold answerability are eligible; F1 is "
+            "not applicable when those decisions contain no gold-unanswerable runs.",
         ),
         "raw_json_validity": boolean_metric(
             "raw_json_valid",

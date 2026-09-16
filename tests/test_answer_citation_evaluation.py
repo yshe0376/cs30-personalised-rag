@@ -543,6 +543,9 @@ def test_all_abstain_and_no_computable_denominator_cases_remain_visible() -> Non
     no_positive_class = AnswerCitationScorer(mappings).score(
         [gold[0]], [runs[0]], mode="development"
     )
+    wrong_abstention_without_positive_class = AnswerCitationScorer(mappings).score(
+        [gold[-1]], [runs[-1]], mode="development"
+    )
 
     assert all_abstain["answer_outcome_counts"] == {
         "correct": 0,
@@ -557,6 +560,22 @@ def test_all_abstain_and_no_computable_denominator_cases_remain_visible() -> Non
     assert no_positive_class["metrics"]["abstention_precision"]["value"] is None
     assert no_positive_class["metrics"]["abstention_recall"]["value"] is None
     assert no_positive_class["metrics"]["abstention_f1"]["value"] is None
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["abstention_precision"]["value"]
+        == 0.0
+    )
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["abstention_recall"]["value"]
+        is None
+    )
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["abstention_f1"]["value"]
+        is None
+    )
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["model_abstention_f1"]["value"]
+        is None
+    )
 
 
 def test_groups_use_retrieval_mode_not_only_execution_mode() -> None:

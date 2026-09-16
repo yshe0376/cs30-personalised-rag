@@ -244,6 +244,48 @@ def test_zero_denominator_is_explicitly_not_applicable(tmp_path: Path) -> None:
     assert "not_applicable" in paths["markdown"].read_text(encoding="utf-8")
 
 
+def test_refusal_f1_is_not_applicable_without_gold_unanswerable_samples(
+    tmp_path: Path,
+) -> None:
+    wrong_abstention = _score_record(
+        "run-wrong-abstention", "q-1", "plain", correct=False
+    )
+    wrong_abstention.update(
+        {
+            "status": "abstained",
+            "abstention_cause": "model_abstained_with_evidence",
+            "abstention_correct": False,
+            "answer_correct": None,
+        }
+    )
+    scores = _write_jsonl(tmp_path / "scores.jsonl", [wrong_abstention])
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [
+            _context(
+                "run-wrong-abstention",
+                "q-1",
+                "plain",
+                lambda_weight=0.0,
+                lambda_status="baseline",
+            )
+        ],
+    )
+
+    paths = write_extension_reports(
+        [scores], contexts, tmp_path / "reports", allow_incomplete=True
+    )
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+    metrics = summary["groups"][0]["metrics"]
+
+    assert metrics["abstention_precision"]["value"] == 0.0
+    assert metrics["abstention_precision"]["status"] == "available"
+    assert metrics["abstention_recall"]["value"] is None
+    assert metrics["abstention_recall"]["status"] == "not_applicable"
+    assert metrics["abstention_f1"]["value"] is None
+    assert metrics["abstention_f1"]["status"] == "not_applicable"
+
+
 def test_extension_does_not_mix_dev_and_test_groups(tmp_path: Path) -> None:
     dev = _score_record("run-dev", "q-dev", "plain", correct=True)
     test = _score_record("run-test", "q-test", "plain", correct=False)

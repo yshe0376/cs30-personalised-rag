@@ -185,7 +185,7 @@ def _build_parser() -> argparse.ArgumentParser:
     extension.add_argument(
         "--ratings",
         type=Path,
-        help="optional blinded level-adaptation rating JSONL",
+        help="optional blinded level-adaptation rating CSV or JSONL",
     )
     extension.add_argument(
         "--rating-key",
