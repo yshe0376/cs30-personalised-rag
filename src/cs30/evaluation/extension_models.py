@@ -153,6 +153,19 @@ class BlindRatingSubmissionManifest(ContractModel):
     rubric_version: Identifier
 
 
+class ScoreArtifactProvenanceManifest(ContractModel):
+    """Integrity binding from one score artifact to its source run results."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    score_file: Path
+    score_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    source_runs_file: Path
+    source_runs_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    score_record_count: int = Field(gt=0)
+    source_run_count: int = Field(gt=0)
+    run_ids_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class RoleLabelProvenanceManifest(ContractModel):
     """M8 audit metadata for an M3-owned Role-label package.
 
@@ -171,7 +184,7 @@ class RoleLabelProvenanceManifest(ContractModel):
     double_annotated: Literal[False] = False
     labels_file: Path
     labels_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    declared_record_count: int = Field(ge=0)
+    declared_record_count: int = Field(gt=0)
     question_id_field: Identifier = "question_id"
     reference_id_field: Identifier = "chunk_id"
     reference_type: Literal["span", "chunk"] = "chunk"

@@ -21,7 +21,9 @@ from .extension_models import (
     LevelAdaptationRating,
     LevelAdaptationRubricManifest,
     RoleLabelProvenanceManifest,
+    ScoreArtifactProvenanceManifest,
 )
+from .io import load_run_results
 from .manifest import RunManifest, assert_manifests_comparable
 from .mapping import GoldChunkMapping
 from .models import EvaluationRunResult, ExecutionMode, GoldSample, RunStatus
@@ -172,6 +174,181 @@ def load_expected_experiment_manifest(path: Path) -> ExpectedExperimentManifest:
 
 def _normalise_path(path: Path) -> Path:
     return path.resolve()
+
+
+def _run_ids_sha256(run_ids: Iterable[str]) -> str:
+    payload = json.dumps(
+        sorted(run_ids), ensure_ascii=False, separators=(",", ":")
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def write_score_artifact_provenance(
+    score_path: Path,
+    source_runs_path: Path,
+    output_path: Path,
+) -> Path:
+    """Seal a score JSONL to the exact saved run-results file it scores."""
+
+    score_records = load_score_records([score_path])
+    source_runs = load_run_results(source_runs_path)
+    score_run_ids = {str(record["run_id"]) for record in score_records}
+    source_run_ids = {run.run_id for run in source_runs}
+    if score_run_ids != source_run_ids:
+        raise ValueError(
+            "score artifact and source run results have different run IDs: "
+            f"missing_from_scores={sorted(source_run_ids - score_run_ids)}, "
+            f"missing_from_source={sorted(score_run_ids - source_run_ids)}"
+        )
+    manifest = ScoreArtifactProvenanceManifest(
+        score_file=score_path.name,
+        score_sha256=hashlib.sha256(score_path.read_bytes()).hexdigest(),
+        source_runs_file=source_runs_path.name,
+        source_runs_sha256=hashlib.sha256(source_runs_path.read_bytes()).hexdigest(),
+        score_record_count=len(score_records),
+        source_run_count=len(source_runs),
+        run_ids_sha256=_run_ids_sha256(score_run_ids),
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        manifest.model_dump_json(indent=2) + "\n", encoding="utf-8"
+    )
+    return output_path
+
+
+def _load_score_source_bindings(
+    score_paths: Sequence[Path],
+    score_source_triples: Sequence[tuple[Path, Path, Path]] | None,
+    *,
+    allow_incomplete: bool,
+) -> dict[str, Any]:
+    expected_scores = {_normalise_path(path) for path in score_paths}
+    if not score_source_triples:
+        if allow_incomplete:
+            return {
+                "status": "pending",
+                "expected_score_count": len(expected_scores),
+                "bound_score_count": 0,
+                "missing_score_files": sorted(path.name for path in expected_scores),
+                "bindings": [],
+            }
+        raise ValueError(
+            "formal evaluation requires one --score-source binding for every "
+            "score artifact"
+        )
+
+    bound_scores: set[Path] = set()
+    seen_manifests: set[Path] = set()
+    seen_sources: set[Path] = set()
+    audit: list[dict[str, Any]] = []
+    for score_path, provenance_path, source_runs_path in score_source_triples:
+        resolved_score = _normalise_path(score_path)
+        resolved_provenance = _normalise_path(provenance_path)
+        resolved_source = _normalise_path(source_runs_path)
+        if resolved_score not in expected_scores:
+            raise ValueError(
+                f"score-source binding references an unknown score artifact: {score_path}"
+            )
+        if resolved_score in bound_scores:
+            raise ValueError(f"duplicate source binding for score artifact: {score_path}")
+        if resolved_provenance in seen_manifests:
+            raise ValueError(
+                f"one score provenance manifest cannot bind multiple files: {provenance_path}"
+            )
+        if resolved_source in seen_sources:
+            raise ValueError(
+                f"one source run-results file cannot bind multiple score files: {source_runs_path}"
+            )
+        if not resolved_provenance.is_file():
+            raise FileNotFoundError(resolved_provenance)
+        if not resolved_source.is_file():
+            raise FileNotFoundError(resolved_source)
+        try:
+            manifest = ScoreArtifactProvenanceManifest.model_validate_json(
+                resolved_provenance.read_text(encoding="utf-8")
+            )
+        except ValidationError as exc:
+            raise ValueError(
+                f"{provenance_path}: invalid score provenance manifest: {exc}"
+            ) from exc
+        checks = {
+            "score_file": (manifest.score_file.name, score_path.name),
+            "source_runs_file": (manifest.source_runs_file.name, source_runs_path.name),
+            "score_sha256": (
+                manifest.score_sha256,
+                hashlib.sha256(resolved_score.read_bytes()).hexdigest(),
+            ),
+            "source_runs_sha256": (
+                manifest.source_runs_sha256,
+                hashlib.sha256(resolved_source.read_bytes()).hexdigest(),
+            ),
+        }
+        mismatches = [
+            f"{field}={declared!r} (actual={actual!r})"
+            for field, (declared, actual) in checks.items()
+            if declared != actual
+        ]
+        if mismatches:
+            raise ValueError(
+                f"{provenance_path}: score-source provenance mismatch: "
+                + "; ".join(mismatches)
+            )
+        score_records = load_score_records([resolved_score])
+        source_runs = load_run_results(resolved_source)
+        score_run_ids = {str(record["run_id"]) for record in score_records}
+        source_run_ids = {run.run_id for run in source_runs}
+        if score_run_ids != source_run_ids:
+            raise ValueError(
+                f"{provenance_path}: score/source run-ID coverage mismatch: "
+                f"missing_from_scores={sorted(source_run_ids - score_run_ids)}, "
+                f"missing_from_source={sorted(score_run_ids - source_run_ids)}"
+            )
+        count_checks = {
+            "score_record_count": (manifest.score_record_count, len(score_records)),
+            "source_run_count": (manifest.source_run_count, len(source_runs)),
+            "run_ids_sha256": (manifest.run_ids_sha256, _run_ids_sha256(score_run_ids)),
+        }
+        count_mismatches = [
+            f"{field}={declared!r} (actual={actual!r})"
+            for field, (declared, actual) in count_checks.items()
+            if declared != actual
+        ]
+        if count_mismatches:
+            raise ValueError(
+                f"{provenance_path}: score-source coverage mismatch: "
+                + "; ".join(count_mismatches)
+            )
+        bound_scores.add(resolved_score)
+        seen_manifests.add(resolved_provenance)
+        seen_sources.add(resolved_source)
+        audit.append(
+            {
+                "score_file": score_path.name,
+                "score_sha256": manifest.score_sha256,
+                "provenance_file": provenance_path.name,
+                "provenance_sha256": hashlib.sha256(
+                    resolved_provenance.read_bytes()
+                ).hexdigest(),
+                "source_runs_file": source_runs_path.name,
+                "source_runs_sha256": manifest.source_runs_sha256,
+                "run_count": manifest.source_run_count,
+                "run_ids_sha256": manifest.run_ids_sha256,
+            }
+        )
+
+    missing_paths = expected_scores - bound_scores
+    if missing_paths and not allow_incomplete:
+        raise ValueError(
+            "formal evaluation is missing score-source bindings for: "
+            + ", ".join(sorted(str(path) for path in missing_paths))
+        )
+    return {
+        "status": "complete" if not missing_paths else "incomplete",
+        "expected_score_count": len(expected_scores),
+        "bound_score_count": len(bound_scores),
+        "missing_score_files": sorted(path.name for path in missing_paths),
+        "bindings": audit,
+    }
 
 
 def _load_manifest_bindings(
@@ -725,6 +902,13 @@ def _validate_joined_manifest_bindings(
                 manifest.execution_mode.value,
             ),
         }
+        if manifest.execution_mode is ExecutionMode.RETRIEVAL_AND_GENERATION:
+            checks["student_level/profile"] = (
+                record["student_level"],
+                manifest.profile,
+            )
+        else:
+            checks["retrieval_only profile"] = (manifest.profile, "none")
         mismatches = [
             f"{field}={actual!r} (manifest={expected!r})"
             for field, (actual, expected) in checks.items()
@@ -850,6 +1034,11 @@ def _adaptation_summary(
     if not ratings:
         raise ValueError("a supplied blind-rating file must not be empty")
     records_by_run = {str(record["run_id"]): record for record in records}
+    expected_answered_runs = {
+        run_id
+        for run_id, record in records_by_run.items()
+        if record["status"] == "answered"
+    }
     if rubric is None:
         raise ValueError("level-adaptation ratings require a frozen rubric manifest")
     keys_by_answer: dict[str, str] = {}
@@ -873,6 +1062,13 @@ def _adaptation_summary(
                 "blind-rating key must contain answered runs only: "
                 f"{blinded_answer_id} -> {run_id}"
             )
+    missing_key_runs = sorted(expected_answered_runs - keyed_runs)
+    extra_key_runs = sorted(keyed_runs - expected_answered_runs)
+    if (missing_key_runs or extra_key_runs) and not allow_incomplete:
+        raise ValueError(
+            "blind-rating private key does not cover all applicable answered runs: "
+            f"missing={missing_key_runs}, extra={extra_key_runs}"
+        )
     seen_rating_ids: set[str] = set()
     rated_answers: set[str] = set()
     grouped: dict[tuple[Any, ...], list[float]] = defaultdict(list)
@@ -937,10 +1133,16 @@ def _adaptation_summary(
             }
         )
     return {
-        "status": "incomplete" if missing_ratings else "available",
+        "status": (
+            "incomplete"
+            if missing_ratings or missing_key_runs or extra_key_runs
+            else "available"
+        ),
         "rating_count": len(ratings),
-        "expected_rating_count": len(keys_by_answer),
+        "expected_rating_count": len(expected_answered_runs),
         "missing_blinded_answer_ids": missing_ratings,
+        "missing_run_ids_from_private_key": missing_key_runs,
+        "unexpected_run_ids_in_private_key": extra_key_runs,
         "rubric_versions": sorted(rubric_versions),
         "score_min": rubric.score_min,
         "score_max": rubric.score_max,
@@ -1313,6 +1515,12 @@ def audit_role_label_provenance(
         errors.append("Role labels reference unknown evidence IDs")
     if invalid_question_reference_pairs:
         errors.append("Role labels contain invalid question-to-evidence relationships")
+    missing_expected_pairs = valid_pairs - seen_label_pairs
+    unexpected_label_pairs = seen_label_pairs - valid_pairs
+    if missing_expected_pairs:
+        errors.append("Role-label package does not cover every expected question/evidence pair")
+    if unexpected_label_pairs:
+        errors.append("Role-label package contains pairs outside the expected coverage scope")
     return {
         "status": "passed" if not errors else "failed",
         "semantic_quality_reviewed": False,
@@ -1327,6 +1535,7 @@ def audit_role_label_provenance(
         "annotator_count": len(manifest.annotator_ids),
         "double_annotated": manifest.double_annotated,
         "record_count": len(rows),
+        "expected_record_count": len(valid_pairs),
         "labels_sha256": digest,
         "reference_type": manifest.reference_type,
         "reference_universe": manifest.reference_universe,
@@ -1340,6 +1549,14 @@ def audit_role_label_provenance(
         "duplicate_label_pairs": [
             {"question_id": question_id, "reference_id": reference_id}
             for question_id, reference_id in sorted(duplicate_label_pairs)
+        ],
+        "missing_expected_pairs": [
+            {"question_id": question_id, "reference_id": reference_id}
+            for question_id, reference_id in sorted(missing_expected_pairs)
+        ],
+        "unexpected_label_pairs": [
+            {"question_id": question_id, "reference_id": reference_id}
+            for question_id, reference_id in sorted(unexpected_label_pairs)
         ],
         "errors": errors,
     }
@@ -1443,6 +1660,36 @@ def _markdown(result: Mapping[str, Any]) -> str:
         )
     for missing_file in binding_status["missing_score_files"]:
         lines.append(f"- Missing run-manifest binding: {missing_file}")
+    source_status = result["score_source_binding_status"]
+    source_bindings = result["score_source_bindings"]
+    lines.append(f"- Score-source binding: `{source_status['status']}`")
+    if source_status["status"] == "complete":
+        lines.extend(
+            [
+                "- Every score artifact is bound by SHA-256 and exact run-ID coverage "
+                "to its original saved run-results file.",
+                "",
+                "| Score file | Provenance file | Source run-results | Source SHA-256 | Runs |",
+                "| --- | --- | --- | --- | ---: |",
+            ]
+        )
+        for binding in source_bindings:
+            lines.append(
+                f"| {binding['score_file']} | {binding['provenance_file']} | "
+                f"{binding['source_runs_file']} | "
+                f"`{binding['source_runs_sha256']}` | {binding['run_count']} |"
+            )
+    elif not source_bindings:
+        lines.append(
+            "- No score-source provenance was supplied "
+            "(development/incomplete report only)."
+        )
+    else:
+        lines.append(
+            "- Score-source bindings are incomplete and cannot support a formal report."
+        )
+    for missing_file in source_status["missing_score_files"]:
+        lines.append(f"- Missing score-source binding: {missing_file}")
     for error in coverage.get("errors", []):
         lines.append(f"- Coverage error: {error}")
     lines.extend(
@@ -1640,6 +1887,8 @@ def _markdown(result: Mapping[str, Any]) -> str:
                 f"- Annotation date: `{role['annotation_date']}`",
                 f"- Annotator count: {role['annotator_count']}",
                 f"- Double annotated: {str(role['double_annotated']).lower()}",
+                f"- Expected question/evidence pairs: {role['expected_record_count']}",
+                f"- Supplied Role labels: {role['record_count']}",
                 "- Role semantic quality reviewed by M8: no",
                 "- Evidence Role IAA computed by M8: no",
             ]
@@ -1660,6 +1909,7 @@ def write_extension_reports(
     rating_rubric_path: Path | None = None,
     rating_submission_manifest_path: Path | None = None,
     score_manifest_pairs: Sequence[tuple[Path, Path]] | None = None,
+    score_source_triples: Sequence[tuple[Path, Path, Path]] | None = None,
     expected_experiment_manifest_path: Path | None = None,
     role_provenance: Mapping[str, Any] | None = None,
     allow_incomplete: bool = False,
@@ -1761,6 +2011,11 @@ def write_extension_reports(
         expected_experiments,
         allow_incomplete=allow_incomplete,
     )
+    score_source_audit = _load_score_source_bindings(
+        score_paths,
+        score_source_triples,
+        allow_incomplete=allow_incomplete,
+    )
     result = {
         "schema_version": "0.1",
         "record_count": len(joined),
@@ -1769,6 +2024,12 @@ def write_extension_reports(
             key: value for key, value in manifest_audit.items() if key != "bindings"
         },
         "run_manifest_bindings": manifest_audit["bindings"],
+        "score_source_binding_status": {
+            key: value
+            for key, value in score_source_audit.items()
+            if key != "bindings"
+        },
+        "score_source_bindings": score_source_audit["bindings"],
         "experiment_coverage": experiment_coverage,
         "groups": groups,
         "lambda_comparisons": comparisons,

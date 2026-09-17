@@ -24,6 +24,7 @@ from .extension_reporting import (
     seal_blind_rating_submission,
     write_blind_rating_materials,
     write_extension_reports,
+    write_score_artifact_provenance,
 )
 from .io import (
     load_gold_samples,
@@ -191,6 +192,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "bind one score JSONL to the real RunManifest that produced its saved "
             "run; repeat once per --scores input"
+        ),
+    )
+    extension.add_argument(
+        "--score-source",
+        action="append",
+        nargs=3,
+        type=Path,
+        metavar=("SCORE_FILE", "PROVENANCE_MANIFEST", "RUN_RESULTS"),
+        help=(
+            "bind one score JSONL to its score-provenance manifest and original "
+            "saved run-results JSONL; repeat once per --scores input"
         ),
     )
     extension.add_argument(
@@ -677,9 +689,15 @@ def _score_command(args: argparse.Namespace) -> int:
             encoding="utf-8",
         )
     if args.answer_citation_output_dir:
-        write_answer_citation_reports(
+        report_paths = write_answer_citation_reports(
             scored["extensions"]["answer_citation"],
             args.answer_citation_output_dir,
+        )
+        write_score_artifact_provenance(
+            report_paths["per_question"],
+            args.runs,
+            args.answer_citation_output_dir
+            / "answer_citation_score_provenance.json",
         )
     return 0
 
@@ -797,6 +815,7 @@ def _report_extension_command(args: argparse.Namespace) -> int:
         rating_rubric_path=args.rating_rubric,
         rating_submission_manifest_path=args.rating_submission_manifest,
         score_manifest_pairs=args.score_manifest,
+        score_source_triples=args.score_source,
         expected_experiment_manifest_path=args.expected_experiments,
         role_provenance=role_provenance,
         allow_incomplete=args.allow_incomplete,

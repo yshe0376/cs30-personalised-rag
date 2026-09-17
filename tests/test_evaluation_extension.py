@@ -14,6 +14,7 @@ from cs30.evaluation.extension_reporting import (
     seal_blind_rating_submission,
     write_blind_rating_materials,
     write_extension_reports,
+    write_score_artifact_provenance,
 )
 from cs30.evaluation.io import load_gold_samples, load_mappings, load_run_results
 
@@ -63,6 +64,29 @@ def _write_jsonl(path: Path, rows: list[dict]) -> Path:
     return path
 
 
+def _score_source_binding(
+    tmp_path: Path, score_path: Path, *, stem: str
+) -> tuple[Path, Path, Path]:
+    template = json.loads(
+        (FIXTURES / "run_results_scorable_v0_2.jsonl")
+        .read_text(encoding="utf-8")
+        .splitlines()[0]
+    )
+    source_rows = []
+    for score in [json.loads(line) for line in score_path.read_text(encoding="utf-8").splitlines()]:
+        row = dict(template)
+        row.update(
+            run_id=score["run_id"],
+            question_id=score["question_id"],
+            condition_id=score["condition_id"],
+        )
+        source_rows.append(row)
+    source_path = _write_jsonl(tmp_path / f"{stem}-runs.jsonl", source_rows)
+    provenance_path = tmp_path / f"{stem}-score-provenance.json"
+    write_score_artifact_provenance(score_path, source_path, provenance_path)
+    return score_path, provenance_path, source_path
+
+
 def _context(
     run_id: str,
     question_id: str,
@@ -106,6 +130,7 @@ def _run_manifest(
     condition_id: str,
     reportable: bool = True,
     fixture_mode: bool = False,
+    profile: str = "beginner",
 ) -> Path:
     path.write_text(
         json.dumps(
@@ -125,7 +150,7 @@ def _run_manifest(
                 "index_version": "index-v1",
                 "generation_model": "model-v1",
                 "prompt_version": "prompt-v1",
-                "profile": "beginner",
+                "profile": profile,
                 "execution_mode": "retrieval_and_generation",
                 "retrieval_mode": "hybrid",
                 "top_k": 5,
@@ -787,6 +812,10 @@ def test_formal_extension_binds_real_manifests_and_expected_matrix(
         condition_id="reranking-only",
     )
     expected = _expected_experiments(tmp_path / "expected.json", context_rows)
+    baseline_source = _score_source_binding(
+        tmp_path, baseline_score, stem="baseline"
+    )
+    frozen_source = _score_source_binding(tmp_path, frozen_score, stem="frozen")
 
     paths = write_extension_reports(
         [baseline_score, frozen_score],
@@ -796,6 +825,7 @@ def test_formal_extension_binds_real_manifests_and_expected_matrix(
             (baseline_score, baseline_manifest),
             (frozen_score, frozen_manifest),
         ],
+        score_source_triples=[baseline_source, frozen_source],
         expected_experiment_manifest_path=expected,
     )
     summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
@@ -810,6 +840,8 @@ def test_formal_extension_binds_real_manifests_and_expected_matrix(
     assert len(summary["run_manifest_bindings"]) == 2
     assert all(binding["reportable"] for binding in summary["run_manifest_bindings"])
     assert all(binding["manifest_sha256"] for binding in summary["run_manifest_bindings"])
+    assert summary["score_source_binding_status"]["status"] == "complete"
+    assert len(summary["score_source_bindings"]) == 2
 
 
 def test_development_report_labels_partial_manifest_bindings_incomplete(
@@ -860,6 +892,86 @@ def test_development_report_labels_partial_manifest_bindings_incomplete(
     }
     assert "Every score artifact is bound" not in markdown
     assert "Run-manifest binding: `incomplete`" in markdown
+
+
+def test_generation_manifest_profile_must_match_student_level(tmp_path: Path) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [_context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline")],
+    )
+    manifest = _run_manifest(
+        tmp_path / "run.manifest.json",
+        run_id="batch-base",
+        condition_id="plain",
+        profile="advanced",
+    )
+
+    with pytest.raises(ValueError, match="student_level/profile"):
+        write_extension_reports(
+            [scores],
+            contexts,
+            tmp_path / "reports",
+            score_manifest_pairs=[(scores, manifest)],
+            allow_incomplete=True,
+        )
+
+
+def test_score_source_binding_rejects_tampered_score_or_source(tmp_path: Path) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    binding = _score_source_binding(tmp_path, scores, stem="plain")
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [_context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline")],
+    )
+
+    source_path = binding[2]
+    source_path.write_text(
+        source_path.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="source_runs_sha256"):
+        write_extension_reports(
+            [scores],
+            contexts,
+            tmp_path / "reports",
+            score_source_triples=[binding],
+            allow_incomplete=True,
+        )
+
+    second_scores = _write_jsonl(
+        tmp_path / "second-scores.jsonl",
+        [_score_record("run-second", "q-2", "plain", correct=True)],
+    )
+    second_binding = _score_source_binding(tmp_path, second_scores, stem="second")
+    second_contexts = _write_jsonl(
+        tmp_path / "second-contexts.jsonl",
+        [
+            _context(
+                "run-second",
+                "q-2",
+                "plain",
+                lambda_weight=0.0,
+                lambda_status="baseline",
+            )
+        ],
+    )
+    second_scores.write_text(
+        second_scores.read_text(encoding="utf-8") + "\n", encoding="utf-8"
+    )
+    with pytest.raises(ValueError, match="score_sha256"):
+        write_extension_reports(
+            [second_scores],
+            second_contexts,
+            tmp_path / "second-reports",
+            score_source_triples=[second_binding],
+            allow_incomplete=True,
+        )
 
 
 def test_formal_extension_rejects_nonreportable_or_misbound_manifest(
@@ -1263,6 +1375,72 @@ def test_blinded_ratings_must_cover_every_keyed_answer(tmp_path: Path) -> None:
     assert summary["level_adaptation"]["missing_blinded_answer_ids"] == ["answer-b"]
 
 
+def test_blind_private_key_must_cover_every_answered_run(tmp_path: Path) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [
+            _score_record("run-base", "q-1", "plain", correct=True),
+            _score_record("run-frozen", "q-1", "reranking-only", correct=True),
+        ],
+    )
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [
+            _context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"),
+            _context(
+                "run-frozen",
+                "q-1",
+                "reranking-only",
+                lambda_weight=0.35,
+                lambda_status="frozen",
+            ),
+        ],
+    )
+    ratings = _write_jsonl(
+        tmp_path / "ratings.jsonl",
+        [
+            {
+                "schema_version": "0.1",
+                "rating_id": "rating-a",
+                "question_id": "q-1",
+                "blinded_answer_id": "answer-a",
+                "assigned_level": "beginner",
+                "score": 4,
+                "rubric_version": "adaptation-v1",
+                "rater_id": "rater-1",
+            }
+        ],
+    )
+    key = _write_jsonl(
+        tmp_path / "key.jsonl",
+        [{"schema_version": "0.1", "blinded_answer_id": "answer-a", "run_id": "run-base"}],
+    )
+    rubric = tmp_path / "rubric.json"
+    rubric.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "rubric_version": "adaptation-v1",
+                "score_min": 1,
+                "score_max": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
+    submission = _seal(tmp_path, ratings, key, rubric)
+
+    with pytest.raises(ValueError, match="does not cover all applicable answered runs"):
+        write_extension_reports(
+            [scores],
+            contexts,
+            tmp_path / "reports",
+            ratings_path=ratings,
+            rating_key_path=key,
+            rating_rubric_path=rubric,
+            rating_submission_manifest_path=submission,
+        )
+
+
 def test_role_label_provenance_checks_versions_hash_and_references(
     tmp_path: Path,
 ) -> None:
@@ -1301,14 +1479,20 @@ def test_role_label_provenance_checks_versions_hash_and_references(
                 "question_id_field": "question_id",
                 "reference_id_field": "chunk_id",
                 "reference_type": "chunk",
-                "reference_universe": "gold_mapping",
+                "reference_universe": "corpus_records",
                 "role_field": "role",
             }
         ),
         encoding="utf-8",
     )
 
-    result = audit_role_label_provenance(manifest, gold, mapping)
+    result = audit_role_label_provenance(
+        manifest,
+        gold,
+        mapping,
+        corpus_record_ids={first_chunk},
+        question_reference_pairs={(first_item.question_id, first_chunk)},
+    )
 
     assert result["status"] == "passed"
     assert result["single_annotator"] is True
@@ -1319,6 +1503,63 @@ def test_role_label_provenance_checks_versions_hash_and_references(
     assert result["invalid_question_ids"] == []
     assert result["invalid_reference_ids"] == []
     assert result["invalid_question_reference_pairs"] == []
+    assert result["expected_record_count"] == 1
+    assert result["missing_expected_pairs"] == []
+
+
+def test_role_label_provenance_rejects_partial_or_empty_packages(
+    tmp_path: Path,
+) -> None:
+    gold = load_gold_samples(FIXTURES / "gold_v0_1.jsonl")
+    mapping = load_mappings(FIXTURES / "mapping_v0_1.json")
+    first_item = mapping.items[0]
+    first_chunk = first_item.spans[0].acceptable_chunk_sets[0][0]
+    labels = _write_jsonl(
+        tmp_path / "role_labels.jsonl",
+        [
+            {
+                "schema_version": "role-schema-v1",
+                "question_id": first_item.question_id,
+                "chunk_id": first_chunk,
+                "role": "definition",
+            }
+        ],
+    )
+    manifest_payload = {
+        "schema_version": "0.1",
+        "role_schema_version": "role-schema-v1",
+        "role_taxonomy_version": "role-taxonomy-v1",
+        "annotation_version": "role-labels-v1",
+        "corpus_version": gold[0].corpus_version,
+        "parser_version": gold[0].parser_version,
+        "annotation_date": "2026-09-16",
+        "annotator_ids": ["primary-annotator"],
+        "double_annotated": False,
+        "labels_file": labels.name,
+        "labels_sha256": hashlib.sha256(labels.read_bytes()).hexdigest(),
+        "declared_record_count": 1,
+        "reference_universe": "corpus_records",
+    }
+    manifest = tmp_path / "role_manifest.json"
+    manifest.write_text(json.dumps(manifest_payload), encoding="utf-8")
+    extra_pair = (first_item.question_id, "another-authoritative-chunk")
+
+    partial = audit_role_label_provenance(
+        manifest,
+        gold,
+        mapping,
+        corpus_record_ids={first_chunk, extra_pair[1]},
+        question_reference_pairs={(first_item.question_id, first_chunk), extra_pair},
+    )
+    assert partial["status"] == "failed"
+    assert partial["missing_expected_pairs"] == [
+        {"question_id": extra_pair[0], "reference_id": extra_pair[1]}
+    ]
+
+    manifest_payload["declared_record_count"] = 0
+    manifest.write_text(json.dumps(manifest_payload), encoding="utf-8")
+    with pytest.raises(ValueError, match="greater than 0"):
+        audit_role_label_provenance(manifest, gold, mapping)
 
 
 def test_corpus_role_references_require_m4_records(tmp_path: Path) -> None:

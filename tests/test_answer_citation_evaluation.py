@@ -790,3 +790,9 @@ def test_cli_runs_extension_and_writes_all_report_artifacts(tmp_path: Path) -> N
     assert (reports / "answer_citation_summary.csv").is_file()
     assert (reports / "answer_citation_report.md").is_file()
     assert (reports / "answer_citation_failures.jsonl").is_file()
+    provenance_path = reports / "answer_citation_score_provenance.json"
+    assert provenance_path.is_file()
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    assert provenance["source_runs_file"] == RUNS.name
+    assert provenance["score_file"] == "answer_citation_scores.jsonl"
+    assert provenance["score_record_count"] == provenance["source_run_count"]

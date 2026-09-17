@@ -11,12 +11,14 @@ from .extension_models import (
     LevelAdaptationRating,
     LevelAdaptationRubricManifest,
     RoleLabelProvenanceManifest,
+    ScoreArtifactProvenanceManifest,
 )
 from .extension_reporting import (
     audit_role_label_provenance,
     seal_blind_rating_submission,
     write_blind_rating_materials,
     write_extension_reports,
+    write_score_artifact_provenance,
 )
 from .io import (
     append_jsonl_record,
@@ -128,6 +130,7 @@ __all__ = [
     "RunManifest",
     "RunStatus",
     "RoleLabelProvenanceManifest",
+    "ScoreArtifactProvenanceManifest",
     "SourceSplit",
     "SpanResolutionMethod",
     "SpanResolutionStatus",
@@ -183,6 +186,7 @@ __all__ = [
     "write_answer_citation_reports",
     "write_blind_rating_materials",
     "write_extension_reports",
+    "write_score_artifact_provenance",
     "write_normalized_gold",
     "write_prepared_corpus",
 ]

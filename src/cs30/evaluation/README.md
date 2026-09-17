@@ -350,8 +350,17 @@ Formal reporting also binds every score artifact to the real `RunManifest`
 written by its runner invocation. The report verifies the manifest is
 reportable and non-fixture, then checks condition, execution mode, retrieval
 mode, dataset, split, corpus, chunk, mapping, and index identities against the
-score records and contexts. Score and manifest SHA-256 values are retained in
-the aggregate report. A development report may omit these bindings only with
+score records and contexts. For generation runs, the experiment
+`student_level` must also equal `RunManifest.profile`; retrieval-only manifests
+must use profile `none`.
+
+The `score` command also writes `answer_citation_score_provenance.json`. It
+binds `answer_citation_scores.jsonl` to the exact original run-results file by
+both SHA-256 and the complete run-ID set. Formal combined reporting requires a
+`--score-source` binding for every score artifact and re-verifies both files,
+their counts, and their run IDs. Score, source, provenance, and manifest hashes
+are retained in the aggregate report. A development report may omit these
+bindings only with
 `--allow-incomplete`; the aggregate JSON and Markdown then label the binding
 state as `pending` or `incomplete` rather than claiming a formal binding.
 
@@ -429,9 +438,11 @@ rubric manifest records the agreed version and score range:
 {"schema_version":"0.1","rubric_version":"level-fit-v1","score_min":1,"score_max":5}
 ```
 
-Every answer in the private key must receive exactly one score. Missing ratings,
-duplicate ratings, level/question mismatches, unknown blind IDs, and scores
-outside the frozen range fail before aggregation.
+The private key must contain every answered run in the report and no
+non-applicable run, and every keyed answer must receive exactly one score.
+Missing key entries, missing ratings, duplicate ratings, level/question
+mismatches, unknown blind IDs, and scores outside the frozen range fail before
+aggregation.
 
 After the single rater completes the sheet, seal the final files:
 
@@ -459,9 +470,10 @@ mapping spans or the full frozen chunk universe.
 
 For full chunk-universe validation, also pass M4's final `records.jsonl` through
 `--role-records` and authoritative candidate `question_id`/`chunk_id` pairs
-through `--role-question-references`. The audit checks identities, hashes,
-counts, schema versions, valid IDs, and question-to-evidence relationships
-without judging Role-label quality.
+through `--role-question-references`. The audit rejects empty packages and
+checks identities, hashes, counts, schema versions, valid IDs,
+question-to-evidence relationships, and exact coverage of the selected
+authoritative reference universe without judging Role-label quality.
 
 In formal mode, any failed Role provenance check stops report generation. A
 development run may retain the failed audit only with `--allow-incomplete`.
@@ -482,6 +494,8 @@ cs30-evaluate report-extension `
   --scores artifacts/plain/answer_citation_scores.jsonl artifacts/reranked/answer_citation_scores.jsonl `
   --score-manifest artifacts/plain/answer_citation_scores.jsonl artifacts/plain/run_results.manifest.json `
   --score-manifest artifacts/reranked/answer_citation_scores.jsonl artifacts/reranked/run_results.manifest.json `
+  --score-source artifacts/plain/answer_citation_scores.jsonl artifacts/plain/answer_citation_score_provenance.json artifacts/plain/run_results.jsonl `
+  --score-source artifacts/reranked/answer_citation_scores.jsonl artifacts/reranked/answer_citation_score_provenance.json artifacts/reranked/run_results.jsonl `
   --contexts artifacts/experiment_contexts.jsonl `
   --expected-experiments artifacts/expected_experiments.json `
   --ratings artifacts/blind_rating/blind_rating_sheet.csv `
