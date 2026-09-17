@@ -40,10 +40,12 @@ class FaissIndexBuilder:
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         index_dir: str = "data/index",
         expected_provenance: EvidenceProvenance | None = None,
+        query_instruction: str = "",
     ) -> None:
         self.model_name = model_name
         self.index_dir = Path(index_dir)
         self.expected_provenance = expected_provenance
+        self.query_instruction = query_instruction
 
         self._model: SentenceTransformer | None = None
 
@@ -62,7 +64,7 @@ class FaissIndexBuilder:
 
         counter = self.token_counter()
 
-        special_tokens = 2
+        special_tokens = model.tokenizer.num_special_tokens_to_add()
         content_limit = max(limit - special_tokens, 1)
 
         over_limit = [
@@ -91,6 +93,9 @@ class FaissIndexBuilder:
         # embedding_input uses embed_text when available and falls back
         # to the original chunk text otherwise.
         texts = [chunk.embedding_input for chunk in chunks]
+
+        if self.model_name == "intfloat/e5-base-v2":
+            texts = [f"passage: {text}" for text in texts]
 
         model = self._load_model()
         self._warn_if_truncated(chunks)
@@ -358,6 +363,7 @@ class FaissIndexBuilder:
                 "corpus_hash": corpus_hash,
                 "chunk_config_hash": chunk_config_hash,
                 "embedding_model": self.model_name,
+                "query_instruction": self.query_instruction,
                 "index_version": index_version,
                 "dimension": str(embeddings.shape[1]),
                 "device": device,

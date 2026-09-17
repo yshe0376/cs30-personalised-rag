@@ -190,6 +190,9 @@ def test_model_tokenizer_handoff_builds_a_chapter_isolated_faiss_index(
             assert add_special_tokens is False
             return text.split()
 
+        def num_special_tokens_to_add(self) -> int:
+            return 2
+
     class FakeSentenceTransformer:
         def __init__(self, model_name: str) -> None:
             self.model_name = model_name
@@ -202,6 +205,7 @@ def test_model_tokenizer_handoff_builds_a_chapter_isolated_faiss_index(
             texts: list[str],
             *,
             convert_to_numpy: bool,
+            batch_size: int = 32,
         ) -> np.ndarray:
             assert convert_to_numpy is True
             return np.asarray(

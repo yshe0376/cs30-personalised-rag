@@ -11,17 +11,33 @@ from cs30.indexing import faiss_index
 from cs30.ports import IndexBuilder
 
 
+class FakeTokenizer:
+    def encode(
+        self,
+        text: str,
+        *,
+        add_special_tokens: bool,
+    ) -> list[str]:
+        assert add_special_tokens is False
+        return text.split()
+
+    def num_special_tokens_to_add(self) -> int:
+        return 3
+
 class FakeSentenceTransformer:
     """Small deterministic stand-in for SentenceTransformer."""
 
     def __init__(self, model_name: str) -> None:
         self.model_name = model_name
         self.device = "cpu"
+        self.max_seq_length = 5
+        self.tokenizer = FakeTokenizer()
 
     def encode(
         self,
         texts: list[str],
         convert_to_numpy: bool = True,
+        batch_size: int = 32,
     ) -> np.ndarray:
         """Return deterministic 4-dimensional vectors."""
 
@@ -103,6 +119,7 @@ def make_test_chunks() -> list[Chunk]:
 def make_builder(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
+    query_instruction: str = "",
 ) -> faiss_index.FaissIndexBuilder:
     """Create a builder using the fake embedding model."""
 
@@ -115,8 +132,28 @@ def make_builder(
     return faiss_index.FaissIndexBuilder(
         model_name="fake-embedding-model",
         index_dir=str(tmp_path),
+        query_instruction=query_instruction,
     )
 
+def test_warn_if_truncated_uses_tokenizer_special_token_count(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Truncation warning should reserve tokenizer-reported special tokens."""
+
+    builder = make_builder(
+        monkeypatch,
+        tmp_path,
+    )
+
+    chunks = make_test_chunks()
+
+    with caplog.at_level("WARNING"):
+        builder._warn_if_truncated(chunks)
+
+    assert "effective content token limit=2" in caplog.text
+    assert "reserved special tokens=3" in caplog.text
 
 def test_build_creates_faiss_index(
     monkeypatch: pytest.MonkeyPatch,
@@ -129,12 +166,14 @@ def test_build_creates_faiss_index(
     builder = make_builder(
         monkeypatch,
         tmp_path,
+        query_instruction="test query instruction",
     )
 
     artifact = builder.build(chunks)
 
     assert artifact.chunk_count == 2
     assert artifact.index_type == "faiss-flat-ip"
+    assert artifact.metadata["query_instruction"] == "test query instruction"
 
     assert builder.index.ntotal == 2
     assert builder.index.d == 4
