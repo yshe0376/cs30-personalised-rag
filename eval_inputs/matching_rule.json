@@ -1,0 +1,10 @@
+{
+  "coordinate_system": "normalised_document_half_open_character_offsets",
+  "multi_chunk_policy": "All overlapping chunks are retained; coverage_status records whether their clipped union fully covers the gold span.",
+  "predicate": "same document_id and chapter_id, and max(gold.char_start, chunk.char_start) < min(gold.char_end, chunk.char_end)",
+  "relevant_chunk_unit": "A retrieved chunk is relevant to one gold span exactly when its chunk_id appears in that span's matching_chunk_ids.",
+  "role_policy": "M3 core OR-of-AND membership and partial-evidence membership are copied as source_metadata and are never inferred or modified by M4.",
+  "rule_hash": "sha256:a9a5bfb5bdcc866f957e73a2898fdf7235277259f8b73b85571ed3a9ac742838",
+  "rule_id": "same_source_half_open_overlap",
+  "rule_version": "1.0"
+}

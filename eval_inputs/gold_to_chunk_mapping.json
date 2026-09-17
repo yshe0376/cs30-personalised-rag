@@ -1,0 +1,847 @@
+{
+  "chunk_config_id": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+  "corpus_id": "sha256:c262e332c6334bbb673c05f9683336ab47c1d5e245d207a9b05ed2c2e8840c3e",
+  "entries": [
+    {
+      "alternative_group_id": null,
+      "chapter_id": "7",
+      "char_end": 894585,
+      "char_start": 894452,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00746",
+          "overlap_char_count": 133,
+          "overlap_char_end": 894585,
+          "overlap_char_start": 894452,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 133,
+      "covered_substantive_char_count": 111,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 133,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0330_b003_gold_0018",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00746"
+      ],
+      "question_id": "sciq-test-00024",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0330_b003",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 111
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "4",
+      "char_end": 437458,
+      "char_start": 437113,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_4_w5-m4-official-v1_c00388",
+          "overlap_char_count": 345,
+          "overlap_char_end": 437458,
+          "overlap_char_start": 437113,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 345,
+      "covered_substantive_char_count": 289,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 345,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch04_p0177_b022_gold_0017",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_4_w5-m4-official-v1_c00388"
+      ],
+      "question_id": "sciq-test-00068",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch04_p0177_b022",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 289
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "11",
+      "char_end": 1339919,
+      "char_start": 1339664,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_11_w5-m4-official-v1_c01120",
+          "overlap_char_count": 255,
+          "overlap_char_end": 1339919,
+          "overlap_char_start": 1339664,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 255,
+      "covered_substantive_char_count": 205,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 255,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch11_p0481_b012_gold_0009",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_11_w5-m4-official-v1_c01120"
+      ],
+      "question_id": "sciq-test-00116",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch11_p0481_b012",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 205
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "7",
+      "char_end": 843216,
+      "char_start": 842740,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00691",
+          "overlap_char_count": 476,
+          "overlap_char_end": 843216,
+          "overlap_char_start": 842740,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 476,
+      "covered_substantive_char_count": 402,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 476,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0308_b015_gold_0004",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00691"
+      ],
+      "question_id": "sciq-test-00246",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0308_b015",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 402
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "16",
+      "char_end": 2055995,
+      "char_start": 2055785,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_16_w5-m4-official-v1_c01657",
+          "overlap_char_count": 210,
+          "overlap_char_end": 2055995,
+          "overlap_char_start": 2055785,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 210,
+      "covered_substantive_char_count": 180,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 210,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch16_p0711_b005_gold_0014",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_16_w5-m4-official-v1_c01657"
+      ],
+      "question_id": "sciq-test-00315",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch16_p0711_b005",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 180
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "14",
+      "char_end": 1781826,
+      "char_start": 1780870,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_14_w5-m4-official-v1_c01482",
+          "overlap_char_count": 956,
+          "overlap_char_end": 1781826,
+          "overlap_char_start": 1780870,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 956,
+      "covered_substantive_char_count": 807,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 956,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch14_p0626_b016_gold_0007",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_14_w5-m4-official-v1_c01482"
+      ],
+      "question_id": "sciq-test-00333",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch14_p0626_b016",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 807
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "23",
+      "char_end": 3084524,
+      "char_start": 3084165,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_23_w5-m4-official-v1_c02488",
+          "overlap_char_count": 359,
+          "overlap_char_end": 3084524,
+          "overlap_char_start": 3084165,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 359,
+      "covered_substantive_char_count": 302,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 359,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch23_p1047_b004_gold_0006",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_23_w5-m4-official-v1_c02488"
+      ],
+      "question_id": "sciq-test-00335",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch23_p1047_b004",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 302
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "14",
+      "char_end": 1747995,
+      "char_start": 1747183,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_14_w5-m4-official-v1_c01449",
+          "overlap_char_count": 812,
+          "overlap_char_end": 1747995,
+          "overlap_char_start": 1747183,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 812,
+      "covered_substantive_char_count": 675,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 812,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch14_p0615_b006_gold_0011",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_14_w5-m4-official-v1_c01449"
+      ],
+      "question_id": "sciq-test-00401",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch14_p0615_b006",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 675
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "11",
+      "char_end": 1367615,
+      "char_start": 1367324,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_11_w5-m4-official-v1_c01156",
+          "overlap_char_count": 291,
+          "overlap_char_end": 1367615,
+          "overlap_char_start": 1367324,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 291,
+      "covered_substantive_char_count": 243,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 291,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch11_p0492_b012_gold_0019",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_11_w5-m4-official-v1_c01156"
+      ],
+      "question_id": "sciq-test-00432",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch11_p0492_b012",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 243
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "25",
+      "char_end": 3391906,
+      "char_start": 3391055,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_25_w5-m4-official-v1_c02714",
+          "overlap_char_count": 851,
+          "overlap_char_end": 3391906,
+          "overlap_char_start": 3391055,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 851,
+      "covered_substantive_char_count": 711,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 851,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch25_p1140_b015_gold_0008",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_25_w5-m4-official-v1_c02714"
+      ],
+      "question_id": "sciq-test-00465",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch25_p1140_b015",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 711
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "2",
+      "char_end": 120408,
+      "char_start": 120006,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_2_w5-m4-official-v1_c00107",
+          "overlap_char_count": 402,
+          "overlap_char_end": 120408,
+          "overlap_char_start": 120006,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 402,
+      "covered_substantive_char_count": 347,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 402,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch02_p0068_b009_gold_0002",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_2_w5-m4-official-v1_c00107"
+      ],
+      "question_id": "sciq-test-00536",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch02_p0068_b009",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 347
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "33",
+      "char_end": 4564901,
+      "char_start": 4562701,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_33_w5-m4-official-v1_c03451",
+          "overlap_char_count": 2200,
+          "overlap_char_end": 4564901,
+          "overlap_char_start": 4562701,
+          "relation": "exact"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 2200,
+      "covered_substantive_char_count": 1863,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 2200,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch33_p1509_b005_gold_0015",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_33_w5-m4-official-v1_c03451"
+      ],
+      "question_id": "sciq-test-00540",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch33_p1509_b005",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 1863
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "8",
+      "char_end": 977095,
+      "char_start": 976431,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_8_w5-m4-official-v1_c00807",
+          "overlap_char_count": 664,
+          "overlap_char_end": 977095,
+          "overlap_char_start": 976431,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 664,
+      "covered_substantive_char_count": 560,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 664,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch08_p0356_b010_gold_00614",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_8_w5-m4-official-v1_c00807"
+      ],
+      "question_id": "sciq-test-00614",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch08_p0356_b010",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 560
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "7",
+      "char_end": 825228,
+      "char_start": 825083,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00674",
+          "overlap_char_count": 145,
+          "overlap_char_end": 825228,
+          "overlap_char_start": 825083,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 145,
+      "covered_substantive_char_count": 122,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 145,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0303_b005_gold_00620",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00674"
+      ],
+      "question_id": "sciq-test-00620",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0303_b005",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "joint_core"
+      },
+      "substantive_gold_char_count": 122
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "7",
+      "char_end": 825304,
+      "char_start": 825230,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00674",
+          "overlap_char_count": 74,
+          "overlap_char_end": 825304,
+          "overlap_char_start": 825230,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 74,
+      "covered_substantive_char_count": 57,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 74,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0303_b006_gold_00620_eq",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00674"
+      ],
+      "question_id": "sciq-test-00620",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0303_b006",
+        "source_schema_version": "0.2",
+        "span_index": "1",
+        "sufficiency": "joint_core"
+      },
+      "substantive_gold_char_count": 57
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "22",
+      "char_end": 2891089,
+      "char_start": 2890945,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_22_w5-m4-official-v1_c02354",
+          "overlap_char_count": 144,
+          "overlap_char_end": 2891089,
+          "overlap_char_start": 2890945,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 144,
+      "covered_substantive_char_count": 119,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 144,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch22_p0984_b016_gold_0003",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_22_w5-m4-official-v1_c02354"
+      ],
+      "question_id": "sciq-test-00646",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch22_p0984_b016",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 119
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "24",
+      "char_end": 3322853,
+      "char_start": 3322755,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_24_w5-m4-official-v1_c02669",
+          "overlap_char_count": 98,
+          "overlap_char_end": 3322853,
+          "overlap_char_start": 3322755,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 98,
+      "covered_substantive_char_count": 87,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 98,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch24_p1119_b014_gold_0010",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_24_w5-m4-official-v1_c02669"
+      ],
+      "question_id": "sciq-test-00709",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch24_p1119_b014",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 87
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "18",
+      "char_end": 2335843,
+      "char_start": 2335547,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_18_w5-m4-official-v1_c01894",
+          "overlap_char_count": 296,
+          "overlap_char_end": 2335843,
+          "overlap_char_start": 2335547,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 296,
+      "covered_substantive_char_count": 248,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 296,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch18_p0808_b012_gold_0001",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_18_w5-m4-official-v1_c01894"
+      ],
+      "question_id": "sciq-test-00770",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch18_p0808_b012",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 248
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "32",
+      "char_end": 4485955,
+      "char_start": 4485110,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_32_w5-m4-official-v1_c03420",
+          "overlap_char_count": 845,
+          "overlap_char_end": 4485955,
+          "overlap_char_start": 4485110,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 845,
+      "covered_substantive_char_count": 707,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 845,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch32_p1486_b010_gold_0005",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_32_w5-m4-official-v1_c03420"
+      ],
+      "question_id": "sciq-test-00942",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch32_p1486_b010",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 707
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "13",
+      "char_end": 1563179,
+      "char_start": 1562744,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_13_w5-m4-official-v1_c01293",
+          "overlap_char_count": 435,
+          "overlap_char_end": 1563179,
+          "overlap_char_start": 1562744,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 435,
+      "covered_substantive_char_count": 376,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 435,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch13_p0553_b019_gold_00955",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_13_w5-m4-official-v1_c01293"
+      ],
+      "question_id": "sciq-test-00955",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch13_p0553_b019",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 376
+    },
+    {
+      "alternative_group_id": null,
+      "chapter_id": "24",
+      "char_end": 3246927,
+      "char_start": 3246348,
+      "chunk_matches": [
+        {
+          "chunk_id": "openstax-cp2e-a052d9fae2a90e13_24_w5-m4-official-v1_c02610",
+          "overlap_char_count": 579,
+          "overlap_char_end": 3246927,
+          "overlap_char_start": 3246348,
+          "relation": "chunk_contains_gold"
+        }
+      ],
+      "coverage_basis": "non_whitespace_source_characters",
+      "coverage_ratio": 1.0,
+      "coverage_role": "necessary",
+      "coverage_status": "full",
+      "covered_char_count": 579,
+      "covered_substantive_char_count": 489,
+      "document_id": "openstax-cp2e-a052d9fae2a90e13",
+      "gold_char_count": 579,
+      "gold_span_id": "openstax-cp2e-a052d9fae2a90e13_ch24_p1096_b018_gold_0012",
+      "matching_chunk_ids": [
+        "openstax-cp2e-a052d9fae2a90e13_24_w5-m4-official-v1_c02610"
+      ],
+      "question_id": "sciq-test-00974",
+      "source_metadata": {
+        "annotation_status": "m3_initial",
+        "core_set_index": "0",
+        "evidence_kind": "core",
+        "gold_annotation_version": "m3_gold_v0.1.1",
+        "resolved_block_id": "openstax-cp2e-a052d9fae2a90e13_ch24_p1096_b018",
+        "source_schema_version": "0.2",
+        "span_index": "0",
+        "sufficiency": "core_sufficient"
+      },
+      "substantive_gold_char_count": 489
+    }
+  ],
+  "evidence_source_block_validation": {
+    "evidence_block_count": 23378,
+    "referenced_block_count": 23378,
+    "status": "exact_set_match"
+  },
+  "fully_covered_span_count": 21,
+  "gold_span_count": 21,
+  "incomplete_gold_span_ids": [],
+  "mapping_id": "sha256:5f8f4ef9976b44408cf20d91d80be71566b7bfda3b3845a31aae294624e85b03",
+  "matching_rule": {
+    "coordinate_system": "normalised_document_half_open_character_offsets",
+    "multi_chunk_policy": "All overlapping chunks are retained; coverage_status records whether their clipped union fully covers the gold span.",
+    "predicate": "same document_id and chapter_id, and max(gold.char_start, chunk.char_start) < min(gold.char_end, chunk.char_end)",
+    "relevant_chunk_unit": "A retrieved chunk is relevant to one gold span exactly when its chunk_id appears in that span's matching_chunk_ids.",
+    "role_policy": "M3 core OR-of-AND membership and partial-evidence membership are copied as source_metadata and are never inferred or modified by M4.",
+    "rule_hash": "sha256:a9a5bfb5bdcc866f957e73a2898fdf7235277259f8b73b85571ed3a9ac742838",
+    "rule_id": "same_source_half_open_overlap",
+    "rule_version": "1.0"
+  },
+  "schema_name": "cs30.chunking.gold_mapping",
+  "schema_version": "1.0",
+  "source_gold_hash": "sha256:2df4c6e6bea81a801270600d2323141f51187862e58e8076f7255b6d7a7f279a"
+}
