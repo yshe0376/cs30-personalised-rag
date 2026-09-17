@@ -16,11 +16,13 @@ from pydantic import ValidationError
 from .extension_models import (
     BlindedAnswerKey,
     BlindRatingSubmissionManifest,
+    ExpectedExperimentManifest,
     ExperimentCondition,
     LevelAdaptationRating,
     LevelAdaptationRubricManifest,
     RoleLabelProvenanceManifest,
 )
+from .manifest import RunManifest, assert_manifests_comparable
 from .mapping import GoldChunkMapping
 from .models import EvaluationRunResult, ExecutionMode, GoldSample, RunStatus
 
@@ -115,6 +117,36 @@ def load_score_records(paths: Sequence[Path]) -> list[dict[str, Any]]:
                     raise ValueError(
                         f"{path}: retrieval_only run {run_id} must be not_applicable"
                     )
+                contradictions = []
+                if row["status"] not in {
+                    RunStatus.RETRIEVED.value,
+                    RunStatus.RETRIEVAL_ERROR.value,
+                }:
+                    contradictions.append(f"status={row['status']!r}")
+                if row["model_call_count"] != 0:
+                    contradictions.append(
+                        f"model_call_count={row['model_call_count']!r}"
+                    )
+                if row["abstention_cause"] is not None:
+                    contradictions.append("abstention_cause is present")
+                if row["citation_checks"]:
+                    contradictions.append("citation_checks are present")
+                generation_only_metrics = {
+                    name: row[field]
+                    for name, field in BOOLEAN_METRICS.items()
+                    if row[field] is not None
+                }
+                if generation_only_metrics:
+                    contradictions.append(
+                        f"generation metrics are present: {generation_only_metrics}"
+                    )
+                if row["repair_used"]:
+                    contradictions.append("repair_used is true")
+                if contradictions:
+                    raise ValueError(
+                        f"{path}: retrieval_only run {run_id} contains generation-only "
+                        "state: " + "; ".join(contradictions)
+                    )
             seen.add(run_id)
             records.append(row)
     if not records:
@@ -127,6 +159,134 @@ def load_experiment_conditions(path: Path) -> list[ExperimentCondition]:
         return [ExperimentCondition.model_validate(row) for row in _read_jsonl(path)]
     except ValidationError as exc:
         raise ValueError(f"{path}: invalid experiment context: {exc}") from exc
+
+
+def load_expected_experiment_manifest(path: Path) -> ExpectedExperimentManifest:
+    try:
+        return ExpectedExperimentManifest.model_validate_json(
+            path.read_text(encoding="utf-8")
+        )
+    except ValidationError as exc:
+        raise ValueError(f"{path}: invalid expected experiment manifest: {exc}") from exc
+
+
+def _normalise_path(path: Path) -> Path:
+    return path.resolve()
+
+
+def _load_manifest_bindings(
+    score_paths: Sequence[Path],
+    score_manifest_pairs: Sequence[tuple[Path, Path]] | None,
+    *,
+    allow_incomplete: bool,
+) -> tuple[dict[Path, RunManifest], list[dict[str, Any]]]:
+    if not score_manifest_pairs:
+        if allow_incomplete:
+            return {}, []
+        raise ValueError(
+            "formal evaluation requires one --score-manifest binding for every "
+            "score artifact"
+        )
+
+    expected_scores = {_normalise_path(path) for path in score_paths}
+    manifests_by_score: dict[Path, RunManifest] = {}
+    seen_manifests: set[Path] = set()
+    seen_manifest_run_ids: set[str] = set()
+    audit: list[dict[str, Any]] = []
+    for score_path, manifest_path in score_manifest_pairs:
+        resolved_score = _normalise_path(score_path)
+        resolved_manifest = _normalise_path(manifest_path)
+        if resolved_score not in expected_scores:
+            raise ValueError(
+                f"score-manifest binding references an unknown score artifact: {score_path}"
+            )
+        if resolved_score in manifests_by_score:
+            raise ValueError(f"duplicate manifest binding for score artifact: {score_path}")
+        if resolved_manifest in seen_manifests:
+            raise ValueError(f"one run manifest cannot bind multiple score files: {manifest_path}")
+        if not resolved_manifest.is_file():
+            raise FileNotFoundError(resolved_manifest)
+        try:
+            manifest = RunManifest.model_validate_json(
+                resolved_manifest.read_text(encoding="utf-8")
+            )
+        except ValidationError as exc:
+            raise ValueError(f"{manifest_path}: invalid run manifest: {exc}") from exc
+        if not allow_incomplete and not manifest.reportable:
+            raise ValueError(
+                f"formal evaluation rejects non-reportable run manifest: {manifest_path}"
+            )
+        if not allow_incomplete and (manifest.fixture_mode or manifest.synthetic_trace):
+            raise ValueError(
+                "formal evaluation rejects fixture or synthetic run manifests: "
+                f"{manifest_path}"
+            )
+        if manifest.run_id in seen_manifest_run_ids:
+            raise ValueError(
+                f"duplicate run-manifest run_id across score bindings: {manifest.run_id}"
+            )
+        manifests_by_score[resolved_score] = manifest
+        seen_manifests.add(resolved_manifest)
+        seen_manifest_run_ids.add(manifest.run_id)
+        audit.append(
+            {
+                "score_file": score_path.name,
+                "score_sha256": hashlib.sha256(score_path.read_bytes()).hexdigest(),
+                "manifest_file": manifest_path.name,
+                "manifest_sha256": hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
+                "manifest_run_id": manifest.run_id,
+                "reportable": manifest.reportable,
+                "fixture_mode": manifest.fixture_mode,
+                "synthetic_trace": manifest.synthetic_trace,
+                "dataset_version": manifest.dataset_version,
+                "corpus_version": manifest.corpus_version,
+                "chunk_version": manifest.chunk_version,
+                "mapping_version": manifest.mapping_version,
+                "index_version": manifest.index_version,
+                "execution_mode": manifest.execution_mode.value,
+                "retrieval_mode": manifest.retrieval_mode.value,
+            }
+        )
+
+    missing = sorted(str(path) for path in expected_scores - manifests_by_score.keys())
+    if missing and not allow_incomplete:
+        raise ValueError(
+            "formal evaluation is missing run-manifest bindings for: " + ", ".join(missing)
+        )
+    return manifests_by_score, audit
+
+
+def _validate_score_manifest_bindings(
+    score_paths: Sequence[Path],
+    manifests_by_score: Mapping[Path, RunManifest],
+) -> dict[str, RunManifest]:
+    manifests_by_record: dict[str, RunManifest] = {}
+    for score_path in score_paths:
+        manifest = manifests_by_score.get(_normalise_path(score_path))
+        if manifest is None:
+            continue
+        for row in _read_jsonl(score_path):
+            run_id = str(row.get("run_id", ""))
+            checks = {
+                "condition_id": (row.get("condition_id"), manifest.condition_id),
+                "execution_mode": (row.get("execution_mode"), manifest.execution_mode.value),
+                "mode": (row.get("mode"), manifest.retrieval_mode.value),
+                "data_version": (row.get("data_version"), manifest.dataset_version),
+                "split": (row.get("split"), manifest.split.value),
+                "corpus_version": (row.get("corpus_version"), manifest.corpus_version),
+            }
+            mismatches = [
+                f"{field}={actual!r} (manifest={expected!r})"
+                for field, (actual, expected) in checks.items()
+                if actual != expected
+            ]
+            if mismatches:
+                raise ValueError(
+                    f"{score_path}: score record {run_id} disagrees with its run "
+                    "manifest: " + "; ".join(mismatches)
+                )
+            manifests_by_record[run_id] = manifest
+    return manifests_by_record
 
 
 def load_level_adaptation_ratings(path: Path) -> list[LevelAdaptationRating]:
@@ -509,6 +669,132 @@ def _validate_experiment_versions(
                 "experiment comparison mixes execution modes or artifact versions for "
                 f"{logical_key}: {rendered}"
             )
+
+
+def _manifest_version(value: str | None) -> str:
+    return value if value is not None else "not_applicable"
+
+
+def _validate_joined_manifest_bindings(
+    records: Sequence[Mapping[str, Any]],
+    manifests_by_record: Mapping[str, RunManifest],
+    *,
+    allow_incomplete: bool,
+) -> None:
+    manifests_by_comparison: dict[tuple[Any, ...], dict[str, RunManifest]] = defaultdict(dict)
+    for record in records:
+        run_id = str(record["run_id"])
+        manifest = manifests_by_record.get(run_id)
+        if manifest is None:
+            if allow_incomplete:
+                continue
+            raise ValueError(f"formal evaluation has no bound run manifest for {run_id}")
+        checks = {
+            "chunk_version": (record["chunk_version"], manifest.chunk_version),
+            "mapping_version": (
+                record["mapping_version"],
+                _manifest_version(manifest.mapping_version),
+            ),
+            "index_version": (
+                record["index_version"],
+                _manifest_version(manifest.index_version),
+            ),
+            "execution_mode": (
+                record["execution_mode"],
+                manifest.execution_mode.value,
+            ),
+        }
+        mismatches = [
+            f"{field}={actual!r} (manifest={expected!r})"
+            for field, (actual, expected) in checks.items()
+            if actual != expected
+        ]
+        if mismatches:
+            raise ValueError(
+                f"experiment context for {run_id} disagrees with its run manifest: "
+                + "; ".join(mismatches)
+            )
+        comparison_key = (
+            record["mode"],
+            record["data_version"],
+            record["split"],
+            record["corpus_version"],
+            record["textbook_id"],
+            record["student_level"],
+            record["comparison_id"],
+        )
+        manifests_by_comparison[comparison_key][manifest.run_id] = manifest
+
+    for comparison_key, manifests in manifests_by_comparison.items():
+        try:
+            assert_manifests_comparable(list(manifests.values()))
+        except ValueError as exc:
+            raise ValueError(
+                f"run manifests are not comparable for {comparison_key}: {exc}"
+            ) from exc
+
+
+def _validate_expected_experiment_coverage(
+    groups: Sequence[Mapping[str, Any]],
+    expected: ExpectedExperimentManifest | None,
+    *,
+    allow_incomplete: bool,
+) -> dict[str, Any]:
+    if expected is None:
+        if allow_incomplete:
+            return {"status": "pending", "matrix_version": None, "missing": []}
+        raise ValueError(
+            "formal evaluation requires an expected-experiment manifest"
+        )
+    identity_fields = (
+        "mode",
+        "execution_mode",
+        "data_version",
+        "split",
+        "corpus_version",
+        "chunk_version",
+        "mapping_version",
+        "index_version",
+        "textbook_id",
+        "student_level",
+        "comparison_id",
+        "condition_id",
+        "lambda_weight",
+        "lambda_status",
+    )
+    actual = {
+        tuple(group[field] for field in identity_fields): set(group["question_ids"])
+        for group in groups
+    }
+    expected_keys: set[tuple[Any, ...]] = set()
+    errors: list[str] = []
+    for cell in expected.cells:
+        payload = cell.model_dump(mode="json")
+        key = tuple(payload[field] for field in identity_fields)
+        expected_keys.add(key)
+        actual_questions = actual.get(key)
+        if actual_questions is None:
+            errors.append(f"missing experiment cell {key}")
+            continue
+        expected_questions = set(cell.expected_question_ids)
+        if actual_questions != expected_questions:
+            errors.append(
+                f"question coverage mismatch for {key}: "
+                f"missing={sorted(expected_questions - actual_questions)}, "
+                f"extra={sorted(actual_questions - expected_questions)}"
+            )
+    extra = sorted(actual.keys() - expected_keys)
+    if extra:
+        errors.append(f"unexpected experiment cells: {extra}")
+    if errors and not allow_incomplete:
+        raise ValueError("formal experiment coverage is incomplete: " + "; ".join(errors))
+    return {
+        "status": "incomplete" if errors else "complete",
+        "matrix_version": expected.matrix_version,
+        "expected_cell_count": len(expected.cells),
+        "observed_cell_count": len(actual),
+        "errors": errors,
+    }
 
 
 def _group_records(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1096,6 +1382,39 @@ def _markdown(result: Mapping[str, Any]) -> str:
             f"{group['chunk_version']} | {group['mapping_version']} | "
             f"{group['index_version']} |"
         )
+    coverage = result["experiment_coverage"]
+    lines.extend(
+        [
+            "",
+            "### Formal input integrity",
+            "",
+            f"- Experiment coverage: `{coverage['status']}`",
+            f"- Expected matrix version: `{coverage.get('matrix_version') or 'not_supplied'}`",
+        ]
+    )
+    bindings = result["run_manifest_bindings"]
+    if bindings:
+        lines.extend(
+            [
+                "- Every score artifact is bound to a reportable, non-fixture run manifest.",
+                "",
+                "| Score file | Score SHA-256 | Manifest file | Manifest SHA-256 | "
+                "Run manifest ID |",
+                "| --- | --- | --- | --- | --- |",
+            ]
+        )
+        for binding in bindings:
+            lines.append(
+                f"| {binding['score_file']} | `{binding['score_sha256']}` | "
+                f"{binding['manifest_file']} | `{binding['manifest_sha256']}` | "
+                f"{binding['manifest_run_id']} |"
+            )
+    else:
+        lines.append(
+            "- Run-manifest binding: `pending` (development/incomplete report only)."
+        )
+    for error in coverage.get("errors", []):
+        lines.append(f"- Coverage error: {error}")
     lines.extend(
         [
             "",
@@ -1310,6 +1629,8 @@ def write_extension_reports(
     rating_key_path: Path | None = None,
     rating_rubric_path: Path | None = None,
     rating_submission_manifest_path: Path | None = None,
+    score_manifest_pairs: Sequence[tuple[Path, Path]] | None = None,
+    expected_experiment_manifest_path: Path | None = None,
     role_provenance: Mapping[str, Any] | None = None,
     allow_incomplete: bool = False,
 ) -> dict[str, Path]:
@@ -1375,16 +1696,47 @@ def write_extension_reports(
     comparisons = _lambda_comparisons(
         groups, adaptation, allow_incomplete=allow_incomplete
     )
-    role = dict(role_provenance or {"status": "pending"})
+    role = dict(
+        role_provenance
+        or {
+            "status": "pending",
+            "reason": "upstream_role_package_not_supplied",
+        }
+    )
     if role.get("status") == "failed" and not allow_incomplete:
         raise ValueError(
             "formal evaluation rejected failed Role-label provenance: "
             + "; ".join(str(item) for item in role.get("errors", []))
         )
+    manifests_by_score, manifest_audit = _load_manifest_bindings(
+        score_paths,
+        score_manifest_pairs,
+        allow_incomplete=allow_incomplete,
+    )
+    manifests_by_record = _validate_score_manifest_bindings(
+        score_paths, manifests_by_score
+    )
+    _validate_joined_manifest_bindings(
+        joined,
+        manifests_by_record,
+        allow_incomplete=allow_incomplete,
+    )
+    expected_experiments = (
+        load_expected_experiment_manifest(expected_experiment_manifest_path)
+        if expected_experiment_manifest_path is not None
+        else None
+    )
+    experiment_coverage = _validate_expected_experiment_coverage(
+        groups,
+        expected_experiments,
+        allow_incomplete=allow_incomplete,
+    )
     result = {
         "schema_version": "0.1",
         "record_count": len(joined),
         "frozen_lambda": next(iter(frozen_lambdas), None),
+        "run_manifest_bindings": manifest_audit,
+        "experiment_coverage": experiment_coverage,
         "groups": groups,
         "lambda_comparisons": comparisons,
         "level_adaptation": adaptation,

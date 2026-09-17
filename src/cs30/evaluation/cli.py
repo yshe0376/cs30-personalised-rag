@@ -182,6 +182,25 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="M8 experiment-context JSONL keyed by run_id",
     )
+    extension.add_argument(
+        "--score-manifest",
+        action="append",
+        nargs=2,
+        type=Path,
+        metavar=("SCORE_FILE", "RUN_MANIFEST"),
+        help=(
+            "bind one score JSONL to the real RunManifest that produced its saved "
+            "run; repeat once per --scores input"
+        ),
+    )
+    extension.add_argument(
+        "--expected-experiments",
+        type=Path,
+        help=(
+            "frozen M8 acceptance manifest listing every required experiment cell "
+            "and its exact question IDs"
+        ),
+    )
     extension.add_argument("--output-dir", required=True, type=Path)
     extension.add_argument(
         "--ratings",
@@ -695,13 +714,20 @@ def _normalize_gold_command(args: argparse.Namespace) -> int:
 
 
 def _report_extension_command(args: argparse.Namespace) -> int:
-    role_paths = (args.role_manifest, args.role_gold, args.role_mapping)
+    role_paths = (
+        args.role_manifest,
+        args.role_gold,
+        args.role_mapping,
+        args.role_records,
+        args.role_question_references,
+    )
+    core_role_paths = (args.role_manifest, args.role_gold, args.role_mapping)
     if any(path is not None for path in role_paths) and not all(
-        path is not None for path in role_paths
+        path is not None for path in core_role_paths
     ):
         raise ValueError(
-            "Role provenance requires --role-manifest, --role-gold, and "
-            "--role-mapping together"
+            "any Role provenance input requires --role-manifest, --role-gold, "
+            "and --role-mapping together"
         )
     role_provenance = None
     if args.role_manifest is not None:
@@ -770,6 +796,8 @@ def _report_extension_command(args: argparse.Namespace) -> int:
         rating_key_path=args.rating_key,
         rating_rubric_path=args.rating_rubric,
         rating_submission_manifest_path=args.rating_submission_manifest,
+        score_manifest_pairs=args.score_manifest,
+        expected_experiment_manifest_path=args.expected_experiments,
         role_provenance=role_provenance,
         allow_incomplete=args.allow_incomplete,
     )

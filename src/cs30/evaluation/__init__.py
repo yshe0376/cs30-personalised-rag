@@ -5,6 +5,8 @@ from .answer_reporting import write_answer_citation_reports
 from .extension_models import (
     BlindedAnswerKey,
     BlindRatingSubmissionManifest,
+    ExpectedExperimentCell,
+    ExpectedExperimentManifest,
     ExperimentCondition,
     LevelAdaptationRating,
     LevelAdaptationRubricManifest,
@@ -107,6 +109,8 @@ __all__ = [
     "EvaluationRunResult",
     "EvaluationSplit",
     "ExperimentCondition",
+    "ExpectedExperimentCell",
+    "ExpectedExperimentManifest",
     "ExecutionMode",
     "GitState",
     "GoldChunkMapping",

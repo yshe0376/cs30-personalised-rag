@@ -16,7 +16,7 @@ from pydantic import Field, model_validator
 from cs30.contracts import StudentLevel
 from cs30.contracts.models import ContractModel, Identifier, NonEmptyText
 
-from .models import ExecutionMode
+from .models import EvaluationSplit, ExecutionMode
 
 
 class ExperimentCondition(ContractModel):
@@ -40,6 +40,68 @@ class ExperimentCondition(ContractModel):
     def validate_lambda_status(self) -> ExperimentCondition:
         if self.lambda_status == "baseline" and self.lambda_weight != 0.0:
             raise ValueError("baseline experiment contexts require lambda_weight=0")
+        return self
+
+
+class ExpectedExperimentCell(ContractModel):
+    """One required formal experiment group and its exact question coverage."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    mode: Identifier
+    execution_mode: ExecutionMode
+    data_version: Identifier
+    split: EvaluationSplit
+    corpus_version: Identifier
+    chunk_version: Identifier
+    mapping_version: Identifier
+    index_version: Identifier
+    textbook_id: Identifier
+    student_level: StudentLevel
+    comparison_id: Identifier
+    condition_id: Identifier
+    lambda_weight: float = Field(ge=0.0, le=1.0)
+    lambda_status: Literal["baseline", "frozen"]
+    expected_question_ids: list[Identifier] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_cell(self) -> ExpectedExperimentCell:
+        if self.lambda_status == "baseline" and self.lambda_weight != 0.0:
+            raise ValueError("baseline experiment cells require lambda_weight=0")
+        if len(set(self.expected_question_ids)) != len(self.expected_question_ids):
+            raise ValueError("expected_question_ids must be unique within a cell")
+        return self
+
+
+class ExpectedExperimentManifest(ContractModel):
+    """Frozen acceptance matrix for one formal evaluation report."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    matrix_version: Identifier
+    cells: list[ExpectedExperimentCell] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_unique_cells(self) -> ExpectedExperimentManifest:
+        keys = [
+            (
+                cell.mode,
+                cell.execution_mode,
+                cell.data_version,
+                cell.split,
+                cell.corpus_version,
+                cell.chunk_version,
+                cell.mapping_version,
+                cell.index_version,
+                cell.textbook_id,
+                cell.student_level,
+                cell.comparison_id,
+                cell.condition_id,
+                cell.lambda_weight,
+                cell.lambda_status,
+            )
+            for cell in self.cells
+        ]
+        if len(keys) != len(set(keys)):
+            raise ValueError("expected experiment cells must be unique")
         return self
 
 

@@ -99,6 +99,85 @@ def _seal(
     )
 
 
+def _run_manifest(
+    path: Path,
+    *,
+    run_id: str,
+    condition_id: str,
+    reportable: bool = True,
+    fixture_mode: bool = False,
+) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.2",
+                "run_id": run_id,
+                "condition_id": condition_id,
+                "dataset_version": "gold-v1",
+                "dataset_id": "physics-evaluation",
+                "split": "dev",
+                "corpus_version": "six-textbooks-v1",
+                "chunk_version": "chunks-v1",
+                "parser_version": "parser-v1",
+                "gold_annotation_version": "gold-annotation-v1",
+                "mapping_version": "mapping-v1",
+                "embedding_version": "embedding-v1",
+                "index_version": "index-v1",
+                "generation_model": "model-v1",
+                "prompt_version": "prompt-v1",
+                "profile": "beginner",
+                "execution_mode": "retrieval_and_generation",
+                "retrieval_mode": "hybrid",
+                "top_k": 5,
+                "k_values": [1, 3, 5],
+                "threshold": None,
+                "git_commit": "abc123",
+                "git_dirty": False,
+                "git_snapshot_sha256": "snapshot-v1",
+                "fixture_mode": fixture_mode,
+                "synthetic_trace": False,
+                "reportable": reportable,
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
+def _expected_experiments(path: Path, contexts: list[dict]) -> Path:
+    path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "matrix_version": "matrix-v1",
+                "cells": [
+                    {
+                        "schema_version": "0.1",
+                        "mode": "hybrid",
+                        "execution_mode": context["execution_mode"],
+                        "data_version": "gold-v1",
+                        "split": "dev",
+                        "corpus_version": "six-textbooks-v1",
+                        "chunk_version": context["chunk_version"],
+                        "mapping_version": context["mapping_version"],
+                        "index_version": context["index_version"],
+                        "textbook_id": context["textbook_id"],
+                        "student_level": context["student_level"],
+                        "comparison_id": context["comparison_id"],
+                        "condition_id": context["condition_id"],
+                        "lambda_weight": context["lambda_weight"],
+                        "lambda_status": context["lambda_status"],
+                        "expected_question_ids": [context["question_id"]],
+                    }
+                    for context in contexts
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_baseline_context_requires_zero_lambda() -> None:
     with pytest.raises(ValueError, match="lambda_weight=0"):
         ExperimentCondition.model_validate(
@@ -203,6 +282,7 @@ def test_extension_reports_keep_automated_manual_and_provenance_outputs_separate
         rating_key_path=rating_key,
         rating_rubric_path=rubric,
         rating_submission_manifest_path=rating_manifest,
+        allow_incomplete=True,
     )
 
     assert set(paths) == {
@@ -228,7 +308,10 @@ def test_extension_reports_keep_automated_manual_and_provenance_outputs_separate
         row for row in summary["lambda_comparisons"] if row["metric"] == "level_adaptation_mean"
     )
     assert adaptation_comparison["delta"] == 2.0
-    assert summary["role_label_provenance"] == {"status": "pending"}
+    assert summary["role_label_provenance"] == {
+        "status": "pending",
+        "reason": "upstream_role_package_not_supplied",
+    }
     markdown = paths["markdown"].read_text(encoding="utf-8")
     assert "Blinded level-adaptation assessment" in markdown
     assert "Per-citation validity" in markdown
@@ -671,12 +754,192 @@ def test_execution_mode_and_artifact_versions_are_hard_comparison_boundaries(
         write_extension_reports([scores], contexts, tmp_path / "reports-mode")
 
 
+def test_formal_extension_binds_real_manifests_and_expected_matrix(
+    tmp_path: Path,
+) -> None:
+    baseline_score = _write_jsonl(
+        tmp_path / "baseline-scores.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    frozen_score = _write_jsonl(
+        tmp_path / "frozen-scores.jsonl",
+        [_score_record("run-frozen", "q-1", "reranking-only", correct=True)],
+    )
+    context_rows = [
+        _context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"),
+        _context(
+            "run-frozen",
+            "q-1",
+            "reranking-only",
+            lambda_weight=0.35,
+            lambda_status="frozen",
+        ),
+    ]
+    contexts = _write_jsonl(tmp_path / "contexts.jsonl", context_rows)
+    baseline_manifest = _run_manifest(
+        tmp_path / "baseline.manifest.json",
+        run_id="batch-base",
+        condition_id="plain",
+    )
+    frozen_manifest = _run_manifest(
+        tmp_path / "frozen.manifest.json",
+        run_id="batch-frozen",
+        condition_id="reranking-only",
+    )
+    expected = _expected_experiments(tmp_path / "expected.json", context_rows)
+
+    paths = write_extension_reports(
+        [baseline_score, frozen_score],
+        contexts,
+        tmp_path / "reports",
+        score_manifest_pairs=[
+            (baseline_score, baseline_manifest),
+            (frozen_score, frozen_manifest),
+        ],
+        expected_experiment_manifest_path=expected,
+    )
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+
+    assert summary["experiment_coverage"]["status"] == "complete"
+    assert len(summary["run_manifest_bindings"]) == 2
+    assert all(binding["reportable"] for binding in summary["run_manifest_bindings"])
+    assert all(binding["manifest_sha256"] for binding in summary["run_manifest_bindings"])
+
+
+def test_formal_extension_rejects_nonreportable_or_misbound_manifest(
+    tmp_path: Path,
+) -> None:
+    baseline_score = _write_jsonl(
+        tmp_path / "baseline.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    frozen_score = _write_jsonl(
+        tmp_path / "frozen.jsonl",
+        [_score_record("run-frozen", "q-1", "reranking-only", correct=True)],
+    )
+    baseline_context = _context(
+        "run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"
+    )
+    frozen_context = _context(
+        "run-frozen",
+        "q-1",
+        "reranking-only",
+        lambda_weight=0.35,
+        lambda_status="frozen",
+    )
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl", [baseline_context, frozen_context]
+    )
+    expected = _expected_experiments(
+        tmp_path / "expected.json", [baseline_context, frozen_context]
+    )
+    fixture_manifest = _run_manifest(
+        tmp_path / "fixture.manifest.json",
+        run_id="fixture-batch",
+        condition_id="plain",
+        reportable=False,
+        fixture_mode=True,
+    )
+    frozen_manifest = _run_manifest(
+        tmp_path / "frozen.manifest.json",
+        run_id="frozen-batch",
+        condition_id="reranking-only",
+    )
+
+    with pytest.raises(ValueError, match="non-reportable run manifest"):
+        write_extension_reports(
+            [baseline_score, frozen_score],
+            contexts,
+            tmp_path / "fixture-reports",
+            score_manifest_pairs=[
+                (baseline_score, fixture_manifest),
+                (frozen_score, frozen_manifest),
+            ],
+            expected_experiment_manifest_path=expected,
+        )
+
+    wrong_manifest = _run_manifest(
+        tmp_path / "wrong.manifest.json",
+        run_id="wrong-batch",
+        condition_id="combined",
+    )
+    with pytest.raises(ValueError, match="disagrees with its run manifest"):
+        write_extension_reports(
+            [baseline_score, frozen_score],
+            contexts,
+            tmp_path / "wrong-reports",
+            score_manifest_pairs=[
+                (baseline_score, wrong_manifest),
+                (frozen_score, frozen_manifest),
+            ],
+            expected_experiment_manifest_path=expected,
+        )
+
+
+def test_formal_extension_rejects_incomplete_expected_matrix(tmp_path: Path) -> None:
+    baseline_score = _write_jsonl(
+        tmp_path / "baseline.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    frozen_score = _write_jsonl(
+        tmp_path / "frozen.jsonl",
+        [_score_record("run-frozen", "q-1", "reranking-only", correct=True)],
+    )
+    rows = [
+        _context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"),
+        _context(
+            "run-frozen",
+            "q-1",
+            "reranking-only",
+            lambda_weight=0.35,
+            lambda_status="frozen",
+        ),
+    ]
+    contexts = _write_jsonl(tmp_path / "contexts.jsonl", rows)
+    expected = _expected_experiments(tmp_path / "expected.json", rows)
+    payload = json.loads(expected.read_text(encoding="utf-8"))
+    payload["cells"][1]["expected_question_ids"] = ["q-1", "q-missing"]
+    expected.write_text(json.dumps(payload), encoding="utf-8")
+    manifests = [
+        _run_manifest(
+            tmp_path / "base.manifest.json",
+            run_id="base-batch",
+            condition_id="plain",
+        ),
+        _run_manifest(
+            tmp_path / "frozen.manifest.json",
+            run_id="frozen-batch",
+            condition_id="reranking-only",
+        ),
+    ]
+
+    with pytest.raises(ValueError, match="formal experiment coverage is incomplete"):
+        write_extension_reports(
+            [baseline_score, frozen_score],
+            contexts,
+            tmp_path / "reports",
+            score_manifest_pairs=[
+                (baseline_score, manifests[0]),
+                (frozen_score, manifests[1]),
+            ],
+            expected_experiment_manifest_path=expected,
+        )
+
+
 def test_retrieval_only_extension_metrics_are_not_applicable(tmp_path: Path) -> None:
     record = _score_record("run-retrieval", "q-1", "retrieval", correct=True)
     record.update(
         execution_mode="retrieval_only",
         status="retrieved",
         answer_outcome="not_applicable",
+        model_call_count=0,
+        citation_checks=[],
+        repair_used=False,
+        answer_correct=None,
+        citation_valid=None,
+        gold_evidence_covered=None,
+        raw_json_valid=None,
+        raw_schema_valid=None,
     )
     scores = _write_jsonl(tmp_path / "scores.jsonl", [record])
     context = _context(
@@ -699,6 +962,68 @@ def test_retrieval_only_extension_metrics_are_not_applicable(tmp_path: Path) -> 
         metric["status"] == "not_applicable"
         for metric in summary["groups"][0]["metrics"].values()
     )
+
+
+def test_retrieval_only_rejects_generation_only_state(tmp_path: Path) -> None:
+    record = _score_record("run-retrieval", "q-1", "retrieval", correct=True)
+    record.update(
+        execution_mode="retrieval_only",
+        status="retrieved",
+        answer_outcome="not_applicable",
+    )
+    scores = _write_jsonl(tmp_path / "scores.jsonl", [record])
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [
+            {
+                **_context(
+                    "run-retrieval",
+                    "q-1",
+                    "retrieval",
+                    lambda_weight=0.0,
+                    lambda_status="baseline",
+                ),
+                "execution_mode": "retrieval_only",
+            }
+        ],
+    )
+
+    with pytest.raises(ValueError, match="contains generation-only state"):
+        write_extension_reports(
+            [scores], contexts, tmp_path / "reports", allow_incomplete=True
+        )
+
+
+def test_cli_rejects_orphan_role_supplemental_inputs(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [_context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline")],
+    )
+    role_records = _write_jsonl(tmp_path / "records.jsonl", [{"chunk_id": "chunk-1"}])
+
+    exit_code = main(
+        [
+            "report-extension",
+            "--scores",
+            str(scores),
+            "--contexts",
+            str(contexts),
+            "--output-dir",
+            str(tmp_path / "reports"),
+            "--role-records",
+            str(role_records),
+            "--allow-incomplete",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "any Role provenance input requires" in capsys.readouterr().err
 
 
 def test_completed_rating_sha_and_role_provenance_fail_closed(tmp_path: Path) -> None:

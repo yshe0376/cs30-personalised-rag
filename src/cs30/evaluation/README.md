@@ -346,12 +346,56 @@ Formal reporting requires both sides of every declared comparison, identical
 unique question sets, and one globally frozen lambda value. Partial development
 reports must opt in with `--allow-incomplete`.
 
+Formal reporting also binds every score artifact to the real `RunManifest`
+written by its runner invocation. The report verifies the manifest is
+reportable and non-fixture, then checks condition, execution mode, retrieval
+mode, dataset, split, corpus, chunk, mapping, and index identities against the
+score records and contexts. Score and manifest SHA-256 values are retained in
+the aggregate report. A development report may omit these bindings only with
+`--allow-incomplete`.
+
 The report rejects a context whose `execution_mode` disagrees with its score
-record, and rejects lambda comparisons that mix chunk, mapping, or index
-versions. `retrieval_only` records are retained for traceability but their
-answer, citation, abstention, and level-adaptation metrics are
+record or manifest, and rejects lambda comparisons that mix incompatible run
+manifests or artifact versions. `retrieval_only` records must not contain model
+calls, answers, repairs, citations, abstention causes, or generation metrics;
+valid retrieval-only records remain traceable with those metrics marked
 `not_applicable`. Retrieval, generation, and parsing failures remain separate
 technical outcomes and do not enter answer or abstention accuracy denominators.
+
+### Formal experiment coverage
+
+`--expected-experiments` supplies the frozen acceptance matrix rather than
+hard-coding M7 condition names in M8. Each cell identifies one required
+textbook, learner level, split, condition, comparison, retrieval mode, lambda
+status and exact question set. Formal reporting fails on missing, extra, or
+partially covered cells.
+
+```json
+{
+  "schema_version": "0.1",
+  "matrix_version": "formal-matrix-v1",
+  "cells": [
+    {
+      "schema_version": "0.1",
+      "mode": "hybrid",
+      "execution_mode": "retrieval_and_generation",
+      "data_version": "gold-v1",
+      "split": "dev",
+      "corpus_version": "openstax-cp2e-v1",
+      "chunk_version": "chunks-v1",
+      "mapping_version": "mapping-v1",
+      "index_version": "hybrid-index-v1",
+      "textbook_id": "openstax_college_physics_2e",
+      "student_level": "beginner",
+      "comparison_id": "prompt-controlled-reranking",
+      "condition_id": "P0R0_plain",
+      "lambda_weight": 0.0,
+      "lambda_status": "baseline",
+      "expected_question_ids": ["q-001"]
+    }
+  ]
+}
+```
 
 ### Single-rater blind assessment
 
@@ -420,6 +464,12 @@ without judging Role-label quality.
 
 In formal mode, any failed Role provenance check stops report generation. A
 development run may retain the failed audit only with `--allow-incomplete`.
+The current repository does not yet contain a frozen machine-readable Role
+schema or Role-label package, so M8 does not hard-code the six design-time Role
+names or claim a completed allowed-value audit. Once that upstream package is
+available, allowed values must be validated from its own frozen schema rather
+than redefined in evaluation code. Supplying `--role-records` or
+`--role-question-references` without the three core Role inputs is an error.
 
 ### Combined report
 
@@ -429,7 +479,10 @@ then build the combined package:
 ```powershell
 cs30-evaluate report-extension `
   --scores artifacts/plain/answer_citation_scores.jsonl artifacts/reranked/answer_citation_scores.jsonl `
+  --score-manifest artifacts/plain/answer_citation_scores.jsonl artifacts/plain/run_results.manifest.json `
+  --score-manifest artifacts/reranked/answer_citation_scores.jsonl artifacts/reranked/run_results.manifest.json `
   --contexts artifacts/experiment_contexts.jsonl `
+  --expected-experiments artifacts/expected_experiments.json `
   --ratings artifacts/blind_rating/blind_rating_sheet.csv `
   --rating-key artifacts/blind_rating/blinded_answer_key.jsonl `
   --rating-rubric artifacts/level_adaptation_rubric.json `
