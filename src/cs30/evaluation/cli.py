@@ -21,6 +21,7 @@ from .answer_reporting import write_answer_citation_reports
 from .extension_reporting import (
     audit_role_label_provenance,
     load_experiment_conditions,
+    seal_blind_rating_submission,
     write_blind_rating_materials,
     write_extension_reports,
 )
@@ -198,6 +199,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="team-frozen level-adaptation rubric version and score range",
     )
     extension.add_argument(
+        "--rating-submission-manifest",
+        type=Path,
+        help="sealed SHA manifest for the completed ratings, private key, and rubric",
+    )
+    extension.add_argument(
         "--role-manifest",
         type=Path,
         help="optional M8 provenance sidecar for the M3 Role-label package",
@@ -230,7 +236,8 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help=(
             "development only: allow experiment buckets without both lambda=0 "
-            "and frozen-lambda groups"
+            "and frozen-lambda groups, partial blind-rating coverage, or a failed "
+            "Role provenance audit"
         ),
     )
 
@@ -245,6 +252,15 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="one or more saved EvaluationRunResult JSONL files",
     )
+
+    seal = commands.add_parser(
+        "seal-blind-ratings",
+        help="freeze completed single-rater files and record their SHA-256 identities",
+    )
+    seal.add_argument("--ratings", required=True, type=Path)
+    seal.add_argument("--rating-key", required=True, type=Path)
+    seal.add_argument("--rating-rubric", required=True, type=Path)
+    seal.add_argument("--output", required=True, type=Path)
     blind.add_argument("--gold", required=True, type=Path)
     blind.add_argument("--contexts", required=True, type=Path)
     blind.add_argument("--output-dir", required=True, type=Path)
@@ -753,6 +769,7 @@ def _report_extension_command(args: argparse.Namespace) -> int:
         ratings_path=args.ratings,
         rating_key_path=args.rating_key,
         rating_rubric_path=args.rating_rubric,
+        rating_submission_manifest_path=args.rating_submission_manifest,
         role_provenance=role_provenance,
         allow_incomplete=args.allow_incomplete,
     )
@@ -792,6 +809,17 @@ def _prepare_blind_ratings_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _seal_blind_ratings_command(args: argparse.Namespace) -> int:
+    path = seal_blind_rating_submission(
+        args.ratings,
+        args.rating_key,
+        args.rating_rubric,
+        args.output,
+    )
+    print(json.dumps({"rating_submission_manifest": str(path)}, ensure_ascii=False))
+    return 0
+
+
 def _prepare_corpus_command(args: argparse.Namespace) -> int:
     corpus = load_openstax_archive(args.archive, chapters=args.chapters)
     paths = write_prepared_corpus(corpus, args.output_dir)
@@ -822,6 +850,8 @@ def main(argv: list[str] | None = None) -> int:
             return _report_extension_command(args)
         if args.command == "prepare-blind-ratings":
             return _prepare_blind_ratings_command(args)
+        if args.command == "seal-blind-ratings":
+            return _seal_blind_ratings_command(args)
         if args.command == "normalize-gold":
             return _normalize_gold_command(args)
         return _prepare_corpus_command(args)

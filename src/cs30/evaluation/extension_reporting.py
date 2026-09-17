@@ -15,13 +15,14 @@ from pydantic import ValidationError
 
 from .extension_models import (
     BlindedAnswerKey,
+    BlindRatingSubmissionManifest,
     ExperimentCondition,
     LevelAdaptationRating,
     LevelAdaptationRubricManifest,
     RoleLabelProvenanceManifest,
 )
 from .mapping import GoldChunkMapping
-from .models import EvaluationRunResult, GoldSample, RunStatus
+from .models import EvaluationRunResult, ExecutionMode, GoldSample, RunStatus
 
 BOOLEAN_METRICS = {
     "answer_accuracy": "answer_correct",
@@ -36,9 +37,13 @@ BOOLEAN_METRICS = {
 
 GROUP_IDENTITY_FIELDS = (
     "mode",
+    "execution_mode",
     "data_version",
     "split",
     "corpus_version",
+    "chunk_version",
+    "mapping_version",
+    "index_version",
     "textbook_id",
     "student_level",
     "comparison_id",
@@ -73,6 +78,7 @@ def load_score_records(paths: Sequence[Path]) -> list[dict[str, Any]]:
         "run_id",
         "question_id",
         "condition_id",
+        "execution_mode",
         "mode",
         "data_version",
         "split",
@@ -83,6 +89,8 @@ def load_score_records(paths: Sequence[Path]) -> list[dict[str, Any]]:
         "citation_checks",
         "model_call_count",
         "repair_used",
+        "answer_outcome",
+        "failure_labels",
         *BOOLEAN_METRICS.values(),
     }
     records: list[dict[str, Any]] = []
@@ -95,6 +103,18 @@ def load_score_records(paths: Sequence[Path]) -> list[dict[str, Any]]:
             run_id = str(row["run_id"])
             if run_id in seen:
                 raise ValueError(f"duplicate score run_id across inputs: {run_id}")
+            try:
+                ExecutionMode(str(row["execution_mode"]))
+            except ValueError as exc:
+                raise ValueError(
+                    f"{path}: invalid execution_mode for run {run_id}: "
+                    f"{row['execution_mode']!r}"
+                ) from exc
+            if row["execution_mode"] == ExecutionMode.RETRIEVAL_ONLY.value:
+                if row["answer_outcome"] != "not_applicable":
+                    raise ValueError(
+                        f"{path}: retrieval_only run {run_id} must be not_applicable"
+                    )
             seen.add(run_id)
             records.append(row)
     if not records:
@@ -161,6 +181,85 @@ def load_level_adaptation_rubric(path: Path) -> LevelAdaptationRubricManifest:
         raise ValueError(f"{path}: invalid level-adaptation rubric: {exc}") from exc
 
 
+def load_blind_rating_submission_manifest(
+    path: Path,
+) -> BlindRatingSubmissionManifest:
+    try:
+        return BlindRatingSubmissionManifest.model_validate_json(
+            path.read_text(encoding="utf-8")
+        )
+    except ValidationError as exc:
+        raise ValueError(f"{path}: invalid blind-rating submission manifest: {exc}") from exc
+
+
+def seal_blind_rating_submission(
+    ratings_path: Path,
+    rating_key_path: Path,
+    rating_rubric_path: Path,
+    output_path: Path,
+) -> Path:
+    """Freeze completed blind-rating inputs so later report runs can verify them."""
+
+    ratings = load_level_adaptation_ratings(ratings_path)
+    keys = load_blinded_answer_keys(rating_key_path)
+    rubric = load_level_adaptation_rubric(rating_rubric_path)
+    if not ratings:
+        raise ValueError("cannot seal an empty blind-rating file")
+    rater_ids = {rating.rater_id for rating in ratings}
+    if len(rater_ids) != 1:
+        raise ValueError("single-rater assessment requires exactly one rater_id")
+    if any(rating.rubric_version != rubric.rubric_version for rating in ratings):
+        raise ValueError("blind ratings do not use the frozen rubric version")
+    keyed_ids = {item.blinded_answer_id for item in keys}
+    if len(keyed_ids) != len(keys):
+        raise ValueError("blind-rating key contains duplicate blinded_answer_id values")
+    rated_ids = {item.blinded_answer_id for item in ratings}
+    if not rated_ids.issubset(keyed_ids):
+        raise ValueError("blind ratings reference an ID absent from the private key")
+    manifest = BlindRatingSubmissionManifest(
+        ratings_sha256=hashlib.sha256(ratings_path.read_bytes()).hexdigest(),
+        key_sha256=hashlib.sha256(rating_key_path.read_bytes()).hexdigest(),
+        rubric_sha256=hashlib.sha256(rating_rubric_path.read_bytes()).hexdigest(),
+        expected_rating_count=len(keys),
+        rubric_version=rubric.rubric_version,
+    )
+    if output_path.exists():
+        raise FileExistsError(f"refusing to overwrite blind-rating manifest: {output_path}")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        manifest.model_dump_json(indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return output_path
+
+
+def _verify_blind_rating_submission(
+    manifest_path: Path,
+    ratings_path: Path,
+    rating_key_path: Path,
+    rating_rubric_path: Path,
+    *,
+    rating_count: int,
+    key_count: int,
+    rubric_version: str,
+) -> None:
+    manifest = load_blind_rating_submission_manifest(manifest_path)
+    checks = {
+        "ratings_sha256": hashlib.sha256(ratings_path.read_bytes()).hexdigest(),
+        "key_sha256": hashlib.sha256(rating_key_path.read_bytes()).hexdigest(),
+        "rubric_sha256": hashlib.sha256(rating_rubric_path.read_bytes()).hexdigest(),
+    }
+    for field, actual in checks.items():
+        if getattr(manifest, field) != actual:
+            raise ValueError(f"blind-rating {field} does not match the supplied file")
+    if manifest.expected_rating_count != key_count:
+        raise ValueError("blind-rating manifest expected count does not match the key")
+    if rating_count > manifest.expected_rating_count:
+        raise ValueError("blind-rating file contains more rows than the sealed assessment")
+    if manifest.rubric_version != rubric_version:
+        raise ValueError("blind-rating manifest does not use the supplied rubric version")
+
+
 def _metric(values: Iterable[bool | None]) -> dict[str, Any]:
     materialized = list(values)
     eligible = [value for value in materialized if value is not None]
@@ -176,6 +275,10 @@ def _metric(values: Iterable[bool | None]) -> dict[str, Any]:
 
 
 def _summarise_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    retrieval_only = all(
+        record.get("execution_mode") == ExecutionMode.RETRIEVAL_ONLY.value
+        for record in records
+    )
     metrics = {
         name: _metric(record.get(field) for record in records)
         for name, field in BOOLEAN_METRICS.items()
@@ -252,18 +355,33 @@ def _summarise_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             ),
         }
     )
+    if retrieval_only:
+        metrics = {
+            name: {
+                "numerator": 0,
+                "denominator": 0,
+                "value": None,
+                "status": "not_applicable",
+                "excluded": len(records),
+            }
+            for name in metrics
+        }
     answerability_confusion = Counter(
         {
             "correct_abstention": 0,
             "wrong_abstention": 0,
             "answered_when_unanswerable": 0,
             "answered_when_answerable": 0,
-            "technical_or_unscored": 0,
+            "technical_failure": 0,
             "unresolved_answerability": 0,
+            "not_applicable": 0,
         }
     )
     cause_confusion: dict[str, Counter[str]] = defaultdict(Counter)
     for record in records:
+        if record.get("execution_mode") == ExecutionMode.RETRIEVAL_ONLY.value:
+            answerability_confusion["not_applicable"] += 1
+            continue
         gold_answerable = record.get("gold_answerable")
         abstention_correct = record.get("abstention_correct")
         status = record.get("status")
@@ -271,7 +389,7 @@ def _summarise_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         if gold_answerable is None:
             outcome = "unresolved_answerability"
         elif abstention_correct is None:
-            outcome = "technical_or_unscored"
+            outcome = "technical_failure"
         elif status == "abstained":
             outcome = (
                 "correct_abstention" if abstention_correct else "wrong_abstention"
@@ -287,6 +405,7 @@ def _summarise_records(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             cause_confusion[str(cause)][outcome] += 1
     return {
         "sample_count": len(records),
+        "applicability": "not_applicable" if retrieval_only else "applicable",
         "question_ids": sorted(str(record["question_id"]) for record in records),
         "metrics": metrics,
         "answerability_confusion": dict(sorted(answerability_confusion.items())),
@@ -344,8 +463,52 @@ def _join_records(
             raise ValueError(f"question_id mismatch for run {context.run_id}")
         if context.condition_id != record["condition_id"]:
             raise ValueError(f"condition_id mismatch for run {context.run_id}")
+        if context.execution_mode.value != record["execution_mode"]:
+            raise ValueError(f"execution_mode mismatch for run {context.run_id}")
         joined.append({**record, **context.model_dump(mode="json")})
     return joined
+
+
+def _validate_experiment_versions(
+    records: Sequence[Mapping[str, Any]], *, allow_incomplete: bool
+) -> None:
+    """Reject comparisons assembled from different frozen M4/M5 artifacts."""
+
+    logical_fields = (
+        "mode",
+        "data_version",
+        "split",
+        "corpus_version",
+        "textbook_id",
+        "student_level",
+        "comparison_id",
+    )
+    version_fields = (
+        "execution_mode",
+        "chunk_version",
+        "mapping_version",
+        "index_version",
+    )
+    versions_by_comparison: dict[tuple[Any, ...], set[tuple[Any, ...]]] = defaultdict(set)
+    for record in records:
+        logical_key = tuple(record[field] for field in logical_fields)
+        version_key = tuple(record[field] for field in version_fields)
+        versions_by_comparison[logical_key].add(version_key)
+        if not allow_incomplete and any(
+            str(record[field]).strip().lower() == "unspecified"
+            for field in version_fields[1:]
+        ):
+            raise ValueError(
+                "formal evaluation requires explicit chunk_version, mapping_version, "
+                f"and index_version for {logical_key}"
+            )
+    for logical_key, versions in versions_by_comparison.items():
+        if len(versions) > 1:
+            rendered = [dict(zip(version_fields, item, strict=True)) for item in sorted(versions)]
+            raise ValueError(
+                "experiment comparison mixes execution modes or artifact versions for "
+                f"{logical_key}: {rendered}"
+            )
 
 
 def _group_records(records: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -371,9 +534,14 @@ def _adaptation_summary(
     ratings: Sequence[LevelAdaptationRating],
     answer_keys: Sequence[BlindedAnswerKey],
     rubric: LevelAdaptationRubricManifest | None,
+    *,
+    ratings_supplied: bool,
+    allow_incomplete: bool,
 ) -> dict[str, Any]:
-    if not ratings:
+    if not ratings_supplied:
         return {"status": "pending", "rating_count": 0, "groups": []}
+    if not ratings:
+        raise ValueError("a supplied blind-rating file must not be empty")
     records_by_run = {str(record["run_id"]): record for record in records}
     if rubric is None:
         raise ValueError("level-adaptation ratings require a frozen rubric manifest")
@@ -442,8 +610,10 @@ def _adaptation_summary(
         grouped[key].append(rating.score)
         rubric_versions.add(rating.rubric_version)
         rater_ids.add(rating.rater_id)
+    if len(rater_ids) != 1:
+        raise ValueError("single-rater assessment requires exactly one rater_id")
     missing_ratings = sorted(keys_by_answer.keys() - rated_answers)
-    if missing_ratings:
+    if missing_ratings and not allow_incomplete:
         raise ValueError(
             "blind-rating coverage is incomplete; missing ratings for: "
             + ", ".join(missing_ratings)
@@ -460,8 +630,10 @@ def _adaptation_summary(
             }
         )
     return {
-        "status": "available",
+        "status": "incomplete" if missing_ratings else "available",
         "rating_count": len(ratings),
+        "expected_rating_count": len(keys_by_answer),
+        "missing_blinded_answer_ids": missing_ratings,
         "rubric_versions": sorted(rubric_versions),
         "score_min": rubric.score_min,
         "score_max": rubric.score_max,
@@ -478,9 +650,13 @@ def _lambda_comparisons(
 ) -> list[dict[str, Any]]:
     comparison_identity = (
         "mode",
+        "execution_mode",
         "data_version",
         "split",
         "corpus_version",
+        "chunk_version",
+        "mapping_version",
+        "index_version",
         "textbook_id",
         "student_level",
         "comparison_id",
@@ -908,6 +1084,21 @@ def _markdown(result: Mapping[str, Any]) -> str:
     lines.extend(
         [
             "",
+            "### Bound execution and artifact versions",
+            "",
+            "| Condition | Execution mode | Chunk version | Mapping version | Index version |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+    )
+    for group in result["groups"]:
+        lines.append(
+            f"| {group['condition_id']} | {group['execution_mode']} | "
+            f"{group['chunk_version']} | {group['mapping_version']} | "
+            f"{group['index_version']} |"
+        )
+    lines.extend(
+        [
+            "",
             "### Refusal metrics",
             "",
             "| Split | Corpus | Textbook | Level | Condition | Precision | Recall | F1 |",
@@ -1056,6 +1247,11 @@ def _markdown(result: Mapping[str, Any]) -> str:
     if adaptation["status"] == "pending":
         lines.append("Status: pending. No blinded human ratings were supplied.")
     else:
+        if adaptation["status"] == "incomplete":
+            lines.append(
+                "Status: incomplete. The supplied blind-rating file does not cover every "
+                "sealed answer."
+            )
         lines.append(
             f"Ratings: {adaptation['rating_count']}; raters: "
             f"{adaptation['rater_count']}; rubric versions: "
@@ -1113,6 +1309,7 @@ def write_extension_reports(
     ratings_path: Path | None = None,
     rating_key_path: Path | None = None,
     rating_rubric_path: Path | None = None,
+    rating_submission_manifest_path: Path | None = None,
     role_provenance: Mapping[str, Any] | None = None,
     allow_incomplete: bool = False,
 ) -> dict[str, Path]:
@@ -1131,13 +1328,20 @@ def write_extension_reports(
             f"found={sorted(frozen_lambdas)}"
         )
     joined = _join_records(records, contexts)
+    _validate_experiment_versions(joined, allow_incomplete=allow_incomplete)
     groups = _group_records(joined)
-    rating_paths = (ratings_path, rating_key_path, rating_rubric_path)
+    rating_paths = (
+        ratings_path,
+        rating_key_path,
+        rating_rubric_path,
+        rating_submission_manifest_path,
+    )
     if any(path is not None for path in rating_paths) and not all(
         path is not None for path in rating_paths
     ):
         raise ValueError(
-            "blinded ratings require ratings, rating-key, and rubric files together"
+            "blinded ratings require ratings, rating-key, rubric, and sealed submission "
+            "manifest files together"
         )
     ratings = load_level_adaptation_ratings(ratings_path) if ratings_path else []
     answer_keys = load_blinded_answer_keys(rating_key_path) if rating_key_path else []
@@ -1146,11 +1350,37 @@ def write_extension_reports(
         if rating_rubric_path
         else None
     )
-    adaptation = _adaptation_summary(joined, ratings, answer_keys, rubric)
+    if ratings_path is not None:
+        assert rating_key_path is not None
+        assert rating_rubric_path is not None
+        assert rating_submission_manifest_path is not None
+        assert rubric is not None
+        _verify_blind_rating_submission(
+            rating_submission_manifest_path,
+            ratings_path,
+            rating_key_path,
+            rating_rubric_path,
+            rating_count=len(ratings),
+            key_count=len(answer_keys),
+            rubric_version=rubric.rubric_version,
+        )
+    adaptation = _adaptation_summary(
+        joined,
+        ratings,
+        answer_keys,
+        rubric,
+        ratings_supplied=ratings_path is not None,
+        allow_incomplete=allow_incomplete,
+    )
     comparisons = _lambda_comparisons(
         groups, adaptation, allow_incomplete=allow_incomplete
     )
     role = dict(role_provenance or {"status": "pending"})
+    if role.get("status") == "failed" and not allow_incomplete:
+        raise ValueError(
+            "formal evaluation rejected failed Role-label provenance: "
+            + "; ".join(str(item) for item in role.get("errors", []))
+        )
     result = {
         "schema_version": "0.1",
         "record_count": len(joined),
@@ -1200,9 +1430,13 @@ def write_extension_reports(
     with paths["lambda"].open("w", encoding="utf-8", newline="") as stream:
         fieldnames = [
             "mode",
+            "execution_mode",
             "data_version",
             "split",
             "corpus_version",
+            "chunk_version",
+            "mapping_version",
+            "index_version",
             "textbook_id",
             "student_level",
             "comparison_id",

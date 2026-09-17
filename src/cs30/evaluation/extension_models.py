@@ -16,6 +16,8 @@ from pydantic import Field, model_validator
 from cs30.contracts import StudentLevel
 from cs30.contracts.models import ContractModel, Identifier, NonEmptyText
 
+from .models import ExecutionMode
+
 
 class ExperimentCondition(ContractModel):
     """Reporting metadata joined to one saved per-question score record."""
@@ -27,6 +29,10 @@ class ExperimentCondition(ContractModel):
     comparison_id: Identifier
     textbook_id: Identifier
     student_level: StudentLevel
+    execution_mode: ExecutionMode
+    chunk_version: Identifier
+    mapping_version: Identifier
+    index_version: Identifier
     lambda_weight: float = Field(ge=0.0, le=1.0)
     lambda_status: Literal["baseline", "frozen"]
 
@@ -72,6 +78,17 @@ class LevelAdaptationRubricManifest(ContractModel):
         if self.score_max <= self.score_min:
             raise ValueError("score_max must be greater than score_min")
         return self
+
+
+class BlindRatingSubmissionManifest(ContractModel):
+    """Integrity metadata for one completed single-rater blind assessment."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    ratings_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    key_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    rubric_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    expected_rating_count: int = Field(gt=0)
+    rubric_version: Identifier
 
 
 class RoleLabelProvenanceManifest(ContractModel):

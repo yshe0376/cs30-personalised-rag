@@ -11,6 +11,7 @@ from cs30.evaluation.cli import main
 from cs30.evaluation.extension_models import ExperimentCondition
 from cs30.evaluation.extension_reporting import (
     audit_role_label_provenance,
+    seal_blind_rating_submission,
     write_blind_rating_materials,
     write_extension_reports,
 )
@@ -24,11 +25,13 @@ def _score_record(run_id: str, question_id: str, condition_id: str, *, correct: 
         "run_id": run_id,
         "question_id": question_id,
         "condition_id": condition_id,
+        "execution_mode": "retrieval_and_generation",
         "mode": "hybrid",
         "data_version": "gold-v1",
         "split": "dev",
         "corpus_version": "six-textbooks-v1",
         "status": "answered",
+        "answer_outcome": "correct" if correct else "wrong",
         "abstention_cause": None,
         "gold_answerable": True,
         "failure_labels": [] if correct else ["wrong_option"],
@@ -76,9 +79,24 @@ def _context(
         "comparison_id": "prompt-controlled-reranking",
         "textbook_id": "openstax_college_physics_2e",
         "student_level": "beginner",
+        "execution_mode": "retrieval_and_generation",
+        "chunk_version": "chunks-v1",
+        "mapping_version": "mapping-v1",
+        "index_version": "index-v1",
         "lambda_weight": lambda_weight,
         "lambda_status": lambda_status,
     }
+
+
+def _seal(
+    tmp_path: Path, ratings: Path, rating_key: Path, rubric: Path, *, name: str = "sealed.json"
+) -> Path:
+    return seal_blind_rating_submission(
+        ratings,
+        rating_key,
+        rubric,
+        tmp_path / name,
+    )
 
 
 def test_baseline_context_requires_zero_lambda() -> None:
@@ -175,6 +193,7 @@ def test_extension_reports_keep_automated_manual_and_provenance_outputs_separate
         ),
         encoding="utf-8",
     )
+    rating_manifest = _seal(tmp_path, ratings, rating_key, rubric)
 
     paths = write_extension_reports(
         [scores],
@@ -183,6 +202,7 @@ def test_extension_reports_keep_automated_manual_and_provenance_outputs_separate
         ratings_path=ratings,
         rating_key_path=rating_key,
         rating_rubric_path=rubric,
+        rating_submission_manifest_path=rating_manifest,
     )
 
     assert set(paths) == {
@@ -443,6 +463,9 @@ def test_prepare_blind_rating_materials_excludes_non_answers_and_hides_condition
         ),
         encoding="utf-8",
     )
+    rating_manifest = _seal(
+        tmp_path, paths["sheet"], paths["key"], rubric, name="completed-ratings.json"
+    )
     reports = write_extension_reports(
         [score_path],
         context_path,
@@ -450,6 +473,7 @@ def test_prepare_blind_rating_materials_excludes_non_answers_and_hides_condition
         ratings_path=paths["sheet"],
         rating_key_path=paths["key"],
         rating_rubric_path=rubric,
+        rating_submission_manifest_path=rating_manifest,
         allow_incomplete=True,
     )
     summary = json.loads(reports["summary"].read_text(encoding="utf-8"))
@@ -504,8 +528,269 @@ def test_blinded_ratings_require_a_separate_key(tmp_path: Path) -> None:
     )
     ratings = _write_jsonl(tmp_path / "ratings.jsonl", [])
 
-    with pytest.raises(ValueError, match="ratings, rating-key, and rubric"):
+    with pytest.raises(ValueError, match="ratings, rating-key, rubric"):
         write_extension_reports([scores], contexts, tmp_path / "reports", ratings_path=ratings)
+
+
+def test_supplied_empty_rating_file_is_not_pending(tmp_path: Path) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [_context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline")],
+    )
+    ratings = _write_jsonl(tmp_path / "ratings.jsonl", [])
+    rating_key = _write_jsonl(
+        tmp_path / "rating-key.jsonl",
+        [{"schema_version": "0.1", "blinded_answer_id": "answer-a", "run_id": "run-base"}],
+    )
+    rubric = tmp_path / "rubric.json"
+    rubric.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "rubric_version": "adaptation-v1",
+                "score_min": 1,
+                "score_max": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
+    submission = tmp_path / "submission.json"
+    submission.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "ratings_sha256": hashlib.sha256(ratings.read_bytes()).hexdigest(),
+                "key_sha256": hashlib.sha256(rating_key.read_bytes()).hexdigest(),
+                "rubric_sha256": hashlib.sha256(rubric.read_bytes()).hexdigest(),
+                "expected_rating_count": 1,
+                "rubric_version": "adaptation-v1",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="must not be empty"):
+        write_extension_reports(
+            [scores],
+            contexts,
+            tmp_path / "reports",
+            ratings_path=ratings,
+            rating_key_path=rating_key,
+            rating_rubric_path=rubric,
+            rating_submission_manifest_path=submission,
+            allow_incomplete=True,
+        )
+
+
+def test_single_rater_is_enforced(
+    tmp_path: Path,
+) -> None:
+    ratings = _write_jsonl(
+        tmp_path / "ratings.jsonl",
+        [
+            {
+                "schema_version": "0.1",
+                "rating_id": "rating-a",
+                "question_id": "q-1",
+                "blinded_answer_id": "answer-a",
+                "assigned_level": "beginner",
+                "score": 3,
+                "rubric_version": "adaptation-v1",
+                "rater_id": "rater-1",
+            },
+            {
+                "schema_version": "0.1",
+                "rating_id": "rating-b",
+                "question_id": "q-2",
+                "blinded_answer_id": "answer-b",
+                "assigned_level": "beginner",
+                "score": 4,
+                "rubric_version": "adaptation-v1",
+                "rater_id": "rater-2",
+            },
+        ],
+    )
+    rating_key = _write_jsonl(
+        tmp_path / "rating-key.jsonl",
+        [
+            {"schema_version": "0.1", "blinded_answer_id": "answer-a", "run_id": "run-a"},
+            {"schema_version": "0.1", "blinded_answer_id": "answer-b", "run_id": "run-b"},
+        ],
+    )
+    rubric = tmp_path / "rubric.json"
+    rubric.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "rubric_version": "adaptation-v1",
+                "score_min": 1,
+                "score_max": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="exactly one rater_id"):
+        _seal(tmp_path, ratings, rating_key, rubric)
+
+
+def test_execution_mode_and_artifact_versions_are_hard_comparison_boundaries(
+    tmp_path: Path,
+) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [
+            _score_record("run-base", "q-1", "plain", correct=True),
+            _score_record("run-frozen", "q-1", "reranking-only", correct=True),
+        ],
+    )
+    baseline = _context(
+        "run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"
+    )
+    frozen = _context(
+        "run-frozen",
+        "q-1",
+        "reranking-only",
+        lambda_weight=0.35,
+        lambda_status="frozen",
+    )
+    frozen["mapping_version"] = "mapping-v2"
+    contexts = _write_jsonl(tmp_path / "contexts.jsonl", [baseline, frozen])
+
+    with pytest.raises(ValueError, match="mixes execution modes or artifact versions"):
+        write_extension_reports([scores], contexts, tmp_path / "reports")
+
+    frozen["mapping_version"] = "mapping-v1"
+    frozen["execution_mode"] = "retrieval_only"
+    contexts = _write_jsonl(tmp_path / "contexts-mode.jsonl", [baseline, frozen])
+    with pytest.raises(ValueError, match="execution_mode mismatch"):
+        write_extension_reports([scores], contexts, tmp_path / "reports-mode")
+
+
+def test_retrieval_only_extension_metrics_are_not_applicable(tmp_path: Path) -> None:
+    record = _score_record("run-retrieval", "q-1", "retrieval", correct=True)
+    record.update(
+        execution_mode="retrieval_only",
+        status="retrieved",
+        answer_outcome="not_applicable",
+    )
+    scores = _write_jsonl(tmp_path / "scores.jsonl", [record])
+    context = _context(
+        "run-retrieval",
+        "q-1",
+        "retrieval",
+        lambda_weight=0.0,
+        lambda_status="baseline",
+    )
+    context["execution_mode"] = "retrieval_only"
+    contexts = _write_jsonl(tmp_path / "contexts.jsonl", [context])
+
+    paths = write_extension_reports(
+        [scores], contexts, tmp_path / "reports", allow_incomplete=True
+    )
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+
+    assert summary["groups"][0]["applicability"] == "not_applicable"
+    assert all(
+        metric["status"] == "not_applicable"
+        for metric in summary["groups"][0]["metrics"].values()
+    )
+
+
+def test_completed_rating_sha_and_role_provenance_fail_closed(tmp_path: Path) -> None:
+    scores = _write_jsonl(
+        tmp_path / "scores.jsonl",
+        [
+            _score_record("run-base", "q-1", "plain", correct=True),
+            _score_record("run-frozen", "q-1", "reranking-only", correct=True),
+        ],
+    )
+    contexts = _write_jsonl(
+        tmp_path / "contexts.jsonl",
+        [
+            _context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"),
+            _context(
+                "run-frozen",
+                "q-1",
+                "reranking-only",
+                lambda_weight=0.35,
+                lambda_status="frozen",
+            ),
+        ],
+    )
+    ratings = _write_jsonl(
+        tmp_path / "ratings.jsonl",
+        [
+            {
+                "schema_version": "0.1",
+                "rating_id": "rating-a",
+                "question_id": "q-1",
+                "blinded_answer_id": "answer-a",
+                "assigned_level": "beginner",
+                "score": 4,
+                "rubric_version": "adaptation-v1",
+                "rater_id": "rater-1",
+            },
+            {
+                "schema_version": "0.1",
+                "rating_id": "rating-b",
+                "question_id": "q-1",
+                "blinded_answer_id": "answer-b",
+                "assigned_level": "beginner",
+                "score": 5,
+                "rubric_version": "adaptation-v1",
+                "rater_id": "rater-1",
+            },
+        ],
+    )
+    key = _write_jsonl(
+        tmp_path / "key.jsonl",
+        [
+            {"schema_version": "0.1", "blinded_answer_id": "answer-a", "run_id": "run-base"},
+            {
+                "schema_version": "0.1",
+                "blinded_answer_id": "answer-b",
+                "run_id": "run-frozen",
+            },
+        ],
+    )
+    rubric = tmp_path / "rubric.json"
+    rubric.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "rubric_version": "adaptation-v1",
+                "score_min": 1,
+                "score_max": 5,
+            }
+        ),
+        encoding="utf-8",
+    )
+    submission = _seal(tmp_path, ratings, key, rubric)
+    ratings.write_text(ratings.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="ratings_sha256"):
+        write_extension_reports(
+            [scores],
+            contexts,
+            tmp_path / "tampered",
+            ratings_path=ratings,
+            rating_key_path=key,
+            rating_rubric_path=rubric,
+            rating_submission_manifest_path=submission,
+        )
+
+    with pytest.raises(ValueError, match="rejected failed Role-label provenance"):
+        write_extension_reports(
+            [scores],
+            contexts,
+            tmp_path / "failed-role",
+            role_provenance={"status": "failed", "errors": ["labels_sha256 mismatch"]},
+        )
 
 
 def test_blinded_ratings_must_cover_every_keyed_answer(tmp_path: Path) -> None:
@@ -567,6 +852,9 @@ def test_blinded_ratings_must_cover_every_keyed_answer(tmp_path: Path) -> None:
         ),
         encoding="utf-8",
     )
+    rating_manifest = _seal(
+        tmp_path, ratings, rating_key, rubric, name="incomplete-ratings.json"
+    )
 
     with pytest.raises(ValueError, match="coverage is incomplete"):
         write_extension_reports(
@@ -576,7 +864,22 @@ def test_blinded_ratings_must_cover_every_keyed_answer(tmp_path: Path) -> None:
             ratings_path=ratings,
             rating_key_path=rating_key,
             rating_rubric_path=rubric,
+            rating_submission_manifest_path=rating_manifest,
         )
+
+    development = write_extension_reports(
+        [scores],
+        contexts,
+        tmp_path / "development-reports",
+        ratings_path=ratings,
+        rating_key_path=rating_key,
+        rating_rubric_path=rubric,
+        rating_submission_manifest_path=rating_manifest,
+        allow_incomplete=True,
+    )
+    summary = json.loads(development["summary"].read_text(encoding="utf-8"))
+    assert summary["level_adaptation"]["status"] == "incomplete"
+    assert summary["level_adaptation"]["missing_blinded_answer_ids"] == ["answer-b"]
 
 
 def test_role_label_provenance_checks_versions_hash_and_references(

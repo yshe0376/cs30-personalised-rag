@@ -4,6 +4,7 @@ from .answer_metrics import AnswerCitationScorer, ScoringMode
 from .answer_reporting import write_answer_citation_reports
 from .extension_models import (
     BlindedAnswerKey,
+    BlindRatingSubmissionManifest,
     ExperimentCondition,
     LevelAdaptationRating,
     LevelAdaptationRubricManifest,
@@ -11,6 +12,7 @@ from .extension_models import (
 )
 from .extension_reporting import (
     audit_role_label_provenance,
+    seal_blind_rating_submission,
     write_blind_rating_materials,
     write_extension_reports,
 )
@@ -97,6 +99,7 @@ __all__ = [
     "AbstentionCause",
     "AnswerCitationScorer",
     "BlindedAnswerKey",
+    "BlindRatingSubmissionManifest",
     "AnnotationStatus",
     "EvidenceSufficiency",
     "ErrorStage",
@@ -168,6 +171,7 @@ __all__ = [
     "run_evaluation",
     "run_scoring_extensions",
     "score_saved_run",
+    "seal_blind_rating_submission",
     "score_retrieval_batch",
     "RetrievalScoreRow",
     "validate_artifact_compatibility",

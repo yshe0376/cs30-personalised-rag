@@ -337,7 +337,7 @@ It supplies the reporting dimensions that are intentionally absent from the
 shared run-result contract:
 
 ```json
-{"schema_version":"0.1","run_id":"run-001","question_id":"q-001","condition_id":"plain","comparison_id":"prompt-controlled-reranking","textbook_id":"openstax_college_physics_2e","student_level":"beginner","lambda_weight":0.0,"lambda_status":"baseline"}
+{"schema_version":"0.1","run_id":"run-001","question_id":"q-001","condition_id":"plain","comparison_id":"prompt-controlled-reranking","textbook_id":"openstax_college_physics_2e","student_level":"beginner","execution_mode":"retrieval_and_generation","chunk_version":"chunks-v1","mapping_version":"mapping-v1","index_version":"hybrid-index-v1","lambda_weight":0.0,"lambda_status":"baseline"}
 ```
 
 `comparison_id` pairs the two conditions being compared. Baseline rows must use
@@ -345,6 +345,13 @@ shared run-result contract:
 Formal reporting requires both sides of every declared comparison, identical
 unique question sets, and one globally frozen lambda value. Partial development
 reports must opt in with `--allow-incomplete`.
+
+The report rejects a context whose `execution_mode` disagrees with its score
+record, and rejects lambda comparisons that mix chunk, mapping, or index
+versions. `retrieval_only` records are retained for traceability but their
+answer, citation, abstention, and level-adaptation metrics are
+`not_applicable`. Retrieval, generation, and parsing failures remain separate
+technical outcomes and do not enter answer or abstention accuracy denominators.
 
 ### Single-rater blind assessment
 
@@ -381,6 +388,22 @@ Every answer in the private key must receive exactly one score. Missing ratings,
 duplicate ratings, level/question mismatches, unknown blind IDs, and scores
 outside the frozen range fail before aggregation.
 
+After the single rater completes the sheet, seal the final files:
+
+```powershell
+cs30-evaluate seal-blind-ratings `
+  --ratings artifacts/blind_rating/blind_rating_sheet.csv `
+  --rating-key artifacts/blind_rating/blinded_answer_key.jsonl `
+  --rating-rubric artifacts/level_adaptation_rubric.json `
+  --output artifacts/blind_rating/blind_rating_submission.json
+```
+
+The sealed manifest binds the completed rating file, private key, rubric, and
+expected row count by SHA-256. A supplied empty file fails rather than becoming
+`pending`, and more than one `rater_id` is rejected. Only a completely omitted
+rating package is reported as `pending`; partial coverage is allowed solely in
+development with `--allow-incomplete` and is labelled `incomplete`.
+
 ### Role-label provenance
 
 Pass `--role-manifest`, `--role-gold`, and `--role-mapping` together. The
@@ -395,6 +418,9 @@ through `--role-question-references`. The audit checks identities, hashes,
 counts, schema versions, valid IDs, and question-to-evidence relationships
 without judging Role-label quality.
 
+In formal mode, any failed Role provenance check stops report generation. A
+development run may retain the failed audit only with `--allow-incomplete`.
+
 ### Combined report
 
 First retain the `answer_citation_scores.jsonl` output for every frozen run,
@@ -407,6 +433,7 @@ cs30-evaluate report-extension `
   --ratings artifacts/blind_rating/blind_rating_sheet.csv `
   --rating-key artifacts/blind_rating/blinded_answer_key.jsonl `
   --rating-rubric artifacts/level_adaptation_rubric.json `
+  --rating-submission-manifest artifacts/blind_rating/blind_rating_submission.json `
   --role-manifest artifacts/role_label_provenance_manifest.json `
   --role-gold artifacts/gold_v1.jsonl `
   --role-mapping artifacts/gold_chunk_mapping_v1.json `

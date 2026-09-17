@@ -613,6 +613,20 @@ def test_retrieval_only_answer_metrics_are_not_applicable() -> None:
     assert result["groups"][0]["metrics"] == {}
 
 
+def test_technical_failure_is_reported_without_entering_accuracy_denominators() -> None:
+    gold, _, mappings = _inputs()
+    technical_run = load_run_results(FIXTURES / "run_results_v0_2.jsonl")[1]
+
+    result = AnswerCitationScorer(mappings).score(
+        [gold[0]], [technical_run], mode="development"
+    )
+
+    assert result["records"][0]["answer_outcome"] == "generation_failed"
+    assert result["metrics"]["answer_choice_accuracy_all"]["denominator"] == 0
+    assert result["metrics"]["abstention_accuracy"]["denominator"] == 0
+    assert result["abstention_confusion"]["technical_failure"] == 1
+
+
 def test_missing_runs_are_reported_only_within_the_expected_split() -> None:
     gold, runs, mappings = _inputs()
     missing_dev = gold[0].model_copy(update={"question_id": "missing_dev"})
