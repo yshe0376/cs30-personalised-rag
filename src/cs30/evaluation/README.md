@@ -352,7 +352,8 @@ reportable and non-fixture, then checks condition, execution mode, retrieval
 mode, dataset, split, corpus, chunk, mapping, and index identities against the
 score records and contexts. Score and manifest SHA-256 values are retained in
 the aggregate report. A development report may omit these bindings only with
-`--allow-incomplete`.
+`--allow-incomplete`; the aggregate JSON and Markdown then label the binding
+state as `pending` or `incomplete` rather than claiming a formal binding.
 
 The report rejects a context whose `execution_mode` disagrees with its score
 record or manifest, and rejects lambda comparisons that mix incompatible run

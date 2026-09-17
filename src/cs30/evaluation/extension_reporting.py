@@ -179,16 +179,22 @@ def _load_manifest_bindings(
     score_manifest_pairs: Sequence[tuple[Path, Path]] | None,
     *,
     allow_incomplete: bool,
-) -> tuple[dict[Path, RunManifest], list[dict[str, Any]]]:
+) -> tuple[dict[Path, RunManifest], dict[str, Any]]:
+    expected_scores = {_normalise_path(path) for path in score_paths}
     if not score_manifest_pairs:
         if allow_incomplete:
-            return {}, []
+            return {}, {
+                "status": "pending",
+                "expected_score_count": len(expected_scores),
+                "bound_score_count": 0,
+                "missing_score_files": sorted(path.name for path in expected_scores),
+                "bindings": [],
+            }
         raise ValueError(
             "formal evaluation requires one --score-manifest binding for every "
             "score artifact"
         )
 
-    expected_scores = {_normalise_path(path) for path in score_paths}
     manifests_by_score: dict[Path, RunManifest] = {}
     seen_manifests: set[Path] = set()
     seen_manifest_run_ids: set[str] = set()
@@ -248,12 +254,27 @@ def _load_manifest_bindings(
             }
         )
 
-    missing = sorted(str(path) for path in expected_scores - manifests_by_score.keys())
+    missing_paths = expected_scores - manifests_by_score.keys()
+    missing = sorted(str(path) for path in missing_paths)
     if missing and not allow_incomplete:
         raise ValueError(
             "formal evaluation is missing run-manifest bindings for: " + ", ".join(missing)
         )
-    return manifests_by_score, audit
+    formal_eligible = all(
+        binding["reportable"]
+        and not binding["fixture_mode"]
+        and not binding["synthetic_trace"]
+        for binding in audit
+    )
+    return manifests_by_score, {
+        "status": (
+            "complete" if not missing_paths and formal_eligible else "incomplete"
+        ),
+        "expected_score_count": len(expected_scores),
+        "bound_score_count": len(manifests_by_score),
+        "missing_score_files": sorted(path.name for path in missing_paths),
+        "bindings": audit,
+    }
 
 
 def _validate_score_manifest_bindings(
@@ -1392,8 +1413,10 @@ def _markdown(result: Mapping[str, Any]) -> str:
             f"- Expected matrix version: `{coverage.get('matrix_version') or 'not_supplied'}`",
         ]
     )
+    binding_status = result["run_manifest_binding_status"]
     bindings = result["run_manifest_bindings"]
-    if bindings:
+    lines.append(f"- Run-manifest binding: `{binding_status['status']}`")
+    if binding_status["status"] == "complete":
         lines.extend(
             [
                 "- Every score artifact is bound to a reportable, non-fixture run manifest.",
@@ -1409,10 +1432,17 @@ def _markdown(result: Mapping[str, Any]) -> str:
                 f"{binding['manifest_file']} | `{binding['manifest_sha256']}` | "
                 f"{binding['manifest_run_id']} |"
             )
+    elif not bindings:
+        lines.append(
+            "- No run manifests were supplied (development/incomplete report only)."
+        )
     else:
         lines.append(
-            "- Run-manifest binding: `pending` (development/incomplete report only)."
+            "- Supplied bindings are incomplete or development-only and cannot support "
+            "a formal report."
         )
+    for missing_file in binding_status["missing_score_files"]:
+        lines.append(f"- Missing run-manifest binding: {missing_file}")
     for error in coverage.get("errors", []):
         lines.append(f"- Coverage error: {error}")
     lines.extend(
@@ -1735,7 +1765,10 @@ def write_extension_reports(
         "schema_version": "0.1",
         "record_count": len(joined),
         "frozen_lambda": next(iter(frozen_lambdas), None),
-        "run_manifest_bindings": manifest_audit,
+        "run_manifest_binding_status": {
+            key: value for key, value in manifest_audit.items() if key != "bindings"
+        },
+        "run_manifest_bindings": manifest_audit["bindings"],
         "experiment_coverage": experiment_coverage,
         "groups": groups,
         "lambda_comparisons": comparisons,

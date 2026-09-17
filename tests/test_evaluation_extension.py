@@ -801,9 +801,65 @@ def test_formal_extension_binds_real_manifests_and_expected_matrix(
     summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
 
     assert summary["experiment_coverage"]["status"] == "complete"
+    assert summary["run_manifest_binding_status"] == {
+        "status": "complete",
+        "expected_score_count": 2,
+        "bound_score_count": 2,
+        "missing_score_files": [],
+    }
     assert len(summary["run_manifest_bindings"]) == 2
     assert all(binding["reportable"] for binding in summary["run_manifest_bindings"])
     assert all(binding["manifest_sha256"] for binding in summary["run_manifest_bindings"])
+
+
+def test_development_report_labels_partial_manifest_bindings_incomplete(
+    tmp_path: Path,
+) -> None:
+    baseline_score = _write_jsonl(
+        tmp_path / "baseline.jsonl",
+        [_score_record("run-base", "q-1", "plain", correct=True)],
+    )
+    frozen_score = _write_jsonl(
+        tmp_path / "frozen.jsonl",
+        [_score_record("run-frozen", "q-1", "reranking-only", correct=True)],
+    )
+    rows = [
+        _context("run-base", "q-1", "plain", lambda_weight=0.0, lambda_status="baseline"),
+        _context(
+            "run-frozen",
+            "q-1",
+            "reranking-only",
+            lambda_weight=0.35,
+            lambda_status="frozen",
+        ),
+    ]
+    contexts = _write_jsonl(tmp_path / "contexts.jsonl", rows)
+    fixture_manifest = _run_manifest(
+        tmp_path / "fixture.manifest.json",
+        run_id="fixture-batch",
+        condition_id="plain",
+        reportable=False,
+        fixture_mode=True,
+    )
+
+    paths = write_extension_reports(
+        [baseline_score, frozen_score],
+        contexts,
+        tmp_path / "reports",
+        score_manifest_pairs=[(baseline_score, fixture_manifest)],
+        allow_incomplete=True,
+    )
+    summary = json.loads(paths["summary"].read_text(encoding="utf-8"))
+    markdown = paths["markdown"].read_text(encoding="utf-8")
+
+    assert summary["run_manifest_binding_status"] == {
+        "status": "incomplete",
+        "expected_score_count": 2,
+        "bound_score_count": 1,
+        "missing_score_files": ["frozen.jsonl"],
+    }
+    assert "Every score artifact is bound" not in markdown
+    assert "Run-manifest binding: `incomplete`" in markdown
 
 
 def test_formal_extension_rejects_nonreportable_or_misbound_manifest(
