@@ -208,6 +208,7 @@ def _score_pair(
     answer_correct = None
     if (
         generation_run
+        and successful
         and gold.answerable is not None
         and gold.gold_answer is not None
     ):
@@ -236,7 +237,7 @@ def _score_pair(
         answered_choice_correct = run.final_answer.final_choice == gold.gold_answer
 
     abstention_correct = None
-    if generation_run and gold.answerable is not None:
+    if generation_run and successful and gold.answerable is not None:
         expected_abstention = gold.answerable is False
         abstention_correct = bool(
             successful
@@ -442,8 +443,9 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
     metrics = {
         "answer_choice_accuracy_all": boolean_metric(
             "answer_correct",
-            "Correct choices divided by generation runs with resolved Gold answerability "
-            "and a gold choice; technical failures and abstentions count as incorrect.",
+            "Correct choices divided by successful generation outcomes with resolved Gold "
+            "answerability and a gold choice; abstentions count as incorrect and technical "
+            "failures are reported separately.",
         ),
         "answer_choice_accuracy_parsed": boolean_metric(
             "parsed_answer_correct",
@@ -459,8 +461,8 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "abstention_correct",
             "System-level correct abstain/non-abstain decisions divided by generation runs "
             "with resolved answerability. Both no_retrieval_hits and "
-            "model_abstained_with_evidence are system abstentions; technical failures count "
-            "as incorrect.",
+            "model_abstained_with_evidence are system abstentions; technical failures are "
+            "reported separately.",
         ),
         "abstention_precision": _metric(
             true_system_abstentions,
@@ -479,11 +481,11 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             total=total,
             definition="System-level correct abstentions, including both no_retrieval_hits "
             "and model_abstained_with_evidence, divided by all gold-unanswerable generation "
-            "runs with resolved answerability; technical failures remain in the denominator.",
+            "outcomes with resolved answerability; technical failures are excluded.",
         ),
         "abstention_f1": _metric(
             system_f1_numerator,
-            system_f1_denominator,
+            system_f1_denominator if system_recall_denominator > 0 else 0,
             eligible=sum(
                 record["execution_mode"]
                 == ExecutionMode.RETRIEVAL_AND_GENERATION.value
@@ -494,7 +496,8 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             definition="System-level abstention F1 computed as 2TP / (2TP + FP + FN), "
             "where both abstention causes are predicted positives, TP is a correct "
             "abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that "
-            "did not abstain correctly. Only resolved Gold answerability is eligible.",
+            "did not abstain correctly. Only resolved Gold answerability is eligible; "
+            "F1 is not applicable when the Gold set has no unanswerable runs.",
         ),
         "model_abstention_accuracy": _metric(
             sum(record["abstention_correct"] is True for record in model_decisions),
@@ -526,12 +529,13 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         ),
         "model_abstention_f1": _metric(
             model_f1_numerator,
-            model_f1_denominator,
+            model_f1_denominator if model_recall_denominator > 0 else 0,
             eligible=len(model_decisions),
             total=total,
             definition="Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where "
             "model_abstained_with_evidence is the predicted positive. Only successful model "
-            "decisions with evidence and resolved Gold answerability are eligible.",
+            "decisions with evidence and resolved Gold answerability are eligible; F1 is "
+            "not applicable when those decisions contain no gold-unanswerable runs.",
         ),
         "raw_json_validity": boolean_metric(
             "raw_json_valid",

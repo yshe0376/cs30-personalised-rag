@@ -543,6 +543,9 @@ def test_all_abstain_and_no_computable_denominator_cases_remain_visible() -> Non
     no_positive_class = AnswerCitationScorer(mappings).score(
         [gold[0]], [runs[0]], mode="development"
     )
+    wrong_abstention_without_positive_class = AnswerCitationScorer(mappings).score(
+        [gold[-1]], [runs[-1]], mode="development"
+    )
 
     assert all_abstain["answer_outcome_counts"] == {
         "correct": 0,
@@ -557,6 +560,22 @@ def test_all_abstain_and_no_computable_denominator_cases_remain_visible() -> Non
     assert no_positive_class["metrics"]["abstention_precision"]["value"] is None
     assert no_positive_class["metrics"]["abstention_recall"]["value"] is None
     assert no_positive_class["metrics"]["abstention_f1"]["value"] is None
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["abstention_precision"]["value"]
+        == 0.0
+    )
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["abstention_recall"]["value"]
+        is None
+    )
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["abstention_f1"]["value"]
+        is None
+    )
+    assert (
+        wrong_abstention_without_positive_class["metrics"]["model_abstention_f1"]["value"]
+        is None
+    )
 
 
 def test_groups_use_retrieval_mode_not_only_execution_mode() -> None:
@@ -592,6 +611,20 @@ def test_retrieval_only_answer_metrics_are_not_applicable() -> None:
     assert result["metrics"] == {}
     assert result["answer_outcome_counts"] == {"not_applicable": 1}
     assert result["groups"][0]["metrics"] == {}
+
+
+def test_technical_failure_is_reported_without_entering_accuracy_denominators() -> None:
+    gold, _, mappings = _inputs()
+    technical_run = load_run_results(FIXTURES / "run_results_v0_2.jsonl")[1]
+
+    result = AnswerCitationScorer(mappings).score(
+        [gold[0]], [technical_run], mode="development"
+    )
+
+    assert result["records"][0]["answer_outcome"] == "generation_failed"
+    assert result["metrics"]["answer_choice_accuracy_all"]["denominator"] == 0
+    assert result["metrics"]["abstention_accuracy"]["denominator"] == 0
+    assert result["abstention_confusion"]["technical_failure"] == 1
 
 
 def test_missing_runs_are_reported_only_within_the_expected_split() -> None:
@@ -757,3 +790,9 @@ def test_cli_runs_extension_and_writes_all_report_artifacts(tmp_path: Path) -> N
     assert (reports / "answer_citation_summary.csv").is_file()
     assert (reports / "answer_citation_report.md").is_file()
     assert (reports / "answer_citation_failures.jsonl").is_file()
+    provenance_path = reports / "answer_citation_score_provenance.json"
+    assert provenance_path.is_file()
+    provenance = json.loads(provenance_path.read_text(encoding="utf-8"))
+    assert provenance["source_runs_file"] == RUNS.name
+    assert provenance["score_file"] == "answer_citation_scores.jsonl"
+    assert provenance["score_record_count"] == provenance["source_run_count"]
