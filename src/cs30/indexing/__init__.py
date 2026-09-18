@@ -1,10 +1,8 @@
 """Member 5: embeddings and the FAISS dense index.
 
 ``FaissIndexBuilder`` needs the optional ``ml`` extra (faiss-cpu and
-sentence-transformers), so it is exported lazily. Importing this package has to
-keep working for a core-only install: the pipeline imports
-``FixtureIndexBuilder`` from here, and the smoke job installs the project
-without extras to prove that a plain ``pip install .`` still runs the demo.
+sentence-transformers), so it is exported lazily. Importing this package must
+stay possible for anyone who installed only the core dependencies.
 """
 
 from typing import TYPE_CHECKING

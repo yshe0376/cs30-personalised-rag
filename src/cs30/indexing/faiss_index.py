@@ -14,6 +14,15 @@ from cs30.logging import get_logger
 
 LOGGER = get_logger("indexing.faiss")
 
+def get_query_instruction(model_name: str) -> str:
+    if model_name == "BAAI/bge-base-en-v1.5":
+        return "Represent this sentence for searching relevant passages: "
+
+    if model_name == "intfloat/e5-base-v2":
+        return "query: "
+
+    return ""
+
 
 class HFTokenCounter:
     """Count tokens using the embedding model tokenizer."""
@@ -40,10 +49,14 @@ class FaissIndexBuilder:
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         index_dir: str = "data/index",
         expected_provenance: EvidenceProvenance | None = None,
+        query_instruction: str = "",
+        corpus_id: str | None = None,
     ) -> None:
         self.model_name = model_name
         self.index_dir = Path(index_dir)
         self.expected_provenance = expected_provenance
+        self.query_instruction = query_instruction
+        self.corpus_id = corpus_id
 
         self._model: SentenceTransformer | None = None
 
@@ -62,18 +75,25 @@ class FaissIndexBuilder:
 
         counter = self.token_counter()
 
+        special_tokens = model.tokenizer.num_special_tokens_to_add()
+        content_limit = max(limit - special_tokens, 1)
+
         over_limit = [
             chunk.chunk_id
             for chunk in chunks
-            if counter.count(chunk.embedding_input) > limit
+            if counter.count(chunk.embedding_input) > content_limit
         ]
 
         if over_limit:
             LOGGER.warning(
-                "%d/%d chunks exceed max_seq_length=%d and may be truncated",
+                "%d/%d chunks exceed effective content token limit=%d "
+                "(model max_seq_length=%d, reserved special tokens=%d) "
+                "and may be truncated",
                 len(over_limit),
                 len(chunks),
+                content_limit,
                 limit,
+                special_tokens,
             )
 
     def _embed_chunks(self, chunks: list[Chunk]) -> np.ndarray:
@@ -85,11 +105,15 @@ class FaissIndexBuilder:
         # to the original chunk text otherwise.
         texts = [chunk.embedding_input for chunk in chunks]
 
+        if self.model_name == "intfloat/e5-base-v2":
+            texts = [f"passage: {text}" for text in texts]
+
         model = self._load_model()
         self._warn_if_truncated(chunks)
         embeddings = model.encode(
             texts,
             convert_to_numpy=True,
+            batch_size=4,
         )
 
         return np.asarray(embeddings)
@@ -226,6 +250,13 @@ class FaissIndexBuilder:
                 "saved index provenance does not match the expected "
                 "corpus, chunk configuration, embedding model, or index version"
             )
+        saved_corpus_id = artifact.metadata.get("corpus_id")
+
+        if self.corpus_id is not None and saved_corpus_id != self.corpus_id:
+            raise ArtifactMismatchError(
+                "saved index corpus_id does not match the expected corpus_id"
+            )
+        
     def build(
         self,
         chunks: list[Chunk],
@@ -341,25 +372,30 @@ class FaissIndexBuilder:
             f"{model_short}-{dimension}-"
             f"{chunks[0].metadata['chunker_version']}"
         )
+        metadata = {
+            "corpus_hash": corpus_hash,
+            "chunk_config_hash": chunk_config_hash,
+            "embedding_model": self.model_name,
+            "query_instruction": self.query_instruction,
+            "index_version": index_version,
+            "dimension": str(embeddings.shape[1]),
+            "device": device,
+            "build_time_seconds": f"{build_time:.4f}",
+            "index_file": str(index_path),
+            "chunk_map": str(chunk_map_path),
+            "embedding_source": embedding_source,
+            "normalisation": "L2",
+            "similarity": "inner_product",
+        }
+
+        if self.corpus_id is not None:
+            metadata["corpus_id"] = self.corpus_id
         artifact = IndexArtifact(
             artifact_id=artifact_id,
             index_type="faiss-flat-ip",
             location=str(self.index_dir),
             chunk_count=len(chunks),
-            metadata={
-                "corpus_hash": corpus_hash,
-                "chunk_config_hash": chunk_config_hash,
-                "embedding_model": self.model_name,
-                "index_version": index_version,
-                "dimension": str(embeddings.shape[1]),
-                "device": device,
-                "build_time_seconds": f"{build_time:.4f}",
-                "index_file": str(index_path),
-                "chunk_map": str(chunk_map_path),
-                "embedding_source": embedding_source,
-                "normalisation": "L2",
-                "similarity": "inner_product",
-            },
+            metadata=metadata,
         )
 
         # ---------------------------------------------------------

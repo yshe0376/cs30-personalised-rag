@@ -71,7 +71,10 @@ def test_real_builder_writes_reloadable_index(monkeypatch, tmp_path, capsys):
         max_seq_length = 512
 
         def __init__(self, name):
-            self.tokenizer = SimpleNamespace(encode=lambda text, **kw: text.split())
+            self.tokenizer = SimpleNamespace(
+                encode=lambda text, **kw: text.split(),
+                num_special_tokens_to_add=lambda: 2,
+            )
 
         def encode(self, texts, **kwargs):
             return np.array([[1, i + 1, 2, 3] for i in range(len(texts))], dtype=np.float32)
