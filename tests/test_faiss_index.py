@@ -1,12 +1,13 @@
 """Tests for the FAISS index builder."""
 
+import json
 from pathlib import Path
 
 import numpy as np
 import pytest
 
 from cs30.contracts import Chunk
-from cs30.errors import IndexUnavailableError
+from cs30.errors import ArtifactMismatchError, IndexUnavailableError
 from cs30.indexing import faiss_index
 from cs30.ports import IndexBuilder
 
@@ -239,6 +240,42 @@ def test_artifact_records_embedding_metadata(
     # One test chunk uses embed_text and one uses plain text.
     assert artifact.metadata["embedding_source"] == "mixed"
 
+def test_load_rejects_mismatched_corpus_id(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Loading should reject an artifact with the wrong corpus_id."""
+
+    builder = make_builder(
+        monkeypatch,
+        tmp_path,
+    )
+    builder.corpus_id = "sha256:expected"
+
+    builder.build(make_test_chunks())
+
+    artifact_path = tmp_path / "artifact.json"
+
+    with artifact_path.open("r", encoding="utf-8") as file:
+        artifact_data = json.load(file)
+
+    artifact_data["metadata"]["corpus_id"] = "sha256:wrong"
+
+    with artifact_path.open("w", encoding="utf-8") as file:
+        json.dump(artifact_data, file, indent=2)
+
+    reloaded_builder = make_builder(
+        monkeypatch,
+        tmp_path,
+    )
+    reloaded_builder.corpus_id = "sha256:expected"
+
+    with pytest.raises(
+        ArtifactMismatchError,
+        match="corpus_id",
+    ):
+        reloaded_builder.load()
+
 
 def test_saved_index_can_be_loaded(
     monkeypatch: pytest.MonkeyPatch,
@@ -317,3 +354,4 @@ def test_faiss_builder_implements_index_builder_protocol(
     )
 
     assert isinstance(builder, IndexBuilder)
+

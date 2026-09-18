@@ -13,7 +13,10 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
 from cs30.contracts import Chunk  # noqa: E402
-from cs30.indexing import FaissIndexBuilder  # noqa: E402
+from cs30.indexing.faiss_index import (  # noqa: E402
+    FaissIndexBuilder,
+    get_query_instruction,
+)
 
 DEFAULT_CORPUS_DIR = (
     REPOSITORY_ROOT
@@ -23,25 +26,12 @@ DEFAULT_CORPUS_DIR = (
     / "retrieval_corpus"
 )
 
-DEFAULT_INDEX_DIR = (
-    REPOSITORY_ROOT
-    / "artifacts"
-    / "w5"
-    / "m5_latest"
-    / "minilm"
-)
 
 DEFAULT_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
+def model_output_name(model_name: str) -> str:
+    return model_name.split("/")[-1].lower()
 
-def get_query_instruction(model_name: str) -> str:
-    if model_name == "BAAI/bge-base-en-v1.5":
-        return "Represent this sentence for searching relevant passages: "
-
-    if model_name == "intfloat/e5-base-v2":
-        return "query: "
-
-    return ""
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -67,8 +57,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=DEFAULT_INDEX_DIR,
-        help="Directory where the FAISS index will be written.",
+        default=None,
+        help=(
+            "Directory where the FAISS index will be written. "
+            "If omitted, a model-specific directory is used."
+        ),
     )
 
     return parser.parse_args()
@@ -113,6 +106,37 @@ def main() -> int:
     corpus_path = args.corpus_dir / "records.jsonl"
     manifest_path = args.corpus_dir / "manifest.json"
 
+    if args.output_dir is None:
+        output_dir = (
+            REPOSITORY_ROOT
+            / "artifacts"
+            / "w5"
+            / "m5_latest"
+            / model_output_name(args.model)
+        )
+    else:
+        output_dir = args.output_dir
+
+    if output_dir.exists() and any(output_dir.iterdir()):
+        print(
+            f"ERROR: Output directory is not empty: {output_dir}",
+            file=sys.stderr,
+        )
+        print(
+            "Choose a different --output-dir or clear the directory first.",
+            file=sys.stderr,
+        )
+        return 1
+
+    query_instruction = get_query_instruction(args.model)
+
+    builder = FaissIndexBuilder(
+        model_name=args.model,
+        index_dir=output_dir,
+        query_instruction=query_instruction,
+    )
+
+
     if not args.corpus_dir.is_dir():
         print(
             f"ERROR: Corpus directory not found: {args.corpus_dir}",
@@ -144,7 +168,7 @@ def main() -> int:
 
     print(f"Corpus: {corpus_path}")
     print(f"Model: {args.model}")
-    print(f"Index output: {args.output_dir}")
+    print(f"Index output: {output_dir}")
     print()
     manifest = load_manifest(manifest_path)
 
@@ -186,13 +210,6 @@ def main() -> int:
         )
         return 1
 
-    query_instruction = get_query_instruction(args.model)
-
-    builder = FaissIndexBuilder(
-        model_name=args.model,
-        index_dir=args.output_dir,
-        query_instruction=query_instruction,
-    )
 
     print()
     print("Building FAISS index...")
@@ -213,23 +230,73 @@ def main() -> int:
 
     loaded_artifact = builder.load()
 
-    print(
-        "Artifact ID match:",
-        loaded_artifact.artifact_id == artifact.artifact_id,
-    )
-
-    print("Reloaded chunks:", len(builder.chunks))
-
-    if len(builder.chunks) != len(chunks):
-        raise RuntimeError(
-            f"Reload chunk count mismatch: "
-            f"{len(builder.chunks)} != {len(chunks)}"
+    if loaded_artifact.artifact_id != artifact.artifact_id:
+        print(
+            "ERROR: Reloaded artifact ID does not match built artifact:",
+            file=sys.stderr,
         )
+        print(
+            f"  expected: {artifact.artifact_id}",
+            file=sys.stderr,
+        )
+        print(
+            f"  actual:   {loaded_artifact.artifact_id}",
+            file=sys.stderr,
+        )
+        return 1
 
+    print("Artifact ID match: True")
+    print("Reloaded chunks:", len(builder.chunks))
+    if len(builder.chunks) != len(chunks):
+        print(
+            "ERROR: Reload chunk count mismatch:",
+            file=sys.stderr,
+        )
+        print(
+            f"  expected: {len(chunks)}",
+            file=sys.stderr,
+        )
+        print(
+            f"  actual:   {len(builder.chunks)}",
+            file=sys.stderr,
+        )
+        return 1
+    if builder.index.ntotal != len(chunks):
+        print(
+            "ERROR: Reloaded FAISS vector count mismatch:",
+            file=sys.stderr,
+        )
+        print(
+            f"  expected: {len(chunks)}",
+            file=sys.stderr,
+        )
+        print(
+            f"  actual:   {builder.index.ntotal}",
+            file=sys.stderr,
+        )
+        return 1
+
+    expected_dimension = int(artifact.metadata["dimension"])
+
+    if builder.index.d != expected_dimension:
+        print(
+            "ERROR: Reloaded FAISS dimension mismatch:",
+            file=sys.stderr,
+        )
+        print(
+            f"  expected: {expected_dimension}",
+            file=sys.stderr,
+        )
+        print(
+            f"  actual:   {builder.index.d}",
+            file=sys.stderr,
+        )
+        return 1
+    
     print()
     print("Official M5 FAISS index build and reload verification passed.")
     return 0
-    
+        
 
 
 if __name__ == "__main__":

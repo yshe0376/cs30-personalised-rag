@@ -77,10 +77,17 @@ def build_real_build_deps(
     """Share the embedding model's tokenizer with M4; never fall back to fixtures."""
     strategy = _chunking_strategy(candidate)
     try:
-        from cs30.indexing.faiss_index import FaissIndexBuilder
+        from cs30.indexing.faiss_index import (
+            FaissIndexBuilder,
+            get_query_instruction,
+        )
     except ImportError as exc:
         raise IndexUnavailableError('Index building requires pip install -e ".[ml]"') from exc
-    builder = FaissIndexBuilder(model_name=model_name, index_dir=str(index_dir))
+    builder = FaissIndexBuilder(
+        model_name=model_name,
+        index_dir=str(index_dir),
+        query_instruction=get_query_instruction(model_name),
+    )
     return BuildDeps(
         parser=RealDocumentParser(chapters, source_url, download_date),
         chunker=BlockAwareChunker(strategy=strategy, token_counter=builder.token_counter()),
