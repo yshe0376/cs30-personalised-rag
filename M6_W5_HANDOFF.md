@@ -77,6 +77,17 @@ records `annotation_status=m3_initial`, so the CLI keeps these real runs
 rewritten. All 20 Gold questions are answerable, so controlled refusal tests
 do not calibrate a production abstention threshold.
 
+The checked-in notebook was executed in this checkout with the BGE-M3 Release
+index. The independent validator found no exclusions or run errors:
+
+| Split | Questions | Hit@5 | Recall@5 | MRR | Interpretation |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Proposed Dev | 12 | 0.5833 | 0.5833 | 0.3569 | Provisional Dev result |
+| Proposed Test | 8 | 0.7500 | 0.7500 | 0.4688 | Second, exploratory Test use |
+
+Both run manifests identify `BAAI/bge-m3`, `dense`, `top_k=5`, and a clean
+Git snapshot. Neither result is marked formally reportable.
+
 ## GitHub scope
 
 Commit the notebook, generator, installer, shared BOM compatibility fix,
