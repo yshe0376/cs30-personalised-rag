@@ -6,10 +6,9 @@ This revision configures `BAAI/bge-m3` Hybrid retrieval with the matching
 Dense 25% / BM25 75%, `rrf_k=60`, and 50 candidates per retriever, matching
 the local comparison settings. Previous BM25 and BGE-M3 Dense runs remain
 under ignored `artifacts/w5/m6/`; this experiment uses a new ID and does not
-overwrite them. The Hybrid notebook has **not** been executed in this revision.
-The 25/75 weights and 50-candidate depth match the earlier local comparison,
-but the released M4/M5 artifact and M1 scoring path still need to be run here;
-the old table's 83.3% Hit@5 is not a promised result for this notebook.
+overwrite them. The Hybrid notebook was executed with the released M4/M5
+inputs in the project `.venv`. Its checked-in output is Dev-only; Test remained locked.
+The 25/75 weights and 50-candidate depth match the earlier local comparison.
 
 ## Local setup
 
@@ -47,8 +46,7 @@ Run the 12-question `proposed_dev` split first. BGE-M3 Hybrid 25/75 is the
 user's requested configuration, not a claim that it won a new Dev comparison.
 Earlier BM25 and BGE-M3 Dense experiments already ran the eight `proposed_test`
 questions. If this notebook also runs Hybrid on Test, it is another
-**exploratory Test use**, not an
-untouched one-time final Test. It must not be used to reselect a model while
+**exploratory Test use**, not an untouched one-time final Test. It must not be used to reselect a model while
 claiming Test remained held out.
 
 The default notebook execution keeps Test locked. To run Dev only:
@@ -92,8 +90,18 @@ records `annotation_status=m3_initial`, so the CLI keeps these real runs
 rewritten. All 20 Gold questions are answerable, so controlled refusal tests
 do not calibrate a production abstention threshold.
 
+The executed Hybrid Dev run completed all 12 questions, with zero exclusions.
+The independent M6 checker reproduced the M1 retrieval metrics:
+
+| Split | Mode | Questions | Hit@1 | Hit@3 | Hit@5 | Recall@5 | MRR |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Proposed Dev | BGE-M3 Hybrid 25/75 | 12 | 0.5000 | 0.7500 | 0.8333 | 0.8333 | 0.6319 |
+
+The run manifest records `BAAI/bge-m3`, `hybrid`, `top_k=5`, a clean Git
+snapshot, and `reportable=false`. No Hybrid Test run was performed here.
+
 The earlier BGE-M3 **Dense-only** notebook had these verified historical
-results. They are not Hybrid results and must not be displayed as such:
+results. They are not Hybrid results:
 
 | Split | Questions | Hit@5 | Recall@5 | MRR | Interpretation |
 | --- | ---: | ---: | ---: | ---: | --- |
@@ -101,7 +109,6 @@ results. They are not Hybrid results and must not be displayed as such:
 | Proposed Test | 8 | 0.7500 | 0.7500 | 0.4688 | Historical Dense-only exploratory run |
 
 The prior run manifests identify `BAAI/bge-m3`, `dense`, and `top_k=5`.
-No Hybrid score is claimed until the user runs and validates the revised notebook.
 
 ## GitHub scope
 
