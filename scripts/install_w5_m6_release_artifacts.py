@@ -1,4 +1,4 @@
-"""Install the frozen W5 M4 and provisional M5 release inputs for local M6 runs.
+"""Install the frozen W5 M4 and BGE-M3 M5 release inputs for local M6 runs.
 
 Only named files are extracted. Release archive SHA-256 values are pinned, and an
 existing local file is never overwritten with different content.
@@ -54,19 +54,23 @@ ARCHIVES = (
     ),
     (
         "w5-m5-minilm-local-rebuild-v1",
-        "w5-m5-all-minilm-l6-v2-local-rebuild.zip",
-        "4e98be294603ecc995a373beebe0246312b1f82a55fc059c7965339515876070",
-        ("artifact.json", "chunks.json", "index.faiss"),
-        "artifacts/w5/m5_latest/all-minilm-l6-v2",
+        "m5_release_v2.zip",
+        "5a1c8caed9a57de2b23a02be9316e8c9c4af592097d0cc37fe9fb655775cad72",
+        ("bge-m3/artifact.json", "bge-m3/chunks.json", "bge-m3/index.faiss"),
+        "artifacts/w5/m5_release_v2",
     ),
 )
 
 
 def download_archive(tag: str, name: str, expected_sha256: str) -> bytes:
-    url = f"{RELEASE_BASE}/{tag}/{name}"
-    request = urllib.request.Request(url, headers={"User-Agent": "cs30-m6-release-installer"})
-    with urllib.request.urlopen(request, timeout=90) as response:
-        payload = response.read()
+    cached = REPOSITORY_ROOT / "artifacts/w5" / name
+    if cached.is_file():
+        payload = cached.read_bytes()
+    else:
+        url = f"{RELEASE_BASE}/{tag}/{name}"
+        request = urllib.request.Request(url, headers={"User-Agent": "cs30-m6-release-installer"})
+        with urllib.request.urlopen(request, timeout=90) as response:
+            payload = response.read()
     actual_sha256 = hashlib.sha256(payload).hexdigest()
     if actual_sha256 != expected_sha256:
         raise ValueError(
@@ -112,7 +116,7 @@ def install_archive(
 
 def verify_installed_identities() -> None:
     m4_root = REPOSITORY_ROOT / "artifacts/w5/m4-v3"
-    index_root = REPOSITORY_ROOT / "artifacts/w5/m5_latest/all-minilm-l6-v2"
+    index_root = REPOSITORY_ROOT / "artifacts/w5/m5_release_v2/bge-m3"
     corpus = m4_root / "retrieval_corpus/records.jsonl"
     corpus_manifest = json.loads(
         (m4_root / "retrieval_corpus/manifest.json").read_text(encoding="utf-8")
@@ -121,15 +125,15 @@ def verify_installed_identities() -> None:
     if corpus_id != corpus_manifest["corpus_id"]:
         raise ValueError("M4 retrieval corpus does not match its frozen manifest")
 
-    index = json.loads((index_root / "artifact.json").read_text(encoding="utf-8"))
+    index = json.loads((index_root / "artifact.json").read_text(encoding="utf-8-sig"))
     normalized_gold = m4_root / "gold_normalized/gold_v0_2_from_m3_v0_1_1.jsonl"
     gold_rows = [line for line in normalized_gold.read_text(encoding="utf-8").splitlines() if line]
     if index["chunk_count"] != corpus_manifest["record_count"] or len(gold_rows) != 20:
         raise ValueError("M4/M5 chunk count or normalized Gold count is inconsistent")
-    if index["metadata"]["embedding_model"] != "sentence-transformers/all-MiniLM-L6-v2":
-        raise ValueError("M5 artifact is not the expected MiniLM model")
+    if index["metadata"]["embedding_model"] != "BAAI/bge-m3":
+        raise ValueError("M5 artifact is not the expected BGE-M3 model")
     print(f"Identity checks passed: {index['chunk_count']} chunks, {len(gold_rows)} Gold rows")
-    print("Caveat: the M5 release is a provisional local rebuild, pending M5 validation.")
+    print("BGE-M3 index verified; BGE-base remains a separate, unused candidate.")
 
 
 def main() -> None:

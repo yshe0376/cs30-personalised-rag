@@ -1,4 +1,4 @@
-"""Independently validate MiniLM Dev and the single frozen Test retrieval handoff."""
+"""Independently validate one W5 retrieval experiment's Dev or Test handoff."""
 
 from __future__ import annotations
 
@@ -24,22 +24,30 @@ def assert_close(actual: float, expected: float, label: str) -> None:
         raise ValueError(f"{label}: {actual} != {expected}")
 
 
-def validate(require_clean: bool, require_reportable: bool, split: str) -> None:
+def validate(
+    require_clean: bool,
+    require_reportable: bool,
+    split: str,
+    experiment_id: str,
+    modes: tuple[str, ...],
+    expected_model: str | None,
+    selection_file: str,
+) -> None:
     if split not in {"proposed_dev", "proposed_test"}:
         raise ValueError(f"Unsupported split: {split}")
     expected_count = 12 if split == "proposed_dev" else 8
-    modes = MODES
     if split == "proposed_test":
-        selection = json.loads((M6_ROOT / "frozen_selection.json").read_text(encoding="utf-8"))
-        modes = (selection["retrieval_mode"],)
-        if modes != ("bm25",):
-            raise ValueError("Frozen Test must use the Dev-selected BM25 mode")
+        selection = json.loads((M6_ROOT / selection_file).read_text(encoding="utf-8"))
+        if selection["experiment_id"] != experiment_id:
+            raise ValueError("Selection experiment ID does not match the requested experiment")
+        if modes != (selection["retrieval_mode"],):
+            raise ValueError("Test mode does not match the saved Dev selection")
         dev_scores = (
-            M6_ROOT / "proposed_dev" / selection["experiment_id"] / "bm25/scores.json"
+            M6_ROOT / "proposed_dev" / experiment_id / modes[0] / "scores.json"
         )
         if hashlib.sha256(dev_scores.read_bytes()).hexdigest() != selection["dev_scores_sha256"]:
-            raise ValueError("Frozen Test selection is not bound to the saved Dev score")
-    base = M6_ROOT / split / "w5-minilm-primary-v1"
+            raise ValueError("Test selection is not bound to the saved Dev score")
+    base = M6_ROOT / split / experiment_id
     gold_ids = {
         row["question_id"]
         for row in load_jsonl(GOLD)
@@ -54,7 +62,7 @@ def validate(require_clean: bool, require_reportable: bool, split: str) -> None:
     print("split mode questions excluded hit@1 hit@3 hit@5 recall@5 mrr reportable")
     for mode in modes:
         directory = base / mode
-        stem = f"w5-minilm-primary-v1_{mode}_{split}"
+        stem = f"{experiment_id}_{mode}_{split}"
         runs = load_jsonl(directory / f"{stem}.jsonl")
         score_rows = load_jsonl(directory / "retrieval_scores.jsonl")
         score = json.loads((directory / "scores.json").read_text(encoding="utf-8"))[
@@ -72,6 +80,8 @@ def validate(require_clean: bool, require_reportable: bool, split: str) -> None:
             raise ValueError(f"{mode}: inconsistent Top-K or K values")
         if manifest["split"] != split or manifest["retrieval_mode"] != mode:
             raise ValueError(f"{mode}: incorrect split or mode in run manifest")
+        if expected_model is not None and manifest["embedding_version"] != expected_model:
+            raise ValueError(f"{mode}: embedding model differs from the selected index")
         if require_clean and manifest["git_dirty"]:
             raise ValueError(f"{mode}: this run was made from a dirty checkout")
         if require_reportable and not manifest["reportable"]:
@@ -91,6 +101,8 @@ def validate(require_clean: bool, require_reportable: bool, split: str) -> None:
             if any(not hit["source"] for hit in hits):
                 raise ValueError(f"{mode}: missing source")
             provenance = result["provenance"]
+            if expected_model is not None and provenance["embedding_model"] != expected_model:
+                raise ValueError(f"{mode}: provenance reports the wrong embedding model")
             identity = tuple(
                 provenance[key] for key in ("corpus_hash", "chunk_config_hash", "index_version")
             )
@@ -135,9 +147,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--split", choices=("proposed_dev", "proposed_test"), default="proposed_dev"
     )
+    parser.add_argument("--experiment-id", default="w5-minilm-primary-v1")
+    parser.add_argument("--modes", nargs="+", choices=MODES, default=list(MODES))
+    parser.add_argument("--expected-model")
+    parser.add_argument("--selection-file", default="frozen_selection.json")
     args = parser.parse_args()
     validate(
         require_clean=args.require_clean,
         require_reportable=args.require_reportable,
         split=args.split,
+        experiment_id=args.experiment_id,
+        modes=tuple(args.modes),
+        expected_model=args.expected_model,
+        selection_file=args.selection_file,
     )

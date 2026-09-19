@@ -730,6 +730,25 @@ def test_retrieval_only_dependencies_do_not_initialize_an_llm_client(
     assert isinstance(deps.retriever, real_retrieval.BM25Retriever)
 
 
+def test_pipeline_reads_release_artifact_with_utf8_bom(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "artifact.json").write_text(
+        _artifact(dense=True).model_dump_json(), encoding="utf-8-sig"
+    )
+    monkeypatch.setattr(real_retrieval.BM25Retriever, "load_index", lambda self, artifact: None)
+    config = AppConfig(
+        fixture_mode=False,
+        retrieval=RetrievalConfig(mode=RetrievalMode.BM25, index_dir=str(tmp_path)),
+    )
+
+    deps = build_real_retrieval_deps(config)
+
+    assert deps.mode == "real"
+    assert isinstance(deps.retriever, real_retrieval.BM25Retriever)
+
+
 def test_pipeline_passes_thresholds_to_hybrid_retrievers(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

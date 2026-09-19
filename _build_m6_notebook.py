@@ -13,17 +13,19 @@ cells = [
 
 ## TL;DR
 
-This notebook is the reproducible M6 handoff for BM25, Dense, and Hybrid retrieval.
-It uses the repository interfaces, the M4/M5 release artifact layout, MiniLM as the
-primary Dense model, `top_k=5`, and Hit/Recall at 1, 3, and 5 plus MRR.
+This notebook is the reproducible M6 handoff for BGE-M3 Dense retrieval.
+It uses the repository interfaces, the M4/M5 release artifact layout,
+`BAAI/bge-m3` with its matching 1024-dimensional FAISS index, `top_k=5`,
+and Hit/Recall at 1, 3, and 5 plus MRR.
 
 The notebook automatically runs real retrieval and Dev evaluation when the official
 artifacts are present. If an artifact is missing, it reports the exact missing path
 instead of presenting fixture output as a real result. The proposed Test split remains
-locked until `CS30_RUN_FROZEN_TEST=1` is explicitly set after one Dev configuration is
-frozen. BM25 is the Dev-selected frozen retrieval mode for this handoff; the user
-accepted the M3/M5 inputs for this experiment, without changing their source
-review labels."""
+locked until `CS30_RUN_FROZEN_TEST=1` is explicitly set after the BGE-M3 Dev run.
+An earlier BM25 run already used the eight Test questions. Any BGE-M3 Test run
+is therefore a second, exploratory use of that split, not an untouched final Test.
+The user accepted the M3/M5 inputs for this experiment without changing their
+source review labels."""
     ),
     new_markdown_cell(
         """## Context and methods
@@ -31,13 +33,14 @@ review labels."""
 ### Key assumptions
 
 - M4 artifacts follow `artifacts/w5/m4-v3/`.
-- M5's primary MiniLM index follows
-  `artifacts/w5/m5_latest/all-minilm-l6-v2/`.
-- All three retrieval modes must report the same `corpus_hash`,
-  `chunk_config_hash`, and `index_version`.
+- The selected BGE-M3 index follows `artifacts/w5/m5_release_v2/bge-m3/`.
+- The index must identify `BAAI/bge-m3`, 1024 dimensions, and the same M4
+  corpus and chunk configuration as the mapping.
 - The current 20-question Gold set is answerable-only. Refusal checks below are
   controlled engineering gates, not evidence of a calibrated production threshold.
-- Dev selects the configuration. Test is run once only after the configuration is frozen."""
+- Dense-only BGE-M3 is selected by the user; this is not a Dev winner claim.
+- The eight Test questions were already evaluated with BM25, so any BGE-M3
+  Test result is explicitly exploratory."""
     ),
     new_code_cell(
         """from __future__ import annotations
@@ -96,10 +99,7 @@ print('cs30 source:', PACKAGE_SOURCE)"""
     new_markdown_cell("## Inputs and experiment policy"),
     new_code_cell(
         """from cs30.contracts import RetrievalMode
-from cs30.retrieval.model_policy import (
-    CANDIDATE_EMBEDDING_MODELS,
-    PRIMARY_EMBEDDING_MODEL,
-)
+from cs30.retrieval.model_policy import CANDIDATE_EMBEDDING_MODELS
 
 TOP_K = 5
 K_VALUES = (1, 3, 5)
@@ -113,55 +113,23 @@ EVIDENCE_SOURCE_BLOCKS = PREPARED_CORPUS_DIR / 'evidence_source_blocks.jsonl'
 NORMALIZED_GOLD = M4_ROOT / 'gold_normalized' / 'gold_v0_2_from_m3_v0_1_1.jsonl'
 GOLD_MAPPING = M4_ROOT / 'gold_mapping' / 'evaluation_mapping_v0_1.json'
 
-M5_ROOT = PROJECT_ROOT / 'artifacts' / 'w5' / 'm5_latest'
-PRIMARY_INDEX_DIR = M5_ROOT / 'all-minilm-l6-v2'
+M5_ROOT = PROJECT_ROOT / 'artifacts' / 'w5' / 'm5_release_v2'
+SELECTED_EMBEDDING_MODEL = 'BAAI/bge-m3'
+assert SELECTED_EMBEDDING_MODEL in CANDIDATE_EMBEDDING_MODELS
+PRIMARY_INDEX_DIR = M5_ROOT / 'bge-m3'
 M6_OUTPUT_ROOT = PROJECT_ROOT / 'artifacts' / 'w5' / 'm6'
+EXPERIMENT_ID = 'w5-bge-m3-release-v2'
+MODEL_EXPERIMENTS = [{
+    'experiment_id': EXPERIMENT_ID,
+    'model': SELECTED_EMBEDDING_MODEL,
+    'index_dir': PRIMARY_INDEX_DIR,
+    'role': 'selected_bge_m3',
+}]
 
-
-def model_slug(model_name: str) -> str:
-    return model_name.rsplit('/', 1)[-1].lower()
-
-
-MODEL_EXPERIMENTS = [
-    {
-        'experiment_id': 'w5-minilm-primary-v1',
-        'model': PRIMARY_EMBEDDING_MODEL,
-        'index_dir': PRIMARY_INDEX_DIR,
-        'role': 'primary',
-    },
-    *[
-        {
-            'experiment_id': f'w5-{model_slug(model)}-candidate-v1',
-            'model': model,
-            'index_dir': M5_ROOT / model_slug(model),
-            'role': 'candidate',
-        }
-        for model in CANDIDATE_EMBEDDING_MODELS
-    ],
-]
-RRF_WEIGHT_CANDIDATES = ((0.75, 0.25), (0.50, 0.50), (0.25, 0.75))
-for candidate_model in CANDIDATE_EMBEDDING_MODELS:
-    for dense_weight, bm25_weight in RRF_WEIGHT_CANDIDATES:
-        if (dense_weight, bm25_weight) == (0.50, 0.50):
-            continue
-        MODEL_EXPERIMENTS.append(
-            {
-                'experiment_id': (
-                    f'w5-{model_slug(candidate_model)}-rrf-'
-                    f'{int(dense_weight * 100)}-{int(bm25_weight * 100)}-v1'
-                ),
-                'model': candidate_model,
-                'index_dir': M5_ROOT / model_slug(candidate_model),
-                'role': 'candidate_rrf',
-                'weights': (dense_weight, bm25_weight),
-            }
-        )
-
-RUN_CANDIDATE_EXPERIMENTS = os.getenv('CS30_RUN_CANDIDATES', '0') == '1'
 RUN_FROZEN_TEST = os.getenv('CS30_RUN_FROZEN_TEST', '0') == '1'
 ALLOW_DIRTY_LOCAL = os.getenv('CS30_ALLOW_DIRTY_LOCAL', '0') == '1'
-FROZEN_EXPERIMENT_ID = os.getenv('CS30_FROZEN_EXPERIMENT_ID', 'w5-minilm-primary-v1')
-FROZEN_RETRIEVAL_MODE = os.getenv('CS30_FROZEN_RETRIEVAL_MODE', 'bm25')
+FROZEN_EXPERIMENT_ID = EXPERIMENT_ID
+FROZEN_RETRIEVAL_MODE = 'dense'
 
 print('Top-K:', TOP_K)
 print('K values:', K_VALUES)
@@ -252,31 +220,32 @@ if RUN_FROZEN_TEST and PRIMARY_MISSING:
     )"""
     ),
     new_markdown_cell(
-        """## MiniLM input-length check
+        """## BGE-M3 release identity check
 
-This check repeats the M5 indexing warning against the released `chunks.json` and
-the actual MiniLM tokenizer. Long inputs may be truncated during embedding, so
-Dense and Hybrid underperformance cannot be attributed to ranking alone."""
+The new Release archive contains both BGE-base and BGE-M3. This notebook checks
+the selected BGE-M3 artifact, embedding dimension, chunk count, and M4 corpus
+identity before running any retrieval. The Release `artifact.json` uses a UTF-8
+BOM; the shared loader accepts that encoding without altering source bytes."""
     ),
     new_code_cell(
         """if RUN_PRIMARY_DEV:
-    from sentence_transformers import SentenceTransformer
-
-    chunk_rows = json.loads((PRIMARY_INDEX_DIR / 'chunks.json').read_text(encoding='utf-8'))
-    minilm_model = SentenceTransformer(PRIMARY_EMBEDDING_MODEL)
-    tokenizer = minilm_model.tokenizer
-    content_limit = minilm_model.max_seq_length - tokenizer.num_special_tokens_to_add()
-    over_limit_count = sum(
-        len(tokenizer.encode(row.get('embed_text') or row['text'], add_special_tokens=False))
-        > content_limit
-        for row in chunk_rows
+    bge_artifact = json.loads(
+        (PRIMARY_INDEX_DIR / 'artifact.json').read_text(encoding='utf-8-sig')
     )
-    assert (len(chunk_rows), content_limit, over_limit_count) == (3684, 254, 1446)
-    print(f'MiniLM input-length risk: {over_limit_count}/{len(chunk_rows)} chunks '
-          f'exceed {content_limit} content tokens and may be truncated.')
-    del minilm_model
+    bge_chunks = json.loads((PRIMARY_INDEX_DIR / 'chunks.json').read_text(encoding='utf-8'))
+    corpus_path = M4_ROOT / 'retrieval_corpus' / 'records.jsonl'
+    assert bge_artifact['metadata']['embedding_model'] == SELECTED_EMBEDDING_MODEL
+    assert int(bge_artifact['metadata']['dimension']) == 1024
+    assert bge_artifact['chunk_count'] == len(bge_chunks) == 3684
+    assert bge_artifact['metadata']['corpus_id'] == (
+        'sha256:' + hashlib.sha256(corpus_path.read_bytes()).hexdigest()
+    )
+    print('Selected model:', bge_artifact['metadata']['embedding_model'])
+    print('Index version:', bge_artifact['metadata']['index_version'])
+    print('Index dimensions:', bge_artifact['metadata']['dimension'])
+    print('Corpus-bound chunks:', len(bge_chunks))
 else:
-    print('MiniLM input-length check is pending the released index.')"""
+    print('BGE-M3 identity check is pending the released index.')"""
     ),
     new_markdown_cell("## Automated retrieval and refusal gates"),
     new_code_cell(
@@ -297,10 +266,10 @@ print('Retrieval, provenance, model-policy, configuration, and controlled-refusa
     new_markdown_cell(
         """### Retrieval cache evidence
 
-`src/cs30/retrieval/real.py` implements `_ResultCache`. Dense, BM25, and RRF
-retrievers check it before scoring/search and populate it after retrieval.
-The focused tests below include a repeated BM25 query that fails if scoring is
-called again, plus cache-key and mutation-isolation checks."""
+`src/cs30/retrieval/real.py` implements `_ResultCache`. The selected Dense
+retriever checks it before FAISS search and stores copies after retrieval.
+Focused tests cover cache keys and mutation isolation. Legacy BM25 cache tests
+are engineering checks only; no BM25 evaluation is run in this notebook."""
     ),
     new_code_cell(
         """cache_test_command = [
@@ -311,11 +280,10 @@ subprocess.run(cache_test_command, cwd=PROJECT_ROOT, check=True)
 print('Focused retrieval cache tests passed: repeated query, configuration keys, and isolation.')"""
     ),
     new_markdown_cell(
-        """## Real BM25, Dense, and Hybrid smoke check
+        """## Real BGE-M3 Dense smoke check
 
-The checks below validate rank order, result count, duplicate IDs, source fields,
-and provenance. The three modes must use the same corpus, chunk configuration,
-and index version."""
+The check below validates rank order, result count, duplicate IDs, source fields,
+model identity, and provenance. It does not call BM25 or Hybrid retrieval."""
     ),
     new_code_cell(
         """from cs30.config import AppConfig, RetrievalConfig
@@ -344,77 +312,61 @@ def make_retrieval_config(
     )
 
 
-def run_three_mode_smoke(experiment: dict[str, object]) -> dict[str, dict[str, object]]:
-    results: dict[str, dict[str, object]] = {}
-    provenance_identities: set[tuple[str, str, str]] = set()
+def run_dense_smoke(experiment: dict[str, object]) -> dict[str, object]:
     output_dir = M6_OUTPUT_ROOT / 'smoke' / str(experiment['experiment_id'])
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    for mode in (RetrievalMode.BM25, RetrievalMode.DENSE, RetrievalMode.HYBRID):
-        config = make_retrieval_config(
-            mode,
-            index_dir=Path(experiment['index_dir']),
-            expected_model=str(experiment['model']),
-        )
-        result = build_real_retrieval_deps(config).retriever.retrieve(
-            SMOKE_QUESTION,
-            top_k=TOP_K,
-        )
-        assert len(result.hits) <= TOP_K
-        assert [hit.rank for hit in result.hits] == list(range(1, len(result.hits) + 1))
-        assert len({hit.chunk_id for hit in result.hits}) == len(result.hits)
-        assert all(hit.source.strip() for hit in result.hits)
-        assert result.provenance is not None
-
-        provenance = result.provenance
-        provenance_identities.add(
-            (provenance.corpus_hash, provenance.chunk_config_hash, provenance.index_version)
-        )
-        payload = result.model_dump(mode='json')
-        results[mode.value] = payload
-
-        print(f'\\n{mode.value}: {len(result.hits)} results')
-        for hit in result.hits:
-            print(
-                f'  rank={hit.rank} chunk_id={hit.chunk_id} '
-                f'source={hit.source} score={hit.score:.6f}'
-            )
-
-    assert len(provenance_identities) == 1, (
-        'BM25, Dense, and Hybrid did not use the same corpus/index provenance.'
+    config = make_retrieval_config(
+        RetrievalMode.DENSE,
+        index_dir=Path(experiment['index_dir']),
+        expected_model=str(experiment['model']),
     )
+    result = build_real_retrieval_deps(config).retriever.retrieve(
+        SMOKE_QUESTION, top_k=TOP_K,
+    )
+    assert len(result.hits) <= TOP_K
+    assert [hit.rank for hit in result.hits] == list(range(1, len(result.hits) + 1))
+    assert len({hit.chunk_id for hit in result.hits}) == len(result.hits)
+    assert all(hit.source.strip() for hit in result.hits)
+    assert result.provenance is not None
+    assert result.provenance.embedding_model == SELECTED_EMBEDDING_MODEL
+    assert result.provenance.index_version == bge_artifact['metadata']['index_version']
+    payload = result.model_dump(mode='json')
+
+    print(f'BGE-M3 Dense: {len(result.hits)} results')
+    for hit in result.hits:
+        print(
+            f'  rank={hit.rank} chunk_id={hit.chunk_id} '
+            f'source={hit.source} score={hit.score:.6f}'
+        )
 
     raw_path = output_dir / 'raw_rankings.jsonl'
     raw_path.write_text(
-        ''.join(
-            json.dumps({'mode': mode, **payload}, ensure_ascii=False) + '\\n'
-            for mode, payload in results.items()
-        ),
+        json.dumps({'mode': 'dense', **payload}, ensure_ascii=False) + '\\n',
         encoding='utf-8',
     )
     print('Raw rankings:', raw_path)
-    return results
+    return payload
 
 
 primary_smoke_results = {}
-if RUN_REAL_RETRIEVAL:
-    primary_smoke_results = run_three_mode_smoke(MODEL_EXPERIMENTS[0])
+if RUN_PRIMARY_DEV:
+    primary_smoke_results = run_dense_smoke(MODEL_EXPERIMENTS[0])
 else:
     print('Skipped because the official M4/M5 inputs listed above are not present.')"""
     ),
     new_markdown_cell(
-        """## Dev experiments and M1 scoring
+        """## BGE-M3 Dev experiment and M1 scoring
 
-The primary MiniLM experiment runs first. Candidate models are never implicit
-fallbacks: each candidate has its own model name, index directory, and experiment ID.
-Set `CS30_RUN_CANDIDATES=1` only after the matching M5 candidate indexes exist.
+Only BGE-M3 Dense is evaluated here. The release also contains MiniLM,
+BGE-base, E5, and MPNet, but none is an implicit fallback or run in this notebook.
 
 Each completed condition writes raw Dev/Test JSONL, a run manifest, retrieval scores,
 aggregate metrics, answer/citation reports, and a failure list."""
     ),
     new_code_cell(
         """def load_json(path: Path) -> dict[str, object]:
-    return json.loads(path.read_text(encoding='utf-8'))
+    return json.loads(path.read_text(encoding='utf-8-sig'))
 
 
 def git_is_dirty() -> bool:
@@ -586,42 +538,15 @@ def run_and_score(
 
 if RUN_PRIMARY_DEV:
     primary_experiment = MODEL_EXPERIMENTS[0]
-    for retrieval_mode in ('bm25', 'dense', 'hybrid'):
-        completed_evaluations.append(
-            run_and_score(
-                primary_experiment,
-                split='proposed_dev',
-                mode=retrieval_mode,
-            )
+    completed_evaluations.append(
+        run_and_score(
+            primary_experiment,
+            split='proposed_dev',
+            mode='dense',
         )
+    )
 else:
-    print('Primary Dev evaluation is pending the official M4/M5 artifacts.')
-
-if RUN_CANDIDATE_EXPERIMENTS:
-    if not RUN_PRIMARY_DEV:
-        raise FileNotFoundError(
-            'Run the official MiniLM primary Dev evaluation before candidate experiments.'
-        )
-    for experiment in MODEL_EXPERIMENTS[1:]:
-        candidate_missing = missing_files(
-            M4_REQUIRED + index_required(Path(experiment['index_dir']))
-        )
-        if candidate_missing:
-            print(f"Skipping {experiment['experiment_id']}; missing candidate index files:")
-            for path in candidate_missing:
-                print(' -', path.relative_to(PROJECT_ROOT))
-            continue
-        modes = ('hybrid',) if experiment['role'] == 'candidate_rrf' else ('dense', 'hybrid')
-        for retrieval_mode in modes:
-            completed_evaluations.append(
-                run_and_score(
-                    experiment,
-                    split='proposed_dev',
-                    mode=retrieval_mode,
-                )
-            )
-else:
-    print('Candidate experiments are disabled. Set CS30_RUN_CANDIDATES=1 after indexes exist.')"""
+    print('BGE-M3 Dev evaluation is pending the M4/M5 release inputs.')"""
     ),
     new_markdown_cell("## Independent Dev result validation"),
     new_code_cell(
@@ -629,6 +554,9 @@ else:
     validation_command = [
         sys.executable,
         str(PROJECT_ROOT / 'scripts' / 'validate_w5_m6_dev.py'),
+        '--experiment-id', EXPERIMENT_ID,
+        '--modes', 'dense',
+        '--expected-model', SELECTED_EMBEDDING_MODEL,
     ]
     if not ALLOW_DIRTY_LOCAL:
         validation_command.append('--require-clean')
@@ -636,7 +564,7 @@ else:
 else:
     print('Independent Dev validation is pending official inputs.')"""
     ),
-    new_markdown_cell("## Dev decision: freeze BM25 before Test"),
+    new_markdown_cell("## BGE-M3 Dev check before exploratory Test"),
     new_code_cell(
         """dev_mode_scores = {}
 for item in completed_evaluations:
@@ -649,20 +577,20 @@ for item in completed_evaluations:
     }
 
 if RUN_PRIMARY_DEV:
-    assert set(dev_mode_scores) == {'bm25', 'dense', 'hybrid'}
-    assert FROZEN_RETRIEVAL_MODE == 'bm25', 'This handoff freezes BM25 before Test.'
-    bm25_metrics = dev_mode_scores['bm25']
-    assert all(
-        bm25_metrics['mrr'] >= metrics['mrr']
-        and bm25_metrics['hit_at_5'] >= metrics['hit_at_5']
-        for metrics in dev_mode_scores.values()
-    ), 'BM25 is no longer the Dev leader; stop before opening Test.'
-    print('Dev comparison:', dev_mode_scores)
-    print('Frozen retrieval mode: BM25 (highest Dev MRR and Hit@5).')
+    assert set(dev_mode_scores) == {'dense'}
+    assert FROZEN_RETRIEVAL_MODE == 'dense'
+    print('BGE-M3 Dense Dev metrics:', dev_mode_scores['dense'])
+    print('BGE-M3 Dense was selected by the user, not declared the Dev winner.')
 else:
-    print('Frozen Dev decision is pending primary results.')"""
+    print('BGE-M3 Dev check is pending the released inputs.')"""
     ),
-    new_markdown_cell("## Frozen Test gate"),
+    new_markdown_cell(
+        """## BGE-M3 exploratory Test gate
+
+The eight proposed Test questions were already used for BM25. If enabled,
+this BGE-M3 Dense Test is a second, exploratory evaluation. It is never
+described as an untouched one-time final Test."""
+    ),
     new_code_cell(
         """if RUN_FROZEN_TEST:
     frozen_matches = [
@@ -673,8 +601,8 @@ else:
     if len(frozen_matches) != 1:
         raise ValueError(f'Unknown frozen experiment ID: {FROZEN_EXPERIMENT_ID}')
     frozen_experiment = frozen_matches[0]
-    if FROZEN_RETRIEVAL_MODE not in ('bm25', 'dense', 'hybrid'):
-        raise ValueError(f'Invalid frozen retrieval mode: {FROZEN_RETRIEVAL_MODE}')
+    if FROZEN_RETRIEVAL_MODE != 'dense':
+        raise ValueError('This BGE-M3 experiment only permits Dense retrieval')
     dev_scores = (
         M6_OUTPUT_ROOT / 'proposed_dev' / FROZEN_EXPERIMENT_ID
         / FROZEN_RETRIEVAL_MODE / 'scores.json'
@@ -683,12 +611,13 @@ else:
         raise FileNotFoundError(
             f'Frozen Test requires the selected Dev score artifact: {dev_scores}'
         )
-    frozen_selection_path = M6_OUTPUT_ROOT / 'frozen_selection.json'
+    frozen_selection_path = M6_OUTPUT_ROOT / 'frozen_selection_bge_m3_v2.json'
     frozen_selection = {
         'experiment_id': FROZEN_EXPERIMENT_ID,
         'retrieval_mode': FROZEN_RETRIEVAL_MODE,
         'dev_scores_sha256': hashlib.sha256(dev_scores.read_bytes()).hexdigest(),
-        'selection_rule': 'Highest Dev MRR and Hit@5 among BM25, Dense, and Hybrid',
+        'selection_rule': 'User-selected BGE-M3 Dense; no Dev winner claim',
+        'test_usage': 'exploratory second use after prior BM25 Test',
         'dev_mode_scores': dev_mode_scores,
     }
     if frozen_selection_path.is_file():
@@ -714,7 +643,7 @@ else:
         )
     )
 else:
-    print('Test remains locked. Freeze one Dev configuration, then set CS30_RUN_FROZEN_TEST=1.')"""
+    print('BGE-M3 exploratory Test is locked; set CS30_RUN_FROZEN_TEST=1 to run it.')"""
     ),
     new_markdown_cell("## Independent frozen Test validation"),
     new_code_cell(
@@ -723,6 +652,10 @@ else:
         sys.executable,
         str(PROJECT_ROOT / 'scripts' / 'validate_w5_m6_dev.py'),
         '--split', 'proposed_test',
+        '--experiment-id', EXPERIMENT_ID,
+        '--modes', 'dense',
+        '--expected-model', SELECTED_EMBEDDING_MODEL,
+        '--selection-file', 'frozen_selection_bge_m3_v2.json',
     ]
     if not ALLOW_DIRTY_LOCAL:
         test_validation_command.append('--require-clean')
@@ -741,13 +674,17 @@ else:
 
 
 M6_OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
-handoff_files = sorted(
+handoff_files = {
     path
-    for path in M6_OUTPUT_ROOT.rglob('*')
+    for item in completed_evaluations
+    for path in Path(item['run_file']).parent.rglob('*')
     if path.is_file()
-    and path.name != 'handoff_manifest.json'
-    and 'failed_attempts' not in path.parts
-)
+}
+smoke_file = M6_OUTPUT_ROOT / 'smoke' / EXPERIMENT_ID / 'raw_rankings.jsonl'
+selection_file = M6_OUTPUT_ROOT / 'frozen_selection_bge_m3_v2.json'
+for path in (smoke_file, selection_file):
+    if path.is_file():
+        handoff_files.add(path)
 has_frozen_test = any(item['split'] == 'proposed_test' for item in completed_evaluations)
 run_reportability = [
     load_json(Path(item['manifest']))['reportable'] for item in completed_evaluations
@@ -758,12 +695,13 @@ handoff_manifest = {
         'pending_official_artifacts'
         if not completed_evaluations
         else (
-            'test_complete_user_accepted_inputs_nonreportable'
-            if has_frozen_test else 'dev_complete_user_accepted_inputs_nonreportable'
+            'bge_m3_exploratory_test_complete_nonreportable'
+            if has_frozen_test else 'bge_m3_dev_complete_nonreportable'
         )
     ),
     'git_dirty': git_is_dirty() if GIT_EXECUTABLE is not None else None,
     'm3_m5_user_accepted_for_experiment': True,
+    'test_usage': 'exploratory second use after prior BM25 Test',
     'm5_artifact_status': (
         'User accepted this local rebuild for the W5 experiment; '
         'the release itself remains labeled pending M5 owner validation'
@@ -772,7 +710,10 @@ handoff_manifest = {
     'formal_reportable': bool(run_reportability) and all(run_reportability),
     'm4_release_tag': 'w5-m4-official-v1',
     'm5_release_tag': 'w5-m5-minilm-local-rebuild-v1',
-    'primary_model': PRIMARY_EMBEDDING_MODEL,
+    'm5_release_asset': 'm5_release_v2.zip',
+    'm5_release_asset_sha256': '5a1c8caed9a57de2b23a02be9316e8c9c4af592097d0cc37fe9fb655775cad72',
+    'selected_model': SELECTED_EMBEDDING_MODEL,
+    'selected_retrieval_mode': 'dense',
     'top_k': TOP_K,
     'k_values': list(K_VALUES),
     'answerability_note': (
@@ -782,13 +723,8 @@ handoff_manifest = {
     'missing_primary_inputs': [str(path) for path in PRIMARY_MISSING],
     'completed_evaluations': completed_evaluations,
     'frozen_selection': (
-        load_json(M6_OUTPUT_ROOT / 'frozen_selection.json') if has_frozen_test else None
+        load_json(selection_file) if has_frozen_test else None
     ),
-    'minilm_input_length_risk': {
-        'over_limit_chunks': over_limit_count if RUN_PRIMARY_DEV else None,
-        'chunk_count': len(chunk_rows) if RUN_PRIMARY_DEV else None,
-        'effective_content_token_limit': content_limit if RUN_PRIMARY_DEV else None,
-    },
     'dev_metric_summary': [
         {
             'mode': item['mode'],
@@ -801,16 +737,28 @@ handoff_manifest = {
         for item in completed_evaluations
         if item['split'] == 'proposed_dev'
     ],
+    'test_metric_summary': [
+        {
+            'mode': item['mode'],
+            'hit_at_5': load_json(Path(item['scores']))['retrieval']['by_k']['5']['hit_at_k'],
+            'recall_at_5': load_json(Path(item['scores']))['retrieval']['by_k']['5'][
+                'recall_at_k'
+            ],
+            'mrr': load_json(Path(item['scores']))['retrieval']['mrr'],
+        }
+        for item in completed_evaluations
+        if item['split'] == 'proposed_test'
+    ],
     'files': [
         {
             'path': str(path.relative_to(PROJECT_ROOT)),
             'bytes': path.stat().st_size,
             'sha256': sha256(path),
         }
-        for path in handoff_files
+        for path in sorted(handoff_files)
     ],
 }
-handoff_path = M6_OUTPUT_ROOT / 'handoff_manifest.json'
+handoff_path = M6_OUTPUT_ROOT / 'handoff_manifest_bge_m3_v2.json'
 handoff_path.write_text(
     json.dumps(handoff_manifest, indent=2, ensure_ascii=False) + '\\n',
     encoding='utf-8',
@@ -825,18 +773,15 @@ print('Delivered files:', len(handoff_manifest['files']))"""
     new_markdown_cell(
         """## Takeaways
 
-- MiniLM is the mandatory primary run; MPNet, E5, BGE-base, and BGE-M3 remain
-  explicitly identified candidate experiments.
-- BM25, Dense, and Hybrid use one M5 artifact and are checked for matching provenance.
+- This revision evaluates only `BAAI/bge-m3` with Dense FAISS retrieval from
+  `m5_release_v2.zip`; it does not run BM25 or Hybrid scoring.
+- The released index is 1024-dimensional and bound to the same M4 corpus.
 - Dev `run` and M1 `score` commands execute with `subprocess.run(..., check=True)`.
 - Top-K is fixed at 5 and reported at K = 1, 3, and 5.
 - Raw rankings, Dev/Test JSONL, manifests, scores, and failure reports are recorded in
-  the M1 handoff manifest when artifacts are available.
-- On the 12-question proposed Dev split, BM25 led Dense and Hybrid (Hit@5 =
-  0.8333, MRR = 0.7361), so BM25 was frozen before the one-time 8-question Test.
-- MiniLM's 254-token effective content limit is exceeded by 1,446 of 3,684
-  released chunks. This may weaken Dense and Hybrid; the comparison does not
-  isolate that cause.
+  the BGE-M3 handoff manifest when artifacts are available.
+- BGE-M3 was requested by the user. Because BM25 already used the proposed Test
+  questions, a BGE-M3 Test result is exploratory, not an untouched final Test.
 - M3/M5 inputs are user-accepted for this experiment, but the released Gold
   still says `m3_initial` and M5 is labeled a local rebuild. The CLI therefore
   keeps the real Dev/Test runs `reportable=false`; no source review metadata is

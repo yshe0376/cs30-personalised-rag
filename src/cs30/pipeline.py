@@ -163,7 +163,7 @@ def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
     else:
         try:
             artifact = IndexArtifact.model_validate_json(
-                artifact_path.read_text(encoding="utf-8")
+                artifact_path.read_text(encoding="utf-8-sig")
             )
         except (OSError, ValueError) as exc:
             raise IndexUnavailableError(
