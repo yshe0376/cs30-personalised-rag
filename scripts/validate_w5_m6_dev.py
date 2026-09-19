@@ -1,0 +1,114 @@
+"""Independently validate the three MiniLM Dev retrieval handoff files."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import math
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+BASE = ROOT / "artifacts/w5/m6/proposed_dev/w5-minilm-primary-v1"
+GOLD = ROOT / "artifacts/w5/m4-v3/gold_normalized/gold_v0_2_from_m3_v0_1_1.jsonl"
+MODES = ("bm25", "dense", "hybrid")
+K_VALUES = (1, 3, 5)
+
+
+def load_jsonl(path: Path) -> list[dict]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+
+
+def assert_close(actual: float, expected: float, label: str) -> None:
+    if not math.isclose(actual, expected, rel_tol=0, abs_tol=1e-12):
+        raise ValueError(f"{label}: {actual} != {expected}")
+
+
+def validate(require_clean: bool) -> None:
+    gold_ids = {
+        row["question_id"]
+        for row in load_jsonl(GOLD)
+        if row["split"] == "proposed_dev"
+    }
+    if len(gold_ids) != 12:
+        raise ValueError(f"Expected 12 unique Dev questions, found {len(gold_ids)}")
+
+    reference_provenance: tuple[str, str, str] | None = None
+    print("mode questions excluded hit@1 hit@3 hit@5 recall@5 mrr reportable")
+    for mode in MODES:
+        directory = BASE / mode
+        stem = f"w5-minilm-primary-v1_{mode}_proposed_dev"
+        runs = load_jsonl(directory / f"{stem}.jsonl")
+        score_rows = load_jsonl(directory / "retrieval_scores.jsonl")
+        score = json.loads((directory / "scores.json").read_text(encoding="utf-8"))[
+            "retrieval"
+        ]
+        manifest = json.loads((directory / f"{stem}.manifest.json").read_text(encoding="utf-8"))
+
+        run_ids = [row["question_id"] for row in runs]
+        score_ids = [row["question_id"] for row in score_rows]
+        if set(run_ids) != gold_ids or set(score_ids) != gold_ids:
+            raise ValueError(f"{mode}: run/score question IDs differ from normalized Dev Gold")
+        if len(run_ids) != len(set(run_ids)) or len(score_ids) != len(set(score_ids)):
+            raise ValueError(f"{mode}: duplicate question IDs")
+        if manifest["top_k"] != 5 or manifest["k_values"] != list(K_VALUES):
+            raise ValueError(f"{mode}: inconsistent Top-K or K values")
+        if manifest["split"] != "proposed_dev" or manifest["retrieval_mode"] != mode:
+            raise ValueError(f"{mode}: incorrect split or mode in run manifest")
+        if require_clean and (manifest["git_dirty"] or not manifest["reportable"]):
+            raise ValueError(f"{mode}: this is not a clean reportable run")
+
+        for run in runs:
+            if run["status"] != "retrieved" or run["error"] is not None:
+                raise ValueError(f"{mode}: retrieval failed for {run['question_id']}")
+            result = run["retrieval"]
+            hits = result["hits"]
+            if len(hits) > 5:
+                raise ValueError(f"{mode}: more than five hits")
+            if [hit["rank"] for hit in hits] != list(range(1, len(hits) + 1)):
+                raise ValueError(f"{mode}: nonconsecutive ranks")
+            if len({hit["chunk_id"] for hit in hits}) != len(hits):
+                raise ValueError(f"{mode}: duplicate retrieved chunk IDs")
+            if any(not hit["source"] for hit in hits):
+                raise ValueError(f"{mode}: missing source")
+            provenance = result["provenance"]
+            identity = tuple(
+                provenance[key] for key in ("corpus_hash", "chunk_config_hash", "index_version")
+            )
+            if reference_provenance is None:
+                reference_provenance = identity
+            elif identity != reference_provenance:
+                raise ValueError(f"{mode}: corpus/index provenance differs across runs")
+
+        if score["sample_count"] != 12 or score["excluded_runs"]["total"] != 0:
+            raise ValueError(f"{mode}: unexpected sample count or excluded questions")
+        included = [row for row in score_rows if row["included"]]
+        if len(included) != 12:
+            raise ValueError(f"{mode}: not all score rows are included")
+        assert_close(
+            sum(row["first_hit_mrr"] for row in included) / 12,
+            score["mrr"],
+            f"{mode} MRR",
+        )
+        for k in K_VALUES:
+            key = str(k)
+            for metric in ("hit_at_k", "recall_at_k"):
+                mean = sum(row["by_k"][key][metric] for row in included) / 12
+                assert_close(mean, score["by_k"][key][metric], f"{mode} {metric}@{k}")
+
+        print(
+            mode,
+            len(runs),
+            score["excluded_runs"]["total"],
+            *[f"{score['by_k'][str(k)]['hit_at_k']:.4f}" for k in K_VALUES],
+            f"{score['by_k']['5']['recall_at_k']:.4f}",
+            f"{score['mrr']:.4f}",
+            manifest["reportable"],
+        )
+    print("Independent Dev handoff checks passed.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--require-clean", action="store_true")
+    args = parser.parse_args()
+    validate(require_clean=args.require_clean)

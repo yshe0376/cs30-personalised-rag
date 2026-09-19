@@ -1,9 +1,25 @@
 """Behaviour tests for Task 7's portable combined-evidence retriever."""
 
-from cs30.config import load_config
+from pathlib import Path
+
+from cs30.config import AppConfig, load_config
 from cs30.contracts import RetrievalHit, RetrievalMode, StudentLevel
 from cs30.generation import CombinedEvidenceRetriever
 from cs30.pipeline import build_real_deps, run_pipeline
+
+
+def fixture_config(tmp_path: Path) -> AppConfig:
+    """Exercise fixture fallback independently of a locally installed M5 index."""
+
+    base = load_config("development")
+    return base.model_copy(
+        update={
+            "fixture_mode": True,
+            "retrieval": base.retrieval.model_copy(
+                update={"index_dir": str(tmp_path / "missing-index")}
+            ),
+        }
+    )
 
 
 def evidence() -> list[RetrievalHit]:
@@ -51,8 +67,10 @@ def test_combined_retriever_rejects_single_word_accidental_overlap() -> None:
     assert result.hits == []
 
 
-def test_configured_pipeline_uses_fixture_corpus_and_abstains_without_evidence() -> None:
-    config = load_config("development")
+def test_configured_pipeline_uses_fixture_corpus_and_abstains_without_evidence(
+    tmp_path: Path,
+) -> None:
+    config = fixture_config(tmp_path)
     result = run_pipeline(
         "Who painted the Mona Lisa?",
         StudentLevel.BEGINNER,
@@ -67,8 +85,8 @@ def test_configured_pipeline_uses_fixture_corpus_and_abstains_without_evidence()
     assert int(result.metadata["corpus_evidence_count"]) >= 44
 
 
-def test_configured_pipeline_returns_only_retrieved_citations() -> None:
-    config = load_config("development")
+def test_configured_pipeline_returns_only_retrieved_citations(tmp_path: Path) -> None:
+    config = fixture_config(tmp_path)
     result = run_pipeline(
         "What is the difference between velocity and acceleration?",
         StudentLevel.INTERMEDIATE,
