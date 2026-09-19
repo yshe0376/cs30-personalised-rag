@@ -590,6 +590,24 @@ def test_cache_returns_equal_copies_without_leaking_mutation(
     assert third.hits
 
 
+def test_repeated_bm25_query_uses_cache_without_rescoring(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    retriever = real_retrieval.BM25Retriever()
+    retriever.load_index(_artifact())
+    first = retriever.retrieve("What is acceleration?", top_k=2)
+
+    def fail_if_rescored(*args: object) -> float:
+        raise AssertionError("A repeated query must be served from the retrieval cache")
+
+    monkeypatch.setattr(retriever, "_score_document", fail_if_rescored)
+    second = retriever.retrieve("What is acceleration?", top_k=2)
+
+    assert second == first
+    assert second is not first
+
+
 def test_bm25_cache_key_changes_with_runtime_configuration(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

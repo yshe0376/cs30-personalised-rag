@@ -14,14 +14,16 @@ cells = [
 ## TL;DR
 
 This notebook is the reproducible M6 handoff for BM25, Dense, and Hybrid retrieval.
-It uses the repository interfaces, the official M4/M5 artifact layout, MiniLM as the
-primary model, `top_k=5`, and Hit/Recall at 1, 3, and 5 plus MRR.
+It uses the repository interfaces, the M4/M5 release artifact layout, MiniLM as the
+primary Dense model, `top_k=5`, and Hit/Recall at 1, 3, and 5 plus MRR.
 
 The notebook automatically runs real retrieval and Dev evaluation when the official
 artifacts are present. If an artifact is missing, it reports the exact missing path
 instead of presenting fixture output as a real result. The proposed Test split remains
 locked until `CS30_RUN_FROZEN_TEST=1` is explicitly set after one Dev configuration is
-frozen."""
+frozen. BM25 is the Dev-selected frozen retrieval mode for this handoff; the user
+accepted the M3/M5 inputs for this experiment, without changing their source
+review labels."""
     ),
     new_markdown_cell(
         """## Context and methods
@@ -48,7 +50,7 @@ import shutil
 import subprocess
 import sys
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import cs30
@@ -159,7 +161,7 @@ RUN_CANDIDATE_EXPERIMENTS = os.getenv('CS30_RUN_CANDIDATES', '0') == '1'
 RUN_FROZEN_TEST = os.getenv('CS30_RUN_FROZEN_TEST', '0') == '1'
 ALLOW_DIRTY_LOCAL = os.getenv('CS30_ALLOW_DIRTY_LOCAL', '0') == '1'
 FROZEN_EXPERIMENT_ID = os.getenv('CS30_FROZEN_EXPERIMENT_ID', 'w5-minilm-primary-v1')
-FROZEN_RETRIEVAL_MODE = os.getenv('CS30_FROZEN_RETRIEVAL_MODE', 'hybrid')
+FROZEN_RETRIEVAL_MODE = os.getenv('CS30_FROZEN_RETRIEVAL_MODE', 'bm25')
 
 print('Top-K:', TOP_K)
 print('K values:', K_VALUES)
@@ -249,6 +251,33 @@ if RUN_FROZEN_TEST and PRIMARY_MISSING:
         'Frozen Test was requested, but official M4/M5 inputs are incomplete.'
     )"""
     ),
+    new_markdown_cell(
+        """## MiniLM input-length check
+
+This check repeats the M5 indexing warning against the released `chunks.json` and
+the actual MiniLM tokenizer. Long inputs may be truncated during embedding, so
+Dense and Hybrid underperformance cannot be attributed to ranking alone."""
+    ),
+    new_code_cell(
+        """if RUN_PRIMARY_DEV:
+    from sentence_transformers import SentenceTransformer
+
+    chunk_rows = json.loads((PRIMARY_INDEX_DIR / 'chunks.json').read_text(encoding='utf-8'))
+    minilm_model = SentenceTransformer(PRIMARY_EMBEDDING_MODEL)
+    tokenizer = minilm_model.tokenizer
+    content_limit = minilm_model.max_seq_length - tokenizer.num_special_tokens_to_add()
+    over_limit_count = sum(
+        len(tokenizer.encode(row.get('embed_text') or row['text'], add_special_tokens=False))
+        > content_limit
+        for row in chunk_rows
+    )
+    assert (len(chunk_rows), content_limit, over_limit_count) == (3684, 254, 1446)
+    print(f'MiniLM input-length risk: {over_limit_count}/{len(chunk_rows)} chunks '
+          f'exceed {content_limit} content tokens and may be truncated.')
+    del minilm_model
+else:
+    print('MiniLM input-length check is pending the released index.')"""
+    ),
     new_markdown_cell("## Automated retrieval and refusal gates"),
     new_code_cell(
         """test_command = [
@@ -264,6 +293,22 @@ if RUN_FROZEN_TEST and PRIMARY_MISSING:
 print('Running:', subprocess.list2cmdline(test_command))
 subprocess.run(test_command, cwd=PROJECT_ROOT, check=True)
 print('Retrieval, provenance, model-policy, configuration, and controlled-refusal gates passed.')"""
+    ),
+    new_markdown_cell(
+        """### Retrieval cache evidence
+
+`src/cs30/retrieval/real.py` implements `_ResultCache`. Dense, BM25, and RRF
+retrievers check it before scoring/search and populate it after retrieval.
+The focused tests below include a repeated BM25 query that fails if scoring is
+called again, plus cache-key and mutation-isolation checks."""
+    ),
+    new_code_cell(
+        """cache_test_command = [
+    sys.executable, '-m', 'pytest', '-q', 'tests/test_real_retrieval.py',
+    '-k', 'cache',
+]
+subprocess.run(cache_test_command, cwd=PROJECT_ROOT, check=True)
+print('Focused retrieval cache tests passed: repeated query, configuration keys, and isolation.')"""
     ),
     new_markdown_cell(
         """## Real BM25, Dense, and Hybrid smoke check
@@ -591,6 +636,32 @@ else:
 else:
     print('Independent Dev validation is pending official inputs.')"""
     ),
+    new_markdown_cell("## Dev decision: freeze BM25 before Test"),
+    new_code_cell(
+        """dev_mode_scores = {}
+for item in completed_evaluations:
+    if item['experiment_id'] != FROZEN_EXPERIMENT_ID or item['split'] != 'proposed_dev':
+        continue
+    retrieval = load_json(Path(item['scores']))['retrieval']
+    dev_mode_scores[item['mode']] = {
+        'hit_at_5': retrieval['by_k']['5']['hit_at_k'],
+        'mrr': retrieval['mrr'],
+    }
+
+if RUN_PRIMARY_DEV:
+    assert set(dev_mode_scores) == {'bm25', 'dense', 'hybrid'}
+    assert FROZEN_RETRIEVAL_MODE == 'bm25', 'This handoff freezes BM25 before Test.'
+    bm25_metrics = dev_mode_scores['bm25']
+    assert all(
+        bm25_metrics['mrr'] >= metrics['mrr']
+        and bm25_metrics['hit_at_5'] >= metrics['hit_at_5']
+        for metrics in dev_mode_scores.values()
+    ), 'BM25 is no longer the Dev leader; stop before opening Test.'
+    print('Dev comparison:', dev_mode_scores)
+    print('Frozen retrieval mode: BM25 (highest Dev MRR and Hit@5).')
+else:
+    print('Frozen Dev decision is pending primary results.')"""
+    ),
     new_markdown_cell("## Frozen Test gate"),
     new_code_cell(
         """if RUN_FROZEN_TEST:
@@ -617,6 +688,8 @@ else:
         'experiment_id': FROZEN_EXPERIMENT_ID,
         'retrieval_mode': FROZEN_RETRIEVAL_MODE,
         'dev_scores_sha256': hashlib.sha256(dev_scores.read_bytes()).hexdigest(),
+        'selection_rule': 'Highest Dev MRR and Hit@5 among BM25, Dense, and Hybrid',
+        'dev_mode_scores': dev_mode_scores,
     }
     if frozen_selection_path.is_file():
         existing_selection = json.loads(frozen_selection_path.read_text(encoding='utf-8'))
@@ -643,6 +716,20 @@ else:
 else:
     print('Test remains locked. Freeze one Dev configuration, then set CS30_RUN_FROZEN_TEST=1.')"""
     ),
+    new_markdown_cell("## Independent frozen Test validation"),
+    new_code_cell(
+        """if RUN_FROZEN_TEST:
+    test_validation_command = [
+        sys.executable,
+        str(PROJECT_ROOT / 'scripts' / 'validate_w5_m6_dev.py'),
+        '--split', 'proposed_test',
+    ]
+    if not ALLOW_DIRTY_LOCAL:
+        test_validation_command.append('--require-clean')
+    subprocess.run(test_validation_command, cwd=PROJECT_ROOT, check=True)
+else:
+    print('Frozen Test validation is skipped because the Test gate is closed.')"""
+    ),
     new_markdown_cell("## M1 handoff manifest"),
     new_code_cell(
         """def sha256(path: Path) -> str:
@@ -661,17 +748,28 @@ handoff_files = sorted(
     and path.name != 'handoff_manifest.json'
     and 'failed_attempts' not in path.parts
 )
+has_frozen_test = any(item['split'] == 'proposed_test' for item in completed_evaluations)
+run_reportability = [
+    load_json(Path(item['manifest']))['reportable'] for item in completed_evaluations
+]
 handoff_manifest = {
-    'created_at_utc': datetime.now(timezone.utc).isoformat(),
+    'created_at_utc': datetime.now(UTC).isoformat(),
     'status': (
         'pending_official_artifacts'
         if not completed_evaluations
-        else 'dev_complete_provisional_m5_index'
+        else (
+            'test_complete_user_accepted_inputs_nonreportable'
+            if has_frozen_test else 'dev_complete_user_accepted_inputs_nonreportable'
+        )
     ),
     'git_dirty': git_is_dirty() if GIT_EXECUTABLE is not None else None,
-    'm5_artifact_status': 'M6 local rebuild pending M5 owner validation',
+    'm3_m5_user_accepted_for_experiment': True,
+    'm5_artifact_status': (
+        'User accepted this local rebuild for the W5 experiment; '
+        'the release itself remains labeled pending M5 owner validation'
+    ),
     'gold_annotation_status': 'm3_initial (not reviewed)',
-    'formal_reportable': False,
+    'formal_reportable': bool(run_reportability) and all(run_reportability),
     'm4_release_tag': 'w5-m4-official-v1',
     'm5_release_tag': 'w5-m5-minilm-local-rebuild-v1',
     'primary_model': PRIMARY_EMBEDDING_MODEL,
@@ -683,6 +781,14 @@ handoff_manifest = {
     ),
     'missing_primary_inputs': [str(path) for path in PRIMARY_MISSING],
     'completed_evaluations': completed_evaluations,
+    'frozen_selection': (
+        load_json(M6_OUTPUT_ROOT / 'frozen_selection.json') if has_frozen_test else None
+    ),
+    'minilm_input_length_risk': {
+        'over_limit_chunks': over_limit_count if RUN_PRIMARY_DEV else None,
+        'chunk_count': len(chunk_rows) if RUN_PRIMARY_DEV else None,
+        'effective_content_token_limit': content_limit if RUN_PRIMARY_DEV else None,
+    },
     'dev_metric_summary': [
         {
             'mode': item['mode'],
@@ -726,8 +832,16 @@ print('Delivered files:', len(handoff_manifest['files']))"""
 - Top-K is fixed at 5 and reported at K = 1, 3, and 5.
 - Raw rankings, Dev/Test JSONL, manifests, scores, and failure reports are recorded in
   the M1 handoff manifest when artifacts are available.
-- The current M5 index is a local rebuild pending M5 owner validation. Results are
-  real Dev retrieval measurements, but not yet an owner-approved W5 index result.
+- On the 12-question proposed Dev split, BM25 led Dense and Hybrid (Hit@5 =
+  0.8333, MRR = 0.7361), so BM25 was frozen before the one-time 8-question Test.
+- MiniLM's 254-token effective content limit is exceeded by 1,446 of 3,684
+  released chunks. This may weaken Dense and Hybrid; the comparison does not
+  isolate that cause.
+- M3/M5 inputs are user-accepted for this experiment, but the released Gold
+  still says `m3_initial` and M5 is labeled a local rebuild. The CLI therefore
+  keeps the real Dev/Test runs `reportable=false`; no source review metadata is
+  rewritten.
+- The cache implementation and focused repeated-query tests are identified above.
 - The current answerable-only Gold set cannot calibrate production refusal behavior."""
     ),
 ]
@@ -737,7 +851,7 @@ notebook = new_notebook(
     cells=cells,
     metadata={
         "kernelspec": {
-            "display_name": "Python 3 (w5_m6_code .venv)",
+            "display_name": "Python 3 (cs30-personalised-rag .venv)",
             "language": "python",
             "name": "python3",
         },

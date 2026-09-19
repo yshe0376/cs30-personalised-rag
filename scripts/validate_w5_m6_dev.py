@@ -1,14 +1,15 @@
-"""Independently validate the three MiniLM Dev retrieval handoff files."""
+"""Independently validate MiniLM Dev and the single frozen Test retrieval handoff."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-BASE = ROOT / "artifacts/w5/m6/proposed_dev/w5-minilm-primary-v1"
+M6_ROOT = ROOT / "artifacts/w5/m6"
 GOLD = ROOT / "artifacts/w5/m4-v3/gold_normalized/gold_v0_2_from_m3_v0_1_1.jsonl"
 MODES = ("bm25", "dense", "hybrid")
 K_VALUES = (1, 3, 5)
@@ -23,20 +24,37 @@ def assert_close(actual: float, expected: float, label: str) -> None:
         raise ValueError(f"{label}: {actual} != {expected}")
 
 
-def validate(require_clean: bool, require_reportable: bool) -> None:
+def validate(require_clean: bool, require_reportable: bool, split: str) -> None:
+    if split not in {"proposed_dev", "proposed_test"}:
+        raise ValueError(f"Unsupported split: {split}")
+    expected_count = 12 if split == "proposed_dev" else 8
+    modes = MODES
+    if split == "proposed_test":
+        selection = json.loads((M6_ROOT / "frozen_selection.json").read_text(encoding="utf-8"))
+        modes = (selection["retrieval_mode"],)
+        if modes != ("bm25",):
+            raise ValueError("Frozen Test must use the Dev-selected BM25 mode")
+        dev_scores = (
+            M6_ROOT / "proposed_dev" / selection["experiment_id"] / "bm25/scores.json"
+        )
+        if hashlib.sha256(dev_scores.read_bytes()).hexdigest() != selection["dev_scores_sha256"]:
+            raise ValueError("Frozen Test selection is not bound to the saved Dev score")
+    base = M6_ROOT / split / "w5-minilm-primary-v1"
     gold_ids = {
         row["question_id"]
         for row in load_jsonl(GOLD)
-        if row["split"] == "proposed_dev"
+        if row["split"] == split
     }
-    if len(gold_ids) != 12:
-        raise ValueError(f"Expected 12 unique Dev questions, found {len(gold_ids)}")
+    if len(gold_ids) != expected_count:
+        raise ValueError(
+            f"Expected {expected_count} unique {split} questions, found {len(gold_ids)}"
+        )
 
     reference_provenance: tuple[str, str, str] | None = None
-    print("mode questions excluded hit@1 hit@3 hit@5 recall@5 mrr reportable")
-    for mode in MODES:
-        directory = BASE / mode
-        stem = f"w5-minilm-primary-v1_{mode}_proposed_dev"
+    print("split mode questions excluded hit@1 hit@3 hit@5 recall@5 mrr reportable")
+    for mode in modes:
+        directory = base / mode
+        stem = f"w5-minilm-primary-v1_{mode}_{split}"
         runs = load_jsonl(directory / f"{stem}.jsonl")
         score_rows = load_jsonl(directory / "retrieval_scores.jsonl")
         score = json.loads((directory / "scores.json").read_text(encoding="utf-8"))[
@@ -52,7 +70,7 @@ def validate(require_clean: bool, require_reportable: bool) -> None:
             raise ValueError(f"{mode}: duplicate question IDs")
         if manifest["top_k"] != 5 or manifest["k_values"] != list(K_VALUES):
             raise ValueError(f"{mode}: inconsistent Top-K or K values")
-        if manifest["split"] != "proposed_dev" or manifest["retrieval_mode"] != mode:
+        if manifest["split"] != split or manifest["retrieval_mode"] != mode:
             raise ValueError(f"{mode}: incorrect split or mode in run manifest")
         if require_clean and manifest["git_dirty"]:
             raise ValueError(f"{mode}: this run was made from a dirty checkout")
@@ -81,23 +99,24 @@ def validate(require_clean: bool, require_reportable: bool) -> None:
             elif identity != reference_provenance:
                 raise ValueError(f"{mode}: corpus/index provenance differs across runs")
 
-        if score["sample_count"] != 12 or score["excluded_runs"]["total"] != 0:
+        if score["sample_count"] != expected_count or score["excluded_runs"]["total"] != 0:
             raise ValueError(f"{mode}: unexpected sample count or excluded questions")
         included = [row for row in score_rows if row["included"]]
-        if len(included) != 12:
+        if len(included) != expected_count:
             raise ValueError(f"{mode}: not all score rows are included")
         assert_close(
-            sum(row["first_hit_mrr"] for row in included) / 12,
+            sum(row["first_hit_mrr"] for row in included) / expected_count,
             score["mrr"],
             f"{mode} MRR",
         )
         for k in K_VALUES:
             key = str(k)
             for metric in ("hit_at_k", "recall_at_k"):
-                mean = sum(row["by_k"][key][metric] for row in included) / 12
+                mean = sum(row["by_k"][key][metric] for row in included) / expected_count
                 assert_close(mean, score["by_k"][key][metric], f"{mode} {metric}@{k}")
 
         print(
+            split,
             mode,
             len(runs),
             score["excluded_runs"]["total"],
@@ -106,12 +125,19 @@ def validate(require_clean: bool, require_reportable: bool) -> None:
             f"{score['mrr']:.4f}",
             manifest["reportable"],
         )
-    print("Independent Dev handoff checks passed.")
+    print(f"Independent {split} handoff checks passed.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--require-clean", action="store_true")
     parser.add_argument("--require-reportable", action="store_true")
+    parser.add_argument(
+        "--split", choices=("proposed_dev", "proposed_test"), default="proposed_dev"
+    )
     args = parser.parse_args()
-    validate(require_clean=args.require_clean, require_reportable=args.require_reportable)
+    validate(
+        require_clean=args.require_clean,
+        require_reportable=args.require_reportable,
+        split=args.split,
+    )
