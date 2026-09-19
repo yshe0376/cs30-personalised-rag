@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from cs30.contracts import GeneratedAnswer, RetrievalResult, StudentProfile
+from cs30.contracts import GeneratedAnswer, StudentProfile
 from cs30.errors import GenerationError
 
+from .evidence import GenerationEvidence
 from .generator import GenerationTrace, PersonalisedAnswerGenerator
 
 
@@ -15,7 +16,7 @@ class BatchItem:
     question_id: str
     question: str
     profile: StudentProfile
-    retrieval: RetrievalResult
+    retrieval: GenerationEvidence
 
 
 @dataclass(frozen=True)
@@ -31,7 +32,7 @@ class BatchResult:
             "question_id": self.question_id,
             "status": self.status,
             "answer": self.answer.model_dump(mode="json") if self.answer else None,
-            "trace": self.trace.to_metadata() if self.trace else None,
+            "trace": self.trace.model_dump() if self.trace else None,
             "error": self.error,
         }
 
