@@ -57,3 +57,6 @@ PG Projects Details - Semester 2 2026.xlsx
 .idea/
 .DS_Store
 Thumbs.db
+
+# Large source archives distributed via GitHub Releases
+*.zip

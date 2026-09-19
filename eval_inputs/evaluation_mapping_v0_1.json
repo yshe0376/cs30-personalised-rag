@@ -1,0 +1,356 @@
+{
+  "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+  "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+  "items": [
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00024",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00746"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0330_b003_gold_0018"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00068",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_4_w5-m4-official-v1_c00388"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch04_p0177_b022_gold_0017"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00116",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_11_w5-m4-official-v1_c01120"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch11_p0481_b012_gold_0009"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00246",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00691"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0308_b015_gold_0004"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00315",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_16_w5-m4-official-v1_c01657"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch16_p0711_b005_gold_0014"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00333",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_14_w5-m4-official-v1_c01482"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch14_p0626_b016_gold_0007"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00335",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_23_w5-m4-official-v1_c02488"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch23_p1047_b004_gold_0006"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00401",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_14_w5-m4-official-v1_c01449"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch14_p0615_b006_gold_0011"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00432",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_11_w5-m4-official-v1_c01156"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch11_p0492_b012_gold_0019"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00465",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_25_w5-m4-official-v1_c02714"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch25_p1140_b015_gold_0008"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00536",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_2_w5-m4-official-v1_c00107"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch02_p0068_b009_gold_0002"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00540",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_33_w5-m4-official-v1_c03451"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch33_p1509_b005_gold_0015"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00614",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_8_w5-m4-official-v1_c00807"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch08_p0356_b010_gold_00614"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00620",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00674"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0303_b005_gold_00620"
+        },
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_7_w5-m4-official-v1_c00674"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch07_p0303_b006_gold_00620_eq"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00646",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_22_w5-m4-official-v1_c02354"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch22_p0984_b016_gold_0003"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00709",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_24_w5-m4-official-v1_c02669"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch24_p1119_b014_gold_0010"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00770",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_18_w5-m4-official-v1_c01894"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch18_p0808_b012_gold_0001"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00942",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_32_w5-m4-official-v1_c03420"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch32_p1486_b010_gold_0005"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00955",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_13_w5-m4-official-v1_c01293"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch13_p0553_b019_gold_00955"
+        }
+      ]
+    },
+    {
+      "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+      "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+      "mapping_version": "mapping-5f8f4ef9976b4440",
+      "question_id": "sciq-test-00974",
+      "schema_version": "0.1",
+      "spans": [
+        {
+          "acceptable_chunk_sets": [
+            [
+              "openstax-cp2e-a052d9fae2a90e13_24_w5-m4-official-v1_c02610"
+            ]
+          ],
+          "span_id": "openstax-cp2e-a052d9fae2a90e13_ch24_p1096_b018_gold_0012"
+        }
+      ]
+    }
+  ],
+  "mapping_version": "mapping-5f8f4ef9976b4440",
+  "schema_version": "0.1"
+}
