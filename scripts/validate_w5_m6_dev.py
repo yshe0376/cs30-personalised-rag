@@ -23,7 +23,7 @@ def assert_close(actual: float, expected: float, label: str) -> None:
         raise ValueError(f"{label}: {actual} != {expected}")
 
 
-def validate(require_clean: bool) -> None:
+def validate(require_clean: bool, require_reportable: bool) -> None:
     gold_ids = {
         row["question_id"]
         for row in load_jsonl(GOLD)
@@ -54,8 +54,10 @@ def validate(require_clean: bool) -> None:
             raise ValueError(f"{mode}: inconsistent Top-K or K values")
         if manifest["split"] != "proposed_dev" or manifest["retrieval_mode"] != mode:
             raise ValueError(f"{mode}: incorrect split or mode in run manifest")
-        if require_clean and (manifest["git_dirty"] or not manifest["reportable"]):
-            raise ValueError(f"{mode}: this is not a clean reportable run")
+        if require_clean and manifest["git_dirty"]:
+            raise ValueError(f"{mode}: this run was made from a dirty checkout")
+        if require_reportable and not manifest["reportable"]:
+            raise ValueError(f"{mode}: this run is provisional, not reportable")
 
         for run in runs:
             if run["status"] != "retrieved" or run["error"] is not None:
@@ -110,5 +112,6 @@ def validate(require_clean: bool) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--require-clean", action="store_true")
+    parser.add_argument("--require-reportable", action="store_true")
     args = parser.parse_args()
-    validate(require_clean=args.require_clean)
+    validate(require_clean=args.require_clean, require_reportable=args.require_reportable)

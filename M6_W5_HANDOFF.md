@@ -120,7 +120,12 @@ production threshold calibration.
 
 The notebook writes `artifacts/w5/m6/handoff_manifest.json`. The default
 evaluation path requires a clean Git checkout; `CS30_ALLOW_DIRTY_LOCAL=1`
-explicitly permits a non-reportable local validation run. For a clean run,
+explicitly permits a dirty local validation run. The currently released Gold is
+`m3_initial`, not reviewed, and the M5 index is a provisional local rebuild.
+The notebook therefore passes `--provisional`: real retrieval and M1 scoring run,
+but each run manifest stays `reportable=false` even from a clean checkout. Do
+not remove that flag until reviewed Gold and an owner-validated M5 index are
+available. For a clean provisional run,
 execute to an ignored output copy so saving notebook outputs does not dirty the
 source checkout:
 

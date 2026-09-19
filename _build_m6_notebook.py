@@ -240,7 +240,7 @@ if RUN_PRIMARY_DEV and not ALLOW_DIRTY_LOCAL:
     )
     if git_check.stdout.strip():
         raise RuntimeError(
-            'The checkout must be clean for reportable runs. '
+            'The checkout must be clean for provenance-safe runs. '
             'Set CS30_ALLOW_DIRTY_LOCAL=1 only for explicitly non-reportable local validation.'
         )
 
@@ -467,6 +467,7 @@ def run_and_score(
         str(experiment['model']),
         '--index-version',
         index_version,
+        '--provisional',
     ]
     if git_is_dirty():
         if not ALLOW_DIRTY_LOCAL:
@@ -479,8 +480,8 @@ def run_and_score(
         )
     if run_file.is_file() and run_manifest.is_file():
         saved_manifest = load_json(run_manifest)
-        if not ALLOW_DIRTY_LOCAL and not saved_manifest['reportable']:
-            raise ValueError(f'Refusing to reuse a non-reportable run: {run_manifest}')
+        if not ALLOW_DIRTY_LOCAL and saved_manifest['git_dirty']:
+            raise ValueError(f'Refusing to reuse a dirty run: {run_manifest}')
         print('Using completed run:', run_file)
     else:
         if Path(str(run_file) + '.inprogress').is_file():
@@ -669,6 +670,8 @@ handoff_manifest = {
     ),
     'git_dirty': git_is_dirty() if GIT_EXECUTABLE is not None else None,
     'm5_artifact_status': 'M6 local rebuild pending M5 owner validation',
+    'gold_annotation_status': 'm3_initial (not reviewed)',
+    'formal_reportable': False,
     'm4_release_tag': 'w5-m4-official-v1',
     'm5_release_tag': 'w5-m5-minilm-local-rebuild-v1',
     'primary_model': PRIMARY_EMBEDDING_MODEL,
