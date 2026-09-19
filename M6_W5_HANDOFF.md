@@ -1,10 +1,15 @@
 # M6 W5 BGE-M3 Retrieval Handoff
 
 The runnable notebook is `M6_W5_retrieval_dev_test.ipynb` in this checkout.
-This revision uses only `BAAI/bge-m3` Dense retrieval with the matching
-1024-dimensional FAISS index from the updated M5 Release. It does not run
-BM25 or Hybrid evaluation. The previous MiniLM/BM25 results are retained under
-ignored `artifacts/w5/m6/` as historical evidence, not silently overwritten.
+This revision configures `BAAI/bge-m3` Hybrid retrieval with the matching
+1024-dimensional FAISS index from the updated M5 Release. Weighted RRF uses
+Dense 25% / BM25 75%, `rrf_k=60`, and 50 candidates per retriever, matching
+the local comparison settings. Previous BM25 and BGE-M3 Dense runs remain
+under ignored `artifacts/w5/m6/`; this experiment uses a new ID and does not
+overwrite them. The Hybrid notebook has **not** been executed in this revision.
+The 25/75 weights and 50-candidate depth match the earlier local comparison,
+but the released M4/M5 artifact and M1 scoring path still need to be run here;
+the old table's 83.3% Hit@5 is not a promised result for this notebook.
 
 ## Local setup
 
@@ -32,30 +37,40 @@ artifacts/w5/m5_release_v2/bge-m3/
 The notebook checks the model name, 1024-dimensional index, 3,684 chunks,
 and M4 corpus identity before retrieval. Its `CS30_INDEX_DIR` and
 `CS30_EXPECTED_EMBEDDING_MODEL` settings point to that same BGE-M3 artifact.
+Both the smoke check and evaluation CLI receive the same 25/75 RRF settings.
 M1's `cs30.evaluation.cli run` and `score` produce the metrics; M6 does not
 introduce a second metric formula or a new retrieval-result schema.
 
 ## Dev and Test interpretation
 
-Run the 12-question `proposed_dev` split first. BGE-M3 Dense is the user's
-requested model, not a claim that it won a Dev comparison. The earlier BM25
-experiment already ran the eight `proposed_test` questions. If this notebook
-also runs BGE-M3 on Test, it is a **second, exploratory Test use**, not an
+Run the 12-question `proposed_dev` split first. BGE-M3 Hybrid 25/75 is the
+user's requested configuration, not a claim that it won a new Dev comparison.
+Earlier BM25 and BGE-M3 Dense experiments already ran the eight `proposed_test`
+questions. If this notebook also runs Hybrid on Test, it is another
+**exploratory Test use**, not an
 untouched one-time final Test. It must not be used to reselect a model while
 claiming Test remained held out.
 
-The default notebook execution keeps Test locked. To execute this exploratory
-BGE-M3 Test after the BGE-M3 Dev artifact exists:
+The default notebook execution keeps Test locked. To run Dev only:
+
+```powershell
+Remove-Item Env:CS30_RUN_FROZEN_TEST -ErrorAction SilentlyContinue
+.\.venv\Scripts\python.exe _execute_m6_notebook.py `
+  --output artifacts/w5/m6/M6_W5_bge_m3_hybrid_25_75_dev_executed.ipynb
+```
+
+To run the already-used Test questions as an explicitly exploratory Hybrid
+check after the Hybrid Dev artifact exists:
 
 ```powershell
 $env:CS30_RUN_FROZEN_TEST = '1'
 .\.venv\Scripts\python.exe _execute_m6_notebook.py `
-  --output artifacts/w5/m6/M6_W5_bge_m3_executed.ipynb
+  --output artifacts/w5/m6/M6_W5_bge_m3_hybrid_25_75_test_executed.ipynb
 ```
 
-The experiment writes separately named BGE-M3 run JSONL, score JSON,
-per-question scores, failure reports, `frozen_selection_bge_m3_v2.json`,
-and `handoff_manifest_bge_m3_v2.json` under ignored `artifacts/w5/m6/`.
+The experiment writes separately named Hybrid run JSONL, score JSON,
+per-question scores, failure reports, `frozen_selection_bge_m3_hybrid_25_75_v2.json`,
+and `handoff_manifest_bge_m3_hybrid_25_75_v2.json` under ignored `artifacts/w5/m6/`.
 Re-executing the notebook reuses an existing matching run rather than
 re-running the Test retrieval. The independent checker verifies question
 IDs, ranks, provenance, no exclusions, MRR, Hit@K, Recall@K, and the Test
@@ -63,12 +78,12 @@ selection's Dev score hash:
 
 ```powershell
 .\.venv\Scripts\python.exe scripts\validate_w5_m6_dev.py `
-  --experiment-id w5-bge-m3-release-v2 --modes dense `
+  --experiment-id w5-bge-m3-hybrid-25-75-release-v2 --modes hybrid `
   --expected-model BAAI/bge-m3 --require-clean
 .\.venv\Scripts\python.exe scripts\validate_w5_m6_dev.py `
-  --split proposed_test --experiment-id w5-bge-m3-release-v2 `
-  --modes dense --expected-model BAAI/bge-m3 `
-  --selection-file frozen_selection_bge_m3_v2.json --require-clean
+  --split proposed_test --experiment-id w5-bge-m3-hybrid-25-75-release-v2 `
+  --modes hybrid --expected-model BAAI/bge-m3 `
+  --selection-file frozen_selection_bge_m3_hybrid_25_75_v2.json --require-clean
 ```
 
 The user accepted M3/M5 inputs for this experiment. The released Gold still
@@ -77,20 +92,20 @@ records `annotation_status=m3_initial`, so the CLI keeps these real runs
 rewritten. All 20 Gold questions are answerable, so controlled refusal tests
 do not calibrate a production abstention threshold.
 
-The checked-in notebook was executed in this checkout with the BGE-M3 Release
-index. The independent validator found no exclusions or run errors:
+The earlier BGE-M3 **Dense-only** notebook had these verified historical
+results. They are not Hybrid results and must not be displayed as such:
 
 | Split | Questions | Hit@5 | Recall@5 | MRR | Interpretation |
 | --- | ---: | ---: | ---: | ---: | --- |
-| Proposed Dev | 12 | 0.5833 | 0.5833 | 0.3569 | Provisional Dev result |
-| Proposed Test | 8 | 0.7500 | 0.7500 | 0.4688 | Second, exploratory Test use |
+| Proposed Dev | 12 | 0.5833 | 0.5833 | 0.3569 | Historical Dense-only run |
+| Proposed Test | 8 | 0.7500 | 0.7500 | 0.4688 | Historical Dense-only exploratory run |
 
-Both run manifests identify `BAAI/bge-m3`, `dense`, `top_k=5`, and a clean
-Git snapshot. Neither result is marked formally reportable.
+The prior run manifests identify `BAAI/bge-m3`, `dense`, and `top_k=5`.
+No Hybrid score is claimed until the user runs and validates the revised notebook.
 
 ## GitHub scope
 
-Commit the notebook, generator, installer, shared BOM compatibility fix,
-validator, tests, and this handoff. Do not force-add `artifacts/`, indexes,
+Commit the notebook, generator, and this handoff. The installer, shared BOM
+compatibility fix, validator, and tests are already in this branch. Do not force-add `artifacts/`, indexes,
 model weights, or the downloaded Release ZIP; `.gitignore` excludes them.
 No GitHub push or PR is performed by the local notebook workflow.
