@@ -259,6 +259,27 @@ def test_dense_rejects_missing_embedding_model() -> None:
         retriever.load_index(invalid_artifact)
 
 
+def test_dense_rejects_model_mismatch_before_loading_files() -> None:
+    retriever = real_retrieval.FaissDenseRetriever(
+        expected_model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+
+    with pytest.raises(ArtifactMismatchError, match="embedding model does not match"):
+        retriever.load_index(_artifact(dense=True))
+
+
+def test_dense_index_hash_detects_changed_index(tmp_path: Path) -> None:
+    _write_chunk_map(tmp_path, _chunks())
+    (tmp_path / "index.faiss").write_bytes(b"changed-index")
+    artifact = _artifact_at(tmp_path, dense=True)
+    payload = artifact.model_dump()
+    payload["metadata"]["index_sha256"] = "sha256:" + "0" * 64
+    retriever = real_retrieval.FaissDenseRetriever()
+
+    with pytest.raises(ArtifactMismatchError, match="FAISS index SHA-256"):
+        retriever.load_index(IndexArtifact.model_validate(payload))
+
+
 def test_dense_rejects_vector_count_mismatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -355,6 +376,16 @@ def test_chunk_map_rejects_count_mismatch(
         match="count",
     ):
         real_retrieval._load_chunk_map(_artifact_at(tmp_path))
+
+
+def test_chunk_map_hash_detects_changed_text_with_the_same_ids(tmp_path: Path) -> None:
+    _write_chunk_map(tmp_path, _chunks())
+    artifact = _artifact_at(tmp_path)
+    payload = artifact.model_dump()
+    payload["metadata"]["chunk_map_sha256"] = "0" * 64
+
+    with pytest.raises(ArtifactMismatchError, match="chunk map SHA-256"):
+        real_retrieval._load_chunk_map(IndexArtifact.model_validate(payload))
 
 
 class _SpyRetriever:
@@ -477,6 +508,55 @@ def test_rrf_returns_empty_when_both_backends_abstain() -> None:
     assert result.hits == []
 
 
+@pytest.mark.parametrize(
+    ("dense_weight", "bm25_weight", "expected_first"),
+    [
+        (0.75, 0.25, "dense-first"),
+        (0.25, 0.75, "bm25-first"),
+        (0.50, 0.50, "bm25-first"),
+    ],
+)
+def test_weighted_rrf_changes_ranking(
+    dense_weight: float,
+    bm25_weight: float,
+    expected_first: str,
+) -> None:
+    dense = _SpyRetriever(
+        result=_result(RetrievalMode.DENSE, ["dense-first", "bm25-first"])
+    )
+    bm25 = _SpyRetriever(
+        result=_result(RetrievalMode.BM25, ["bm25-first", "dense-first"])
+    )
+    retriever = real_retrieval.RRFRetriever(
+        dense=dense,
+        bm25=bm25,
+        dense_weight=dense_weight,
+        bm25_weight=bm25_weight,
+    )
+    retriever.load_index(_artifact(dense=True))
+
+    result = retriever.retrieve("weighted ranking", top_k=2)
+
+    assert result.hits[0].chunk_id == expected_first
+
+
+@pytest.mark.parametrize(
+    ("dense_weight", "bm25_weight"),
+    [(-0.1, 1.1), (1.1, -0.1), (0.0, 0.0)],
+)
+def test_weighted_rrf_rejects_invalid_weights(
+    dense_weight: float,
+    bm25_weight: float,
+) -> None:
+    with pytest.raises(ValueError, match="RRF weight"):
+        real_retrieval.RRFRetriever(
+            dense=_SpyRetriever(),
+            bm25=_SpyRetriever(),
+            dense_weight=dense_weight,
+            bm25_weight=bm25_weight,
+        )
+
+
 def test_cache_returns_equal_copies_without_leaking_mutation(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -508,6 +588,78 @@ def test_cache_returns_equal_copies_without_leaking_mutation(
         top_k=2,
     )
     assert third.hits
+
+
+def test_repeated_bm25_query_uses_cache_without_rescoring(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    retriever = real_retrieval.BM25Retriever()
+    retriever.load_index(_artifact())
+    first = retriever.retrieve("What is acceleration?", top_k=2)
+
+    def fail_if_rescored(*args: object) -> float:
+        raise AssertionError("A repeated query must be served from the retrieval cache")
+
+    monkeypatch.setattr(retriever, "_score_document", fail_if_rescored)
+    second = retriever.retrieve("What is acceleration?", top_k=2)
+
+    assert second == first
+    assert second is not first
+
+
+def test_bm25_cache_key_changes_with_runtime_configuration(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    retriever = real_retrieval.BM25Retriever(min_score=0.0)
+    retriever.load_index(_artifact())
+
+    assert retriever.retrieve("acceleration", top_k=2).hits
+    retriever.min_score = 1_000_000.0
+
+    assert retriever.retrieve("acceleration", top_k=2).hits == []
+
+
+def test_dense_cache_key_changes_with_runtime_threshold(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+    retriever = real_retrieval.FaissDenseRetriever(
+        min_similarity=None,
+        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        index_reader=lambda path: _FakeIndex(),
+    )
+    retriever.load_index(_artifact(dense=True))
+
+    assert len(retriever.retrieve("acceleration", top_k=2).hits) == 2
+    retriever.min_similarity = 0.5
+
+    assert [
+        hit.chunk_id for hit in retriever.retrieve("acceleration", top_k=2).hits
+    ] == ["chunk-1"]
+
+
+def test_rrf_cache_key_changes_with_runtime_weights() -> None:
+    dense = _SpyRetriever(
+        result=_result(RetrievalMode.DENSE, ["dense-first", "bm25-first"])
+    )
+    bm25 = _SpyRetriever(
+        result=_result(RetrievalMode.BM25, ["bm25-first", "dense-first"])
+    )
+    retriever = real_retrieval.RRFRetriever(dense=dense, bm25=bm25)
+    retriever.load_index(_artifact(dense=True))
+
+    assert retriever.retrieve("cache weights", top_k=2).hits[0].chunk_id == "bm25-first"
+    retriever.dense_weight = 1.0
+    retriever.bm25_weight = 0.0
+
+    assert retriever.retrieve("cache weights", top_k=2).hits[0].chunk_id == "dense-first"
 
 
 def test_empty_query_raises_typed_error() -> None:
@@ -578,6 +730,25 @@ def test_retrieval_only_dependencies_do_not_initialize_an_llm_client(
     assert isinstance(deps.retriever, real_retrieval.BM25Retriever)
 
 
+def test_pipeline_reads_release_artifact_with_utf8_bom(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    (tmp_path / "artifact.json").write_text(
+        _artifact(dense=True).model_dump_json(), encoding="utf-8-sig"
+    )
+    monkeypatch.setattr(real_retrieval.BM25Retriever, "load_index", lambda self, artifact: None)
+    config = AppConfig(
+        fixture_mode=False,
+        retrieval=RetrievalConfig(mode=RetrievalMode.BM25, index_dir=str(tmp_path)),
+    )
+
+    deps = build_real_retrieval_deps(config)
+
+    assert deps.mode == "real"
+    assert isinstance(deps.retriever, real_retrieval.BM25Retriever)
+
+
 def test_pipeline_passes_thresholds_to_hybrid_retrievers(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -603,6 +774,9 @@ def test_pipeline_passes_thresholds_to_hybrid_retrievers(
             dense_min_similarity=0.55,
             rrf_k=42,
             rrf_input_top_k=7,
+            rrf_dense_weight=0.75,
+            rrf_bm25_weight=0.25,
+            expected_embedding_model="fake-embedding-model",
         ),
     )
 
@@ -614,6 +788,9 @@ def test_pipeline_passes_thresholds_to_hybrid_retrievers(
     assert deps.retriever.bm25.min_score == pytest.approx(0.25)
     assert deps.retriever.rrf_k == 42
     assert deps.retriever.input_top_k == 7
+    assert deps.retriever.dense_weight == pytest.approx(0.75)
+    assert deps.retriever.bm25_weight == pytest.approx(0.25)
+    assert deps.retriever.dense.expected_model_name == "fake-embedding-model"
 
     
 def test_pipeline_falls_back_to_fixture_when_index_is_missing(

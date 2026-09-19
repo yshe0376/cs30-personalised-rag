@@ -60,6 +60,20 @@ WIRING_CASES: tuple[WiringCase, ...] = (
     ),
     WiringCase("rrf_k", 17, RetrievalMode.HYBRID, "rrf_k"),
     WiringCase("rrf_input_top_k", 33, RetrievalMode.HYBRID, "input_top_k"),
+    WiringCase("rrf_dense_weight", 0.75, RetrievalMode.HYBRID, "dense_weight"),
+    WiringCase("rrf_bm25_weight", 0.25, RetrievalMode.HYBRID, "bm25_weight"),
+    WiringCase(
+        "expected_embedding_model",
+        "candidate/model",
+        RetrievalMode.DENSE,
+        "expected_model_name",
+    ),
+    WiringCase(
+        "expected_embedding_model",
+        "candidate/model",
+        RetrievalMode.HYBRID,
+        "dense.expected_model_name",
+    ),
     # ``_stopwords`` is private, but this assertion is about wiring rather than
     # behaviour, and the public surface is the constructor argument. The
     # behavioural half lives in test_bm25_stopword_knob_changes_retrieval.

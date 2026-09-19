@@ -163,7 +163,7 @@ def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
     else:
         try:
             artifact = IndexArtifact.model_validate_json(
-                artifact_path.read_text(encoding="utf-8")
+                artifact_path.read_text(encoding="utf-8-sig")
             )
         except (OSError, ValueError) as exc:
             raise IndexUnavailableError(
@@ -180,6 +180,7 @@ def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
         retrieval_mode = config.retrieval.mode
 
         dense_retriever = FaissDenseRetriever(
+            expected_model_name=config.retrieval.expected_embedding_model,
             min_similarity=config.retrieval.dense_min_similarity,
         )
         bm25_retriever = BM25Retriever(
@@ -194,6 +195,8 @@ def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
             bm25=bm25_retriever,
             rrf_k=config.retrieval.rrf_k,
             input_top_k=config.retrieval.rrf_input_top_k,
+            dense_weight=config.retrieval.rrf_dense_weight,
+            bm25_weight=config.retrieval.rrf_bm25_weight,
         )
 
         retrieval_service.load_index(
