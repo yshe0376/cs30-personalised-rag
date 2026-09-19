@@ -18,6 +18,8 @@ final evaluation.
 | A5 | Medium | `rrf_k` | `60` | Validation-set alternatives | Hybrid | Recall@K, MRR | Configuration available |
 | A6 | Medium | `rrf_input_top_k` | `20` | Validation-set alternatives | Hybrid | Recall@K, MRR and latency | Configuration available |
 | A7 | Low | Final returned `top_k` | Configured default | Candidate values such as 3, 5 and 10 | All modes | Hit@K, Recall@K, MRR and latency | Configuration available |
+| A8 | Medium | Weighted RRF | Dense `1.0`, BM25 `1.0` | `0.75/0.25`, `0.50/0.50`, `0.25/0.75` | Hybrid | Hit@K, Recall@K and MRR | Configuration available; Dev only |
+| A9 | High | Embedding model | M5 official MiniLM index | M5-built MPNet, E5, BGE-base, or BGE-M3 index | Dense and Hybrid | Hit@K, Recall@K, MRR, truncation diagnostics | Explicit model/index match enforced |
 
 ## Dense Similarity Threshold
 
@@ -39,6 +41,15 @@ below the configured threshold is removed before ranks are assigned.
 
 In Hybrid mode, the threshold applies only to the Dense candidate list before
 RRF fusion. The RRF calculation itself remains unchanged.
+
+## Dev and Test separation
+
+The M6 reference notebook defines 12 `proposed_dev` questions and 8
+`proposed_test` questions. Model, RRF weight, threshold and other retrieval
+choices may use only the 12 Dev questions. After the configuration is frozen,
+run that one configuration on the 8 Test questions. Exploratory comparisons of
+multiple configurations on Test must be labelled exploratory and must not be
+used to claim an untouched final Test result.
 
 ## Calibration Procedure
 
@@ -88,6 +99,7 @@ Every reported ablation result should record:
 - `bm25_min_score`.
 - `rrf_k`.
 - `rrf_input_top_k`.
+- `rrf_dense_weight` and `rrf_bm25_weight`.
 - Hit@K, Recall@K and MRR.
 - Abstention precision, recall and F1 where unanswerable questions are included.
 

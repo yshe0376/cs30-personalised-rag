@@ -123,6 +123,11 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument("--split", choices=[split.value for split in EvaluationSplit])
     run.add_argument("--resume", action="store_true")
     run.add_argument("--fixture", action="store_true")
+    run.add_argument(
+        "--provisional",
+        action="store_true",
+        help="run real retrieval against provisional inputs without claiming reportability",
+    )
     run.add_argument("--environment", default="development")
     run.add_argument("--manifest", type=Path)
     run.add_argument(
@@ -391,6 +396,7 @@ def _manifest_for_run(
         reportable=(
             not state.dirty
             and not args.fixture
+            and not args.provisional
             and not args.allow_synthetic_trace
             and args.mapping_version is not None
         ),
