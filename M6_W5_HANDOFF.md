@@ -155,6 +155,14 @@ $env:CS30_FROZEN_EXPERIMENT_ID = 'w5-minilm-primary-v1'
 $env:CS30_FROZEN_RETRIEVAL_MODE = 'bm25'
 ```
 
+The frozen BM25 run was executed once on the 8 proposed Test questions in this
+checkout: Hit@5 = 1.0000 and MRR = 0.9375, with no excluded questions. These
+are small-sample, user-accepted-input experimental results; the saved run
+manifest remains `reportable=false`. Test results were not used to reselect or
+tune the retrieval mode. Run `scripts/validate_w5_m6_dev.py --split proposed_test
+--require-clean` to independently check the Test file and its frozen Dev score
+hash.
+
 MiniLM may truncate 1,446 of the 3,684 released chunks at its 254-token
 effective content limit. That is a plausible contributor to weaker Dense and
 Hybrid retrieval, not a proven causal explanation. The notebook recomputes
