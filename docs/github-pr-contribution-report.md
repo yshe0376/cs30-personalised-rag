@@ -1,40 +1,49 @@
 # Pull Request Change and Integration Ledger
 
-> Last synchronised: 2026-09-14
+> Last synchronised: 2026-09-16
 > Repository: [yshe0376/cs30-personalised-rag](https://github.com/yshe0376/cs30-personalised-rag)
-> Scope: All 33 pull requests currently recorded in GitHub.
+> Scope: All 42 pull requests currently recorded in GitHub.
 > Purpose: Record who delivered each change, what changed, what problems were found, how they were resolved, and which interface owner receives the next hand-off.
 
 This is a living engineering ledger, not a substitute for the GitHub diff or review thread. GitHub is the source of truth for state, authorship, commits, and CI. Technical summaries below are based on PR descriptions, changed files, commits, repository contracts, and recorded review findings. An item marked **inferred** is an integration conclusion rather than a statement made by the PR author.
 
 ## 1. Current status and critical hand-offs
 
-As of the synchronisation date, 25 PRs are merged, 6 are closed without merge, and 2 remain open.
+As of the synchronisation date, 32 PRs are merged, 7 are closed without merge, and 3 remain open.
 
 | PR | Owner | State | Current decision or blocker | Next owner/action |
 |---:|---|---|---|---|
-| [#115](https://github.com/yshe0376/cs30-personalised-rag/pull/115) | `skyshylsylsy` | Open | Generation supports the four W5 conditions and native `EvidenceBundle`, but the shared Pipeline still passes `RetrievalResult`. M5 role labels are also not frozen. | Shared Pipeline/integration owner must switch the orchestration seam; M5 must freeze role labels; M1/M8 must run formal evaluation. |
-| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft, mergeable, CI passing | The corpus filter stays as frozen; `problem` and `summary` remain excluded. M4 delivers an audited 17-question partial mapping and the three uncovered spans go back to M3. The PR body now records this final decision and the exact hand-off. | M3 must re-annotate three spans. M2 manual QA remains pending. M5 must address 1,446 embedding inputs above the model ceiling. |
+| [#115](https://github.com/yshe0376/cs30-personalised-rag/pull/115) | `skyshylsylsy` | Open | Generation supports the four W5 conditions and native `EvidenceBundle`, but the shared Pipeline still passes `RetrievalResult`. The Role-label owner is now M3, and the formal Dev/Test run is not complete. | Shared Pipeline/integration owner must switch the orchestration seam; M3 must publish the versioned Role labels; M1/M8 must run formal evaluation. |
+| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Closed draft, not merged | Withdrawn on 2026-09-14. Its partial 17-question mapping and widened-filter experiments are historical only; no functionality from this PR is delivered on `main`. | Use the merged #147/#148 implementation instead. Do not reopen #137 or treat its artifacts as the current official hand-off. |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | The initial abstention-cause attribution problem was fixed before merge. Reports now preserve the cause and expose system-level, model-level, and cause-specific views. | M1/M3/M4 must provide reportable Gold, mapping, and saved runs before formal benchmark values can be produced. |
 | [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Merged | Publishes this living PR ledger and makes it discoverable from the README. | Keep the ledger synchronised when PRs, interfaces, or hand-offs change. |
-| [#140](https://github.com/yshe0376/cs30-personalised-rag/pull/140) | `yshe0376` | Merged | Freezes the W5 retrieval evidence filter and records why excluded textbook exercises and summaries must not be indexed. | M3 re-annotates the three out-of-scope spans; M4 rebuilds the mapping afterward. |
+| [#140](https://github.com/yshe0376/cs30-personalised-rag/pull/140) | `yshe0376` | Merged | Freezes the W5 retrieval evidence filter and records why excluded textbook exercises and summaries must not be indexed. | The replacement M3/M4 hand-off was completed by #144/#148; use the official path rather than the withdrawn #137 partial mapping. |
+| [#141](https://github.com/yshe0376/cs30-personalised-rag/pull/141) | `yshe0376` | Merged | Synchronises this ledger with the PR #137 documentation update and current GitHub state. | Keep the ledger synchronised when PRs, interfaces, or hand-offs change. |
+| [#142](https://github.com/yshe0376/cs30-personalised-rag/pull/142) | `yshe0376` | Open | Updates this ledger after the PR #137 withdrawal and the subsequent M1-M4 hand-offs. | Merge after the current GitHub state, contributor counts, and recent PR entries are verified. |
+| [#143](https://github.com/yshe0376/cs30-personalised-rag/pull/143) | `yshe0376` | Merged | Publishes the shared evidence policy, source-block list, dual coordinate fields, and policy-aware span-resolution gate. | M3 consumes chapter-local coordinates; M4 and all consumers use the shared policy/list. |
+| [#144](https://github.com/yshe0376/cs30-personalised-rag/pull/144) | `leahwang126` | Merged | Publishes clean M3 Gold v0.1.1 with self-reported `content_type` removed, complete corpus identity, and updated validation/provenance files. | M4 uses the normalised Gold for mapping; M3 remains responsible for future Gold and Role-label versions. |
+| [#145](https://github.com/yshe0376/cs30-personalised-rag/pull/145) | `yshe0376` | Merged | Makes prepared corpus files byte-stable across Windows and Linux by writing all three files as bytes. | Rebuild downstream checksums from the resulting prepared outputs. |
+| [#146](https://github.com/yshe0376/cs30-personalised-rag/pull/146) | `yshe0376` | Merged | Adds the real `cs30-build`/`cs30.build` entry point and saved FAISS/metadata artifacts. | Use the official candidate for the frozen W5 mapping; do not present `main` or S1-S6 as the official W5 build. |
+| [#147](https://github.com/yshe0376/cs30-personalised-rag/pull/147) | `novel-peng` | Merged | Adds M4's `official.py` and imports the shared evidence policy without changing the official content tuple. | The official configuration is the only current W5 chunking path for reportable evaluation. |
+| [#148](https://github.com/yshe0376/cs30-personalised-rag/pull/148) | `novel-peng` | Merged | Completes the M4 W5 hand-off with strict mapping, exact source-block-set validation, build commands, and 20/20 Gold coverage. | M5 rebuilds the index from the delivered records; M6 uses that index for retrieval. |
+| [#149](https://github.com/yshe0376/cs30-personalised-rag/pull/149) | `yshe0376` | Open | Makes the frozen `official` chunk candidate the default for `cs30-build`; keeps other candidates reachable for local checks. | Merge after review. Use `official` for the current project; S1-S6 remain out of scope for the present design. |
 
-### Important decision recorded for PR #137
+### Current decision recorded for PR #137 and its replacements
 
-The team selected the first of the two available M3/M4 alignment options: keep the frozen corpus filter and return the three uncovered evidence spans to M3, rather than widening the filter to rescue them. The filter stays at `body`, `example`, `figure_caption`, `glossary`, `table`, and `equation`; `conceptual_question`, `problem`, and `summary` remain excluded.
+PR #137 was withdrawn and closed without merge on 2026-09-14. Its widened-filter experiment and 17-question partial mapping are historical and must not be treated as delivered `main` functionality.
 
-The reason is evaluation leakage rather than relevance. SciQ questions are derived from this textbook, so indexing its exercises and section summaries would let a question match its own source almost verbatim. Adding the 5,769 `problem` blocks to rescue two provisional spans was rejected on those grounds, at the cost of three Gold questions (`sciq-test-00614`, `sciq-test-00620`, `sciq-test-00955`, all `proposed_dev`), which reduces the usable dev set from 12 to 9 until M3 re-annotates.
+The current official path is the merged sequence #143, #144, #145, #147, and #148. M3 v0.1.1 replaced the three out-of-policy Gold spans with eligible body/equation evidence, so the official M4 hand-off now reports 20 questions, 21 spans, and 20/20 question coverage. The shared policy remains the single definition used by the source-block list and `official.py`.
 
-A widened v2 filter was briefly published and then withdrawn (`221bd86`, `dab80a1`). The authoritative record of this decision is `docs/构思与待定.md` (2026-09-13) and the indexing-policy section of `docs/interfaces.md`.
+The current design does not run S1-S6 chunking ablation. `official` is the frozen reportable configuration; `main` and S1-S6 remain reachable only for local checks or future explicitly versioned work. The present project also does not require M6 or M8 to review, double-label, or calculate IAA for Evidence Role. M3 owns the taxonomy and labels; M8 checks only provenance and format.
 
 ## 2. Contributor overview
 
 | GitHub account | PRs | Primary ownership shown by the PR history |
 |---|---:|---|
-| [yshe0376](https://github.com/yshe0376) | 17 | Shared framework, contracts, Pipeline integration, CI, configuration, project documentation, and M1 evaluation infrastructure |
-| [novel-peng](https://github.com/novel-peng) | 4 | M4 structure-aware chunking, corpus construction, trace-back, and Gold-to-chunk mapping |
+| [yshe0376](https://github.com/yshe0376) | 23 | Shared framework, contracts, Pipeline integration, CI, configuration, project documentation, M1 evaluation infrastructure, and evidence-policy/build integration |
+| [novel-peng](https://github.com/novel-peng) | 6 | M4 structure-aware chunking, corpus construction, trace-back, Gold-to-chunk mapping, and official strategy delivery |
 | [chongshao223](https://github.com/chongshao223) | 4 | M2 OpenStax College Physics parser iterations and final parser delivery |
-| [leahwang126](https://github.com/leahwang126) | 2 | M3 SciQ questions and Gold Evidence data |
+| [leahwang126](https://github.com/leahwang126) | 3 | M3 SciQ questions, Gold Evidence data, and Gold v0.1.1 hand-off |
 | [skyshylsylsy](https://github.com/skyshylsylsy) | 2 | M7 personalised generation, evidence consumption, and reranking |
 | [ZOEY-YUNYI](https://github.com/ZOEY-YUNYI) | 2 | M8 evidence governance, citation validation, UI, and answer/citation evaluation |
 | [Ntan0927](https://github.com/Ntan0927) | 1 | M5 FAISS vector-index construction and persistence |
@@ -75,10 +84,19 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 | [#134](https://github.com/yshe0376/cs30-personalised-rag/pull/134) | `yshe0376` | Merged | Provider-neutral textbook interface and catalogue |
 | [#135](https://github.com/yshe0376/cs30-personalised-rag/pull/135) | `leahwang126` | Merged | M3 Gold Evidence v0.1 and validation material |
 | [#136](https://github.com/yshe0376/cs30-personalised-rag/pull/136) | `yshe0376` | Merged | Corpus-bound Gold normalisation, evaluation runner, and retrieval scoring |
-| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Open draft | Official 34-chapter M4 corpus and audited 17-question partial Gold mapping; leakage rejected, three spans returned to M3 |
+| [#137](https://github.com/yshe0376/cs30-personalised-rag/pull/137) | `novel-peng` | Closed draft | Official 34-chapter M4 corpus and audited 17-question partial Gold mapping; leakage rejected, three spans returned to M3; withdrawn before merge |
 | [#138](https://github.com/yshe0376/cs30-personalised-rag/pull/138) | `ZOEY-YUNYI` | Merged | Cause-aware answer, abstention, format, and citation scoring |
 | [#139](https://github.com/yshe0376/cs30-personalised-rag/pull/139) | `yshe0376` | Merged | Publishes the living PR change and integration ledger |
 | [#140](https://github.com/yshe0376/cs30-personalised-rag/pull/140) | `yshe0376` | Merged | Freezes the W5 retrieval evidence filter and records its evaluation-leakage rationale |
+| [#141](https://github.com/yshe0376/cs30-personalised-rag/pull/141) | `yshe0376` | Merged | Synchronises the living ledger with the closed #137 state and latest PR history |
+| [#142](https://github.com/yshe0376/cs30-personalised-rag/pull/142) | `yshe0376` | Open | Updates the ledger after the PR #137 withdrawal and the subsequent M1-M4 hand-offs |
+| [#143](https://github.com/yshe0376/cs30-personalised-rag/pull/143) | `yshe0376` | Merged | Shared evidence policy, source-block list, dual coordinates, and policy-aware span resolution |
+| [#144](https://github.com/yshe0376/cs30-personalised-rag/pull/144) | `leahwang126` | Merged | Clean M3 Gold v0.1.1 hand-off and corpus-bound validation/provenance files |
+| [#145](https://github.com/yshe0376/cs30-personalised-rag/pull/145) | `yshe0376` | Merged | Cross-platform byte-stable prepared corpus files and reproducibility checks |
+| [#146](https://github.com/yshe0376/cs30-personalised-rag/pull/146) | `yshe0376` | Merged | Real `cs30-build` entry point and saved FAISS/metadata artifacts |
+| [#147](https://github.com/yshe0376/cs30-personalised-rag/pull/147) | `novel-peng` | Merged | M4 official strategy using the shared evidence policy |
+| [#148](https://github.com/yshe0376/cs30-personalised-rag/pull/148) | `novel-peng` | Merged | Strict M4 Gold mapping, source-block-set validation, and completed W5 hand-off |
+| [#149](https://github.com/yshe0376/cs30-personalised-rag/pull/149) | `yshe0376` | Open | Makes the frozen `official` candidate the default for `cs30-build` |
 
 ## 4. Detailed change ledger
 
@@ -281,9 +299,9 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 
 - **Owner:** `skyshylsylsy`
 - **Delivered:** `P0R0_plain`, `P1R0_prompt_only`, `P0R1_reranking_only`, and `P1R1_combined`; level-aware soft reranking; native `EvidenceBundle` support; stable citations; raw provider-attempt traces; repair/failure distinctions; and Mock/Ollama/OpenAI demonstration paths.
-- **Problem and current boundary:** No blocking review defect is recorded. The PR uses fixture role labels because M5 taxonomy/versioning is not frozen, and `lambda_weight` remains an engineering fixture until selected on Dev data. The shared Pipeline still passes `RetrievalResult` despite native bundle support.
-- **Interface hand-off:** M5 owns role labels; M7 owns prompts/reranking/generation; shared Pipeline owner must switch the call seam; M1/M8 own formal four-condition runs and scoring.
-- **Verification/outcome:** Open and mergeable with all CI checks passing as of 2026-09-13. The PR reports 339 local tests, four successful mock conditions, and four successful local Ollama conditions; these are engineering checks, not quality results.
+- **Problem and current boundary:** No blocking review defect is recorded. The PR uses fixture Role labels because M3's taxonomy/versioned labels are not yet frozen, and `lambda_weight` remains an engineering fixture until selected on Dev data. The shared Pipeline still passes `RetrievalResult` despite native bundle support.
+- **Interface hand-off:** M3 owns Evidence Role labels; M7 owns prompts/reranking/generation; the shared Pipeline owner must switch the call seam; M1/M8 own formal four-condition runs and scoring.
+- **Verification/outcome:** The PR remains open as of 2026-09-16. Its recorded 339 local tests, four successful mock conditions, and four successful local Ollama conditions are engineering checks, not answer-quality or validated-personalisation results.
 
 ### PR #133 — Broad evaluation and multi-textbook build draft
 
@@ -306,30 +324,28 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 
 - **Owner:** `leahwang126`
 - **Delivered:** 20 `m3_initial` Gold records, JSON Schema, character-level validation, Dev/Test split plan, personalisation candidates, and an M3 manual-review record.
-- **Problems and current boundary:** M2 has not independently reviewed provenance. Every `gold_answer` is `D`, and all 20 records are answerable, so v0.1 cannot support credible answer-accuracy or unanswerable/abstention reporting by itself.
-- **Interface hand-off:** M3 owns Gold annotations and review status; M4 maps spans to chunks; M1 validates and runs them; M8 scores saved runs.
-- **Verification/outcome:** Merged on 2026-09-11. Formal reporting remains blocked until the required independent review and a suitable answerability distribution are available.
+- **Problems and current boundary:** The original v0.1 history contains 20 records, all with `gold_answer=D` and `answerable=true`; that version alone cannot support a balanced answer or refusal evaluation. It was superseded by the clean v0.1.1 hand-off in #144. Evidence Role taxonomy and labels are now explicitly owned by M3, with no M6/M8 double-label or IAA track.
+- **Interface hand-off:** M3 owns Gold and Role annotations; M4 maps spans to chunks; M1 normalises and validates them; M8 scores saved runs and checks Role-label provenance only.
+- **Verification/outcome:** Merged on 2026-09-11. Current formal reporting still requires the expanded W6 Gold set, appropriate answerability coverage, final mapping, frozen index, and saved evaluation runs.
 
 ### PR #136 — Corpus-bound Gold and retrieval evaluation
 
 - **Owner:** `yshe0376`
 - **Delivered:** Evaluation v0.2 models, JSONL I/O, batch runner, retrieval-only dependency path, offline metrics, CLI, manifests, fixtures, corpus-bound Gold normalisation, and prompt/model provenance traces.
 - **Problems and resolution:** The implementation added explicit stale/ambiguous classification, chapter/text consistency checks, no-overwrite protection, and a retrieval-only path that does not initialise an LLM. It preserved raw M3 data rather than overwriting it with normalised records.
-- **Scope boundary:** The PR did not claim unreviewed M3 Gold was reportable and did not contain the real M4 mapping artifact; #137 supplies that hand-off.
+- **Scope boundary:** The PR did not claim unreviewed M3 Gold was reportable and did not contain the real M4 mapping artifact. #137 contained a candidate M4 hand-off but was closed without merge, so no reportable mapping is delivered to `main` through #137.
 - **Interface hand-off:** Consumes M3 Gold and M4 mapping; runs M6/M7; produces saved results and retrieval metrics consumed by M8.
 - **Verification/outcome:** Merged on 2026-09-12.
 
 ### PR #137 — Official 34-chapter M4 corpus and Gold mapping
 
 - **Owner:** `novel-peng`
-- **Delivered:** Reproducible 34-chapter corpus build, real all-MiniLM-L6-v2 tokenisation, corpus QA, source trace-back, duplicate provenance, identity guards, Gold normalisation, and M1-compatible mapping.
+- **Delivered on branch:** Reproducible 34-chapter corpus build, real all-MiniLM-L6-v2 tokenisation, corpus QA, source trace-back, duplicate provenance, identity guards, Gold normalisation, and an M1-compatible mapping candidate.
 - **Initial problem:** M4 v1 excluded assessment-like `problem` blocks and `summary`, while three M3 Gold spans used exactly those types. It correctly failed closed at 17/20 and withheld the formal mapping instead of silently producing an incomplete artifact.
-- **Resolution:** A widened v2 filter including `problem` and `summary` was published and then withdrawn (`221bd86`, `dab80a1`). M4 instead kept the frozen filter and made the partial delivery auditable: `320a185` skips uncovered spans when building the M1-compatible artifact, `e394b81` and `0620a57` emit and test the bundle, and `da1bbc1` publishes the 17-question mapping. The three uncovered spans are returned to M3 for re-annotation.
-- **Rejected risk:** Including textbook problems would let SciQ evaluation retrieve near-verbatim source exercises, so the filter was not widened. The cost is three Gold questions, all in `proposed_dev`, which reduces the usable dev set from 12 to 9 until M3 re-annotates.
-- **Downstream handling:** M1 already reports an unmapped question as a `mapping_missing` exclusion, so development scoring proceeds with the gap visible while `strict_mapping` blocks reportable scoring. No M1 change was required.
-- **Documentation status:** The GitHub PR body has been synchronised with the final frozen-filter decision, the 17-question partial mapping, and the three-span M3 hand-off. It no longer presents the withdrawn widened-filter attempt as the current plan.
-- **Interface hand-off:** Consumes M2 canonical blocks and M3 spans; produces corpus records/manifests for M5 plus `GoldChunkMapping` for M1/M8. M5 owns the response to 1,446 inputs above the 254-content-token ceiling.
-- **Verification/outcome:** Open draft, mergeable, and all four GitHub CI checks pass as of 2026-09-14. The delivery manifest records 35,905 blocks, 3,684 chunks, 20 resolved spans, 17 fully covered spans, 3 incomplete spans, and a 17-question evaluation mapping. M2 manual QA and M3 re-annotation remain pending.
+- **Resolution:** A widened v2 filter including `problem` and `summary` was published and then withdrawn. The original PR was closed without merge, and the implementation was replaced by the merged #147/#148 sequence. M3 v0.1.1 replaced the three out-of-policy spans with eligible body/equation evidence, so the current hand-off no longer depends on the partial 17-question mapping.
+- **Downstream handling:** The partial mapping, widened-filter experiment, and its leakage discussion remain historical evidence only. They must not be used as the current M5/M6 input.
+- **Interface hand-off:** The replacement M4 delivery consumes M1/M3's current contracts and produces the official corpus records, source-block-set validation, strict `GoldChunkMapping`, and build instructions for M5/M6.
+- **Verification/outcome:** Closed as a draft without merge on 2026-09-14; `mergedAt` is null, so this PR delivered no functionality to `main`. The current official result is recorded under #148: 34 chapters, 23,378 eligible source blocks, 20 questions, 21 spans, and 20/20 question coverage. Do not reopen #137 as an implicit merge.
 
 ### PR #138 — Cause-aware answer, abstention, format, and citation scoring
 
@@ -343,22 +359,94 @@ Closed, unmerged PRs are included in the counts so attempted work and superseded
 ### PR #139 — Pull request change and integration ledger
 
 - **Owner:** `yshe0376`
-- **Delivered:** This English living ledger, initially a 32-PR index and now synchronised to 33 PRs, with a current hand-off dashboard, contributor overview, interface ownership register, maintenance rules, and a README link.
+- **Delivered:** This English living ledger, initially a 32-PR index and now being synchronised to 42 PRs, with a current hand-off dashboard, contributor overview, interface ownership register, maintenance rules, and a README link.
 - **Problem and resolution:** PR work, review findings, superseding changes, and downstream ownership were previously spread across PR pages and conversations. This PR consolidates them into one version-controlled reference. No material implementation issue is recorded.
 - **Interface hand-off:** All module owners update their own PR facts; the shared integration/documentation owner maintains cross-module status and ownership links.
-- **Verification/outcome:** Merged on 2026-09-13. Before creation, the branch passed 334 tests, Ruff, whitespace checks, relative-link checks, and a complete comparison against the 31 pre-existing GitHub PR IDs. This self-entry was added after GitHub assigned PR #139.
+- **Verification/outcome:** Merged on 2026-09-13. Before creation, the branch passed 334 tests, Ruff, whitespace checks, relative-link checks, and a complete comparison against the pre-existing GitHub PR IDs. This self-entry was added after GitHub assigned PR #139; the ledger was subsequently extended by #141 and is now being updated again through #142.
 
 ### PR #140 — Frozen W5 retrieval evidence policy
 
 - **Owner:** `yshe0376`
 - **Delivered:** The frozen W5 retrieval evidence filter and its evaluation-leakage rationale in `docs/interfaces.md` and `docs/构思与待定.md`.
 - **Problem and resolution:** The repository needed one authoritative decision for which content types may enter retrieval. The PR records that `body`, `example`, `figure_caption`, `glossary`, `table`, and `equation` are included, while `conceptual_question`, `problem`, and `summary` remain excluded. It also records why textbook exercises and summaries must not be added merely to rescue provisional Gold spans.
-- **Interface hand-off:** The policy constrains M4 corpus construction and M5 indexing; M3 owns re-annotation of the three excluded spans; M1/M8 consume the resulting mapping and report the gap explicitly.
+- **Interface hand-off:** The policy constrains M4 corpus construction and M5 indexing; M3 owns Gold evidence and Role labels; M1/M8 consume the resulting mapping and report provenance and coverage explicitly.
 - **Verification/outcome:** Merged on 2026-09-13. Documentation-only; Ruff and the full test suite passed on the branch.
+
+### PR #141 — Synchronise the PR hand-off ledger
+
+- **Owner:** `yshe0376`
+- **Delivered:** Updated this ledger from 33 to 34 recorded PRs, corrected #137 from open draft to closed without merge, added #140 and #141 lifecycle records, and retained the commit-level audit for the recent M3-M8 hand-off chain.
+- **Problem and resolution:** The live GitHub state changed after the previous ledger update: #137 was withdrawn without merge and #141 was merged. This PR synchronised the status totals, contributor count, index, detailed entries, and current hand-offs so the shared document does not describe #137 as delivered functionality.
+- **Interface hand-off:** Documentation/integration ownership remains with `yshe0376`; module owners use the corrected #137 status and the M3/M4 follow-up recorded in the ledger.
+- **Verification/outcome:** Merged on 2026-09-14. Documentation-only; the branch passed the local test suite, Ruff, and `git diff --check` before merge. The status and implementation details were subsequently superseded by #143-#149.
+
+### PR #142 — Record PR #137 withdrawal and synchronise the ledger
+
+- **Owner:** `yshe0376`
+- **Delivered:** The original update corrected the #137 withdrawal, added the #141 lifecycle record, and repaired the related status tables. This follow-up synchronises the same ledger with the current state through #149.
+- **Problem and resolution:** The previous ledger stopped at 34 recorded PRs and retained stale descriptions of the withdrawn #137 partial mapping, M5 Role ownership, and the pre-#143 corpus path. The update replaces those statements with the merged #143/#144/#145/#147/#148 hand-off and the open #149 build-default PR.
+- **Interface hand-off:** This is documentation only. It records M3 as the Evidence Role owner, M4 as the official chunk/mapping owner, M5 as the index owner, and M1/M8 as the evaluation consumers.
+- **Verification/outcome:** Open as of 2026-09-16. The update is based on live GitHub state: 42 PRs total, 32 merged, 7 closed without merge, and 3 open.
+
+### PR #143 — Shared evidence source-block policy
+
+- **Owner:** `yshe0376`
+- **Delivered:** Added `cs30.evidence_policy`, the six eligible evidence content types, `evidence_source_blocks.jsonl`, dual chapter/corpus coordinates, manifest counts/digests, and the shared loader/policy gate.
+- **Problem and resolution:** Gold annotation and M4 filtering previously used an implicit boundary, while a bare character offset could be interpreted as chapter-local or corpus-global. The source-block artifact now exposes the eligible list and both coordinate systems explicitly.
+- **Interface hand-off:** M3 copies chapter-local coordinates from the source-block list; M4 imports the shared policy; normalisation derives corpus-global coordinates and records resolution status.
+- **Verification/outcome:** Merged on 2026-09-14. The real 34-chapter check reported 35,905 blocks, 23,378 eligible blocks, 12,527 excluded blocks, zero coordinate/text mismatches, and byte-identical consecutive exports.
+
+### PR #144 — Clean M3 Gold v0.1.1 hand-off
+
+- **Owner:** `leahwang126`
+- **Delivered:** Replaced superseded v0.1 Gold files with versioned v0.1.1 files, removed the Gold self-reported `content_type`, bound records to the full corpus identity, and updated Gold documentation, schemas, validation, and split/candidate filenames.
+- **Problem and resolution:** The earlier Gold hand-off mixed an older version, incomplete corpus identity, and a redundant content-type assertion. v0.1.1 is now the current Gold hand-off used by M1 normalisation and M4 mapping.
+- **Interface hand-off:** M3 supplies Gold spans and metadata; M1 normalises them; M4 maps the normalised spans; M8 consumes saved results and checks provenance.
+- **Verification/outcome:** Merged on 2026-09-15. The v0.1.1 hand-off is the current W5 Gold source; W6 still requires expansion to 240 records and a documented answerability distribution.
+
+### PR #145 — Cross-platform prepared-corpus bytes
+
+- **Owner:** `yshe0376`
+- **Delivered:** Changed prepared document, evidence-list, and manifest writes to byte-based output and extended reproducibility tests to cover all prepared files and line endings.
+- **Problem and resolution:** Windows newline translation produced CRLF for two files and LF for the evidence list, making checksums depend on the operating system. All three prepared outputs are now written with stable bytes.
+- **Interface hand-off:** M1's prepared-corpus artifacts are safe for cross-platform checksum verification; downstream M3/M4 checksum hand-offs must be regenerated from the resulting files.
+- **Verification/outcome:** Merged on 2026-09-15. The PR reports LF-only, byte-identical repeated exports and an unchanged evidence-list digest.
+
+### PR #146 — Real index-build entry point
+
+- **Owner:** `yshe0376`
+- **Delivered:** Added `cs30.build`/`cs30-build`, real-document adaptation for the existing build pipeline, saved `artifact.json`, `chunks.json`, and `index.faiss`, and reload verification through BM25.
+- **Problem and resolution:** A prepared corpus could be normalised but there was no command that built a retrievable index, so the real evaluation chain stopped before retrieval. The new entry point closes that missing seam.
+- **Interface hand-off:** M4 supplies the chunk source; M5 accepts the resulting index; M6 consumes the index for retrieval; M1/M8 consume saved run outputs.
+- **Verification/outcome:** Merged on 2026-09-15. A three-chapter real build produced 237 chunks and a successful retrieval-to-citation smoke run. The PR also exposed that S2-S6 abort on duplicate filtered text; because the current design does not run S1-S6, this is out of scope for the official path.
+
+### PR #147 — Official chunking strategy uses shared policy
+
+- **Owner:** `novel-peng`
+- **Delivered:** Added `src/cs30/chunking/official.py` and made the official strategy import `EVIDENCE_CONTENT_TYPES` from the shared policy module.
+- **Problem and resolution:** The official chunker needed to use the same evidence boundary as M1 and M3 instead of carrying another hard-coded tuple. The content tuple and official configuration identity remain unchanged.
+- **Interface hand-off:** M4's official strategy is the source for the frozen W5 chunk artifact; M5/M6 use the resulting chunks and M1/M8 use the resulting mapping.
+- **Verification/outcome:** Merged on 2026-09-16. The PR changed one source file, added no generated data, and passed the reported full test and Ruff checks.
+
+### PR #148 — Completed M4 W5 Gold hand-off
+
+- **Owner:** `novel-peng`
+- **Delivered:** Rebuilt the M4 delivery on current `main`, added strict `coverage_status` validation, consumed normalised Gold v0.2 derived from `m3_gold_v0.1.1`, validated the exact source-block set, and added reproducible build/mapping commands and tests.
+- **Problem and resolution:** The withdrawn #137 branch had a partial mapping and stale alignment assumptions. #148 is the merged replacement and uses the clean v0.1.1 Gold plus the shared source-block list.
+- **Interface hand-off:** M4 produces the authoritative W5 records, mapping, manifest, and source-block-set validation for M5/M6; M1/M8 consume mapping and provenance.
+- **Verification/outcome:** Merged on 2026-09-16. The reported real-data result is 34 chapters, 23,378 eligible source blocks, exact source-block-set match, 20 questions, 21 spans, and zero excluded questions. No S1-S6 comparison work is included.
+
+### PR #149 — Default `cs30-build` to the frozen official candidate
+
+- **Owner:** `yshe0376`
+- **Delivered:** Added an `official` build candidate resolving to the frozen M4 strategy and made it the default while keeping `main` and S1-S6 reachable for local checks.
+- **Problem and resolution:** The previous default `main` candidate applied no evidence filter, so its chunk IDs did not correspond to M4's official mapping. The default now builds the same 3,684-chunk official set verified by the M4 delivery.
+- **Interface hand-off:** M5 must build the index from the `official` output; M6 must retrieve from that index; M1/M8 must compare only identity-matched artifacts.
+- **Verification/outcome:** Open as of 2026-09-16. The reported real-corpus check found identical chunk-ID sets between `cs30-build --candidate official` and the M4 build, with all 20 mapped chunks present. S1-S6 remain out of scope for the current design.
 
 ## Commit-level audit for the recent hand-off chain
 
-The PR index and detailed ledger cover all 33 repository PRs. The tables below add the requested commit-level audit for the current M3-M8 hand-off chain. Each row names the GitHub author, the concrete change, the problem or limitation exposed at that point, and the follow-up that resolved it or remains assigned. `No material issue recorded` is intentional where a commit only adds tests or documentation.
+The PR index and detailed ledger cover all 42 repository PRs. The tables below add the requested commit-level audit for the current M3-M8 hand-off chain. Each row names the GitHub author, the concrete change, the problem or limitation exposed at that point, and the follow-up that resolved it or remains assigned. `No material issue recorded` is intentional where a commit only adds tests or documentation.
 
 ### PR #137 commits — `novel-peng`
 
@@ -404,6 +492,26 @@ The PR index and detailed ledger cover all 33 repository PRs. The tables below a
 | #139 | [`5ac03dd`](https://github.com/yshe0376/cs30-personalised-rag/commit/5ac03dd) | `yshe0376` | Recorded the ledger PR itself so the index remained complete after GitHub assigned #139. |
 | #139 | [`d557b9b`](https://github.com/yshe0376/cs30-personalised-rag/commit/d557b9b) | `yshe0376` | Corrected the #137 filter decision and delivery figures after review; this update keeps those corrections current. |
 | #140 | [`7fe42e9`](https://github.com/yshe0376/cs30-personalised-rag/commit/7fe42e9) | `yshe0376` | Froze the retrieval evidence policy and documented the evaluation-leakage rationale; M3/M4 receive the next hand-off. |
+| #141 | [`cdcdbbe`](https://github.com/yshe0376/cs30-personalised-rag/commit/cdcdbbe) | `yshe0376` | Updated the status totals, #137 withdrawal record, and commit-level audit; this was the documentation update later merged into `main`. |
+| #141 | [`0fd193b`](https://github.com/yshe0376/cs30-personalised-rag/commit/0fd193b) | `yshe0376` | Kept the ledger scope and #139 self-entry current after the update; no material issue recorded. |
+
+### PR #143-#149 commits — current replacement hand-off
+
+| PR | Commit | Author | Change and follow-up |
+|---|---|---|---|
+| #143 | [`43168ed`](https://github.com/yshe0376/cs30-personalised-rag/commit/43168ed) | `yshe0376` | Added the shared evidence source-block list, dual coordinate fields, loader validation, and policy gate. |
+| #143 | [`066fbc6`](https://github.com/yshe0376/cs30-personalised-rag/commit/066fbc6) | `yshe0376` | Added excluded-block totals and per-content-type counts to the manifest. |
+| #144 | [`727e9bf`](https://github.com/yshe0376/cs30-personalised-rag/commit/727e9bf) | `leahwang126` | Published the clean Gold v0.1.1 file and removed the superseded v0.1 hand-off. |
+| #144 | [`0d88b3e`](https://github.com/yshe0376/cs30-personalised-rag/commit/0d88b3e) | `leahwang126` | Aligned Gold checksum metadata with the prepared corpus outputs. |
+| #144 | [`a265dacc`](https://github.com/yshe0376/cs30-personalised-rag/commit/a265dacc) | `leahwang126` | Added corpus provenance and content-checksum validation. |
+| #145 | [`90a9493`](https://github.com/yshe0376/cs30-personalised-rag/commit/90a9493) | `yshe0376` | Made all prepared corpus files byte-stable across platforms and extended line-ending tests. |
+| #146 | [`a1c2871`](https://github.com/yshe0376/cs30-personalised-rag/commit/a1c2871) | `yshe0376` | Added the real index-build command and saved-artifact reload verification. |
+| #147 | [`80c0477`](https://github.com/yshe0376/cs30-personalised-rag/commit/80c0477) | `novel-peng` | Added the official chunking strategy using the shared evidence policy. |
+| #148 | [`962258a`](https://github.com/yshe0376/cs30-personalised-rag/commit/962258a) | `novel-peng` | Added reproducible M4 delivery/build commands on current `main`. |
+| #148 | [`5bc0941`](https://github.com/yshe0376/cs30-personalised-rag/commit/5bc0941) | `novel-peng` | Added strict Gold mapping and explicit `coverage_status` handling. |
+| #148 | [`860b036`](https://github.com/yshe0376/cs30-personalised-rag/commit/860b036) | `novel-peng` | Added tests for the completed official hand-off and exact source-block set. |
+| #148 | [`32aae71`](https://github.com/yshe0376/cs30-personalised-rag/commit/32aae71) | `novel-peng` | Documented the verified 20-question/21-span M4 delivery. |
+| #149 | [`58361e0`](https://github.com/yshe0376/cs30-personalised-rag/commit/58361e0) | `yshe0376` | Made the frozen `official` candidate the default for `cs30-build`; merge remains pending. |
 
 ## 5. Interface ownership and dependency register
 
@@ -412,15 +520,15 @@ This table describes the current practical ownership inferred from PR authorship
 | Interface / artifact | Producer or maintainer | Consumed by | Current hand-off risk |
 |---|---|---|---|
 | Shared contracts and `ports.py` | `yshe0376` | M2-M8 | Contract changes require compatibility review and ADR/update discipline. |
-| Canonical textbook document and blocks | M2: `chongshao223`; shared/catalogue integration: `yshe0376` | M4 | M2 manual QA for the official corpus remains pending. |
-| Gold questions, spans, answers, and review status | M3: `leahwang126` | M4, M1, M8 | v0.1 is `m3_initial`, all answers are `D`, and no records are unanswerable. |
-| Frozen retrieval evidence policy | Shared documentation: `yshe0376`; applied by M4 | M3 annotation, M4 mapping, M5 indexing, M1/M8 evaluation | The policy must remain identical across corpus construction, Gold annotation inputs, and evaluation mapping. |
-| Chunking strategy, corpus records, manifest, Gold mapping | M4: `novel-peng` | M5, M6, M1, M8 | Filter excludes `problem`, `summary`, and `conceptual_question`; the mapping covers 17 of 20 Gold questions. |
-| Dense index and embedding configuration | M5: `Ntan0927` | M6 | #137 reports 1,446 inputs above the selected model's content-token ceiling. |
+| Canonical textbook document and blocks | M2: `chongshao223`; shared/catalogue integration: `yshe0376` | M4 | Current W5 is the verified OpenStax 34-chapter hand-off; the six-textbook W6 corpus is future work. |
+| Gold questions, spans, answers, and review status | M3: `leahwang126` | M4, M1, M8 | v0.1.1 is the current W5 Gold hand-off; the current 20 records are not the final 240-record W6 set. |
+| Frozen retrieval evidence policy | Shared policy: `yshe0376`; applied by M4 | M3 annotation, M4 mapping, M5 indexing, M1/M8 evaluation | The policy must remain identical across source blocks, official chunking, Gold mapping, and evaluation. |
+| Chunking strategy, corpus records, manifest, Gold mapping | M4: `novel-peng` | M5, M6, M1, M8 | #148 is the current official W5 hand-off with exact source-block-set validation and 20/20 question coverage. |
+| Dense index and embedding configuration | M5: `Ntan0927`; real build seam: `yshe0376` | M6 | Build the reportable index from the `official` candidate; #149 makes that candidate the default and remains open. |
 | Retrieval service and evidence provenance | M6: `syj-111-s`; contract/config integration: `yshe0376` | EvidenceBundle, M7, M1, M8 | Thresholds and stopword behaviour must remain wired and recorded per run. |
 | EvidenceBundle, citation validation, UI | M8: `ZOEY-YUNYI` | M7, demo users, evaluation | Shared Pipeline still needs the native EvidenceBundle hand-off used by #115. |
-| Personalised prompt, reranking, and generation | M7: `skyshylsylsy`; prompt-field integration: `yshe0376` | M1 runner, M8 scorer | Role-label taxonomy and production Pipeline integration remain open. |
-| Evaluation contracts, runner, retrieval metrics | M1/integration: `yshe0376` | M8 scoring and final report | Formal runs require reviewed Gold and identity-matched corpus/mapping artifacts. |
+| Personalised prompt, reranking, and generation | M7: `skyshylsylsy`; prompt-field integration: `yshe0376` | M1 runner, M8 scorer | M3 Role-label taxonomy/versioning and the shared Pipeline seam remain open for formal runs. |
+| Evaluation contracts, runner, retrieval metrics | M1/integration: `yshe0376` | M8 scoring and final report | Formal runs require the #148 identity-matched mapping, the official index, and expanded reportable Gold. |
 | Answer/citation scoring and reports | M8: `ZOEY-YUNYI` | Experiment owners and final report | Metric values are not formal until reportable inputs exist. |
 
 ## 6. How to maintain this ledger
