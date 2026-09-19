@@ -109,6 +109,8 @@ RRF_K = 60
 RRF_INPUT_TOP_K = 50
 RRF_DENSE_WEIGHT = 0.25
 RRF_BM25_WEIGHT = 0.75
+BM25_MIN_SCORE = 0.0
+DENSE_MIN_SIMILARITY = None
 SMOKE_QUESTION = 'What is acceleration?'
 
 M4_ROOT = PROJECT_ROOT / 'artifacts' / 'w5' / 'm4-v3'
@@ -397,15 +399,27 @@ def artifact_versions(index_dir: Path) -> tuple[str, str, str]:
     artifact = load_json(index_dir / 'artifact.json')
     metadata = artifact['metadata']
     mapping = load_json(GOLD_MAPPING)
+
+    artifact_chunk_hash = str(metadata['chunk_config_hash'])
+    mapping_chunk_hash = str(mapping['chunk_config_hash'])
+
+    if artifact_chunk_hash != mapping_chunk_hash:
+        raise ValueError(
+            'Index and Gold mapping use different chunk configurations: '
+            f'{artifact_chunk_hash!r} != {mapping_chunk_hash!r}'
+        )
+
     return (
         str(metadata['index_version']),
-        str(mapping['chunk_config_hash']),
+        artifact_chunk_hash,
         str(mapping['mapping_version']),
     )
 
 
 def evaluation_environment(experiment: dict[str, object]) -> dict[str, str]:
     environment = os.environ.copy()
+    environment.pop('CS30_BM25_MIN_SCORE', None)
+    environment.pop('CS30_DENSE_MIN_SIMILARITY', None)
     environment.update(
         {
             'CS30_ENV': 'staging',
@@ -417,6 +431,7 @@ def evaluation_environment(experiment: dict[str, object]) -> dict[str, str]:
             'CS30_RRF_INPUT_TOP_K': str(RRF_INPUT_TOP_K),
             'CS30_RRF_DENSE_WEIGHT': str(experiment['weights'][0]),
             'CS30_RRF_BM25_WEIGHT': str(experiment['weights'][1]),
+            'CS30_BM25_MIN_SCORE': str(BM25_MIN_SCORE),
             'CS30_BM25_STOPWORDS': 'true',
         }
     )
@@ -441,6 +456,33 @@ def run_and_score(
     index_version, chunk_version, mapping_version = artifact_versions(
         Path(experiment['index_dir'])
     )
+    signature_path = output_dir / 'experiment_signature.manifest.json'
+    current_commit = subprocess.run(
+        [str(GIT_EXECUTABLE), 'rev-parse', 'HEAD'],
+        cwd=PROJECT_ROOT,
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout.strip()
+
+    expected_signature = {
+        'git_commit': current_commit,
+        'git_dirty': git_is_dirty(),
+        'model': str(experiment['model']),
+        'index_version': index_version,
+        'chunk_config_hash': chunk_version,
+        'mapping_version': mapping_version,
+        'retrieval_mode': mode,
+        'split': split,
+        'top_k': TOP_K,
+        'k_values': list(K_VALUES),
+        'rrf_k': RRF_K,
+        'rrf_input_top_k': RRF_INPUT_TOP_K,
+        'rrf_dense_weight': float(experiment['weights'][0]),
+        'rrf_bm25_weight': float(experiment['weights'][1]),
+        'bm25_min_score': BM25_MIN_SCORE,
+        'dense_min_similarity': DENSE_MIN_SIMILARITY,
+    }
     run_command = [
         sys.executable,
         '-m',
@@ -492,10 +534,23 @@ def run_and_score(
             f'Only one of the run file and manifest exists: {run_file}, {run_manifest}'
         )
     if run_file.is_file() and run_manifest.is_file():
+        if not signature_path.is_file():
+            raise ValueError(
+                f'Existing run has no experiment signature. '
+                f'Move or delete {output_dir} and rerun.'
+            )
+
+        saved_signature = load_json(signature_path)
+        if saved_signature != expected_signature:
+            raise ValueError(
+                f'Existing run does not match the current experiment. '
+                f'Move or delete {output_dir} and rerun.'
+            )
+
         saved_manifest = load_json(run_manifest)
         if not ALLOW_DIRTY_LOCAL and saved_manifest['git_dirty']:
             raise ValueError(f'Refusing to reuse a dirty run: {run_manifest}')
-        print('Using completed run:', run_file)
+        print('Using verified completed run:', run_file)
     else:
         if Path(str(run_file) + '.inprogress').is_file():
             run_command.append('--resume')
@@ -505,6 +560,10 @@ def run_and_score(
             cwd=PROJECT_ROOT,
             env=evaluation_environment(experiment),
             check=True,
+        )
+        signature_path.write_text(
+            json.dumps(expected_signature, indent=2, ensure_ascii=False) + '\\n',
+            encoding='utf-8',
         )
 
     score_command = [
