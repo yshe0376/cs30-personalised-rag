@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
 
-from cs30.v2.contracts import Chunk, TextbookDocument
+from cs30.v2.contracts import Chunk, IndexArtifact, TextbookDocument
+from cs30.v2.corpus.manifest import CorpusManifest, CorpusManifestDraft
 
 
 @dataclass(frozen=True)
@@ -66,9 +67,19 @@ class Chunker(Protocol):
 
 @runtime_checkable
 class CorpusManifestBuilder(Protocol):
-    def build(self, *args, **kwargs): ...
+    def build(
+        self,
+        documents: Sequence[TextbookDocument],
+        chunks: Sequence[Chunk],
+        *,
+        corpus_version: str,
+        chunk_config_hash: str,
+        required_textbook_ids: Sequence[str],
+        mode: Literal["development", "official"],
+        failed_textbook_ids: Sequence[str] = (),
+    ) -> CorpusManifestDraft: ...
 
 
 @runtime_checkable
 class IndexBuilder(Protocol):
-    def build(self, chunks: Sequence[Chunk], manifest): ...
+    def build(self, chunks: Sequence[Chunk], manifest: CorpusManifest) -> IndexArtifact: ...

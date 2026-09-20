@@ -19,12 +19,20 @@ from cs30.v2.corpus.manifest import (
     write_corpus_manifest,
 )
 from cs30.v2.corpus.publish import atomic_publish_directory
-from cs30.v2.errors import BuildGateError, ContractError, InputError, V2Error
+from cs30.v2.errors import (
+    BuildGateError,
+    ContractError,
+    InputError,
+    PublishConflictError,
+    V2Error,
+)
 from cs30.v2.ids import sha256_file
 from cs30.v2.ports import (
     ChunkBatchReport,
     Chunker,
+    CorpusManifestBuilder,
     DocumentParser,
+    IndexBuilder,
     MaterialFailure,
     ParseBatchReport,
     ParserRegistry,
@@ -52,6 +60,8 @@ def _failure(
 def parse_material_batch(
     inputs: Sequence[TextbookInput],
     parser_registry: ParserRegistry,
+    *,
+    require_source_hash: bool = False,
 ) -> ParseBatchReport:
     """Parse each input independently while returning successes and failures."""
 
@@ -75,6 +85,16 @@ def parse_material_batch(
                     stage="input",
                     code="INPUT_NOT_FOUND",
                     error=FileNotFoundError(str(input.source_path)),
+                )
+            )
+            continue
+        if require_source_hash and not input.expected_source_sha256:
+            failures.append(
+                _failure(
+                    input,
+                    stage="input",
+                    code="SOURCE_HASH_NOT_PINNED",
+                    error=ValueError("official builds require an expected source SHA-256"),
                 )
             )
             continue
@@ -217,7 +237,8 @@ class MultiTextbookBuildSpec:
 class BuildDeps:
     parser_registry: ParserRegistry
     chunker: Chunker
-    index_builder: object | None = None
+    manifest_builder: CorpusManifestBuilder | None = None
+    index_builder: IndexBuilder | None = None
 
 
 @dataclass(frozen=True)
@@ -263,7 +284,11 @@ def run_build_pipeline(
             code="UNKNOWN_TEXTBOOK",
         )
 
-    parse_report = parse_material_batch(inputs, deps.parser_registry)
+    parse_report = parse_material_batch(
+        inputs,
+        deps.parser_registry,
+        require_source_hash=spec.mode == "official",
+    )
     chunk_report = chunk_material_batch(parse_report.documents, inputs, deps.chunker)
     failed_ids = {
         failure.textbook_id
@@ -284,17 +309,38 @@ def run_build_pipeline(
         for textbook_id in sorted(missing_ids)
     )
 
-    draft = build_manifest_draft(
-        parse_report.documents,
-        chunk_report.chunks,
-        corpus_version=spec.corpus_version,
-        chunk_config_hash=deps.chunker.config_hash,
-        required_textbook_ids=spec.required_textbook_ids,
-        mode=spec.mode,
-        failed_textbook_ids=tuple(
-            textbook_id for textbook_id in spec.required_textbook_ids if textbook_id in failed_ids
+    manifest_kwargs = {
+        "corpus_version": spec.corpus_version,
+        "chunk_config_hash": deps.chunker.config_hash,
+        "required_textbook_ids": spec.required_textbook_ids,
+        "mode": spec.mode,
+        "failed_textbook_ids": tuple(
+            textbook_id
+            for textbook_id in spec.required_textbook_ids
+            if textbook_id in failed_ids
         ),
-    )
+    }
+    if deps.manifest_builder is None:
+        draft = build_manifest_draft(
+            parse_report.documents,
+            chunk_report.chunks,
+            **manifest_kwargs,
+        )
+    else:
+        draft = deps.manifest_builder.build(
+            parse_report.documents,
+            chunk_report.chunks,
+            **manifest_kwargs,
+        )
+    if spec.mode == "official" and deps.index_builder is None:
+        draft = draft.model_copy(
+            update={
+                "validation_errors": (
+                    *draft.validation_errors,
+                    "index builder is not configured for an official build",
+                )
+            }
+        )
     manifest = finalize_manifest(draft)
     run_id = uuid.uuid4().hex[:16]
     report_payload = {
@@ -312,12 +358,13 @@ def run_build_pipeline(
         "corpus_hash": manifest.corpus_hash,
         "manifest_hash": manifest.manifest_hash,
         "validation_errors": list(manifest.validation_errors),
+        "artifact_ready": deps.index_builder is not None,
         "failures": [_failure_payload(failure) for failure in failures],
     }
 
     output_dir = spec.output_dir.resolve()
     if output_dir.exists():
-        raise ValueError(f"output directory already exists: {output_dir}")
+        raise PublishConflictError(f"output directory already exists: {output_dir}")
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     staging_dir = output_dir.parent / f".{output_dir.name}.staging-{run_id}"
     staging_dir.mkdir()
@@ -338,6 +385,11 @@ def run_build_pipeline(
             _write_run_report(diagnostics_report, report_payload)
             raise BuildGateError(
                 "official v2 build is not reportable; see diagnostics",
+                code=(
+                    "MISSING_REQUIRED_TEXTBOOK"
+                    if failed_ids
+                    else "INDEX_BUILDER_NOT_CONFIGURED"
+                ),
                 report_path=diagnostics_report,
                 manifest=manifest,
             )

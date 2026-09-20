@@ -23,13 +23,17 @@ def atomic_publish_directory(staging_dir: Path, output_dir: Path) -> None:
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     lock_path = output_dir.parent / f".{output_dir.name}.lock"
     try:
-        with lock_path.open("x", encoding="utf-8") as lock:
-            lock.write("v2-publish-lock\n")
+        try:
+            with lock_path.open("x", encoding="utf-8") as lock:
+                lock.write("v2-publish-lock\n")
+        except FileExistsError as exc:
+            raise LockError(f"publish is already locked: {lock_path}") from exc
         if output_dir.exists():
             raise PublishConflictError(f"output directory already exists: {output_dir}")
-        os.replace(staging_dir, output_dir)
-    except FileExistsError as exc:
-        raise LockError(f"publish is already locked: {lock_path}") from exc
+        try:
+            os.rename(staging_dir, output_dir)
+        except FileExistsError as exc:
+            raise PublishConflictError(f"output directory already exists: {output_dir}") from exc
     finally:
         try:
             lock_path.unlink()

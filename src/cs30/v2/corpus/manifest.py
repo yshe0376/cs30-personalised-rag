@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -65,6 +65,11 @@ class CorpusManifestDraft(ManifestModel):
             raise ValueError("failed_textbook_ids must be a subset of required_textbook_ids")
         if set(self.included_textbook_ids) & set(self.failed_textbook_ids):
             raise ValueError("a textbook cannot be both included and failed")
+        if self.reportable and self.__class__.__name__ == "CorpusManifestDraft":
+            raise ValueError("reportable is derived by finalize_manifest")
+        relative_records = PurePosixPath(self.records_relpath)
+        if relative_records.is_absolute() or ".." in relative_records.parts:
+            raise ValueError("records_relpath must remain inside the v2 output directory")
         document_ids = [document.document_id for document in self.documents]
         if len(document_ids) != len(set(document_ids)):
             raise ValueError("document_id values must be unique")

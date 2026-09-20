@@ -39,6 +39,9 @@ class V2BlockChunker:
             if not text.strip():
                 raise ValueError(f"empty block cannot become a chunk: {block.block_id}")
             token_count = self._count_tokens(text)
+            page_or_location = block.page_or_location or (
+                f"chapter-{block.chapter_id}/block-{block.block_id}"
+            )
             metadata = {
                 "block_id": block.block_id,
                 "content_type": block.content_type.value,
@@ -63,13 +66,13 @@ class V2BlockChunker:
                     chapter_id=block.chapter_id,
                     source_name=document.source_name,
                     source_uri=document.source_uri,
-                    page_or_location=block.page_or_location,
+                    page_or_location=page_or_location,
                     source_locator=source_locator(
                         source_uri=document.source_uri,
                         textbook_id=document.textbook_id,
                         document_id=document.document_id,
                         chapter_id=block.chapter_id,
-                        page_or_location=block.page_or_location,
+                        page_or_location=page_or_location,
                         char_start=block.char_start,
                         char_end=block.char_end,
                     ),

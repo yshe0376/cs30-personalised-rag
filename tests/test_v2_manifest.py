@@ -13,6 +13,7 @@ from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.contracts import TextbookDocument
 from cs30.v2.corpus.canonical import canonical_corpus_bytes
 from cs30.v2.corpus.manifest import (
+    CorpusManifestDraft,
     build_manifest_draft,
     finalize_manifest,
     load_corpus_manifest,
@@ -121,4 +122,21 @@ def test_manifest_rejects_duplicate_document_identity() -> None:
             chunk_config_hash=chunks[0].chunk_config_hash,
             required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
             mode="development",
+        )
+
+
+def test_manifest_draft_cannot_be_marked_reportable_by_the_caller() -> None:
+    draft, _, _, _ = make_full_manifest()
+    payload = draft.model_dump()
+    payload["reportable"] = True
+
+    with pytest.raises(ValueError, match="derived"):
+        CorpusManifestDraft.model_validate(payload)
+
+
+def test_manifest_rejects_a_records_path_that_escapes_the_output_directory() -> None:
+    draft, _, _, _ = make_full_manifest()
+    with pytest.raises(ValueError, match="records_relpath"):
+        CorpusManifestDraft.model_validate(
+            {**draft.model_dump(), "records_relpath": "../v1/records.jsonl"}
         )

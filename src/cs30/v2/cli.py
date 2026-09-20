@@ -57,7 +57,9 @@ def _config_with_overrides(args: argparse.Namespace) -> V2Config:
         updates["corpus_mode"] = args.mode
     if args.output_dir is not None:
         updates["output_dir"] = args.output_dir
-    return config.model_copy(update=updates) if updates else config
+    if not updates:
+        return config
+    return V2Config.model_validate({**config.model_dump(), **updates})
 
 
 def run(argv: list[str] | None = None) -> int:
