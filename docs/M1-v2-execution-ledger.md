@@ -13,8 +13,8 @@
 
 - [x] Task 1 — v2 contract models, deterministic IDs, errors, catalog, ports
 - [x] Task 2 — Manifest Draft/Finalize/Write, canonical hashing, config
-- [ ] Task 3 — multi-textbook batch parse/chunk pipeline, reports, v2 script
-- [ ] Task 4 — integration fixtures/tests, output gate, full verification
+- [x] Task 3 — multi-textbook batch parse/chunk pipeline, reports, v2 script
+- [x] Task 4 — integration fixtures/tests, output gate, full verification
 
 ## Task 1/2 done
 
