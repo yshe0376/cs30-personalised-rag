@@ -1,0 +1,19 @@
+{
+  "chunk_config_hash": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+  "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+  "detailed_question_count": 20,
+  "detailed_span_count": 21,
+  "evaluation_question_count": 20,
+  "evaluation_span_count": 21,
+  "evidence_source_block_validation": {
+    "evidence_block_count": 23378,
+    "referenced_block_count": 23378,
+    "status": "exact_set_match"
+  },
+  "excluded_question_count": 0,
+  "excluded_questions": [],
+  "m1_exclusion_reason": "mapping_missing",
+  "mapping_version": "mapping-5f8f4ef9976b4440",
+  "source_gold_annotation_version": "m3_gold_v0.1.1",
+  "status": "complete_evaluation_mapping"
+}

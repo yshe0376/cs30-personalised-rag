@@ -10,6 +10,7 @@ therefore still run after a core-only installation of this project.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -133,8 +134,29 @@ def _resolve_artifact_file(
     raise IndexUnavailableError(f"artifact file not found: {shown}")
 
 
+def _normalise_sha256(value: str) -> str:
+    return value.removeprefix("sha256:").casefold()
+
+
+def _verify_optional_sha256(path: Path, expected: str | None, label: str) -> None:
+    """Reject changed payloads when M5 supplied a checksum in the manifest."""
+
+    if not expected:
+        return
+    actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual != _normalise_sha256(expected):
+        raise ArtifactMismatchError(
+            f"{label} SHA-256 does not match IndexArtifact metadata"
+        )
+
+
 def _load_chunk_map(artifact: IndexArtifact) -> list[dict[str, Any]]:
     path = _resolve_artifact_file(artifact, "chunk_map", "chunks.json")
+    _verify_optional_sha256(
+        path,
+        artifact.metadata.get("chunk_map_sha256"),
+        "chunk map",
+    )
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -266,6 +288,11 @@ class FaissDenseRetriever:
 
         chunks = _load_chunk_map(artifact)
         index_path = _resolve_artifact_file(artifact, "index_file", "index.faiss")
+        _verify_optional_sha256(
+            index_path,
+            artifact.metadata.get("index_sha256"),
+            "FAISS index",
+        )
         try:
             index = self._index_reader(index_path)
             model = self._model_loader(model_name)
@@ -314,7 +341,11 @@ class FaissDenseRetriever:
         ):
             raise IndexUnavailableError("load_index() must be called before dense retrieval")
 
-        key = _cache_key(self._artifact.artifact_id, cleaned, top_k)
+        artifact_key = (
+            f"{self._artifact.artifact_id}|min_similarity={self.min_similarity!r}"
+            f"|query_instruction={self._effective_instruction}"
+        )
+        key = _cache_key(artifact_key, cleaned, top_k)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
@@ -498,7 +529,12 @@ class BM25Retriever:
         if self._artifact is None or self._provenance is None or not self._chunks:
             raise IndexUnavailableError("load_index() must be called before BM25 retrieval")
 
-        key = _cache_key(self._artifact.artifact_id, cleaned, top_k)
+        stopword_key = ",".join(sorted(self._stopwords))
+        artifact_key = (
+            f"{self._artifact.artifact_id}|k1={self.k1!r}|b={self.b!r}"
+            f"|min_score={self.min_score!r}|stopwords={stopword_key}"
+        )
+        key = _cache_key(artifact_key, cleaned, top_k)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
@@ -564,16 +600,24 @@ class RRFRetriever:
         *,
         rrf_k: int = 60,
         input_top_k: int = 20,
+        dense_weight: float = 1.0,
+        bm25_weight: float = 1.0,
         cache_size: int = 256,
     ) -> None:
         if rrf_k < 1:
             raise ValueError("rrf_k must be positive")
         if input_top_k < 1:
             raise ValueError("input_top_k must be positive")
+        if dense_weight < 0 or bm25_weight < 0:
+            raise ValueError("RRF weights must not be negative")
+        if dense_weight + bm25_weight <= 0:
+            raise ValueError("at least one RRF weight must be positive")
         self.dense = dense or FaissDenseRetriever(cache_size=cache_size)
         self.bm25 = bm25 or BM25Retriever(cache_size=cache_size)
         self.rrf_k = rrf_k
         self.input_top_k = input_top_k
+        self.dense_weight = dense_weight
+        self.bm25_weight = bm25_weight
         self._cache = _ResultCache(cache_size)
         self._artifact: IndexArtifact | None = None
 
@@ -588,7 +632,14 @@ class RRFRetriever:
         if self._artifact is None:
             raise IndexUnavailableError("load_index() must be called before hybrid retrieval")
 
-        key = _cache_key(self._artifact.artifact_id, cleaned, top_k)
+        artifact_key = (
+            f"{self._artifact.artifact_id}|rrf_k={self.rrf_k}"
+            f"|input_top_k={self.input_top_k}|dense_weight={self.dense_weight!r}"
+            f"|bm25_weight={self.bm25_weight!r}"
+            f"|dense_min_similarity={getattr(self.dense, 'min_similarity', None)!r}"
+            f"|bm25_min_score={getattr(self.bm25, 'min_score', None)!r}"
+        )
+        key = _cache_key(artifact_key, cleaned, top_k)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
@@ -598,7 +649,11 @@ class RRFRetriever:
         bm25_result = self.bm25.retrieve(cleaned, candidate_count)
 
         fused: dict[str, dict[str, Any]] = {}
-        for result in (dense_result, bm25_result):
+        weighted_results = (
+            (dense_result, self.dense_weight),
+            (bm25_result, self.bm25_weight),
+        )
+        for result, weight in weighted_results:
             for hit in result.hits:
                 state = fused.setdefault(
                     hit.chunk_id,
@@ -609,8 +664,8 @@ class RRFRetriever:
                         "modes": set(),
                     },
                 )
-                # RRF formula: add 1 / (k + rank) for every contributing list.
-                state["score"] += 1.0 / (self.rrf_k + hit.rank)
+                # Weighted RRF keeps unlike raw-score scales separate.
+                state["score"] += weight / (self.rrf_k + hit.rank)
                 state["best_rank"] = min(state["best_rank"], hit.rank)
                 state["modes"].add(result.mode)
 
@@ -668,6 +723,8 @@ class RealRetrievalService:
         *,
         rrf_k: int = 60,
         input_top_k: int = 20,
+        dense_weight: float = 1.0,
+        bm25_weight: float = 1.0,
     ) -> None:
         self.dense = dense or FaissDenseRetriever()
         self.bm25 = bm25 or BM25Retriever()
@@ -676,6 +733,8 @@ class RealRetrievalService:
             bm25=self.bm25,
             rrf_k=rrf_k,
             input_top_k=input_top_k,
+            dense_weight=dense_weight,
+            bm25_weight=bm25_weight,
         )
 
     def backend(

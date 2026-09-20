@@ -11,12 +11,14 @@ import tomllib
 from importlib.resources import files
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from cs30.contracts import RetrievalMode
 from cs30.errors import ConfigError
+from cs30.retrieval.model_policy import PRIMARY_EMBEDDING_MODEL
 
 DEFAULT_ENVIRONMENT = "development"
+DEFAULT_W5_INDEX_DIR = "artifacts/w5/m5_latest/all-minilm-l6-v2"
 
 
 def _load_local_env(path: Path | None = None) -> None:
@@ -45,16 +47,27 @@ class RetrievalConfig(BaseModel):
     top_k: int = Field(default=5, gt=0)
     index_type: str = "IndexFlatIP"
     mode: RetrievalMode = RetrievalMode.HYBRID
-    index_dir: str = "data/index"
+    index_dir: str = DEFAULT_W5_INDEX_DIR
     rrf_k: int = Field(default=60, gt=0)
     rrf_input_top_k: int = Field(default=20, gt=0)
+    rrf_dense_weight: float = Field(default=1.0, ge=0.0)
+    rrf_bm25_weight: float = Field(default=1.0, ge=0.0)
     bm25_min_score: float = Field(default=0.0, ge=0.0)
     bm25_stopwords: bool = True
+    expected_embedding_model: str = PRIMARY_EMBEDDING_MODEL
     dense_min_similarity: float | None = Field(
         default=None,
         ge=-1.0,
         le=1.0,
     )
+
+    @model_validator(mode="after")
+    def validate_retrieval_configuration(self) -> RetrievalConfig:
+        if self.rrf_dense_weight + self.rrf_bm25_weight <= 0:
+            raise ValueError("at least one RRF weight must be positive")
+        if not self.expected_embedding_model.strip():
+            raise ValueError("expected_embedding_model must not be empty")
+        return self
 
 
 class GenerationConfig(BaseModel):
@@ -140,7 +153,14 @@ def _apply_env_overrides(payload: dict) -> dict:
     scalar("CS30_INDEX_DIR", "retrieval", "index_dir")
     scalar("CS30_RRF_K", "retrieval", "rrf_k")
     scalar("CS30_RRF_INPUT_TOP_K", "retrieval", "rrf_input_top_k")
+    scalar("CS30_RRF_DENSE_WEIGHT", "retrieval", "rrf_dense_weight")
+    scalar("CS30_RRF_BM25_WEIGHT", "retrieval", "rrf_bm25_weight")
     scalar("CS30_BM25_MIN_SCORE", "retrieval", "bm25_min_score")
+    scalar(
+        "CS30_EXPECTED_EMBEDDING_MODEL",
+        "retrieval",
+        "expected_embedding_model",
+    )
     scalar(
         "CS30_DENSE_MIN_SIMILARITY",
         "retrieval",

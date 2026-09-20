@@ -7,9 +7,43 @@ from cs30.config import AppConfig, GenerationConfig, RetrievalConfig
 from cs30.contracts import OpenStaxChapter, OpenStaxDocument, RetrievalMode, TextBlock
 from cs30.evaluation import load_normalized_gold, load_openstax_archive, write_prepared_corpus
 from cs30.evaluation.cli import main
-from cs30.evaluation.manifest import RunManifest
+from cs30.evaluation.manifest import GitState, RunManifest
+from cs30.evaluation.models import EvaluationSplit
 
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "evaluation"
+
+
+def test_provisional_clean_run_is_non_reportable(tmp_path: Path) -> None:
+    parser = evaluation_cli._build_parser()
+    base = [
+        "run",
+        "--gold",
+        str(FIXTURE_DIR / "gold_v0_1.jsonl"),
+        "--output",
+        str(tmp_path / "provisional.jsonl"),
+        "--chunk-version",
+        "chunk-v1",
+        "--mapping-version",
+        "mapping-v1",
+    ]
+    state = GitState(commit="test-commit", dirty=False, snapshot_sha256="test-snapshot")
+
+    def manifest_for(arguments: list[str]) -> RunManifest:
+        return evaluation_cli._manifest_for_run(
+            parser.parse_args(arguments),
+            state,
+            split=EvaluationSplit.DEV,
+            corpus_version="corpus-v1",
+            corpus_is_prepared=True,
+            parser_version="parser-v1",
+            gold_annotation_version="m3_initial",
+        )
+
+    assert manifest_for(base).reportable is True
+    provisional = manifest_for([*base, "--provisional"])
+    assert provisional.git_dirty is False
+    assert provisional.fixture_mode is False
+    assert provisional.reportable is False
 
 
 def _fixture_run_args(output: Path, *extra: str) -> list[str]:
@@ -261,7 +295,7 @@ def test_cli_score_reloads_saved_run_without_a_model_call(tmp_path: Path) -> Non
     )
 
     assert score_exit == 0
-    assert json.loads(score_output.read_text(encoding="utf-8"))["retrieval"]["sample_count"] == 1
+    assert json.loads(score_output.read_text(encoding="utf-8"))["retrieval"]["sample_count"] == 2
 
 
 def test_cli_score_can_write_per_question_retrieval_scores(tmp_path: Path) -> None:
@@ -340,8 +374,8 @@ def test_cli_scores_the_one_row_per_question_fixture(tmp_path: Path) -> None:
     )
 
     scored = json.loads(score_output.read_text(encoding="utf-8"))
-    assert scored["retrieval"]["sample_count"] == 1
-    assert scored["retrieval"]["excluded_runs"]["total"] == 1
+    assert scored["retrieval"]["sample_count"] == 2
+    assert scored["retrieval"]["excluded_runs"]["total"] == 2
 
 
 def test_cli_rejects_synthetic_trace_outside_fixture_mode(

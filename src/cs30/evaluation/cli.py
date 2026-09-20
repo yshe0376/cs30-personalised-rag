@@ -16,6 +16,16 @@ from cs30.pipeline import (
 )
 from cs30.ports import Retriever
 
+from .answer_metrics import AnswerCitationScorer
+from .answer_reporting import write_answer_citation_reports
+from .extension_reporting import (
+    audit_role_label_provenance,
+    load_experiment_conditions,
+    seal_blind_rating_submission,
+    write_blind_rating_materials,
+    write_extension_reports,
+    write_score_artifact_provenance,
+)
 from .io import (
     load_gold_samples,
     load_mappings,
@@ -113,6 +123,11 @@ def _build_parser() -> argparse.ArgumentParser:
     run.add_argument("--split", choices=[split.value for split in EvaluationSplit])
     run.add_argument("--resume", action="store_true")
     run.add_argument("--fixture", action="store_true")
+    run.add_argument(
+        "--provisional",
+        action="store_true",
+        help="run real retrieval against provisional inputs without claiming reportability",
+    )
     run.add_argument("--environment", default="development")
     run.add_argument("--manifest", type=Path)
     run.add_argument(
@@ -142,8 +157,155 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="write per-question retrieval scores as JSONL",
     )
+    score.add_argument(
+        "--answer-citation-output-dir",
+        type=Path,
+        help=(
+            "write answer, abstention, format, citation, failure, CSV, and Markdown "
+            "artifacts without rerunning retrieval or generation"
+        ),
+    )
     score.add_argument("--k-values", nargs="+")
     score.add_argument("--manifest", type=Path)
+
+    extension = commands.add_parser(
+        "report-extension",
+        help=(
+            "combine saved M8 score artifacts with textbook, level, lambda, "
+            "manual-rating, and Role-label provenance inputs"
+        ),
+    )
+    extension.add_argument(
+        "--scores",
+        required=True,
+        nargs="+",
+        type=Path,
+        help="one or more answer_citation_scores.jsonl files",
+    )
+    extension.add_argument(
+        "--contexts",
+        required=True,
+        type=Path,
+        help="M8 experiment-context JSONL keyed by run_id",
+    )
+    extension.add_argument(
+        "--score-manifest",
+        action="append",
+        nargs=2,
+        type=Path,
+        metavar=("SCORE_FILE", "RUN_MANIFEST"),
+        help=(
+            "bind one score JSONL to the real RunManifest that produced its saved "
+            "run; repeat once per --scores input"
+        ),
+    )
+    extension.add_argument(
+        "--score-source",
+        action="append",
+        nargs=3,
+        type=Path,
+        metavar=("SCORE_FILE", "PROVENANCE_MANIFEST", "RUN_RESULTS"),
+        help=(
+            "bind one score JSONL to its score-provenance manifest and original "
+            "saved run-results JSONL; repeat once per --scores input"
+        ),
+    )
+    extension.add_argument(
+        "--expected-experiments",
+        type=Path,
+        help=(
+            "frozen M8 acceptance manifest listing every required experiment cell "
+            "and its exact question IDs"
+        ),
+    )
+    extension.add_argument("--output-dir", required=True, type=Path)
+    extension.add_argument(
+        "--ratings",
+        type=Path,
+        help="optional blinded level-adaptation rating CSV or JSONL",
+    )
+    extension.add_argument(
+        "--rating-key",
+        type=Path,
+        help="private post-rating mapping from blinded answer IDs to run IDs",
+    )
+    extension.add_argument(
+        "--rating-rubric",
+        type=Path,
+        help="team-frozen level-adaptation rubric version and score range",
+    )
+    extension.add_argument(
+        "--rating-submission-manifest",
+        type=Path,
+        help="sealed SHA manifest for the completed ratings, private key, and rubric",
+    )
+    extension.add_argument(
+        "--role-manifest",
+        type=Path,
+        help="optional M8 provenance sidecar for the M3 Role-label package",
+    )
+    extension.add_argument(
+        "--role-gold",
+        type=Path,
+        help="Gold JSONL used to validate Role-label question and span IDs",
+    )
+    extension.add_argument(
+        "--role-mapping",
+        type=Path,
+        help="M4 mapping used to validate Role-label chunk IDs",
+    )
+    extension.add_argument(
+        "--role-records",
+        type=Path,
+        help="optional M4 records.jsonl used as the full valid chunk-ID universe",
+    )
+    extension.add_argument(
+        "--role-question-references",
+        type=Path,
+        help=(
+            "normalized JSONL of valid question_id/chunk_id pairs from the "
+            "frozen candidate outputs"
+        ),
+    )
+    extension.add_argument(
+        "--allow-incomplete",
+        action="store_true",
+        help=(
+            "development only: allow experiment buckets without both lambda=0 "
+            "and frozen-lambda groups, partial blind-rating coverage, or a failed "
+            "Role provenance audit"
+        ),
+    )
+
+    blind = commands.add_parser(
+        "prepare-blind-ratings",
+        help="create a single-rater anonymous level-adaptation sheet and private key",
+    )
+    blind.add_argument(
+        "--runs",
+        required=True,
+        nargs="+",
+        type=Path,
+        help="one or more saved EvaluationRunResult JSONL files",
+    )
+
+    seal = commands.add_parser(
+        "seal-blind-ratings",
+        help="freeze completed single-rater files and record their SHA-256 identities",
+    )
+    seal.add_argument("--ratings", required=True, type=Path)
+    seal.add_argument("--rating-key", required=True, type=Path)
+    seal.add_argument("--rating-rubric", required=True, type=Path)
+    seal.add_argument("--output", required=True, type=Path)
+    blind.add_argument("--gold", required=True, type=Path)
+    blind.add_argument("--contexts", required=True, type=Path)
+    blind.add_argument("--output-dir", required=True, type=Path)
+    blind.add_argument(
+        "--seed",
+        required=True,
+        type=int,
+        help="private deterministic randomisation seed; do not give it to the rater",
+    )
 
     prepare = commands.add_parser(
         "prepare-corpus",
@@ -234,6 +396,7 @@ def _manifest_for_run(
         reportable=(
             not state.dirty
             and not args.fixture
+            and not args.provisional
             and not args.allow_synthetic_trace
             and args.mapping_version is not None
         ),
@@ -491,13 +654,36 @@ def _score_command(args: argparse.Namespace) -> int:
         mappings,
         k_values=k_values,
         top_k=manifest.top_k if manifest is not None else None,
+        extensions=(
+            AnswerCitationScorer(
+                mappings,
+                expected_split=manifest.split if manifest is not None else None,
+                dataset_version=manifest.dataset_version if manifest is not None else None,
+                expected_mode=manifest.retrieval_mode if manifest is not None else None,
+                expected_condition=(
+                    manifest.condition_id if manifest is not None else None
+                ),
+            ),
+        ),
         manifest=manifest,
     )
-    encoded = json.dumps(scored, indent=2, ensure_ascii=False)
     if args.output:
+        aggregate_only = {
+            **scored,
+            "extensions": {
+                name: {
+                    key: value
+                    for key, value in extension_result.items()
+                    if key != "records"
+                }
+                for name, extension_result in scored["extensions"].items()
+            },
+        }
+        encoded = json.dumps(aggregate_only, indent=2, ensure_ascii=False)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(encoded + "\n", encoding="utf-8")
     else:
-        print(encoded)
+        print(json.dumps(scored, indent=2, ensure_ascii=False))
     if args.scores_output:
         rows = scored["retrieval"]["retrieval_scores"]
         args.scores_output.parent.mkdir(parents=True, exist_ok=True)
@@ -507,6 +693,17 @@ def _score_command(args: argparse.Namespace) -> int:
                 for row in rows
             ),
             encoding="utf-8",
+        )
+    if args.answer_citation_output_dir:
+        report_paths = write_answer_citation_reports(
+            scored["extensions"]["answer_citation"],
+            args.answer_citation_output_dir,
+        )
+        write_score_artifact_provenance(
+            report_paths["per_question"],
+            args.runs,
+            args.answer_citation_output_dir
+            / "answer_citation_score_provenance.json",
         )
     return 0
 
@@ -540,6 +737,142 @@ def _normalize_gold_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _report_extension_command(args: argparse.Namespace) -> int:
+    role_paths = (
+        args.role_manifest,
+        args.role_gold,
+        args.role_mapping,
+        args.role_records,
+        args.role_question_references,
+    )
+    core_role_paths = (args.role_manifest, args.role_gold, args.role_mapping)
+    if any(path is not None for path in role_paths) and not all(
+        path is not None for path in core_role_paths
+    ):
+        raise ValueError(
+            "any Role provenance input requires --role-manifest, --role-gold, "
+            "and --role-mapping together"
+        )
+    role_provenance = None
+    if args.role_manifest is not None:
+        corpus_record_ids = None
+        if args.role_records is not None:
+            corpus_record_ids = set()
+            with args.role_records.open(encoding="utf-8") as stream:
+                for line_number, line in enumerate(stream, start=1):
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    if not isinstance(payload, dict):
+                        raise ValueError(
+                            f"{args.role_records}:{line_number}: expected an object"
+                        )
+                    chunk_id = payload.get("chunk_id")
+                    if not isinstance(chunk_id, str) or not chunk_id.strip():
+                        raise ValueError(
+                            f"{args.role_records}:{line_number}: missing chunk_id"
+                        )
+                    corpus_record_ids.add(chunk_id)
+        question_reference_pairs = None
+        if args.role_question_references is not None:
+            question_reference_pairs = set()
+            with args.role_question_references.open(encoding="utf-8") as stream:
+                for line_number, line in enumerate(stream, start=1):
+                    if not line.strip():
+                        continue
+                    payload = json.loads(line)
+                    if not isinstance(payload, dict):
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "expected an object"
+                        )
+                    question_id = payload.get("question_id")
+                    chunk_id = payload.get("chunk_id")
+                    if not isinstance(question_id, str) or not question_id.strip():
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "missing question_id"
+                        )
+                    if not isinstance(chunk_id, str) or not chunk_id.strip():
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "missing chunk_id"
+                        )
+                    pair = (question_id, chunk_id)
+                    if pair in question_reference_pairs:
+                        raise ValueError(
+                            f"{args.role_question_references}:{line_number}: "
+                            "duplicate question/chunk relationship"
+                        )
+                    question_reference_pairs.add(pair)
+        role_provenance = audit_role_label_provenance(
+            args.role_manifest,
+            load_gold_samples(args.role_gold),
+            load_mappings(args.role_mapping),
+            corpus_record_ids=corpus_record_ids,
+            question_reference_pairs=question_reference_pairs,
+        )
+    paths = write_extension_reports(
+        args.scores,
+        args.contexts,
+        args.output_dir,
+        ratings_path=args.ratings,
+        rating_key_path=args.rating_key,
+        rating_rubric_path=args.rating_rubric,
+        rating_submission_manifest_path=args.rating_submission_manifest,
+        score_manifest_pairs=args.score_manifest,
+        score_source_triples=args.score_source,
+        expected_experiment_manifest_path=args.expected_experiments,
+        role_provenance=role_provenance,
+        allow_incomplete=args.allow_incomplete,
+    )
+    print(
+        json.dumps(
+            {name: str(path) for name, path in paths.items()},
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _prepare_blind_ratings_command(args: argparse.Namespace) -> int:
+    runs = []
+    seen_run_ids: set[str] = set()
+    for path in args.runs:
+        for run in load_run_results(path):
+            if run.run_id in seen_run_ids:
+                raise ValueError(
+                    f"duplicate run_id across blind-rating inputs: {run.run_id}"
+                )
+            seen_run_ids.add(run.run_id)
+            runs.append(run)
+    paths = write_blind_rating_materials(
+        runs,
+        load_gold_samples(args.gold),
+        load_experiment_conditions(args.contexts),
+        args.output_dir,
+        seed=args.seed,
+    )
+    print(
+        json.dumps(
+            {name: str(path) for name, path in paths.items()},
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def _seal_blind_ratings_command(args: argparse.Namespace) -> int:
+    path = seal_blind_rating_submission(
+        args.ratings,
+        args.rating_key,
+        args.rating_rubric,
+        args.output,
+    )
+    print(json.dumps({"rating_submission_manifest": str(path)}, ensure_ascii=False))
+    return 0
+
+
 def _prepare_corpus_command(args: argparse.Namespace) -> int:
     corpus = load_openstax_archive(args.archive, chapters=args.chapters)
     paths = write_prepared_corpus(corpus, args.output_dir)
@@ -566,6 +899,12 @@ def main(argv: list[str] | None = None) -> int:
             return _run_command(args)
         if args.command == "score":
             return _score_command(args)
+        if args.command == "report-extension":
+            return _report_extension_command(args)
+        if args.command == "prepare-blind-ratings":
+            return _prepare_blind_ratings_command(args)
+        if args.command == "seal-blind-ratings":
+            return _seal_blind_ratings_command(args)
         if args.command == "normalize-gold":
             return _normalize_gold_command(args)
         return _prepare_corpus_command(args)

@@ -54,10 +54,21 @@ supporting evidence produces an answer that looks grounded but rests on the
 wrong material, and `validate_citations` cannot detect that: it checks where a
 citation came from, not what kind of text it is.
 
-Indexing policy is configuration, not contract. The agreed Week 2 default is to
-index `body`, `example`, `figure_caption`, and `glossary`; to keep
-`conceptual_question` and `problem` in a separate index; and to attach `heading`
-to its following block rather than indexing it alone.
+Indexing policy is configuration, not contract. The Week 5 frozen configuration
+`w5-m4-official-v1` supersedes the earlier Week 2 default: retrieval evidence is
+built from `body`, `example`, `figure_caption`, `glossary`, `table`, and
+`equation`. Tables and equations are included because they are often the
+necessary support for a physics question.
+
+`conceptual_question`, `problem`, and `summary` are excluded. This is an
+evaluation decision, not only a relevance one: the SciQ questions are derived
+from this textbook, so indexing its exercises and section summaries would let a
+question match its own source almost verbatim. `heading` is attached to its
+following block rather than indexed alone.
+
+A Gold span that falls outside this filter is not rescued by widening the
+filter. It is reported as a `mapping_missing` exclusion and returned to
+Member 3 for re-annotation.
 
 Blocks exist so structure survives the module seam. Without them a chunker
 receives undifferentiated text and has to re-derive section, page, and role
@@ -178,6 +189,23 @@ verbatim fallback. A resolved span must provide `corpus_char_start` and
 `corpus_char_end`, and may retain a `resolved_block_id`. Normalized samples may
 include `source_corpus_version` and `normalizer_version` provenance. Raw v0.1
 M3 records remain valid with all normalization-derived fields absent.
+
+For a Gold span covering a complete source block, M3 copies
+`chapter_char_start`/`chapter_char_end` from `evidence_source_blocks.jsonl`
+without subtracting a merged-document offset. If a span is only a subspan of a
+block, it keeps its own chapter-local coordinates. Chapter-local coordinates
+do not depend on chapter concatenation order, but Gold still binds
+`document_id`, `document_hash`, and `parser_version`. The normalizer produces
+`corpus_char_start`/`corpus_char_end` and records the resolution status and
+method.
+
+Identity boundaries are explicit: `document_hash` is the source PDF SHA-256,
+not a content hash of `openstax_document.json`; `parser_version` identifies
+the generation rules; and `evidence_blocks_sha256` protects the evidence
+JSONL bytes. The loader replays evidence metadata, text, and both coordinate
+systems against the canonical document. These checks establish consistency
+between the evidence list and the document, but do not provide a cryptographic
+anti-tamper guarantee for the prepared document itself.
 
 Reportable run and scoring paths are fail-closed: every Gold span must be
 `resolved` with non-null corpus-global coordinates. Raw v0.1 and stale or
