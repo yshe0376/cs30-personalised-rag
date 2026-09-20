@@ -1,0 +1,259 @@
+"""Contract-first tests for the isolated v2 M1 boundary."""
+
+from __future__ import annotations
+
+import pytest
+
+from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS, get_textbook_spec
+from cs30.v2.chunking import V2BlockChunker
+from cs30.v2.contracts import (
+    Chunk,
+    ChunkSpan,
+    ContentType,
+    EvidenceProvenance,
+    IndexArtifact,
+    RetrievalMode,
+    TextBlock,
+    TextbookChapter,
+    TextbookDocument,
+)
+from cs30.v2.ids import (
+    chunk_config_hash,
+    make_chunk_id,
+    make_document_id,
+    sha256_text,
+)
+
+
+def make_document(
+    textbook_id: str = REQUIRED_TEXTBOOK_IDS[0],
+    *,
+    provider: str = "openstax",
+    parser_version: str = "fixture-parser-2.0",
+    text: str = "A force changes motion.\n[[FORMULA:f=ma]]\n[[IMAGE:fig-1]]",
+) -> TextbookDocument:
+    formula_start = text.index("[[FORMULA:")
+    image_start = text.index("[[IMAGE:")
+    return TextbookDocument(
+        provider=provider,
+        textbook_id=textbook_id,
+        document_id=make_document_id(
+            textbook_id=textbook_id,
+            raw_source_sha256=sha256_text(text),
+            document_hash=sha256_text(text + parser_version),
+            parser_version=parser_version,
+            selected_chapters=("1",),
+        ),
+        title=f"{textbook_id} fixture",
+        raw_source_sha256=sha256_text(text),
+        document_hash=sha256_text(text + parser_version),
+        parser_version=parser_version,
+        source_name=f"{textbook_id}.json",
+        source_uri=f"fixture://{textbook_id}",
+        source_version="fixture-2.0",
+        license="CC BY 4.0",
+        selected_chapters=("1",),
+        text=text,
+        chapters=(
+            TextbookChapter(
+                chapter_id="1",
+                title="Motion",
+                char_start=0,
+                char_end=len(text),
+            ),
+        ),
+        blocks=(
+            TextBlock(
+                block_id="body-1",
+                chapter_id="1",
+                section_id="1.1",
+                section_title="Force",
+                content_type=ContentType.BODY,
+                char_start=0,
+                char_end=formula_start,
+                page_or_location="chapter-1/section-1.1",
+            ),
+            TextBlock(
+                block_id="formula-1",
+                chapter_id="1",
+                section_id="1.1",
+                section_title="Force",
+                content_type=ContentType.FORMULA,
+                char_start=formula_start,
+                char_end=image_start,
+                page_or_location="chapter-1/section-1.1",
+                asset_ref="formula:f=ma",
+            ),
+            TextBlock(
+                block_id="image-1",
+                chapter_id="1",
+                section_id="1.1",
+                section_title="Force",
+                content_type=ContentType.IMAGE,
+                char_start=image_start,
+                char_end=len(text),
+                page_or_location="chapter-1/section-1.1",
+                asset_ref="image:fig-1",
+            ),
+        ),
+    )
+
+
+def test_v2_document_requires_provider_neutral_identity_and_schema() -> None:
+    document = make_document()
+
+    assert document.schema_version == "2.0"
+    assert document.provider == "openstax"
+    assert document.textbook_id in REQUIRED_TEXTBOOK_IDS
+    assert document.source_name
+    assert document.source_version
+    assert document.document_text(document.blocks[1]) == "[[FORMULA:f=ma]]\n"
+
+
+def test_document_rejects_overlapping_or_cross_chapter_block_spans() -> None:
+    document = make_document()
+    with pytest.raises(ValueError, match="overlapping"):
+        TextbookDocument.model_validate(
+            {
+                **document.model_dump(),
+                "blocks": [
+                    document.blocks[0].model_dump(),
+                    {
+                        **document.blocks[0].model_dump(),
+                        "block_id": "overlap",
+                        "char_start": 1,
+                    },
+                ],
+            }
+        )
+
+
+def test_document_and_chunk_ids_are_stable_and_change_with_identity_inputs() -> None:
+    first = make_document()
+    repeated = make_document()
+    changed_parser = make_document(parser_version="fixture-parser-2.1")
+
+    assert first.document_id == repeated.document_id
+    assert first.document_id != changed_parser.document_id
+
+    config_hash = chunk_config_hash(
+        {
+            "chunker_version": "block-v2",
+            "tokenizer": "unicode-wordpunct-v1",
+            "target_tokens": 500,
+        }
+    )
+    assert make_chunk_id(first.document_id, "1", config_hash, 1) == make_chunk_id(
+        repeated.document_id, "1", config_hash, 1
+    )
+    assert make_chunk_id(first.document_id, "1", config_hash, 1) != make_chunk_id(
+        changed_parser.document_id, "1", config_hash, 1
+    )
+
+
+def test_chunk_keeps_document_global_half_open_span_and_structural_spans() -> None:
+    document = make_document()
+    chunker = V2BlockChunker()
+    chunks = chunker.chunk(document)
+
+    assert len(chunks) == 3
+    formula_chunk = chunks[1]
+    assert formula_chunk.text == document.document_text(document.blocks[1])
+    assert document.text[formula_chunk.char_start : formula_chunk.char_end] == formula_chunk.text
+    assert formula_chunk.spans == (
+        ChunkSpan(
+            block_id="formula-1",
+            chapter_id="1",
+            char_start=formula_chunk.char_start,
+            char_end=formula_chunk.char_end,
+            content_type=ContentType.FORMULA,
+        ),
+    )
+    assert formula_chunk.source_locator.startswith("uri=fixture%3A%2F%2F")
+    assert formula_chunk.metadata["asset_ref"] == "formula:f=ma"
+
+
+def test_chunk_rejects_text_that_does_not_match_its_span() -> None:
+    with pytest.raises(ValueError, match="text length"):
+        Chunk(
+            provider="openstax",
+            textbook_id="book",
+            document_id="doc",
+            chapter_id="1",
+            chunk_id="chunk",
+            source_name="book.pdf",
+            source_uri="fixture://book",
+            page_or_location="chapter-1",
+            source_locator="fixture%3A%2F%2Fbook",
+            text="abc",
+            char_start=0,
+            char_end=2,
+            spans=(
+                ChunkSpan(
+                    block_id="b",
+                    chapter_id="1",
+                    char_start=0,
+                    char_end=2,
+                    content_type=ContentType.BODY,
+                ),
+            ),
+            chunker_version="block-v2",
+            chunk_config_hash="sha256:config",
+            token_count=1,
+        )
+
+
+def test_catalog_freezes_exactly_three_v2_textbooks_and_rejects_unknown_ids() -> None:
+    assert len(REQUIRED_TEXTBOOK_IDS) == 3
+    assert len(set(REQUIRED_TEXTBOOK_IDS)) == 3
+    assert all(get_textbook_spec(book_id).enabled for book_id in REQUIRED_TEXTBOOK_IDS)
+    with pytest.raises(ValueError, match="unknown textbook_id"):
+        get_textbook_spec("not-a-real-v2-book")
+
+
+def test_v2_document_does_not_accept_the_v1_source_alias_as_a_substitute() -> None:
+    document = make_document()
+    payload = document.model_dump()
+    payload.pop("source_uri")
+    payload["source"] = "legacy://v1-source"
+
+    with pytest.raises(ValueError, match="source"):
+        TextbookDocument.model_validate(payload)
+
+
+def test_dense_provenance_and_index_artifact_expose_load_compatibility_fields() -> None:
+    with pytest.raises(ValueError, match="embedding identity"):
+        EvidenceProvenance(
+            corpus_version="2.0.0-dev.1",
+            corpus_hash="sha256:corpus",
+            manifest_hash="sha256:manifest",
+            chunk_config_hash="sha256:chunks",
+            index_version="index-v2",
+            retrieval_mode=RetrievalMode.DENSE,
+            retrieval_config_hash="sha256:retrieval",
+        )
+
+    artifact = IndexArtifact(
+        artifact_id="fixture-index",
+        index_type="fixture",
+        index_format_version="1",
+        location="runtime-only",
+        asset_relpaths=("index.bin", "chunk-map.json", "artifact.json"),
+        corpus_version="2.0.0-dev.1",
+        corpus_hash="sha256:corpus",
+        manifest_hash="sha256:manifest",
+        chunk_config_hash="sha256:chunks",
+        required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+        included_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+        chunk_count=1,
+        chunk_ids=("chunk-1",),
+        embedding_model="fixture-model",
+        embedding_revision="fixture-revision",
+        embedding_dimension=3,
+        similarity_metric="cosine",
+        normalise_embeddings=True,
+        index_version="index-v2",
+    )
+
+    assert artifact.asset_relpaths == ("index.bin", "chunk-map.json", "artifact.json")
+    assert artifact.manifest_hash == "sha256:manifest"
