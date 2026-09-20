@@ -1,0 +1,13 @@
+environment = "staging"
+fixture_mode = false
+
+[corpus]
+mode = "official"
+corpus_mode = "official"
+corpus_version = "2.0.0-rc.1"
+required_textbook_ids = [
+  "openstax_college_physics_2e",
+  "ck12_peoples_physics_basic",
+  "ck12_physics_concepts_intermediate",
+]
+output_dir = "artifacts/v2/three-textbooks/2.0.0-rc.1"
