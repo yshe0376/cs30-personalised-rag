@@ -5,7 +5,7 @@ from __future__ import annotations
 from cs30.v2.catalog import TextbookSpec
 from cs30.v2.contracts import ContentType, TextBlock, TextbookChapter, TextbookDocument
 from cs30.v2.ids import (
-    canonical_json_bytes,
+    canonical_document_hash,
     make_document_id,
     sha256_bytes,
 )
@@ -44,7 +44,7 @@ class TextFixtureParser:
             "text": text,
             "cleaning_version": "fixture-clean-v2",
         }
-        document_hash = sha256_bytes(canonical_json_bytes(document_payload))
+        document_hash = canonical_document_hash(document_payload)
         raw_hash = sha256_bytes(raw)
         document_id = make_document_id(
             textbook_id=input.textbook_id,

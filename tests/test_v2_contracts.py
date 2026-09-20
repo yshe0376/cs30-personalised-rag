@@ -18,6 +18,7 @@ from cs30.v2.contracts import (
     TextbookDocument,
 )
 from cs30.v2.ids import (
+    canonical_document_hash,
     chunk_config_hash,
     make_chunk_id,
     make_document_id,
@@ -149,6 +150,13 @@ def test_document_and_chunk_ids_are_stable_and_change_with_identity_inputs() -> 
     assert make_chunk_id(first.document_id, "1", config_hash, 1) != make_chunk_id(
         changed_parser.document_id, "1", config_hash, 1
     )
+    assert canonical_document_hash(
+        {"text": first.text, "parser_version": "fixture-parser-2.0"}
+    ) == (
+        canonical_document_hash(
+            {"parser_version": "fixture-parser-2.0", "text": first.text}
+        )
+    )
 
 
 def test_chunk_keeps_document_global_half_open_span_and_structural_spans() -> None:
@@ -171,6 +179,19 @@ def test_chunk_keeps_document_global_half_open_span_and_structural_spans() -> No
     )
     assert formula_chunk.source_locator.startswith("uri=fixture%3A%2F%2F")
     assert formula_chunk.metadata["asset_ref"] == "formula:f=ma"
+
+
+def test_chunker_derives_a_stable_location_when_page_data_is_unavailable() -> None:
+    document = make_document()
+    payload = document.model_dump()
+    payload["blocks"] = [
+        {**block.model_dump(), "page_or_location": None} for block in document.blocks
+    ]
+    without_pages = TextbookDocument.model_validate(payload)
+
+    chunk = V2BlockChunker().chunk(without_pages)[0]
+
+    assert chunk.page_or_location == "chapter-1/block-body-1"
 
 
 def test_chunk_rejects_text_that_does_not_match_its_span() -> None:

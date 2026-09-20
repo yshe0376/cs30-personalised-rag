@@ -8,6 +8,7 @@ textbook identity as first-class fields.
 from __future__ import annotations
 
 from enum import StrEnum
+from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
@@ -298,6 +299,10 @@ class IndexArtifact(V2Model):
             raise ValueError("chunk_count must equal the chunk_ids length")
         if len(set(self.chunk_ids)) != len(self.chunk_ids):
             raise ValueError("chunk_ids must be unique and ordered")
+        for asset_path in self.asset_relpaths:
+            relative_asset = PurePosixPath(asset_path)
+            if relative_asset.is_absolute() or ".." in relative_asset.parts:
+                raise ValueError("asset_relpaths must remain inside the v2 output directory")
         if self.embedding_model is not None and self.embedding_dimension is None:
             raise ValueError("embedding_dimension is required with embedding_model")
         return self

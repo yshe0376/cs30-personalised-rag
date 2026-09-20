@@ -30,6 +30,12 @@ def sha256_text(text: str) -> str:
     return sha256_bytes(text.encode("utf-8"))
 
 
+def canonical_document_hash(payload: Mapping[str, object]) -> str:
+    """Hash a parser's normalized payload, excluding filesystem/runtime data."""
+
+    return sha256_bytes(canonical_json_bytes(dict(payload)))
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:

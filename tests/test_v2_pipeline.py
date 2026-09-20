@@ -11,7 +11,7 @@ from test_v2_contracts import make_document
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
 from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.contracts import TextbookDocument
-from cs30.v2.errors import BuildGateError, InputError
+from cs30.v2.errors import BuildGateError, InputError, PublishConflictError
 from cs30.v2.ids import sha256_text
 from cs30.v2.pipeline import (
     BuildDeps,
@@ -199,6 +199,62 @@ def test_official_build_gate_writes_diagnostics_but_never_publishes_partial_outp
     diagnostics_dir = output_dir.with_name(output_dir.name + ".diagnostics")
     report = json.loads((diagnostics_dir / "run_report.json").read_text(encoding="utf-8"))
     assert REQUIRED_TEXTBOOK_IDS[2] in report["failed_textbook_ids"]
+
+
+def test_official_build_requires_source_hash_pins_and_an_index_builder(
+    tmp_path: Path,
+) -> None:
+    inputs, _, registry = make_build(tmp_path)
+    unpinned = tuple(
+        input.__class__(
+            **{**input.__dict__, "expected_source_sha256": None}
+        )
+        for input in inputs
+    )
+    output_dir = tmp_path / "artifacts" / "v2" / "three-textbooks" / "official-unpinned"
+
+    with pytest.raises(BuildGateError):
+        run_build_pipeline(
+            unpinned,
+            BuildDeps(parser_registry=registry, chunker=V2BlockChunker()),
+            MultiTextbookBuildSpec(
+                corpus_version="2.0.0-rc.1",
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                mode="official",
+                environment="staging",
+                output_dir=output_dir,
+            ),
+        )
+
+    report = json.loads(
+        (output_dir.with_name(output_dir.name + ".diagnostics") / "run_report.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert {failure["error_code"] for failure in report["failures"]} == {
+        "SOURCE_HASH_NOT_PINNED"
+    }
+
+
+def test_existing_output_is_a_stable_publish_conflict(tmp_path: Path) -> None:
+    inputs, _, registry = make_build(tmp_path)
+    output_dir = tmp_path / "artifacts" / "v2" / "three-textbooks" / "existing"
+    output_dir.mkdir(parents=True)
+
+    with pytest.raises(PublishConflictError) as exc_info:
+        run_build_pipeline(
+            inputs,
+            BuildDeps(parser_registry=registry, chunker=V2BlockChunker()),
+            MultiTextbookBuildSpec(
+                corpus_version="2.0.0-dev.1",
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                mode="development",
+                environment="development",
+                output_dir=output_dir,
+            ),
+        )
+
+    assert exc_info.value.code == "PUBLISH_CONFLICT"
 
 
 def test_build_output_records_are_stable_across_repeated_runs(tmp_path: Path) -> None:

@@ -94,3 +94,26 @@ def test_cli_rejects_an_unknown_textbook_as_input_error(tmp_path: Path) -> None:
 
     assert result.returncode == 2
     assert "UNKNOWN_TEXTBOOK" in result.stderr
+
+
+def test_cli_revalidates_an_output_override_instead_of_bypassing_config_rules(
+    tmp_path: Path,
+) -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--config",
+            "development",
+            "--output-dir",
+            str(tmp_path / "data" / "index"),
+            "--input",
+            "openstax_college_physics_2e=" + str(tmp_path / "missing.txt"),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 2
+    assert "v2 output" in result.stderr

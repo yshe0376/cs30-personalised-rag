@@ -28,8 +28,15 @@ class ContractError(V2Error):
 class BuildGateError(ContractError):
     code = "MISSING_REQUIRED_TEXTBOOK"
 
-    def __init__(self, message: str, *, report_path=None, manifest=None) -> None:
-        super().__init__(message)
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str | None = None,
+        report_path=None,
+        manifest=None,
+    ) -> None:
+        super().__init__(message, code=code)
         self.report_path = report_path
         self.manifest = manifest
 
