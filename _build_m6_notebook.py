@@ -99,8 +99,9 @@ print('Python:', PYTHON)
 print('cs30 source:', PACKAGE_SOURCE)"""
     ),
     new_markdown_cell("## Inputs and experiment policy"),
-    new_code_cell(
-        """from cs30.contracts import RetrievalMode
+new_code_cell(
+    """from cs30.contracts import RetrievalMode
+from cs30.evaluation.manifest import capture_git_state
 from cs30.retrieval.model_policy import CANDIDATE_EMBEDDING_MODELS
 
 TOP_K = 5
@@ -394,6 +395,13 @@ def git_is_dirty() -> bool:
     )
     return bool(completed.stdout.strip())
 
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open('rb') as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
+
 
 def artifact_versions(index_dir: Path) -> tuple[str, str, str]:
     artifact = load_json(index_dir / 'artifact.json')
@@ -432,6 +440,12 @@ def evaluation_environment(experiment: dict[str, object]) -> dict[str, str]:
             'CS30_RRF_DENSE_WEIGHT': str(experiment['weights'][0]),
             'CS30_RRF_BM25_WEIGHT': str(experiment['weights'][1]),
             'CS30_BM25_MIN_SCORE': str(BM25_MIN_SCORE),
+            'CS30_DENSE_MIN_SIMILARITY': (
+                ''
+                if DENSE_MIN_SIMILARITY is None
+                else str(DENSE_MIN_SIMILARITY)
+            ),
+            
             'CS30_BM25_STOPWORDS': 'true',
         }
     )
@@ -453,21 +467,18 @@ def run_and_score(
     score_rows = output_dir / 'retrieval_scores.jsonl'
     report_dir = output_dir / 'reports'
 
-    index_version, chunk_version, mapping_version = artifact_versions(
-        Path(experiment['index_dir'])
-    )
+    index_dir = Path(experiment['index_dir'])
+    index_version, chunk_version, mapping_version = artifact_versions(index_dir)
     signature_path = output_dir / 'experiment_signature.manifest.json'
-    current_commit = subprocess.run(
-        [str(GIT_EXECUTABLE), 'rev-parse', 'HEAD'],
-        cwd=PROJECT_ROOT,
-        check=True,
-        text=True,
-        capture_output=True,
-    ).stdout.strip()
+    git_state = capture_git_state(PROJECT_ROOT)
 
     expected_signature = {
-        'git_commit': current_commit,
-        'git_dirty': git_is_dirty(),
+    'git_commit': git_state.commit,
+    'git_dirty': git_state.dirty,
+    'git_snapshot_sha256': git_state.snapshot_sha256,
+    'artifact_json_sha256': file_sha256(index_dir / 'artifact.json'),
+    'chunks_json_sha256': file_sha256(index_dir / 'chunks.json'),
+    'index_faiss_sha256': file_sha256(index_dir / 'index.faiss'),
         'model': str(experiment['model']),
         'index_version': index_version,
         'chunk_config_hash': chunk_version,

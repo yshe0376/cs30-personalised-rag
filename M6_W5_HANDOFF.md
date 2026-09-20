@@ -6,8 +6,9 @@ This revision configures `BAAI/bge-m3` Hybrid retrieval with the matching
 Dense 25% / BM25 75%, `rrf_k=60`, and 50 candidates per retriever, matching
 the local comparison settings. Previous BM25 and BGE-M3 Dense runs remain
 under ignored `artifacts/w5/m6/`; this experiment uses a new ID and does not
-overwrite them. The Hybrid notebook was executed with the released M4/M5
-inputs in the project `.venv`. Its checked-in output is Dev-only; Test remained locked.
+overwrite them. The source notebook is checked in without execution outputs. It can be reproduced
+locally with the released M4/M5 inputs in the project `.venv`. The Dev metrics
+below were recorded from that local run; Test remained locked.
 The 25/75 weights and 50-candidate depth match the earlier local comparison.
 
 ## Local setup
@@ -93,9 +94,9 @@ do not calibrate a production abstention threshold.
 The executed Hybrid Dev run completed all 12 questions, with zero exclusions.
 The independent M6 checker reproduced the M1 retrieval metrics:
 
-| Split | Mode | Questions | Hit@1 | Hit@3 | Hit@5 | Recall@5 | MRR |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Proposed Dev | BGE-M3 Hybrid 25/75 | 12 | 0.5000 | 0.7500 | 0.8333 | 0.8333 | 0.6319 |
+| Split        | Mode                | Questions |  Hit@1 |  Hit@3 |  Hit@5 | Recall@5 |    MRR |
+| ------------ | ------------------- | --------: | -----: | -----: | -----: | -------: | -----: |
+| Proposed Dev | BGE-M3 Hybrid 25/75 |        12 | 0.5000 | 0.7500 | 0.8333 |   0.8333 | 0.6319 |
 
 The run manifest records `BAAI/bge-m3`, `hybrid`, `top_k=5`, a clean Git
 snapshot, and `reportable=false`. No Hybrid Test run was performed here.
@@ -103,10 +104,10 @@ snapshot, and `reportable=false`. No Hybrid Test run was performed here.
 The earlier BGE-M3 **Dense-only** notebook had these verified historical
 results. They are not Hybrid results:
 
-| Split | Questions | Hit@5 | Recall@5 | MRR | Interpretation |
-| --- | ---: | ---: | ---: | ---: | --- |
-| Proposed Dev | 12 | 0.5833 | 0.5833 | 0.3569 | Historical Dense-only run |
-| Proposed Test | 8 | 0.7500 | 0.7500 | 0.4688 | Historical Dense-only exploratory run |
+| Split         | Questions |  Hit@5 | Recall@5 |    MRR | Interpretation                        |
+| ------------- | --------: | -----: | -------: | -----: | ------------------------------------- |
+| Proposed Dev  |        12 | 0.5833 |   0.5833 | 0.3569 | Historical Dense-only run             |
+| Proposed Test |         8 | 0.7500 |   0.7500 | 0.4688 | Historical Dense-only exploratory run |
 
 The prior run manifests identify `BAAI/bge-m3`, `dense`, and `top_k=5`.
 
