@@ -3,8 +3,9 @@ import os
 import pytest
 
 import cs30.config as config_module
-from cs30.config import load_config
+from cs30.config import RetrievalConfig, load_config
 from cs30.errors import ConfigError
+from cs30.retrieval.model_policy import PRIMARY_EMBEDDING_MODEL
 
 
 def test_development_config_is_read_from_toml() -> None:
@@ -13,7 +14,14 @@ def test_development_config_is_read_from_toml() -> None:
     assert config.environment == "development"
     assert config.log_level == "DEBUG"
     assert config.fixture_mode is True
-    assert config.retrieval.top_k == 3
+    assert config.retrieval.top_k == 5
+    assert config.retrieval.index_dir == "artifacts/w5/m5_latest/all-minilm-l6-v2"
+    assert config.retrieval.expected_embedding_model == PRIMARY_EMBEDDING_MODEL
+
+
+def test_rrf_rejects_two_zero_weights() -> None:
+    with pytest.raises(ValueError, match="at least one RRF weight"):
+        RetrievalConfig(rrf_dense_weight=0.0, rrf_bm25_weight=0.0)
 
 
 def test_staging_config_disables_fixture_mode() -> None:
@@ -21,6 +29,7 @@ def test_staging_config_disables_fixture_mode() -> None:
 
     assert config.fixture_mode is False
     assert config.retrieval.top_k == 5
+    assert config.retrieval.index_dir == "artifacts/w5/m5_latest/all-minilm-l6-v2"
 
 
 def test_environment_variables_override_the_file(monkeypatch: pytest.MonkeyPatch) -> None:

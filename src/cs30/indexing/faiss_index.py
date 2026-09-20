@@ -465,7 +465,7 @@ class FaissIndexBuilder:
             # -----------------------------------------------------
             with artifact_path.open(
                 "r",
-                encoding="utf-8",
+                encoding="utf-8-sig",
             ) as file:
                 artifact_data = json.load(file)
             
