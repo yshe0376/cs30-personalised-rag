@@ -408,18 +408,34 @@ def artifact_versions(index_dir: Path) -> tuple[str, str, str]:
     metadata = artifact['metadata']
     mapping = load_json(GOLD_MAPPING)
 
-    artifact_chunk_hash = str(metadata['chunk_config_hash'])
+    m4_manifest = load_json(
+        PROJECT_ROOT
+        / 'artifacts'
+        / 'w5'
+        / 'm4-v3'
+        / 'retrieval_corpus'
+        / 'manifest.json'
+    )
     mapping_chunk_hash = str(mapping['chunk_config_hash'])
 
-    if artifact_chunk_hash != mapping_chunk_hash:
+    artifact_corpus_id = str(metadata['corpus_id'])
+    m4_corpus_id = str(m4_manifest['corpus_id'])
+
+    if artifact_corpus_id != m4_corpus_id:
         raise ValueError(
-            'Index and Gold mapping use different chunk configurations: '
-            f'{artifact_chunk_hash!r} != {mapping_chunk_hash!r}'
+            'Index and M4 manifest use different corpora: '
+            f'{artifact_corpus_id!r} != {m4_corpus_id!r}'
+        )
+
+    if int(artifact['chunk_count']) != int(m4_manifest['record_count']):
+        raise ValueError(
+            'Index and M4 manifest have different record counts: '
+            f"{artifact['chunk_count']!r} != {m4_manifest['record_count']!r}"
         )
 
     return (
         str(metadata['index_version']),
-        artifact_chunk_hash,
+        mapping_chunk_hash,
         str(mapping['mapping_version']),
     )
 
