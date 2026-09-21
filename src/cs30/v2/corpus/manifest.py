@@ -118,7 +118,10 @@ def build_manifest_draft(
         documents_by_id[document.document_id] = document
 
     seen_chunk_ids: set[str] = set()
-    counts: dict[str, int] = {textbook_id: 0 for textbook_id in required}
+    counts_by_textbook: dict[str, int] = {textbook_id: 0 for textbook_id in required}
+    counts_by_document: dict[str, int] = {
+        document.document_id: 0 for document in documents
+    }
     for chunk in chunks:
         if chunk.chunk_id in seen_chunk_ids:
             raise ValueError(f"duplicate chunk_id: {chunk.chunk_id}")
@@ -130,9 +133,12 @@ def build_manifest_draft(
             raise ValueError(f"chunk textbook_id does not match document: {chunk.chunk_id}")
         if chunk.chunk_config_hash != chunk_config_hash:
             raise ValueError(f"chunk has a different chunk_config_hash: {chunk.chunk_id}")
-        counts[chunk.textbook_id] += 1
+        counts_by_textbook[chunk.textbook_id] += 1
+        counts_by_document[document.document_id] += 1
 
-    included = tuple(textbook_id for textbook_id in required if counts[textbook_id] > 0)
+    included = tuple(
+        textbook_id for textbook_id in required if counts_by_textbook[textbook_id] > 0
+    )
     failed = _ordered_ids(failed_textbook_ids)
     records = tuple(
         CorpusDocument(
@@ -147,7 +153,7 @@ def build_manifest_draft(
             source_version=document.source_version,
             license=document.license,
             selected_chapters=document.selected_chapters,
-            chunk_count=counts[document.textbook_id],
+            chunk_count=counts_by_document[document.document_id],
         )
         for document in sorted(documents, key=lambda item: (item.textbook_id, item.document_id))
     )

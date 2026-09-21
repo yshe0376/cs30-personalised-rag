@@ -125,6 +125,38 @@ def test_manifest_rejects_duplicate_document_identity() -> None:
         )
 
 
+def test_manifest_counts_chunks_per_document_when_one_textbook_has_two_documents() -> None:
+    first = make_document(REQUIRED_TEXTBOOK_IDS[0])
+    second = make_document(
+        REQUIRED_TEXTBOOK_IDS[0],
+        parser_version="fixture-parser-2.1",
+        text="A second source document.\n[[FORMULA:f=ma]]\n[[IMAGE:fig-2]]",
+    )
+    other_documents = make_documents()[1:]
+    documents = (first, second, *other_documents)
+    chunks = tuple(
+        chunk
+        for document in documents
+        for chunk in V2BlockChunker().chunk(document)
+    )
+
+    draft = build_manifest_draft(
+        documents,
+        chunks,
+        corpus_version="2.0.0-dev.1",
+        chunk_config_hash=chunks[0].chunk_config_hash,
+        required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+        mode="development",
+    )
+
+    counts = {document.document_id: 0 for document in documents}
+    for chunk in chunks:
+        counts[chunk.document_id] += 1
+    assert {
+        document.document_id: document.chunk_count for document in draft.documents
+    } == counts
+
+
 def test_manifest_draft_cannot_be_marked_reportable_by_the_caller() -> None:
     draft, _, _, _ = make_full_manifest()
     payload = draft.model_dump()

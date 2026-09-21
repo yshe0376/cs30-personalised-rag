@@ -17,6 +17,7 @@ from cs30.v2.contracts import (
     TextbookChapter,
     TextbookDocument,
 )
+from cs30.v2.fixture import TextFixtureParser
 from cs30.v2.ids import (
     canonical_document_hash,
     chunk_config_hash,
@@ -24,6 +25,7 @@ from cs30.v2.ids import (
     make_document_id,
     sha256_text,
 )
+from cs30.v2.ports import TextbookInput
 
 
 def make_document(
@@ -49,7 +51,7 @@ def make_document(
         raw_source_sha256=sha256_text(text),
         document_hash=sha256_text(text + parser_version),
         parser_version=parser_version,
-        source_name=f"{textbook_id}.json",
+        source_name=get_textbook_spec(textbook_id).source_name,
         source_uri=f"fixture://{textbook_id}",
         source_version="fixture-2.0",
         license="CC BY 4.0",
@@ -177,7 +179,13 @@ def test_chunk_keeps_document_global_half_open_span_and_structural_spans() -> No
             content_type=ContentType.FORMULA,
         ),
     )
-    assert formula_chunk.source_locator.startswith("uri=fixture%3A%2F%2F")
+    assert formula_chunk.source_locator.startswith("source=openstax_college_physics_2e.json")
+    assert formula_chunk.section_id == "1.1"
+    assert formula_chunk.section_title == "Force"
+    assert formula_chunk.content_type is ContentType.FORMULA
+    assert "section_id" not in formula_chunk.metadata
+    assert "section_title" not in formula_chunk.metadata
+    assert "content_type" not in formula_chunk.metadata
     assert formula_chunk.metadata["asset_ref"] == "formula:f=ma"
 
 
@@ -194,6 +202,27 @@ def test_chunker_derives_a_stable_location_when_page_data_is_unavailable() -> No
     assert chunk.page_or_location == "chapter-1/block-body-1"
 
 
+def test_fixture_provenance_url_does_not_change_document_identity(tmp_path) -> None:
+    textbook_id = REQUIRED_TEXTBOOK_IDS[0]
+    spec = get_textbook_spec(textbook_id)
+    source = tmp_path / "renamed-local-file.txt"
+    source.write_text("A force changes motion.", encoding="utf-8")
+    parser = TextFixtureParser(spec)
+    common = {
+        "textbook_id": textbook_id,
+        "source_path": source,
+        "source_name": spec.source_name,
+        "source_version": spec.source_version,
+        "expected_source_sha256": sha256_text("A force changes motion."),
+    }
+
+    first = parser.parse(TextbookInput(**common, source_uri="https://example.test/one"))
+    second = parser.parse(TextbookInput(**common, source_uri="https://example.test/two"))
+
+    assert first.document_id == second.document_id
+    assert first.document_hash == second.document_hash
+
+
 def test_chunk_rejects_text_that_does_not_match_its_span() -> None:
     with pytest.raises(ValueError, match="text length"):
         Chunk(
@@ -203,7 +232,6 @@ def test_chunk_rejects_text_that_does_not_match_its_span() -> None:
             chapter_id="1",
             chunk_id="chunk",
             source_name="book.pdf",
-            source_uri="fixture://book",
             page_or_location="chapter-1",
             source_locator="fixture%3A%2F%2Fbook",
             text="abc",
@@ -222,6 +250,18 @@ def test_chunk_rejects_text_that_does_not_match_its_span() -> None:
             chunk_config_hash="sha256:config",
             token_count=1,
         )
+
+
+def test_chunk_rejects_the_legacy_uri_and_document_locator_format() -> None:
+    document = make_document()
+    payload = V2BlockChunker().chunk(document)[0].model_dump()
+    payload["source_locator"] = (
+        "uri=fixture%3A%2F%2Fbook|textbook=book|document=generated|"
+        "chapter=1|location=chapter-1|span=0:22"
+    )
+
+    with pytest.raises(ValueError, match="source_locator"):
+        Chunk.model_validate(payload)
 
 
 def test_catalog_freezes_exactly_three_v2_textbooks_and_rejects_unknown_ids() -> None:

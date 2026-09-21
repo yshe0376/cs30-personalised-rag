@@ -47,7 +47,7 @@ def test_cli_builds_a_development_diagnostic_corpus(tmp_path: Path) -> None:
     assert (output_dir / "manifest.json").is_file()
 
 
-def test_cli_official_missing_book_returns_gate_exit_code_and_no_formal_output(
+def test_cli_official_refuses_fixture_provider_until_real_providers_are_configured(
     tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "artifacts" / "v2" / "cli-official"
@@ -66,11 +66,9 @@ def test_cli_official_missing_book_returns_gate_exit_code_and_no_formal_output(
         check=False,
     )
 
-    assert result.returncode == 4
+    assert result.returncode == 2
+    assert "REAL_BUILD_NOT_CONFIGURED" in result.stderr
     assert not output_dir.exists()
-    diagnostics = output_dir.with_name(output_dir.name + ".diagnostics")
-    report = json.loads((diagnostics / "run_report.json").read_text(encoding="utf-8"))
-    assert report["reportable"] is False
 
 
 def test_cli_rejects_an_unknown_textbook_as_input_error(tmp_path: Path) -> None:

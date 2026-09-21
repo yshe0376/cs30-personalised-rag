@@ -82,4 +82,10 @@ class CorpusManifestBuilder(Protocol):
 
 @runtime_checkable
 class IndexBuilder(Protocol):
-    def build(self, chunks: Sequence[Chunk], manifest: CorpusManifest) -> IndexArtifact: ...
+    def build(
+        self,
+        chunks: Sequence[Chunk],
+        manifest: CorpusManifest,
+        *,
+        output_dir: Path,
+    ) -> IndexArtifact: ...

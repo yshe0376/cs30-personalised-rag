@@ -31,18 +31,16 @@ def test_official_mode_requires_exactly_three_ids() -> None:
         )
 
 
-def test_config_does_not_treat_fixture_mode_as_official_mode() -> None:
-    config = V2Config(
-        environment="staging",
-        corpus_mode="official",
-        corpus_version="2.0.0-rc.1",
-        required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
-        output_dir=Path("artifacts/v2/test"),
-        fixture_mode=True,
-    )
-
-    assert config.fixture_mode is True
-    assert config.corpus_mode == "official"
+def test_config_rejects_fixture_mode_in_official_mode() -> None:
+    with pytest.raises(ValueError, match="fixture_mode"):
+        V2Config(
+            environment="staging",
+            corpus_mode="official",
+            corpus_version="2.0.0-rc.1",
+            required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+            output_dir=Path("artifacts/v2/test"),
+            fixture_mode=True,
+        )
 
 
 def test_config_rejects_v1_output_path() -> None:
@@ -54,3 +52,24 @@ def test_config_rejects_v1_output_path() -> None:
             required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
             output_dir=Path("data/index"),
         )
+
+
+def test_config_rejects_v2_substrings_and_parent_escape_paths(tmp_path: Path) -> None:
+    for output_dir in (
+        tmp_path / "capstone-v2-m1-three-textbooks" / "artifacts" / "w5" / "m5_latest",
+        tmp_path / "artifacts" / "v2x_backup" / ".." / "w5",
+    ):
+        with pytest.raises(ValueError, match="v2 output"):
+            V2Config(
+                environment="development",
+                corpus_mode="development",
+                corpus_version="2.0.0-dev.1",
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                output_dir=output_dir,
+            )
+
+
+def test_config_reads_the_chunk_configuration() -> None:
+    config = load_v2_config("development")
+
+    assert config.chunk_config == {"tokenizer_name": "unicode-wordpunct-v1"}

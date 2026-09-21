@@ -66,6 +66,11 @@ def run(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         config = _config_with_overrides(args)
+        if not config.fixture_mode:
+            raise InputError(
+                "real v2 parser and chunker providers are not configured for this CLI",
+                code="REAL_BUILD_NOT_CONFIGURED",
+            )
         if not args.input:
             raise InputError("at least one --input is required", code="INPUT_REQUIRED")
 
@@ -81,7 +86,8 @@ def run(argv: list[str] | None = None) -> int:
                 TextbookInput(
                     textbook_id=textbook_id,
                     source_path=source_path,
-                    source_name=source_path.name,
+                    # This is a catalog-defined logical name, not a local filename.
+                    source_name=spec.source_name,
                     source_uri=spec.source_uri,
                     source_version=spec.source_version,
                     selected_chapters=spec.selected_chapters,
@@ -94,7 +100,7 @@ def run(argv: list[str] | None = None) -> int:
             inputs,
             BuildDeps(
                 parser_registry=MappingParserRegistry(parsers),
-                chunker=V2BlockChunker(),
+                chunker=V2BlockChunker.from_config(config.chunk_config),
             ),
             MultiTextbookBuildSpec(
                 corpus_version=config.corpus_version,

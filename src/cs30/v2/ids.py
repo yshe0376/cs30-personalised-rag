@@ -83,9 +83,8 @@ def make_chunk_id(document_id: str, chapter_id: str, config_hash: str, ordinal: 
 
 def source_locator(
     *,
-    source_uri: str | None,
+    source_name: str,
     textbook_id: str,
-    document_id: str,
     chapter_id: str,
     page_or_location: str | None,
     char_start: int,
@@ -93,20 +92,65 @@ def source_locator(
 ) -> str:
     """Build a canonical, path-independent locator string.
 
-    Each value is escaped independently, so delimiters in a URL or location
-    cannot change the meaning of the locator.
+    The locator is stable across parser runs and deliberately excludes URLs
+    and generated document IDs.  ``source_name`` is a stable logical source
+    name, not a machine-local file basename.
     """
-
-    def encoded(value: str | None) -> str:
-        return quote(value or "", safe="")
 
     return "|".join(
         (
-            f"uri={encoded(source_uri)}",
-            f"textbook={encoded(textbook_id)}",
-            f"document={encoded(document_id)}",
-            f"chapter={encoded(chapter_id)}",
-            f"location={encoded(page_or_location)}",
+            f"source={_encode_locator_value(source_name)}",
+            f"textbook={_encode_locator_value(textbook_id)}",
+            f"chapter={_encode_locator_value(chapter_id)}",
+            f"location={_encode_locator_value(page_or_location)}",
             f"span={char_start}:{char_end}",
         )
     )
+
+
+def _encode_locator_value(value: str | None) -> str:
+    return quote(value or "", safe="")
+
+
+def source_locator_prefix(
+    *,
+    source_name: str,
+    textbook_id: str,
+    chapter_id: str,
+    page_or_location: str | None,
+) -> str:
+    """Return the stable locator prefix shared by chunks and evidence."""
+
+    return "|".join(
+        (
+            f"source={_encode_locator_value(source_name)}",
+            f"textbook={_encode_locator_value(textbook_id)}",
+            f"chapter={_encode_locator_value(chapter_id)}",
+            f"location={_encode_locator_value(page_or_location)}",
+        )
+    )
+
+
+def validate_source_locator_shape(
+    locator: str,
+    *,
+    source_name: str,
+    textbook_id: str,
+    chapter_id: str,
+    page_or_location: str | None,
+) -> None:
+    """Reject legacy URI/document locators while retaining the span suffix."""
+
+    prefix = source_locator_prefix(
+        source_name=source_name,
+        textbook_id=textbook_id,
+        chapter_id=chapter_id,
+        page_or_location=page_or_location,
+    )
+    marker = prefix + "|span="
+    if not locator.startswith(marker) or not re.fullmatch(
+        r"\d+:\d+", locator[len(marker) :]
+    ):
+        raise ValueError(
+            "source_locator must use the v2 source/textbook/chapter/location/span format"
+        )

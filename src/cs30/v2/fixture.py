@@ -21,6 +21,7 @@ class TextFixtureParser:
     """
 
     version = "fixture-text-v2"
+    is_fixture = True
 
     def __init__(self, spec: TextbookSpec) -> None:
         self.spec = spec
@@ -37,7 +38,6 @@ class TextFixtureParser:
             "provider": self.spec.provider,
             "textbook_id": input.textbook_id,
             "source_name": input.source_name,
-            "source_uri": source_uri,
             "source_version": source_version,
             "parser_version": self.version,
             "selected_chapters": selected_chapters,

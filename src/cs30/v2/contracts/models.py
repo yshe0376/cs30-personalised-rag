@@ -13,6 +13,8 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from cs30.v2.ids import source_locator, validate_source_locator_shape
+
 Identifier = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 SpanText = Annotated[str, Field(min_length=1)]
 
@@ -167,12 +169,14 @@ class Chunk(V2Model):
     document_id: Identifier
     chapter_id: Identifier
     source_name: Identifier
-    source_uri: str | None = None
     page_or_location: str | None = None
     source_locator: Identifier
     text: SpanText
     char_start: int = Field(ge=0)
     char_end: int = Field(gt=0)
+    section_id: Identifier | None = None
+    section_title: Identifier | None = None
+    content_type: ContentType = ContentType.BODY
     spans: tuple[ChunkSpan, ...] = Field(min_length=1)
     chunker_version: Identifier
     chunk_config_hash: Identifier
@@ -201,6 +205,23 @@ class Chunk(V2Model):
             previous_end = span.char_end
         if not self.source_locator:
             raise ValueError("source_locator must not be empty")
+        validate_source_locator_shape(
+            self.source_locator,
+            source_name=self.source_name,
+            textbook_id=self.textbook_id,
+            chapter_id=self.chapter_id,
+            page_or_location=self.page_or_location,
+        )
+        expected_locator = source_locator(
+            source_name=self.source_name,
+            textbook_id=self.textbook_id,
+            chapter_id=self.chapter_id,
+            page_or_location=self.page_or_location,
+            char_start=self.char_start,
+            char_end=self.char_end,
+        )
+        if self.source_locator != expected_locator:
+            raise ValueError("source_locator does not match the chunk identity and span")
         return self
 
     @property
@@ -238,13 +259,23 @@ class RetrievedEvidence(V2Model):
     chunk_id: Identifier
     chapter_id: Identifier
     source_name: Identifier
-    source_uri: str | None = None
     page_or_location: str | None = None
     source_locator: Identifier
     text: SpanText
     score: float
     rank: int = Field(ge=1)
     retriever_type: RetrievalMode
+
+    @model_validator(mode="after")
+    def validate_locator(self) -> RetrievedEvidence:
+        validate_source_locator_shape(
+            self.source_locator,
+            source_name=self.source_name,
+            textbook_id=self.textbook_id,
+            chapter_id=self.chapter_id,
+            page_or_location=self.page_or_location,
+        )
+        return self
 
 
 class EvidenceItem(V2Model):
@@ -256,12 +287,22 @@ class EvidenceItem(V2Model):
     chunk_id: Identifier
     chapter_id: Identifier
     source_name: Identifier
-    source_uri: str | None = None
     page_or_location: str | None = None
     source_locator: Identifier
     text: SpanText
     rank: int = Field(ge=1)
     score: float
+
+    @model_validator(mode="after")
+    def validate_locator(self) -> EvidenceItem:
+        validate_source_locator_shape(
+            self.source_locator,
+            source_name=self.source_name,
+            textbook_id=self.textbook_id,
+            chapter_id=self.chapter_id,
+            page_or_location=self.page_or_location,
+        )
+        return self
 
 
 class IndexArtifact(V2Model):

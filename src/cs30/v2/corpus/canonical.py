@@ -8,21 +8,32 @@ from cs30.v2.contracts import Chunk
 from cs30.v2.ids import canonical_json_bytes, sha256_bytes
 
 
-def canonical_corpus_bytes(chunks: Sequence[Chunk]) -> bytes:
-    """Serialize retrieval records without output paths or run-time fields."""
+def canonical_chunks(chunks: Sequence[Chunk]) -> tuple[Chunk, ...]:
+    """Return the one ordering shared by records, indexes, and hashes."""
 
-    ordered = sorted(
-        chunks,
-        key=lambda chunk: (
-            chunk.textbook_id,
-            chunk.document_id,
-            chunk.chapter_id,
-            chunk.chunk_id,
-        ),
+    ordered = tuple(
+        sorted(
+            chunks,
+            key=lambda chunk: (
+                chunk.textbook_id,
+                chunk.source_name,
+                chunk.chapter_id,
+                chunk.char_start,
+                chunk.char_end,
+                chunk.chunk_id,
+            ),
+        )
     )
     ids = [chunk.chunk_id for chunk in ordered]
     if len(ids) != len(set(ids)):
         raise ValueError("chunk_id values must be unique")
+    return ordered
+
+
+def canonical_corpus_bytes(chunks: Sequence[Chunk]) -> bytes:
+    """Serialize retrieval records without output paths or run-time fields."""
+
+    ordered = canonical_chunks(chunks)
     return b"".join(
         canonical_json_bytes(chunk.model_dump(mode="json")) for chunk in ordered
     )

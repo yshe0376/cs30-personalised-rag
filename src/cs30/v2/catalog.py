@@ -11,6 +11,7 @@ class TextbookSpec:
     provider: str
     title: str
     source_version: str
+    source_name: str
     source_uri: str
     license: str
     parser_name: str
@@ -34,6 +35,7 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         provider="openstax",
         title="College Physics 2e",
         source_version="2e",
+        source_name="openstax_college_physics_2e.json",
         source_uri="https://openstax.org/details/books/college-physics-2e",
         license="CC BY 4.0",
         parser_name="openstax",
@@ -44,6 +46,7 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         provider="ck12",
         title="People's Physics Book - Basic",
         source_version="SciQ Appendix A source edition",
+        source_name="ck12_peoples_physics_basic.json",
         source_uri="http://www.ck12.org/book/Peoples-Physics-Book-Basic/",
         license="CC BY-NC 3.0",
         parser_name="ck12",
@@ -54,6 +57,7 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         provider="ck12",
         title="CK-12 Physics Concepts - Intermediate",
         source_version="SciQ Appendix A source edition",
+        source_name="ck12_physics_concepts_intermediate.json",
         source_uri="http://www.ck12.org/book/CK-12-Physics-Concepts-Intermediate/",
         license="CC BY-NC 3.0",
         parser_name="ck12",
@@ -70,6 +74,8 @@ def validate_catalog() -> None:
     for textbook_id, spec in TEXTBOOK_CATALOG.items():
         if textbook_id != spec.textbook_id:
             raise ValueError(f"catalogue key does not match textbook_id: {textbook_id}")
+        if not spec.source_name.strip():
+            raise ValueError(f"source_name must not be empty: {textbook_id}")
         if spec.provider != spec.provider.casefold():
             raise ValueError(f"provider must be canonical lowercase: {textbook_id}")
 

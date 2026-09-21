@@ -7,11 +7,13 @@ import shutil
 import uuid
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Literal
 
+from cs30.v2.catalog import get_textbook_spec
+from cs30.v2.config import validate_v2_output_dir
 from cs30.v2.contracts import Chunk, IndexArtifact, TextbookDocument
-from cs30.v2.corpus.canonical import canonical_corpus_bytes
+from cs30.v2.corpus.canonical import canonical_chunks, canonical_corpus_bytes
 from cs30.v2.corpus.manifest import (
     CorpusManifest,
     build_manifest_draft,
@@ -57,6 +59,30 @@ def _failure(
     )
 
 
+def _ensure_official_components_are_real(
+    inputs: Sequence[TextbookInput],
+    parser_registry: ParserRegistry,
+    chunker: Chunker,
+) -> None:
+    """Reject explicitly marked fixture providers before an official build."""
+
+    if getattr(chunker, "is_fixture", False):
+        raise BuildGateError(
+            "official v2 builds cannot use a fixture chunker",
+            code="FIXTURE_NOT_ALLOWED",
+        )
+    for input in inputs:
+        try:
+            parser = parser_registry.parser_for(input.textbook_id)
+        except (KeyError, LookupError):
+            continue
+        if getattr(parser, "is_fixture", False):
+            raise BuildGateError(
+                f"official v2 builds cannot use a fixture parser for {input.textbook_id}",
+                code="FIXTURE_NOT_ALLOWED",
+            )
+
+
 def parse_material_batch(
     inputs: Sequence[TextbookInput],
     parser_registry: ParserRegistry,
@@ -77,6 +103,27 @@ def parse_material_batch(
                 code="DUPLICATE_TEXTBOOK_ID",
             )
         seen.add(input.textbook_id)
+
+        try:
+            catalog_source_name = get_textbook_spec(input.textbook_id).source_name
+        except ValueError as exc:
+            failures.append(
+                _failure(input, stage="input", code="UNKNOWN_TEXTBOOK", error=exc)
+            )
+            continue
+        if input.source_name != catalog_source_name:
+            failures.append(
+                _failure(
+                    input,
+                    stage="input",
+                    code="SOURCE_NAME_MISMATCH",
+                    error=ValueError(
+                        f"expected catalog source_name {catalog_source_name!r}, "
+                        f"received {input.source_name!r}"
+                    ),
+                )
+            )
+            continue
 
         if not input.source_path.is_file():
             failures.append(
@@ -141,6 +188,10 @@ def parse_material_batch(
             if (
                 document.source_name != input.source_name
                 or document.source_version != input.source_version
+                or (
+                    input.source_uri is not None
+                    and document.source_uri != input.source_uri
+                )
             ):
                 raise ContractError(
                     "parser source identity does not match TextbookInput",
@@ -229,8 +280,7 @@ class MultiTextbookBuildSpec:
             raise ValueError("required_textbook_ids must contain exactly three IDs")
         if len(set(self.required_textbook_ids)) != 3:
             raise ValueError("required_textbook_ids must be unique")
-        if "v2" not in self.output_dir.as_posix().casefold():
-            raise ValueError("output_dir must be a versioned v2 output directory")
+        validate_v2_output_dir(self.output_dir)
 
 
 @dataclass(frozen=True)
@@ -268,6 +318,63 @@ def _write_records(path: Path, chunks: Sequence[Chunk]) -> None:
     path.write_bytes(canonical_corpus_bytes(chunks))
 
 
+def _validate_index_artifact(
+    artifact: IndexArtifact,
+    manifest: CorpusManifest,
+    chunks: Sequence[Chunk],
+    output_dir: Path,
+) -> None:
+    """Reject an index that cannot be paired with the staged corpus."""
+
+    expected_chunk_ids = tuple(chunk.chunk_id for chunk in chunks)
+    checks = (
+        (artifact.corpus_version, manifest.corpus_version, "corpus_version"),
+        (artifact.corpus_hash, manifest.corpus_hash, "corpus_hash"),
+        (artifact.manifest_hash, manifest.manifest_hash, "manifest_hash"),
+        (artifact.chunk_config_hash, manifest.chunk_config_hash, "chunk_config_hash"),
+        (
+            artifact.required_textbook_ids,
+            manifest.required_textbook_ids,
+            "required_textbook_ids",
+        ),
+        (
+            artifact.included_textbook_ids,
+            manifest.included_textbook_ids,
+            "included_textbook_ids",
+        ),
+        (artifact.chunk_count, len(expected_chunk_ids), "chunk_count"),
+        (artifact.chunk_ids, expected_chunk_ids, "chunk_ids"),
+    )
+    for received, expected, field in checks:
+        if received != expected:
+            raise ContractError(
+                f"index artifact {field} does not match the staged corpus",
+                code="INDEX_ARTIFACT_MISMATCH",
+            )
+
+    root = output_dir.resolve()
+    for relative in artifact.asset_relpaths:
+        path = PurePosixPath(relative)
+        if path.is_absolute() or ".." in path.parts:
+            raise ContractError(
+                f"index artifact asset escapes the staging directory: {relative}",
+                code="INDEX_ARTIFACT_PATH_INVALID",
+            )
+        candidate = (output_dir / Path(*path.parts)).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError as exc:
+            raise ContractError(
+                f"index artifact asset escapes the staging directory: {relative}",
+                code="INDEX_ARTIFACT_PATH_INVALID",
+            ) from exc
+        if not candidate.is_file():
+            raise ContractError(
+                f"index artifact asset was not written: {relative}",
+                code="INDEX_ARTIFACT_ASSET_MISSING",
+            )
+
+
 def run_build_pipeline(
     inputs: Sequence[TextbookInput],
     deps: BuildDeps,
@@ -284,12 +391,20 @@ def run_build_pipeline(
             code="UNKNOWN_TEXTBOOK",
         )
 
+    if spec.mode == "official":
+        _ensure_official_components_are_real(
+            inputs,
+            deps.parser_registry,
+            deps.chunker,
+        )
+
     parse_report = parse_material_batch(
         inputs,
         deps.parser_registry,
         require_source_hash=spec.mode == "official",
     )
     chunk_report = chunk_material_batch(parse_report.documents, inputs, deps.chunker)
+    ordered_chunks = canonical_chunks(chunk_report.chunks)
     failed_ids = {
         failure.textbook_id
         for failure in (*parse_report.failures, *chunk_report.failures)
@@ -323,13 +438,13 @@ def run_build_pipeline(
     if deps.manifest_builder is None:
         draft = build_manifest_draft(
             parse_report.documents,
-            chunk_report.chunks,
+            ordered_chunks,
             **manifest_kwargs,
         )
     else:
         draft = deps.manifest_builder.build(
             parse_report.documents,
-            chunk_report.chunks,
+            ordered_chunks,
             **manifest_kwargs,
         )
     if spec.mode == "official" and deps.index_builder is None:
@@ -372,14 +487,14 @@ def run_build_pipeline(
     staging_manifest = staging_dir / "manifest.json"
     staging_report = staging_dir / "run_report.json"
     try:
-        _write_records(staging_records, chunk_report.chunks)
+        _write_records(staging_records, ordered_chunks)
         write_corpus_manifest(manifest, staging_manifest)
         _write_run_report(staging_report, report_payload)
 
         if spec.mode == "official" and not manifest.reportable:
             diagnostics_dir = output_dir.with_name(output_dir.name + ".diagnostics")
             diagnostics_dir.mkdir(parents=True, exist_ok=True)
-            _write_records(diagnostics_dir / "records.jsonl", chunk_report.chunks)
+            _write_records(diagnostics_dir / "records.jsonl", ordered_chunks)
             write_corpus_manifest(manifest, diagnostics_dir / "manifest.json")
             diagnostics_report = diagnostics_dir / "run_report.json"
             _write_run_report(diagnostics_report, report_payload)
@@ -387,8 +502,12 @@ def run_build_pipeline(
                 "official v2 build is not reportable; see diagnostics",
                 code=(
                     "MISSING_REQUIRED_TEXTBOOK"
-                    if failed_ids
-                    else "INDEX_BUILDER_NOT_CONFIGURED"
+                    if missing_ids
+                    else (
+                        failures[0].error_code
+                        if failures
+                        else "INDEX_BUILDER_NOT_CONFIGURED"
+                    )
                 ),
                 report_path=diagnostics_report,
                 manifest=manifest,
@@ -396,11 +515,17 @@ def run_build_pipeline(
 
         artifact: IndexArtifact | None = None
         if deps.index_builder is not None:
-            artifact = deps.index_builder.build(chunk_report.chunks, manifest)
-            (staging_dir / "artifact.json").write_text(
+            artifact = deps.index_builder.build(
+                ordered_chunks,
+                manifest,
+                output_dir=staging_dir,
+            )
+            artifact_path = staging_dir / "artifact.json"
+            artifact_path.write_text(
                 artifact.model_dump_json(indent=2),
                 encoding="utf-8",
             )
+            _validate_index_artifact(artifact, manifest, ordered_chunks, staging_dir)
         atomic_publish_directory(staging_dir, output_dir)
     except BuildGateError:
         shutil.rmtree(staging_dir, ignore_errors=True)

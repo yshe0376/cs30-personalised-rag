@@ -12,6 +12,31 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
 
 
+def validate_v2_output_dir(output_dir: Path) -> None:
+    """Require a resolved path below an exact ``artifacts/v2`` directory."""
+
+    resolved = output_dir.resolve()
+    parts = tuple(part.casefold() for part in resolved.parts)
+    if any(
+        left == "data" and right == "index"
+        for left, right in zip(parts, parts[1:], strict=False)
+    ) or "v1" in parts:
+        raise ValueError("output_dir must be a v2 output directory, not v1 or legacy data/index")
+
+    v2_root_index = next(
+        (
+            index
+            for index, (left, right) in enumerate(
+                zip(parts, parts[1:], strict=False)
+            )
+            if left == "artifacts" and right == "v2"
+        ),
+        None,
+    )
+    if v2_root_index is None or resolved == Path(*resolved.parts[: v2_root_index + 2]):
+        raise ValueError("output_dir must be a versioned v2 output directory below artifacts/v2")
+
+
 class V2Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -29,11 +54,9 @@ class V2Config(BaseModel):
             raise ValueError("required_textbook_ids must contain exactly three IDs")
         if len(set(self.required_textbook_ids)) != 3:
             raise ValueError("required_textbook_ids must be unique")
-        normalised = self.output_dir.as_posix().casefold()
-        if "data/index" in normalised or "/v1" in normalised:
-            raise ValueError("output_dir must be a versioned v2 output directory")
-        if "v2" not in normalised:
-            raise ValueError("output_dir must be a versioned v2 output directory")
+        if self.corpus_mode == "official" and self.fixture_mode:
+            raise ValueError("official mode cannot run with fixture_mode enabled")
+        validate_v2_output_dir(self.output_dir)
         return self
 
     @property

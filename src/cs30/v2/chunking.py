@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 
 from cs30.v2.contracts import Chunk, ChunkSpan, TextbookDocument
 from cs30.v2.ids import chunk_config_hash, make_chunk_id, source_locator
@@ -17,6 +18,7 @@ class V2BlockChunker:
     """
 
     version = "v2-block-v1"
+    is_fixture = True
 
     def __init__(self, *, tokenizer_name: str = "unicode-wordpunct-v1") -> None:
         self.tokenizer_name = tokenizer_name
@@ -27,6 +29,14 @@ class V2BlockChunker:
                 "grouping": "one-block",
             }
         )
+
+    @classmethod
+    def from_config(cls, config: Mapping[str, str]) -> V2BlockChunker:
+        supported = {"tokenizer_name"}
+        unknown = set(config) - supported
+        if unknown:
+            raise ValueError(f"unsupported v2 chunk configuration: {sorted(unknown)}")
+        return cls(tokenizer_name=config.get("tokenizer_name", "unicode-wordpunct-v1"))
 
     @property
     def config_hash(self) -> str:
@@ -44,9 +54,6 @@ class V2BlockChunker:
             )
             metadata = {
                 "block_id": block.block_id,
-                "content_type": block.content_type.value,
-                "section_id": block.section_id or "",
-                "section_title": block.section_title or "",
                 "chunker_version": self.version,
                 "tokenizer_name": self.tokenizer_name,
             }
@@ -65,12 +72,13 @@ class V2BlockChunker:
                     document_id=document.document_id,
                     chapter_id=block.chapter_id,
                     source_name=document.source_name,
-                    source_uri=document.source_uri,
                     page_or_location=page_or_location,
+                    section_id=block.section_id,
+                    section_title=block.section_title,
+                    content_type=block.content_type,
                     source_locator=source_locator(
-                        source_uri=document.source_uri,
+                        source_name=document.source_name,
                         textbook_id=document.textbook_id,
-                        document_id=document.document_id,
                         chapter_id=block.chapter_id,
                         page_or_location=page_or_location,
                         char_start=block.char_start,

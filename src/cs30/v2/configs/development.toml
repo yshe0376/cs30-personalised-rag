@@ -11,3 +11,4 @@ required_textbook_ids = [
   "ck12_physics_concepts_intermediate",
 ]
 output_dir = "artifacts/v2/three-textbooks/2.0.0-dev.1"
+chunk_config = { tokenizer_name = "unicode-wordpunct-v1" }
