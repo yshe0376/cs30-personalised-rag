@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1",
+  "role_schema_version": "role-labels-v1",
+  "role_taxonomy_version": "evidence-role-v1",
+  "annotation_version": "m3-role-v1",
+  "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+  "parser_version": "1.2.0",
+  "annotation_date": "2026-09-22",
+  "annotator_ids": [
+    "leahwang126"
+  ],
+  "double_annotated": false,
+  "labels_file": "role_labels_v1.jsonl",
+  "labels_sha256": "d4f9a40bd00829b3663467af29b1d03f47f8ad45fca74650f004d86e8ae97c33",
+  "declared_record_count": 20,
+  "reference_id_field": "chunk_id",
+  "reference_type": "chunk",
+  "reference_universe": "gold_mapping",
+  "role_field": "role",
+  "record_schema_version_field": "schema_version"
+}
