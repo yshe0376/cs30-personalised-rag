@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "split_version": "split-v1",
+  "gold_annotation_version": "m3_gold_v0.1.1",
+  "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+  "rule": {
+    "isolation_key": "chapter_id",
+    "dev": "every evidence chapter_id <= 16",
+    "test": "every evidence chapter_id >= 17",
+    "random_seed": null,
+    "source": "m3_gold/dev_test_split_plan_v0_1_1.md"
+  },
+  "splits": {
+    "dev": {
+      "expected_question_count": 12,
+      "chapter_ids": [
+        2,
+        4,
+        7,
+        8,
+        11,
+        13,
+        14,
+        16
+      ],
+      "question_ids": [
+        "sciq-test-00024",
+        "sciq-test-00068",
+        "sciq-test-00116",
+        "sciq-test-00246",
+        "sciq-test-00315",
+        "sciq-test-00333",
+        "sciq-test-00401",
+        "sciq-test-00432",
+        "sciq-test-00536",
+        "sciq-test-00614",
+        "sciq-test-00620",
+        "sciq-test-00955"
+      ]
+    },
+    "test": {
+      "expected_question_count": 8,
+      "chapter_ids": [
+        18,
+        22,
+        23,
+        24,
+        25,
+        32,
+        33
+      ],
+      "question_ids": [
+        "sciq-test-00335",
+        "sciq-test-00465",
+        "sciq-test-00540",
+        "sciq-test-00646",
+        "sciq-test-00709",
+        "sciq-test-00770",
+        "sciq-test-00942",
+        "sciq-test-00974"
+      ]
+    }
+  }
+}

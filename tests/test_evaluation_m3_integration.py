@@ -84,7 +84,37 @@ def test_m3_v0_1_1_delivery_loads_with_main_loader() -> None:
 
     assert len(samples) == 20
     assert samples[0].gold_annotation_version == "m3_gold_v0.1.1"
-    assert all(sample.annotation_status is AnnotationStatus.M3_INITIAL for sample in samples)
+    # The review record accepts all 20; the delivery is reportable and its
+    # split is final, so both must stay in step with eval_inputs/.
+    assert all(sample.annotation_status is AnnotationStatus.REVIEWED for sample in samples)
+    splits = [sample.split.value for sample in samples]
+    assert splits.count("dev") == 12
+    assert splits.count("test") == 8
+
+
+def test_split_manifest_matches_the_committed_gold() -> None:
+    """The split manifest and both Gold files must describe the same split."""
+
+    manifest = json.loads(Path("eval_inputs/split_manifest.json").read_text(encoding="utf-8"))
+    raw = load_gold_samples(Path("m3_gold/gold_v0_1_1.jsonl"))
+    normalized = load_gold_samples(Path("eval_inputs/gold_v0_2_from_m3_v0_1_1.jsonl"))
+
+    for samples in (raw, normalized):
+        by_split: dict[str, list[str]] = {}
+        for sample in samples:
+            by_split.setdefault(sample.split.value, []).append(sample.question_id)
+        assert set(by_split) == set(manifest["splits"])
+        for split, entry in manifest["splits"].items():
+            assert sorted(by_split[split]) == entry["question_ids"]
+            assert len(entry["question_ids"]) == entry["expected_question_count"]
+
+    assert {sample.gold_annotation_version for sample in normalized} == {
+        manifest["gold_annotation_version"]
+    }
+    assert {sample.corpus_version for sample in normalized} == {manifest["corpus_version"]}
+    dev = set(manifest["splits"]["dev"]["question_ids"])
+    test = set(manifest["splits"]["test"]["question_ids"])
+    assert not dev & test
 
 
 def test_m3_loader_replays_chapter_local_coordinates(tmp_path: Path) -> None:
