@@ -8,9 +8,10 @@ from pathlib import Path
 import pytest
 from test_v2_contracts import make_document
 
-from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
+from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS, get_textbook_spec
 from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.contracts import IndexArtifact, TextbookDocument
+from cs30.v2.corpus import load_duplicate_report
 from cs30.v2.errors import BuildGateError, ContractError, InputError, PublishConflictError
 from cs30.v2.ids import sha256_text
 from cs30.v2.pipeline import (
@@ -21,6 +22,10 @@ from cs30.v2.pipeline import (
     run_build_pipeline,
 )
 from cs30.v2.ports import TextbookInput
+
+# The real catalogue also requires a CK-12 book that is not chosen yet, so
+# official-path tests that exercise later gates declare an OpenStax-only build.
+OPENSTAX_ONLY = ("openstax",)
 
 
 class StaticParser:
@@ -134,11 +139,11 @@ def make_build(tmp_path: Path, *, count: int = 3):
     inputs: list[TextbookInput] = []
     documents: dict[str, TextbookDocument] = {}
     parsers: dict[str, StaticParser] = {}
-    for index, textbook_id in enumerate(REQUIRED_TEXTBOOK_IDS[:count]):
+    for textbook_id in REQUIRED_TEXTBOOK_IDS[:count]:
         input, document = make_input(
             tmp_path,
             textbook_id,
-            provider="openstax" if index == 0 else "ck12",
+            provider=get_textbook_spec(textbook_id).provider,
         )
         inputs.append(input)
         documents[textbook_id] = document
@@ -264,6 +269,7 @@ def test_official_build_gate_writes_diagnostics_but_never_publishes_partial_outp
                 corpus_version="2.0.0-rc.1",
                 required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
                 mode="official",
+                required_providers=OPENSTAX_ONLY,
                 environment="staging",
                 output_dir=output_dir,
             ),
@@ -298,6 +304,7 @@ def test_official_build_requires_source_hash_pins_and_an_index_builder(
                 corpus_version="2.0.0-rc.1",
                 required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
                 mode="official",
+                required_providers=OPENSTAX_ONLY,
                 environment="staging",
                 output_dir=output_dir,
             ),
@@ -325,6 +332,7 @@ def test_official_build_requires_an_index_builder(tmp_path: Path) -> None:
                 corpus_version="2.0.0-rc.1",
                 required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
                 mode="official",
+                required_providers=OPENSTAX_ONLY,
                 environment="staging",
                 output_dir=output_dir,
             ),
@@ -351,6 +359,7 @@ def test_official_build_rejects_an_explicit_fixture_parser(tmp_path: Path) -> No
                 corpus_version="2.0.0-rc.1",
                 required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
                 mode="official",
+                required_providers=OPENSTAX_ONLY,
                 environment="staging",
                 output_dir=tmp_path / "artifacts" / "v2" / "fixture-parser",
             ),
@@ -370,6 +379,7 @@ def test_official_build_rejects_an_explicit_fixture_chunker(tmp_path: Path) -> N
                 corpus_version="2.0.0-rc.1",
                 required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
                 mode="official",
+                required_providers=OPENSTAX_ONLY,
                 environment="staging",
                 output_dir=tmp_path / "artifacts" / "v2" / "fixture-chunker",
             ),
@@ -394,6 +404,7 @@ def test_official_build_binds_index_to_canonical_records_and_hashes(tmp_path: Pa
             corpus_version="2.0.0-rc.1",
             required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
             mode="official",
+            required_providers=OPENSTAX_ONLY,
             environment="staging",
             output_dir=output_dir,
         ),
@@ -431,6 +442,7 @@ def test_mismatched_index_is_rejected_before_publish(tmp_path: Path) -> None:
                 corpus_version="2.0.0-rc.1",
                 required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
                 mode="official",
+                required_providers=OPENSTAX_ONLY,
                 environment="staging",
                 output_dir=output_dir,
             ),
@@ -490,3 +502,104 @@ def test_build_output_records_are_stable_across_repeated_runs(tmp_path: Path) ->
     assert first.manifest.corpus_hash == second.manifest.corpus_hash
     assert first.manifest.manifest_hash == second.manifest.manifest_hash
     assert first.corpus_path.read_bytes() == second.corpus_path.read_bytes()
+
+
+def test_official_build_stops_until_every_required_provider_has_a_book(
+    tmp_path: Path,
+) -> None:
+    inputs, _, registry = make_build(tmp_path)
+    output_dir = tmp_path / "artifacts" / "v2" / "textbooks" / "official-no-ck12"
+
+    with pytest.raises(BuildGateError) as exc_info:
+        run_build_pipeline(
+            inputs,
+            BuildDeps(
+                parser_registry=registry,
+                chunker=NonFixtureChunker(),
+                index_builder=MatchingIndexBuilder(),
+            ),
+            MultiTextbookBuildSpec(
+                corpus_version="2.0.0-rc.1",
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                mode="official",
+                environment="staging",
+                output_dir=output_dir,
+            ),
+        )
+
+    assert exc_info.value.code == "REQUIRED_PROVIDER_MISSING"
+    assert "ck12" in str(exc_info.value)
+    assert not output_dir.exists()
+
+
+def test_parser_provider_must_match_the_catalogue(tmp_path: Path) -> None:
+    inputs, documents, _ = make_build(tmp_path)
+    textbook_id = REQUIRED_TEXTBOOK_IDS[1]
+    wrong = documents[textbook_id].model_copy(update={"provider": "ck12"})
+    registry = StaticRegistry(
+        {
+            book_id: StaticParser(wrong if book_id == textbook_id else document)
+            for book_id, document in documents.items()
+        }
+    )
+
+    report = parse_material_batch(inputs, registry)
+
+    assert [failure.error_code for failure in report.failures] == ["PROVIDER_MISMATCH"]
+    assert report.failures[0].textbook_id == textbook_id
+
+
+def test_build_reports_blocks_repeated_across_textbooks(tmp_path: Path) -> None:
+    shared = "Newton's second law relates the net force on a body to its acceleration.\n"
+    texts = {
+        REQUIRED_TEXTBOOK_IDS[0]: shared,
+        REQUIRED_TEXTBOOK_IDS[1]: "Waves carry energy from one place to another.\n",
+        REQUIRED_TEXTBOOK_IDS[2]: shared.upper().replace(" ", "  "),
+    }
+    inputs = []
+    parsers = {}
+    for textbook_id, body in texts.items():
+        text = body + "[[FORMULA:f=ma]]\n[[IMAGE:fig-1]]"
+        document = make_document(
+            textbook_id,
+            provider=get_textbook_spec(textbook_id).provider,
+            text=text,
+        )
+        source = tmp_path / f"{textbook_id}.txt"
+        source.write_bytes(text.encode("utf-8"))
+        document = document.model_copy(update={"raw_source_sha256": sha256_text(text)})
+        inputs.append(
+            TextbookInput(
+                textbook_id=textbook_id,
+                source_path=source,
+                source_name=document.source_name,
+                source_version=document.source_version,
+                source_uri=document.source_uri,
+            )
+        )
+        parsers[textbook_id] = StaticParser(document)
+    output_dir = tmp_path / "artifacts" / "v2" / "textbooks" / "duplicates"
+
+    outcome = run_build_pipeline(
+        inputs,
+        BuildDeps(parser_registry=StaticRegistry(parsers), chunker=V2BlockChunker()),
+        MultiTextbookBuildSpec(
+            corpus_version="2.0.0-dev.1",
+            required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+            mode="development",
+            environment="development",
+            output_dir=output_dir,
+        ),
+    )
+
+    report = load_duplicate_report(output_dir / "duplicate_blocks.json")
+    assert report.corpus_hash == outcome.manifest.corpus_hash
+    assert len(report.groups) == 1
+    members = report.groups[0].members
+    assert {member.textbook_id for member in members} == {
+        REQUIRED_TEXTBOOK_IDS[0],
+        REQUIRED_TEXTBOOK_IDS[2],
+    }
+    assert {member.block_id for member in members} == {"body-1"}
+    run_report = json.loads(outcome.report_path.read_text(encoding="utf-8"))
+    assert run_report["cross_textbook_duplicate_groups"] == 1

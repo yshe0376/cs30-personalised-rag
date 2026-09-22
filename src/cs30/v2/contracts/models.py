@@ -508,7 +508,7 @@ class IndexArtifact(V2Model):
     corpus_hash: Identifier
     manifest_hash: Identifier
     chunk_config_hash: Identifier
-    required_textbook_ids: tuple[Identifier, ...] = Field(min_length=3)
+    required_textbook_ids: tuple[Identifier, ...] = Field(min_length=1)
     included_textbook_ids: tuple[Identifier, ...] = Field(min_length=1)
     chunk_count: int = Field(gt=0)
     chunk_ids: tuple[Identifier, ...] = Field(min_length=1)

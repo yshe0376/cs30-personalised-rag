@@ -39,7 +39,7 @@ class CorpusManifestDraft(ManifestModel):
     corpus_version: Identifier
     corpus_hash: Identifier
     chunk_config_hash: Identifier
-    required_textbook_ids: tuple[Identifier, ...] = Field(min_length=3)
+    required_textbook_ids: tuple[Identifier, ...] = Field(min_length=1)
     included_textbook_ids: tuple[Identifier, ...] = ()
     failed_textbook_ids: tuple[Identifier, ...] = ()
     documents: tuple[CorpusDocument, ...] = ()
@@ -51,8 +51,6 @@ class CorpusManifestDraft(ManifestModel):
 
     @model_validator(mode="after")
     def validate_sets(self) -> CorpusManifestDraft:
-        if len(self.required_textbook_ids) != 3:
-            raise ValueError("required_textbook_ids must contain exactly three IDs")
         if len(set(self.required_textbook_ids)) != len(self.required_textbook_ids):
             raise ValueError("required_textbook_ids must be unique")
         if len(set(self.included_textbook_ids)) != len(self.included_textbook_ids):
@@ -105,8 +103,8 @@ def build_manifest_draft(
     """Derive included textbooks from actual successful documents and chunks."""
 
     required = _ordered_ids(required_textbook_ids)
-    if len(required) != 3:
-        raise ValueError("required_textbook_ids must contain exactly three IDs")
+    if not required:
+        raise ValueError("required_textbook_ids must name at least one textbook")
     documents = tuple(documents)
     chunks = tuple(chunks)
     documents_by_id: dict[str, TextbookDocument] = {}

@@ -6,6 +6,14 @@ from cs30.v2.corpus.canonical import (
     corpus_hash,
     manifest_hash,
 )
+from cs30.v2.corpus.duplicates import (
+    DuplicateBlockGroup,
+    DuplicateBlockMember,
+    DuplicateBlockReport,
+    find_cross_textbook_duplicates,
+    load_duplicate_report,
+    write_duplicate_report,
+)
 from cs30.v2.corpus.manifest import (
     CorpusDocument,
     CorpusManifest,
@@ -30,7 +38,13 @@ __all__ = [
     "CorpusManifestDraft",
     "ChunkTopicAssignment",
     "ChunkTopicMap",
+    "DuplicateBlockGroup",
+    "DuplicateBlockMember",
+    "DuplicateBlockReport",
     "build_manifest_draft",
+    "find_cross_textbook_duplicates",
+    "load_duplicate_report",
+    "write_duplicate_report",
     "canonical_corpus_bytes",
     "canonical_chunk_topic_map",
     "canonical_manifest_bytes",

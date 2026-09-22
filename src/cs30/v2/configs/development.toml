@@ -7,8 +7,8 @@ corpus_mode = "development"
 corpus_version = "2.0.0-dev.1"
 required_textbook_ids = [
   "openstax_college_physics_2e",
-  "ck12_peoples_physics_basic",
-  "ck12_physics_concepts_intermediate",
+  "openstax_physics",
+  "openstax_college_physics_ap_2e",
 ]
-output_dir = "artifacts/v2/three-textbooks/2.0.0-dev.1"
+output_dir = "artifacts/v2/textbooks/2.0.0-dev.1"
 chunk_config = { tokenizer_name = "unicode-wordpunct-v1" }

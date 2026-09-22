@@ -1,4 +1,4 @@
-"""The v2 textbook catalogue and its exact three-book official set."""
+"""The v2 textbook catalogue: the frozen required set and the providers it must cover."""
 
 from __future__ import annotations
 
@@ -20,15 +20,21 @@ class TextbookSpec:
     enabled: bool = False
 
 
-# M1 freezes the set; raw source hashes are filled when M2 delivers the retained
-# source files.  An absent hash is therefore visible and cannot be mistaken for
-# a verified source pin.  College Physics 2e is pinned to the PDF that M2's
-# OpenStax parser 1.3.2 was validated against (1,671 pages, chapters 1-34).
+# M1 freezes the set; the number of books is whatever this tuple holds, not a
+# fixed three.  Every entry is pinned to the exact PDF that M2's OpenStax
+# parser 1.3.2 was validated against, so an official build cannot silently read
+# another printing.  Licences follow OpenStax's CC BY 4.0 and are re-checked
+# against each PDF's licence page before the first official build.
 REQUIRED_TEXTBOOK_IDS: tuple[str, ...] = (
     "openstax_college_physics_2e",
-    "ck12_peoples_physics_basic",
-    "ck12_physics_concepts_intermediate",
+    "openstax_physics",
+    "openstax_college_physics_ap_2e",
 )
+
+# An official v2 corpus must contain at least one book from each provider.  The
+# CK-12 book is required but not chosen yet; until M2 adds it to the catalogue,
+# official builds stop with REQUIRED_PROVIDER_MISSING instead of guessing an ID.
+REQUIRED_PROVIDERS: tuple[str, ...] = ("openstax", "ck12")
 
 TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
     "openstax_college_physics_2e": TextbookSpec(
@@ -46,36 +52,52 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         ),
         enabled=True,
     ),
-    "ck12_peoples_physics_basic": TextbookSpec(
-        textbook_id="ck12_peoples_physics_basic",
-        provider="ck12",
-        title="People's Physics Book - Basic",
-        source_version="SciQ Appendix A source edition",
-        source_name="ck12_peoples_physics_basic",
-        source_uri="http://www.ck12.org/book/Peoples-Physics-Book-Basic/",
-        license="CC BY-NC 3.0",
-        parser_name="ck12",
+    "openstax_physics": TextbookSpec(
+        textbook_id="openstax_physics",
+        provider="openstax",
+        title="Physics",
+        source_version="1e",
+        source_name="openstax_physics",
+        source_uri="https://openstax.org/details/books/physics",
+        license="CC BY 4.0",
+        parser_name="openstax",
+        selected_chapters=tuple(str(chapter) for chapter in range(1, 24)),
+        expected_source_sha256=(
+            "sha256:a3f75487411ef13d0270c65fc801ceff2b28e6b339afed9b407fe477f7e8453e"
+        ),
         enabled=True,
     ),
-    "ck12_physics_concepts_intermediate": TextbookSpec(
-        textbook_id="ck12_physics_concepts_intermediate",
-        provider="ck12",
-        title="CK-12 Physics Concepts - Intermediate",
-        source_version="SciQ Appendix A source edition",
-        source_name="ck12_physics_concepts_intermediate",
-        source_uri="http://www.ck12.org/book/CK-12-Physics-Concepts-Intermediate/",
-        license="CC BY-NC 3.0",
-        parser_name="ck12",
+    # About 94% of this edition's retrievable text is verbatim College Physics
+    # 2e; the build reports those blocks as cross-textbook duplicate groups.
+    "openstax_college_physics_ap_2e": TextbookSpec(
+        textbook_id="openstax_college_physics_ap_2e",
+        provider="openstax",
+        title="College Physics for AP® Courses 2e",
+        source_version="2e",
+        source_name="openstax_college_physics_ap_2e",
+        source_uri="https://openstax.org/details/books/college-physics-ap-courses-2e",
+        license="CC BY 4.0",
+        parser_name="openstax",
+        selected_chapters=tuple(str(chapter) for chapter in range(1, 35)),
+        expected_source_sha256=(
+            "sha256:de438d7a0ed13339340d3e6bb93346920ef146c99e1275e8c84ba476555943d7"
+        ),
         enabled=True,
     ),
 }
 
 
 def validate_catalog() -> None:
-    if len(REQUIRED_TEXTBOOK_IDS) != 3 or len(set(REQUIRED_TEXTBOOK_IDS)) != 3:
-        raise ValueError("v2 official catalogue must contain exactly three unique textbook IDs")
+    if not REQUIRED_TEXTBOOK_IDS or len(set(REQUIRED_TEXTBOOK_IDS)) != len(
+        REQUIRED_TEXTBOOK_IDS
+    ):
+        raise ValueError("v2 catalogue must contain at least one textbook and no duplicates")
     if set(REQUIRED_TEXTBOOK_IDS) != set(TEXTBOOK_CATALOG):
         raise ValueError("catalogue keys must equal the frozen v2 textbook set")
+    if not REQUIRED_PROVIDERS or any(
+        provider != provider.casefold() for provider in REQUIRED_PROVIDERS
+    ):
+        raise ValueError("required providers must be canonical lowercase names")
     for textbook_id, spec in TEXTBOOK_CATALOG.items():
         if textbook_id != spec.textbook_id:
             raise ValueError(f"catalogue key does not match textbook_id: {textbook_id}")
@@ -100,3 +122,13 @@ def get_textbook_spec(textbook_id: str) -> TextbookSpec:
         return TEXTBOOK_CATALOG[textbook_id]
     except KeyError as exc:
         raise ValueError(f"unknown textbook_id: {textbook_id}") from exc
+
+
+def missing_required_providers(
+    textbook_ids: tuple[str, ...],
+    required_providers: tuple[str, ...] = REQUIRED_PROVIDERS,
+) -> tuple[str, ...]:
+    """Return the required providers that none of ``textbook_ids`` comes from."""
+
+    covered = {get_textbook_spec(textbook_id).provider for textbook_id in textbook_ids}
+    return tuple(provider for provider in required_providers if provider not in covered)

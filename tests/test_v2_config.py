@@ -20,13 +20,24 @@ def test_development_config_uses_versioned_v2_output_and_separate_corpus_mode() 
     assert config.index_dir == config.output_dir / "index"
 
 
-def test_official_mode_requires_exactly_three_ids() -> None:
-    with pytest.raises(ValueError, match="exactly three"):
+@pytest.mark.parametrize(
+    "required_textbook_ids",
+    [
+        ("one", "two"),
+        REQUIRED_TEXTBOOK_IDS[:-1],
+        tuple(reversed(REQUIRED_TEXTBOOK_IDS)),
+        (*REQUIRED_TEXTBOOK_IDS, "ck12_extra"),
+    ],
+)
+def test_profile_must_name_exactly_the_catalogue_set(
+    required_textbook_ids: tuple[str, ...],
+) -> None:
+    with pytest.raises(ValueError, match="catalogue's required set"):
         V2Config(
             environment="staging",
             corpus_mode="official",
             corpus_version="2.0.0-rc.1",
-            required_textbook_ids=("one", "two"),
+            required_textbook_ids=required_textbook_ids,
             output_dir=Path("artifacts/v2/test"),
         )
 

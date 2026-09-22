@@ -50,10 +50,13 @@ class V2Config(BaseModel):
 
     @model_validator(mode="after")
     def validate_v2_boundary(self) -> V2Config:
-        if len(self.required_textbook_ids) != 3:
-            raise ValueError("required_textbook_ids must contain exactly three IDs")
-        if len(set(self.required_textbook_ids)) != 3:
-            raise ValueError("required_textbook_ids must be unique")
+        # The profile must name exactly the catalogue's frozen set, in its order,
+        # so a TOML edit cannot quietly add, drop, or reorder a textbook.
+        if tuple(self.required_textbook_ids) != REQUIRED_TEXTBOOK_IDS:
+            raise ValueError(
+                "required_textbook_ids must equal the catalogue's required set: "
+                f"{list(REQUIRED_TEXTBOOK_IDS)}"
+            )
         if self.corpus_mode == "official" and self.fixture_mode:
             raise ValueError("official mode cannot run with fixture_mode enabled")
         validate_v2_output_dir(self.output_dir)
@@ -101,6 +104,6 @@ def default_v2_config() -> V2Config:
         corpus_mode="development",
         corpus_version="2.0.0-dev.1",
         required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
-        output_dir=Path("artifacts/v2/three-textbooks/2.0.0-dev.1"),
+        output_dir=Path("artifacts/v2/textbooks/2.0.0-dev.1"),
         fixture_mode=True,
     )

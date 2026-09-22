@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS, get_textbook_spec
+from cs30.v2.catalog import (
+    REQUIRED_PROVIDERS,
+    REQUIRED_TEXTBOOK_IDS,
+    get_textbook_spec,
+    missing_required_providers,
+)
 from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.contracts import (
     Chunk,
@@ -451,29 +456,57 @@ def test_chunk_rejects_the_legacy_uri_and_document_locator_format() -> None:
         Chunk.model_validate(payload)
 
 
-def test_catalog_freezes_exactly_three_v2_textbooks_and_rejects_unknown_ids() -> None:
-    assert len(REQUIRED_TEXTBOOK_IDS) == 3
-    assert len(set(REQUIRED_TEXTBOOK_IDS)) == 3
+def test_catalog_freezes_the_required_v2_textbooks_and_rejects_unknown_ids() -> None:
+    assert REQUIRED_TEXTBOOK_IDS == (
+        "openstax_college_physics_2e",
+        "openstax_physics",
+        "openstax_college_physics_ap_2e",
+    )
     assert all(get_textbook_spec(book_id).enabled for book_id in REQUIRED_TEXTBOOK_IDS)
     with pytest.raises(ValueError, match="unknown textbook_id"):
         get_textbook_spec("not-a-real-v2-book")
 
 
-def test_college_physics_is_pinned_to_the_pdf_m2_validated() -> None:
-    spec = get_textbook_spec("openstax_college_physics_2e")
+@pytest.mark.parametrize(
+    ("textbook_id", "version", "last_chapter", "pdf_sha256"),
+    [
+        (
+            "openstax_college_physics_2e",
+            "2e",
+            34,
+            "a052d9fae2a90e135a74d70c001a78bb49b83280be58191e108d5de577699bb6",
+        ),
+        (
+            "openstax_physics",
+            "1e",
+            23,
+            "a3f75487411ef13d0270c65fc801ceff2b28e6b339afed9b407fe477f7e8453e",
+        ),
+        (
+            "openstax_college_physics_ap_2e",
+            "2e",
+            34,
+            "de438d7a0ed13339340d3e6bb93346920ef146c99e1275e8c84ba476555943d7",
+        ),
+    ],
+)
+def test_each_openstax_book_is_pinned_to_the_pdf_m2_validated(
+    textbook_id: str, version: str, last_chapter: int, pdf_sha256: str
+) -> None:
+    spec = get_textbook_spec(textbook_id)
 
-    assert spec.expected_source_sha256 == (
-        "sha256:a052d9fae2a90e135a74d70c001a78bb49b83280be58191e108d5de577699bb6"
+    assert spec.provider == "openstax"
+    assert spec.expected_source_sha256 == "sha256:" + pdf_sha256
+    assert spec.selected_chapters == tuple(
+        str(chapter) for chapter in range(1, last_chapter + 1)
     )
-    assert spec.selected_chapters == tuple(str(chapter) for chapter in range(1, 35))
-    assert spec.source_version == "2e"
-    # The CK-12 entries stay unpinned until M2 delivers those sources, which keeps
-    # official builds closed with SOURCE_HASH_NOT_PINNED instead of guessing.
-    assert all(
-        get_textbook_spec(book_id).expected_source_sha256 is None
-        for book_id in REQUIRED_TEXTBOOK_IDS
-        if book_id != "openstax_college_physics_2e"
-    )
+    assert spec.source_version == version
+
+
+def test_ck12_is_required_but_not_yet_in_the_catalogue() -> None:
+    assert "ck12" in REQUIRED_PROVIDERS
+    assert missing_required_providers(REQUIRED_TEXTBOOK_IDS) == ("ck12",)
+    assert missing_required_providers(REQUIRED_TEXTBOOK_IDS, ("openstax",)) == ()
 
 
 @pytest.mark.parametrize(

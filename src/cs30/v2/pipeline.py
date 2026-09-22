@@ -10,10 +10,18 @@ from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Literal
 
-from cs30.v2.catalog import get_textbook_spec
+from cs30.v2.catalog import (
+    REQUIRED_PROVIDERS,
+    get_textbook_spec,
+    missing_required_providers,
+)
 from cs30.v2.config import validate_v2_output_dir
 from cs30.v2.contracts import Chunk, IndexArtifact, TextbookDocument
 from cs30.v2.corpus.canonical import canonical_chunks, canonical_corpus_bytes
+from cs30.v2.corpus.duplicates import (
+    find_cross_textbook_duplicates,
+    write_duplicate_report,
+)
 from cs30.v2.corpus.manifest import (
     CorpusManifest,
     build_manifest_draft,
@@ -105,12 +113,13 @@ def parse_material_batch(
         seen.add(input.textbook_id)
 
         try:
-            catalog_source_name = get_textbook_spec(input.textbook_id).source_name
+            spec = get_textbook_spec(input.textbook_id)
         except ValueError as exc:
             failures.append(
                 _failure(input, stage="input", code="UNKNOWN_TEXTBOOK", error=exc)
             )
             continue
+        catalog_source_name = spec.source_name
         if input.source_name != catalog_source_name:
             failures.append(
                 _failure(
@@ -184,6 +193,12 @@ def parse_material_batch(
                     f"document textbook_id {document.textbook_id!r} does not match "
                     f"input {input.textbook_id!r}",
                     code="ASSET_VERSION_MISMATCH",
+                )
+            if document.provider != spec.provider:
+                raise ContractError(
+                    f"document provider {document.provider!r} does not match the "
+                    f"catalogue provider {spec.provider!r}",
+                    code="PROVIDER_MISMATCH",
                 )
             if (
                 document.source_name != input.source_name
@@ -274,13 +289,33 @@ class MultiTextbookBuildSpec:
     mode: Literal["development", "official"]
     environment: Literal["development", "staging", "production"]
     output_dir: Path
+    # Official builds must cover every provider named here; the catalogue's
+    # REQUIRED_PROVIDERS is the only production value.
+    required_providers: tuple[str, ...] = REQUIRED_PROVIDERS
 
     def __post_init__(self) -> None:
-        if len(self.required_textbook_ids) != 3:
-            raise ValueError("required_textbook_ids must contain exactly three IDs")
-        if len(set(self.required_textbook_ids)) != 3:
+        if not self.required_textbook_ids:
+            raise ValueError("required_textbook_ids must name at least one textbook")
+        if len(set(self.required_textbook_ids)) != len(self.required_textbook_ids):
             raise ValueError("required_textbook_ids must be unique")
         validate_v2_output_dir(self.output_dir)
+
+
+def _ensure_required_providers(spec: MultiTextbookBuildSpec) -> None:
+    """Stop an official build that would leave out a required provider."""
+
+    try:
+        missing = missing_required_providers(
+            spec.required_textbook_ids, spec.required_providers
+        )
+    except ValueError as exc:
+        raise InputError(str(exc), code="UNKNOWN_TEXTBOOK") from exc
+    if missing:
+        raise BuildGateError(
+            "official v2 builds need at least one textbook from each required provider; "
+            f"missing: {', '.join(missing)}",
+            code="REQUIRED_PROVIDER_MISSING",
+        )
 
 
 @dataclass(frozen=True)
@@ -312,6 +347,9 @@ def _write_run_report(path: Path, payload: dict[str, object]) -> None:
         json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
+
+
+DUPLICATE_REPORT_NAME = "duplicate_blocks.json"
 
 
 def _write_records(path: Path, chunks: Sequence[Chunk]) -> None:
@@ -397,6 +435,9 @@ def run_build_pipeline(
             deps.parser_registry,
             deps.chunker,
         )
+        # Checked before parsing: full textbooks take minutes to parse, and a
+        # build without every required provider can never become reportable.
+        _ensure_required_providers(spec)
 
     parse_report = parse_material_batch(
         inputs,
@@ -457,6 +498,12 @@ def run_build_pipeline(
             }
         )
     manifest = finalize_manifest(draft)
+    included = set(manifest.included_textbook_ids)
+    duplicate_report = find_cross_textbook_duplicates(
+        [document for document in parse_report.documents if document.textbook_id in included],
+        corpus_version=manifest.corpus_version,
+        corpus_hash=manifest.corpus_hash,
+    )
     run_id = uuid.uuid4().hex[:16]
     report_payload = {
         "schema_version": "2.0",
@@ -473,6 +520,7 @@ def run_build_pipeline(
         "corpus_hash": manifest.corpus_hash,
         "manifest_hash": manifest.manifest_hash,
         "validation_errors": list(manifest.validation_errors),
+        "cross_textbook_duplicate_groups": len(duplicate_report.groups),
         "artifact_ready": deps.index_builder is not None,
         "failures": [_failure_payload(failure) for failure in failures],
     }
@@ -489,6 +537,7 @@ def run_build_pipeline(
     try:
         _write_records(staging_records, ordered_chunks)
         write_corpus_manifest(manifest, staging_manifest)
+        write_duplicate_report(duplicate_report, staging_dir / DUPLICATE_REPORT_NAME)
         _write_run_report(staging_report, report_payload)
 
         if spec.mode == "official" and not manifest.reportable:
@@ -496,6 +545,7 @@ def run_build_pipeline(
             diagnostics_dir.mkdir(parents=True, exist_ok=True)
             _write_records(diagnostics_dir / "records.jsonl", ordered_chunks)
             write_corpus_manifest(manifest, diagnostics_dir / "manifest.json")
+            write_duplicate_report(duplicate_report, diagnostics_dir / DUPLICATE_REPORT_NAME)
             diagnostics_report = diagnostics_dir / "run_report.json"
             _write_run_report(diagnostics_report, report_payload)
             raise BuildGateError(
