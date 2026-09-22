@@ -179,7 +179,7 @@ def test_chunk_keeps_document_global_half_open_span_and_structural_spans() -> No
             content_type=ContentType.FORMULA,
         ),
     )
-    assert formula_chunk.source_locator.startswith("source=openstax_college_physics_2e.json")
+    assert formula_chunk.source_locator.startswith("source=openstax_college_physics_2e|")
     assert formula_chunk.section_id == "1.1"
     assert formula_chunk.section_title == "Force"
     assert formula_chunk.content_type is ContentType.FORMULA
@@ -270,6 +270,28 @@ def test_catalog_freezes_exactly_three_v2_textbooks_and_rejects_unknown_ids() ->
     assert all(get_textbook_spec(book_id).enabled for book_id in REQUIRED_TEXTBOOK_IDS)
     with pytest.raises(ValueError, match="unknown textbook_id"):
         get_textbook_spec("not-a-real-v2-book")
+
+
+@pytest.mark.parametrize(
+    "source_name",
+    ["openstax_college_physics_2e.json", "local_copy", "openstax_college_physics_2e/vol1.pdf"],
+)
+def test_catalog_source_name_is_the_textbook_id_without_a_file_extension(
+    monkeypatch: pytest.MonkeyPatch, source_name: str
+) -> None:
+    from dataclasses import replace
+
+    from cs30.v2 import catalog
+
+    textbook_id = REQUIRED_TEXTBOOK_IDS[0]
+    assert get_textbook_spec(textbook_id).source_name == textbook_id
+    monkeypatch.setitem(
+        catalog.TEXTBOOK_CATALOG,
+        textbook_id,
+        replace(catalog.TEXTBOOK_CATALOG[textbook_id], source_name=source_name),
+    )
+    with pytest.raises(ValueError, match="source_name"):
+        catalog.validate_catalog()
 
 
 def test_v2_document_does_not_accept_the_v1_source_alias_as_a_substitute() -> None:
