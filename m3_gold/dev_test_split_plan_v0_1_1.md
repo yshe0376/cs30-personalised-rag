@@ -5,8 +5,14 @@
 This plan applies to `m3_gold/gold_v0_1_1.jsonl`, the current 20-record M3 Gold
 v0.1.1 set produced from `standardized/test.jsonl`.
 
-These split labels are proposed only. They should not be treated as the frozen
-formal evaluation split until the formal Gold set is expanded and reviewed.
+These split labels were first proposed only, pending an expanded and reviewed
+Gold set.
+
+**Status (2026-09-22): adopted as the v1.0 split.** The 20 records are reviewed,
+so the rule below was applied unchanged and the labels finalized from
+`proposed_dev` / `proposed_test` to `dev` / `test`. The machine-readable form is
+`eval_inputs/split_manifest.json` (`split-v1`). The expanded Gold set for v2.0
+will need its own split; keep the chapter-isolation principle described below.
 
 ## Deterministic Rule
 
