@@ -1,37 +1,21 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "0.1",
   "role_schema_version": "role-labels-v1",
   "role_taxonomy_version": "evidence-role-v1",
   "annotation_version": "m3-role-v1",
   "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
   "parser_version": "1.2.0",
-  "split_stats": {
-    "proposed_test": 8,
-    "proposed_dev": 12
-  },
-  "annotation_stats": {
-    "question_count": 20,
-    "label_count": 21,
-    "role_counts": {
-      "definition": 10,
-      "application": 8,
-      "example": 1,
-      "derivation": 2
-    }
-  },
+  "annotation_date": "2026-09-22",
+  "annotator_ids": [
+    "leahwang126"
+  ],
   "double_annotated": false,
-  "scope": "current_m3_gold_v0.1.1; proposed split, not frozen formal evaluation split",
   "labels_file": "role_labels_v1.jsonl",
-  "labels_sha256": "sha256:47967b68abd9d7540e44f4465362da1b8f1b992cc5c64af3c5f5fa3ff229adcb",
-  "declared_record_count": 21,
-  "question_id_field": "question_id",
+  "labels_sha256": "d4f9a40bd00829b3663467af29b1d03f47f8ad45fca74650f004d86e8ae97c33",
+  "declared_record_count": 20,
   "reference_id_field": "chunk_id",
   "reference_type": "chunk",
+  "reference_universe": "gold_mapping",
   "role_field": "role",
-  "record_schema_version_field": "schema_version",
-  "chunk_id_source": "current prepared-corpus block_id; replace with official M4 chunk map before final handoff",
-  "source_files": {
-    "gold": "/Users/orangechick/Desktop/5703/sciq/m3_gold/gold_v0_1_1.jsonl",
-    "evidence_blocks": "/Users/orangechick/Desktop/5703/sciq/m3_unified_source_corpus/source_corpus/evidence_source_blocks.jsonl"
-  }
+  "record_schema_version_field": "schema_version"
 }

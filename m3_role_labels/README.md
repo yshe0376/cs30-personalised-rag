@@ -6,15 +6,13 @@ This directory contains the first role-label draft derived from the reviewed
 The allowed role taxonomy is:
 
 ```text
-definition / example / application / derivation / boundary
+definition / example / comparison / application / derivation / boundary
 ```
 
 Each JSONL record has the required key `(question_id, chunk_id)` plus one
-role. The current prepared corpus does not contain a separate official M4
-block-to-chunk mapping file, so this draft uses the existing Gold
-`block_id` as the reference value and records that limitation in the
-provenance manifest. Do not present this draft as the final M4-compatible
-handoff until the official mapping is available.
+role. `chunk_id` values come from the official M4
+`eval_inputs/gold_to_chunk_mapping.json`; the Gold `block_id` is used only to
+look up that mapping.
 
 Regenerate it with:
 
@@ -22,6 +20,7 @@ Regenerate it with:
 python3 m3_gold/build_role_labels_v1.py
 ```
 
-When M4 supplies a JSON mapping of `block_id` to `chunk_id`, regenerate with
-`--chunk-map path/to/block_to_chunk.json`. The script then refuses any missing
-mapping instead of inventing an identifier.
+The manifest uses the role-label contract: `schema_version` `0.1`, raw
+64-character `labels_sha256`, `reference_universe` `gold_mapping`, and the
+declared role taxonomy. The script refuses any missing mapping instead of
+inventing an identifier.

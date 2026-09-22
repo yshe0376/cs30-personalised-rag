@@ -1,10 +1,7 @@
 """Build M3 role labels from the reviewed Gold-to-source mappings.
 
 The script intentionally does not retrieve new evidence or invent chunk IDs.
-It uses each Gold span's existing ``block_id`` as the current prepared-corpus
-reference. When an official M4 chunk mapping becomes available, pass it with
-``--chunk-map``; the map must contain one ``block_id`` -> ``chunk_id`` entry
-for every Gold span.
+It resolves every Gold span through the official M4 gold-to-chunk mapping.
 """
 
 from __future__ import annotations
@@ -12,19 +9,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from collections import Counter
 from pathlib import Path
 from typing import Any
 
-ROLES = {"definition", "example", "application", "derivation", "boundary"}
+ROLES = {
+    "definition", "example", "comparison", "application", "derivation", "boundary",
+}
 DEFAULT_GOLD = Path(__file__).with_name("gold_v0_1_1.jsonl")
-DEFAULT_BLOCKS = (
-    Path(__file__).resolve().parents[1]
-    / "m3_unified_source_corpus"
-    / "source_corpus"
-    / "evidence_source_blocks.jsonl"
-)
 DEFAULT_OUTPUT_DIR = Path(__file__).resolve().parents[1] / "m3_role_labels"
+DEFAULT_CHUNK_MAP = (
+    Path(__file__).resolve().parents[1] / "eval_inputs" / "gold_to_chunk_mapping.json"
+)
 
 # This is an annotation map for the current reviewed 20-record M3 package.
 # It is keyed by question rather than by text so that reruns are deterministic.
@@ -33,7 +28,7 @@ ROLE_BY_QUESTION = {
     "sciq-test-00536": "definition",
     "sciq-test-00646": "definition",
     "sciq-test-00246": "application",
-    "sciq-test-00942": "application",
+    "sciq-test-00942": "comparison",
     "sciq-test-00335": "application",
     "sciq-test-00333": "application",
     "sciq-test-00465": "application",
@@ -57,15 +52,24 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in stream if line.strip()]
 
 
-def read_chunk_map(path: Path | None) -> dict[str, str]:
-    if path is None:
-        return {}
+def read_chunk_map(path: Path) -> dict[str, list[str]]:
     raw = json.loads(path.read_text(encoding="utf-8"))
-    if isinstance(raw, dict):
-        return {str(key): str(value) for key, value in raw.items()}
-    result = {}
-    for item in raw:
-        result[str(item["block_id"])] = str(item["chunk_id"])
+    entries = raw.get("entries") if isinstance(raw, dict) else raw
+    if not isinstance(entries, list):
+        raise ValueError("chunk map must contain an entries list")
+    result: dict[str, list[str]] = {}
+    for item in entries:
+        metadata = item.get("source_metadata", {})
+        block_id = metadata.get("resolved_block_id") or item.get("block_id")
+        chunk_ids = item.get("matching_chunk_ids")
+        if chunk_ids is None:
+            chunk_ids = [match["chunk_id"] for match in item.get("chunk_matches", [])]
+        if not block_id or not chunk_ids:
+            raise ValueError(f"incomplete chunk map entry: {item!r}")
+        result.setdefault(str(block_id), [])
+        result[str(block_id)].extend(str(chunk_id) for chunk_id in chunk_ids)
+    for block_id, chunk_ids in result.items():
+        result[block_id] = sorted(set(chunk_ids))
     return result
 
 
@@ -74,22 +78,23 @@ def sha256(path: Path) -> str:
     with path.open("rb") as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(chunk)
-    return "sha256:" + digest.hexdigest()
+    return digest.hexdigest()
 
 
 def build_labels(
     gold_path: Path,
-    blocks_path: Path,
+    blocks_path: Path | None,
     output_path: Path,
     manifest_path: Path,
-    chunk_map_path: Path | None,
+    chunk_map_path: Path,
 ) -> dict[str, Any]:
     gold = read_jsonl(gold_path)
-    blocks = {row["block_id"]: row for row in read_jsonl(blocks_path)}
     chunk_map = read_chunk_map(chunk_map_path)
+    if blocks_path is not None and blocks_path.exists():
+        available_blocks = {row["block_id"] for row in read_jsonl(blocks_path)}
+    else:
+        available_blocks = None
     labels: list[dict[str, str]] = []
-    split_counts: Counter[str] = Counter()
-    role_counts: Counter[str] = Counter()
     missing_blocks: list[str] = []
     missing_map: list[str] = []
 
@@ -98,24 +103,28 @@ def build_labels(
         role = ROLE_BY_QUESTION.get(question_id)
         if role not in ROLES:
             raise ValueError(f"no reviewed role assignment for {question_id}")
-        split_counts[str(record.get("split", "unknown"))] += 1
         for evidence_set in record.get("gold_core_evidence_sets", []):
             for span in evidence_set:
                 block_id = str(span["block_id"])
-                if block_id not in blocks:
+                if available_blocks is not None and block_id not in available_blocks:
                     missing_blocks.append(block_id)
                     continue
-                chunk_id = chunk_map.get(block_id, block_id)
-                if chunk_map_path is not None and block_id not in chunk_map:
+                if block_id not in chunk_map:
                     missing_map.append(block_id)
                     continue
-                labels.append({
-                    "schema_version": "role-labels-v1",
-                    "question_id": question_id,
-                    "chunk_id": chunk_id,
-                    "role": role,
-                })
-                role_counts[role] += 1
+                for chunk_id in chunk_map[block_id]:
+                    label = {
+                        "schema_version": "role-labels-v1",
+                        "question_id": question_id,
+                        "chunk_id": chunk_id,
+                        "role": role,
+                    }
+                    if not any(
+                        existing["question_id"] == question_id
+                        and existing["chunk_id"] == chunk_id
+                        for existing in labels
+                    ):
+                        labels.append(label)
 
     if missing_blocks:
         raise ValueError(f"Gold references missing source blocks: {sorted(set(missing_blocks))}")
@@ -132,50 +141,46 @@ def build_labels(
         for row in labels:
             stream.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
-    corpus_manifest = json.loads((blocks_path.parent / "corpus_manifest.json").read_text(encoding="utf-8"))
+    corpus_version = str(gold[0].get("corpus_version", ""))
+    parser_version = str(gold[0].get("parser_version", ""))
+    if not corpus_version or not parser_version:
+        raise ValueError("Gold must provide corpus_version and parser_version")
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": "0.1",
         "role_schema_version": "role-labels-v1",
         "role_taxonomy_version": "evidence-role-v1",
         "annotation_version": "m3-role-v1",
-        "corpus_version": corpus_manifest["corpus_version"],
-        "parser_version": corpus_manifest["parser_version"],
-        "split_stats": dict(split_counts),
-        "annotation_stats": {
-            "question_count": len(gold),
-            "label_count": len(labels),
-            "role_counts": dict(role_counts),
-        },
+        "corpus_version": corpus_version,
+        "parser_version": parser_version,
+        "annotation_date": "2026-09-22",
+        "annotator_ids": ["leahwang126"],
         "double_annotated": False,
-        "scope": "current_m3_gold_v0.1.1; proposed split, not frozen formal evaluation split",
         "labels_file": output_path.name,
         "labels_sha256": sha256(output_path),
         "declared_record_count": len(labels),
-        "question_id_field": "question_id",
         "reference_id_field": "chunk_id",
         "reference_type": "chunk",
+        "reference_universe": "gold_mapping",
         "role_field": "role",
         "record_schema_version_field": "schema_version",
-        "chunk_id_source": (
-            "official M4 block-to-chunk map"
-            if chunk_map_path is not None
-            else "current prepared-corpus block_id; replace with official M4 chunk map before final handoff"
-        ),
-        "source_files": {
-            "gold": str(gold_path),
-            "evidence_blocks": str(blocks_path),
-        },
     }
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
     return manifest
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gold", type=Path, default=DEFAULT_GOLD)
-    parser.add_argument("--blocks", type=Path, default=DEFAULT_BLOCKS)
+    parser.add_argument(
+        "--blocks",
+        type=Path,
+        help="optional prepared evidence blocks file for an additional block-ID check",
+    )
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument("--chunk-map", type=Path)
+    parser.add_argument("--chunk-map", type=Path, default=DEFAULT_CHUNK_MAP)
     args = parser.parse_args()
     manifest = build_labels(
         args.gold,
@@ -185,9 +190,9 @@ def main() -> int:
         args.chunk_map,
     )
     print(f"labels={manifest['declared_record_count']}")
-    print(f"questions={manifest['annotation_stats']['question_count']}")
+    print(f"questions={len(read_jsonl(args.gold))}")
     print(f"output_dir={args.output_dir}")
-    print(f"chunk_id_source={manifest['chunk_id_source']}")
+    print(f"chunk_map={args.chunk_map}")
     return 0
 
 
