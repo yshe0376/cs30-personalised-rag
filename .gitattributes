@@ -1,0 +1,14 @@
+# Check out JSON and JSONL with LF on every platform.
+#
+# Several committed data files have their SHA-256 recorded in a manifest (for
+# example m3_role_labels/role_labels_v1.jsonl in its provenance manifest), and
+# the pipeline hashes JSON artifacts to bind a frozen configuration to its
+# inputs. With core.autocrlf=true, a Windows checkout rewrites LF to CRLF, so
+# the bytes on disk stop matching every recorded hash while the blob in the
+# repository is unchanged. Linux CI never sees the conversion, so the failure
+# only appears on a Windows machine.
+#
+# Every JSON and JSONL blob in the repository is already LF, so this rule
+# changes no committed bytes; it only fixes what a Windows checkout produces.
+*.json  text eol=lf
+*.jsonl text eol=lf
