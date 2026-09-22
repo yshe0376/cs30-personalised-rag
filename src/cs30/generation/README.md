@@ -89,11 +89,16 @@ python -m cs30.generation.prepare_cases \
   --retrieval-runs artifacts/w6/m6/dev_results.jsonl \
   --retrieval-manifest artifacts/w6/m6/dev_manifest.json \
   --gold-mapping artifacts/w6/m4/gold_to_chunk_mapping.json \
-  --split-manifest artifacts/w6/split_manifest.json \
+  --split-manifest path/to/team-frozen-split-manifest.json \
   --target-split dev --input-status formal \
   --output-cases artifacts/task7/formal_dev_cases.jsonl \
   --output-manifest artifacts/task7/formal_dev_cases.manifest.json
 ```
+
+The split-manifest path above is a placeholder. No team-frozen JSON split
+manifest is currently committed, so a formal run cannot start until the M3
+owner and Leader publish the agreed artifact. M7 does not fabricate that
+upstream input.
 
 The preparation step verifies the M6 execution mode and status, rejects
 duplicate questions or missing Gold mappings, preserves M6 retrieval bytes in
@@ -127,20 +132,29 @@ identities:
 python -m cs30.generation.lambda_search \
   --cases artifacts/task7/formal_dev_cases.jsonl \
   --role-label-manifest m3_role_labels/role_labels_v1_provenance_manifest.json \
-  --split-manifest artifacts/w6/split_manifest.json \
+  --split-manifest path/to/team-frozen-split-manifest.json \
   --input-status formal --lambdas 0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1 \
   --metric-k 5 --output artifacts/task7/lambda_dev_search.json
 ```
 
 The command refuses Test rows. The candidate pool must be larger than
 `metric-k`; otherwise hit/recall cannot change and the command fails rather
-than presenting a meaningless comparison. A formal frozen configuration also
+than presenting a meaningless comparison. The current M6 handoff has
+`top_k=5`, so it cannot be used with `metric-k=5`; M6 must provide a larger
+candidate pool, or the team must approve a smaller evaluation k. The existing
+12-question provisional check uses `metric-k=3` and does not change the formal
+configuration. A formal frozen configuration also
 requires the split-manifest question count, Beginner/Intermediate/Advanced
 cases for every question, identical M6 candidates across the three levels,
 retrieval provenance, complete single-role M3 labels, and hashes for every
 input. Every search report includes labeled-candidate coverage. Incomplete
 coverage is explicitly `not_interpretable`; fixture or proposed data remains
 `provisional` and `reportable=false`.
+
+Formal CLI runs also reject a Role-label manifest whose
+`reference_universe` is `gold_mapping`, with an explicit explanation that Gold
+labels do not cover the full reranking candidate pool. This guard does not
+change M3's annotation scope; that remains a team decision.
 
 ## Four-condition batch run
 
@@ -153,7 +167,7 @@ python -m cs30.generation.experiment \
   --cases artifacts/task7/formal_test_cases.jsonl \
   --role-label-manifest m3_role_labels/role_labels_v1_provenance_manifest.json \
   --selected-lambda artifacts/task7/lambda_dev_search.json \
-  --split-manifest artifacts/w6/split_manifest.json \
+  --split-manifest path/to/team-frozen-split-manifest.json \
   --input-status formal --provider ollama --model gpt-oss:20b \
   --output-dir artifacts/task7/formal_test_run
 ```

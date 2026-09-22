@@ -671,6 +671,16 @@ def load_role_labels(
     ).labels
 
 
+def validate_formal_role_label_scope(package: LoadedRoleLabelPackage) -> None:
+    """Reject Gold-only Role packages before a formal candidate-pool run."""
+
+    if package.manifest.reference_universe != "corpus_records":
+        raise ValueError(
+            "the supplied Role-label package covers gold_mapping only; formal "
+            "reranking requires Role labels for the complete candidate pool"
+        )
+
+
 def load_expected_question_count(path: Path, split: Literal["dev", "test"]) -> int:
     """Read a split size without baking dataset-specific counts into M7."""
 
@@ -758,6 +768,8 @@ def main() -> None:
     args = build_parser().parse_args()
     cases = load_lambda_cases(args.cases)
     role_package = load_role_label_package(args.role_label_manifest)
+    if args.input_status == "formal":
+        validate_formal_role_label_scope(role_package)
     if args.input_status == "formal" and args.split_manifest is None:
         raise ValueError("formal lambda search requires --split-manifest")
     expected_question_count = (
@@ -781,10 +793,10 @@ def main() -> None:
         expected_question_count=expected_question_count,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        f"{json.dumps(result.model_dump(), ensure_ascii=False, indent=2, sort_keys=True)}\n",
-        encoding="utf-8",
+    result_text = (
+        f"{json.dumps(result.model_dump(), ensure_ascii=False, indent=2, sort_keys=True)}\n"
     )
+    args.output.write_bytes(result_text.encode("utf-8"))
     print(args.output)
 
 

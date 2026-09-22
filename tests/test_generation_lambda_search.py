@@ -17,8 +17,10 @@ from cs30.generation.lambda_search import (
     LambdaSearchCase,
     SelectedLambdaConfig,
     load_expected_question_count,
+    load_role_label_package,
     load_role_labels,
     search_lambda,
+    validate_formal_role_label_scope,
 )
 from cs30.generation.lambda_search import main as lambda_search_main
 from cs30.generation.reranking import EvidenceRole, RoleLabel
@@ -123,7 +125,7 @@ def _write_role_package(
         + "\n"
         for chunk_id, label in role_labels.items()
     )
-    labels_path.write_text(labels_text, encoding="utf-8")
+    labels_path.write_bytes(labels_text.encode("utf-8"))
     manifest_path = directory / "roles.manifest.json"
     manifest_path.write_text(
         json.dumps(
@@ -292,7 +294,10 @@ def test_lambda_search_cli_writes_hash_bound_result(tmp_path, monkeypatch) -> No
 
     lambda_search_main()
 
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    output_bytes = output_path.read_bytes()
+    assert b"\r\n" not in output_bytes
+    assert output_bytes.endswith(b"\n")
+    payload = json.loads(output_bytes)
     selected = payload["selected_config"]
     assert selected["lambda_weight"] == 0.5
     assert selected["cases_sha256"]
@@ -322,9 +327,16 @@ def test_loader_reads_the_merged_m3_manifest_contract() -> None:
     assert all(len(label.roles) == 1 for label in labels.values())
 
 
+def test_formal_run_rejects_gold_only_role_label_scope(tmp_path) -> None:
+    package = load_role_label_package(_write_role_package(tmp_path))
+
+    with pytest.raises(ValueError, match="covers gold_mapping only"):
+        validate_formal_role_label_scope(package)
+
+
 def test_role_manifest_detects_label_file_tampering(tmp_path) -> None:
     manifest_path = _write_role_package(tmp_path)
-    (tmp_path / "roles.jsonl").write_text("{}\n", encoding="utf-8")
+    (tmp_path / "roles.jsonl").write_bytes(b"{}\n")
 
     with pytest.raises(ValueError, match="labels_sha256 does not match"):
         load_role_labels(manifest_path)

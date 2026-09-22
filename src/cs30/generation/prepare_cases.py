@@ -165,14 +165,14 @@ def write_prepared_cases(
 ) -> None:
     cases_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    cases_path.write_text(
-        "".join(f"{json.dumps(row, ensure_ascii=False, sort_keys=True)}\n" for row in rows),
-        encoding="utf-8",
+    cases_text = "".join(
+        f"{json.dumps(row, ensure_ascii=False, sort_keys=True)}\n" for row in rows
     )
-    manifest_path.write_text(
-        f"{json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True)}\n",
-        encoding="utf-8",
+    manifest_text = (
+        f"{json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True)}\n"
     )
+    cases_path.write_bytes(cases_text.encode("utf-8"))
+    manifest_path.write_bytes(manifest_text.encode("utf-8"))
 
 
 def build_parser() -> argparse.ArgumentParser:

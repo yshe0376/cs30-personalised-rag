@@ -25,6 +25,7 @@ from .lambda_search import (
     load_expected_question_count,
     load_role_label_package,
     sha256_file,
+    validate_formal_role_label_scope,
 )
 from .prompt import PromptBuilder
 from .reranking import LevelAwareReranker, RerankConfig, RoleLabel
@@ -349,16 +350,14 @@ def write_condition_experiment(output_dir: Path, output: ConditionExperimentOutp
     output_dir.mkdir(parents=True, exist_ok=True)
     rows_path = output_dir / "four_condition_results.jsonl"
     manifest_path = output_dir / "run_manifest.json"
-    rows_path.write_text(
-        "".join(
-            f"{json.dumps(row, ensure_ascii=False, sort_keys=True)}\n" for row in output.rows
-        ),
-        encoding="utf-8",
+    rows_text = "".join(
+        f"{json.dumps(row, ensure_ascii=False, sort_keys=True)}\n" for row in output.rows
     )
-    manifest_path.write_text(
-        f"{json.dumps(output.manifest, ensure_ascii=False, indent=2, sort_keys=True)}\n",
-        encoding="utf-8",
+    manifest_text = (
+        f"{json.dumps(output.manifest, ensure_ascii=False, indent=2, sort_keys=True)}\n"
     )
+    rows_path.write_bytes(rows_text.encode("utf-8"))
+    manifest_path.write_bytes(manifest_text.encode("utf-8"))
 
 
 def _client(provider: str, model: str | None) -> LLMClient:
@@ -418,6 +417,8 @@ def main() -> None:
         if selected_lambda.taxonomy_status == "frozen"
         else None,
     )
+    if args.input_status == "formal":
+        validate_formal_role_label_scope(role_package)
     cases = load_condition_cases(args.cases)
     if args.input_status == "formal" and args.split_manifest is None:
         raise ValueError("formal condition run requires --split-manifest")

@@ -89,7 +89,7 @@ def _write_role_package(directory: Path) -> Path:
         + "\n"
         for chunk_id, label in _labels().items()
     )
-    labels_path.write_text(labels_text, encoding="utf-8")
+    labels_path.write_bytes(labels_text.encode("utf-8"))
     manifest_path = directory / "roles.manifest.json"
     manifest_path.write_text(
         json.dumps(
@@ -209,6 +209,13 @@ def test_experiment_saves_four_attributable_rows_and_manifest(tmp_path) -> None:
     saved_manifest = json.loads((tmp_path / "run_manifest.json").read_text(encoding="utf-8"))
     assert len(saved_rows) == 4
     assert saved_manifest["run_id"] == output.manifest["run_id"]
+    for path in (
+        tmp_path / "four_condition_results.jsonl",
+        tmp_path / "run_manifest.json",
+    ):
+        output_bytes = path.read_bytes()
+        assert b"\r\n" not in output_bytes
+        assert output_bytes.endswith(b"\n")
 
 
 def test_formal_run_rejects_provisional_lambda() -> None:

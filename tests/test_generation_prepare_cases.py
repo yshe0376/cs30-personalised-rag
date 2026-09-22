@@ -112,6 +112,10 @@ def test_prepare_cases_joins_m6_mapping_and_all_three_profiles(tmp_path) -> None
     write_prepared_cases(cases_path, manifest_path, rows, manifest)
     assert len(cases_path.read_text(encoding="utf-8").splitlines()) == 3
     assert json.loads(manifest_path.read_text(encoding="utf-8"))["question_count"] == 1
+    for path in (cases_path, manifest_path):
+        output_bytes = path.read_bytes()
+        assert b"\r\n" not in output_bytes
+        assert output_bytes.endswith(b"\n")
 
 
 def test_formal_preparation_rejects_nonreportable_source(tmp_path) -> None:
