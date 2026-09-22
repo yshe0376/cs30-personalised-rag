@@ -47,6 +47,13 @@ class V2Config(BaseModel):
     output_dir: Path
     fixture_mode: bool = False
     chunk_config: dict[str, str] = Field(default_factory=dict)
+    # Where `scripts/install_v2_sources.py` puts the pinned textbook PDFs.
+    sources_dir: Path = Path("data/raw/v2")
+    # No model configured means no index: an official build then stops with
+    # INDEX_BUILDER_NOT_CONFIGURED instead of publishing a corpus without one.
+    embedding_model: str | None = None
+    embedding_revision: str | None = None
+    index_batch_size: int = Field(default=32, ge=1)
 
     @model_validator(mode="after")
     def validate_v2_boundary(self) -> V2Config:
@@ -95,6 +102,8 @@ def load_v2_config(profile: str, *, config_dir: Path | None = None) -> V2Config:
         values.pop("mode")
     values["required_textbook_ids"] = tuple(values["required_textbook_ids"])
     values["output_dir"] = Path(values["output_dir"])
+    if "sources_dir" in values:
+        values["sources_dir"] = Path(values["sources_dir"])
     return V2Config.model_validate(values)
 
 

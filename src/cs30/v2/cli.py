@@ -12,6 +12,8 @@ from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.config import V2Config, load_v2_config
 from cs30.v2.errors import BuildGateError, InputError, V2Error
 from cs30.v2.fixture import TextFixtureParser
+from cs30.v2.indexing import build_faiss_index_builder
+from cs30.v2.ingest import build_parser_registry
 from cs30.v2.pipeline import (
     BuildDeps,
     MappingParserRegistry,
@@ -31,11 +33,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", choices=["development", "official"], default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument(
+        "--sources-dir",
+        type=Path,
+        default=None,
+        help="where the pinned textbook PDFs are installed (real builds)",
+    )
+    parser.add_argument(
+        "--embedding-model",
+        default=None,
+        help="sentence-transformers model for the dense index (real builds)",
+    )
+    parser.add_argument(
         "--input",
         action="append",
         default=[],
         metavar="TEXTBOOK_ID=PATH",
-        help="repeat once per textbook; M1 accepts UTF-8 synthetic text inputs",
+        help=(
+            "repeat once per textbook; fixture builds take UTF-8 text files and "
+            "real builds take PDFs, overriding the sources directory"
+        ),
     )
     return parser
 
@@ -57,54 +73,113 @@ def _config_with_overrides(args: argparse.Namespace) -> V2Config:
         updates["corpus_mode"] = args.mode
     if args.output_dir is not None:
         updates["output_dir"] = args.output_dir
+    if args.sources_dir is not None:
+        updates["sources_dir"] = args.sources_dir
+    if args.embedding_model is not None:
+        updates["embedding_model"] = args.embedding_model
     if not updates:
         return config
     return V2Config.model_validate({**config.model_dump(), **updates})
+
+
+def _fixture_build(
+    config: V2Config, raw_inputs: list[str]
+) -> tuple[list[TextbookInput], BuildDeps]:
+    """Synthetic text inputs: the catalogue's real-source pins do not apply."""
+
+    if not raw_inputs:
+        raise InputError("at least one --input is required", code="INPUT_REQUIRED")
+    inputs: list[TextbookInput] = []
+    parsers: dict[str, object] = {}
+    for raw_input in raw_inputs:
+        textbook_id, source_path = _parse_input(raw_input)
+        spec = _spec(textbook_id)
+        inputs.append(
+            TextbookInput(
+                textbook_id=textbook_id,
+                source_path=source_path,
+                # This is a catalog-defined logical name, not a local filename.
+                source_name=spec.source_name,
+                source_uri=spec.source_uri,
+                source_version=spec.source_version,
+                selected_chapters=(),
+                expected_source_sha256=None,
+            )
+        )
+        parsers[textbook_id] = TextFixtureParser(spec)
+    return inputs, BuildDeps(
+        parser_registry=MappingParserRegistry(parsers),
+        chunker=V2BlockChunker.from_config(config.chunk_config),
+    )
+
+
+def _real_build(
+    config: V2Config, raw_inputs: list[str]
+) -> tuple[list[TextbookInput], BuildDeps]:
+    """Real sources: pinned PDFs, the catalogue's parsers, and an optional index.
+
+    The chunker is still M1's block adapter, which is marked as a fixture, so an
+    official build stops with FIXTURE_NOT_ALLOWED until M4's production chunker
+    is wired in; development builds produce diagnostic corpora from real PDFs.
+    """
+
+    overrides = dict(_parse_input(raw_input) for raw_input in raw_inputs)
+    unknown = set(overrides) - set(config.required_textbook_ids)
+    if unknown:
+        raise InputError(
+            f"--input names textbooks outside the catalogue set: {sorted(unknown)}",
+            code="UNKNOWN_TEXTBOOK",
+        )
+    inputs: list[TextbookInput] = []
+    for textbook_id in config.required_textbook_ids:
+        spec = _spec(textbook_id)
+        source_path = overrides.get(
+            textbook_id, config.sources_dir / f"{textbook_id}.pdf"
+        )
+        inputs.append(
+            TextbookInput(
+                textbook_id=textbook_id,
+                source_path=source_path,
+                source_name=spec.source_name,
+                source_uri=spec.source_uri,
+                source_version=spec.source_version,
+                selected_chapters=spec.selected_chapters,
+                expected_source_sha256=spec.expected_source_sha256,
+            )
+        )
+    index_builder = (
+        build_faiss_index_builder(
+            config.embedding_model,
+            revision=config.embedding_revision,
+            batch_size=config.index_batch_size,
+        )
+        if config.embedding_model
+        else None
+    )
+    return inputs, BuildDeps(
+        parser_registry=build_parser_registry(config.required_textbook_ids),
+        chunker=V2BlockChunker.from_config(config.chunk_config),
+        index_builder=index_builder,
+    )
+
+
+def _spec(textbook_id: str):
+    try:
+        return get_textbook_spec(textbook_id)
+    except ValueError as exc:
+        raise InputError(str(exc), code="UNKNOWN_TEXTBOOK") from exc
 
 
 def run(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         config = _config_with_overrides(args)
-        if not config.fixture_mode:
-            raise InputError(
-                "real v2 parser and chunker providers are not configured for this CLI",
-                code="REAL_BUILD_NOT_CONFIGURED",
-            )
-        if not args.input:
-            raise InputError("at least one --input is required", code="INPUT_REQUIRED")
-
-        inputs: list[TextbookInput] = []
-        parsers = {}
-        for raw_input in args.input:
-            textbook_id, source_path = _parse_input(raw_input)
-            try:
-                spec = get_textbook_spec(textbook_id)
-            except ValueError as exc:
-                raise InputError(str(exc), code="UNKNOWN_TEXTBOOK") from exc
-            inputs.append(
-                TextbookInput(
-                    textbook_id=textbook_id,
-                    source_path=source_path,
-                    # This is a catalog-defined logical name, not a local filename.
-                    source_name=spec.source_name,
-                    source_uri=spec.source_uri,
-                    source_version=spec.source_version,
-                    # This CLI only runs fixture builds over synthetic text, so the
-                    # catalog's pinned source hash and chapter selection, which
-                    # describe the real textbook file, do not apply to its inputs.
-                    selected_chapters=(),
-                    expected_source_sha256=None,
-                )
-            )
-            parsers[textbook_id] = TextFixtureParser(spec)
+        build = _fixture_build if config.fixture_mode else _real_build
+        inputs, deps = build(config, args.input)
 
         outcome = run_build_pipeline(
             inputs,
-            BuildDeps(
-                parser_registry=MappingParserRegistry(parsers),
-                chunker=V2BlockChunker.from_config(config.chunk_config),
-            ),
+            deps,
             MultiTextbookBuildSpec(
                 corpus_version=config.corpus_version,
                 required_textbook_ids=config.required_textbook_ids,

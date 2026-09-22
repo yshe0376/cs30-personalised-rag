@@ -1,0 +1,19 @@
+environment = "development"
+fixture_mode = false
+
+[corpus]
+mode = "development"
+corpus_mode = "development"
+corpus_version = "2.0.0-dev.1"
+required_textbook_ids = [
+  "openstax_college_physics_2e",
+  "openstax_physics",
+  "openstax_college_physics_ap_2e",
+]
+output_dir = "artifacts/v2/textbooks/2.0.0-dev.1-real"
+chunk_config = { tokenizer_name = "unicode-wordpunct-v1" }
+# Where scripts/install_v2_sources.py puts the pinned PDFs.
+sources_dir = "data/raw/v2"
+# embedding_model stays unset until M5 picks the v2 model; without it the build
+# publishes a diagnostic corpus and no index. Pass --embedding-model to try one.
+index_batch_size = 32
