@@ -1,5 +1,7 @@
+import hashlib
 import json
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -74,6 +76,49 @@ def _labels() -> dict[str, RoleLabel]:
     }
 
 
+def _write_role_package(directory: Path) -> Path:
+    labels_path = directory / "roles.jsonl"
+    labels_text = "".join(
+        json.dumps(
+            {
+                "schema_version": "role-labels-v1",
+                "chunk_id": chunk_id,
+                "role": label.roles[0].value,
+            }
+        )
+        + "\n"
+        for chunk_id, label in _labels().items()
+    )
+    labels_path.write_text(labels_text, encoding="utf-8")
+    manifest_path = directory / "roles.manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "0.1",
+                "role_schema_version": "role-labels-v1",
+                "role_taxonomy_version": "evidence-role-v1",
+                "annotation_version": "m3-role-v1",
+                "corpus_version": "corpus-v1",
+                "parser_version": "parser-v1",
+                "annotation_date": "2026-09-22",
+                "annotator_ids": ["m3-owner"],
+                "double_annotated": False,
+                "labels_file": labels_path.name,
+                "labels_sha256": hashlib.sha256(labels_text.encode()).hexdigest(),
+                "declared_record_count": len(_labels()),
+                "reference_id_field": "chunk_id",
+                "reference_type": "chunk",
+                "reference_universe": "gold_mapping",
+                "role_field": "role",
+                "record_schema_version_field": "schema_version",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
 def _selected(*, formal: bool, role_hash: str | None = None):
     if formal:
         cases = [
@@ -105,12 +150,15 @@ def _selected(*, formal: bool, role_hash: str | None = None):
     return search_lambda(
         cases,
         _labels(),
-        taxonomy_version="m3-role-v1" if formal else "fixture-v1",
-        taxonomy_status="frozen" if formal else "fixture",
+        taxonomy_version="evidence-role-v1",
+        taxonomy_status="frozen",
         input_status="formal" if formal else "fixture",
         candidate_lambdas=(0.0, 0.5, 1.0),
+        metric_k=1,
         cases_sha256="a" * 64 if formal else None,
         role_labels_sha256=(role_hash or "b" * 64) if formal else role_hash,
+        split_manifest_sha256="c" * 64 if formal else None,
+        expected_question_count=60 if formal else None,
     ).selected
 
 
@@ -199,8 +247,8 @@ def test_mock_provider_never_produces_a_reportable_provisional_run() -> None:
     assert "Engineering/provisional" in str(output.manifest["warning"])
 
 
-def test_formal_run_enforces_required_question_count() -> None:
-    with pytest.raises(ValueError, match="exactly 60 unique questions"):
+def test_formal_run_enforces_split_manifest_question_count() -> None:
+    with pytest.raises(ValueError, match="does not match the split manifest"):
         run_condition_experiment(
             [
                 ConditionExperimentCase(
@@ -221,6 +269,8 @@ def test_formal_run_enforces_required_question_count() -> None:
             cases_sha256="a" * 64,
             role_labels_sha256="b" * 64,
             selected_lambda_sha256="c" * 64,
+            split_manifest_sha256="d" * 64,
+            expected_question_counts={"dev": 60},
         )
 
 
@@ -251,7 +301,7 @@ def test_provider_failures_are_isolated_and_saved_for_every_condition() -> None:
 
 def test_experiment_cli_writes_results_and_manifest(tmp_path, monkeypatch) -> None:
     cases_path = tmp_path / "cases.jsonl"
-    labels_path = tmp_path / "roles.jsonl"
+    manifest_path = _write_role_package(tmp_path)
     lambda_path = tmp_path / "lambda.json"
     output_dir = tmp_path / "output"
     cases_path.write_text(
@@ -267,20 +317,6 @@ def test_experiment_cli_writes_results_and_manifest(tmp_path, monkeypatch) -> No
         + "\n",
         encoding="utf-8",
     )
-    labels_path.write_text(
-        "".join(
-            json.dumps(
-                {
-                    "chunk_id": chunk_id,
-                    "roles": [label.roles[0].value],
-                    "source": label.source,
-                }
-            )
-            + "\n"
-            for chunk_id, label in _labels().items()
-        ),
-        encoding="utf-8",
-    )
     lambda_path.write_text(
         json.dumps(_selected(formal=False).model_dump()) + "\n",
         encoding="utf-8",
@@ -292,8 +328,8 @@ def test_experiment_cli_writes_results_and_manifest(tmp_path, monkeypatch) -> No
             "cs30.generation.experiment",
             "--cases",
             str(cases_path),
-            "--role-labels",
-            str(labels_path),
+            "--role-label-manifest",
+            str(manifest_path),
             "--selected-lambda",
             str(lambda_path),
             "--input-status",

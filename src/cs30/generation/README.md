@@ -46,9 +46,9 @@ compatibility with the current port and pipeline.
   `reportable` only when the inputs are formal and the M3 taxonomy is frozen.
 - A batch four-condition runner that saves one JSONL row per
   question/profile/condition and a provenance manifest for M8.
-- Formal gates for exactly 60 Dev or 180 Test questions, all three student
-  levels, identical initial candidates, complete non-fixture Role labels, real
-  retrieval provenance and input hashes.
+- Formal gates whose expected Dev/Test sizes come from the frozen split
+  manifest, plus all three student levels, identical initial candidates,
+  complete non-fixture Role labels, real retrieval provenance and input hashes.
 
 ## Four-condition fixture run
 
@@ -89,6 +89,7 @@ python -m cs30.generation.prepare_cases \
   --retrieval-runs artifacts/w6/m6/dev_results.jsonl \
   --retrieval-manifest artifacts/w6/m6/dev_manifest.json \
   --gold-mapping artifacts/w6/m4/gold_to_chunk_mapping.json \
+  --split-manifest artifacts/w6/split_manifest.json \
   --target-split dev --input-status formal \
   --output-cases artifacts/task7/formal_dev_cases.jsonl \
   --output-manifest artifacts/task7/formal_dev_cases.manifest.json
@@ -98,7 +99,9 @@ The preparation step verifies the M6 execution mode and status, rejects
 duplicate questions or missing Gold mappings, preserves M6 retrieval bytes in
 the validated contract, creates all three fixed profiles, and records SHA-256
 hashes for every upstream input. Formal preparation also requires a reportable
-M6 manifest with an exact `dev`/`test` split and the required 60/180 questions.
+M6 manifest with an exact `dev`/`test` split and the question count declared by
+the supplied split manifest. This avoids baking a textbook-specific sample size
+into Member 7.
 
 The resulting JSONL contains one row per question and profile level:
 
@@ -107,10 +110,14 @@ The resulting JSONL contains one row per question and profile level:
 ```
 
 `profile` must validate as `StudentProfile`; `retrieval` must validate as the
-unchanged M6 `RetrievalResult`. Prepare M3 Role labels as JSONL:
+unchanged M6 `RetrievalResult`. M7 consumes M3 Role labels only through M3's
+M8-compatible provenance manifest. The manifest owns `labels_file`,
+`labels_sha256`, `role_field`, `reference_id_field`,
+`role_taxonomy_version`, and the record schema version. The current merged row
+shape is:
 
 ```json
-{"chunk_id":"chunk-1","roles":["definition"],"source":"m3-role-labels-v1","taxonomy_version":"m3-role-v1"}
+{"schema_version":"role-labels-v1","question_id":"q1","chunk_id":"chunk-1","role":"definition"}
 ```
 
 Run the search only after those inputs have been joined without changing their
@@ -119,18 +126,21 @@ identities:
 ```bash
 python -m cs30.generation.lambda_search \
   --cases artifacts/task7/formal_dev_cases.jsonl \
-  --role-labels artifacts/task7/evidence_role_labels.jsonl \
-  --taxonomy-version m3-role-v1 --taxonomy-status frozen \
+  --role-label-manifest m3_role_labels/role_labels_v1_provenance_manifest.json \
+  --split-manifest artifacts/w6/split_manifest.json \
   --input-status formal --lambdas 0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1 \
   --metric-k 5 --output artifacts/task7/lambda_dev_search.json
 ```
 
-The command refuses Test rows. A formal frozen configuration additionally
-requires exactly 60 unique Dev questions, Beginner/Intermediate/Advanced cases
-for every question, identical M6 candidates across the three levels, retrieval
-provenance, complete single-role M3 labels, and hashes for both input files.
-Fixture or proposed data still produces a useful search report, but the selected
-configuration is labelled `provisional` and `reportable=false`.
+The command refuses Test rows. The candidate pool must be larger than
+`metric-k`; otherwise hit/recall cannot change and the command fails rather
+than presenting a meaningless comparison. A formal frozen configuration also
+requires the split-manifest question count, Beginner/Intermediate/Advanced
+cases for every question, identical M6 candidates across the three levels,
+retrieval provenance, complete single-role M3 labels, and hashes for every
+input. Every search report includes labeled-candidate coverage. Incomplete
+coverage is explicitly `not_interpretable`; fixture or proposed data remains
+`provisional` and `reportable=false`.
 
 ## Four-condition batch run
 
@@ -141,8 +151,9 @@ standalone selected-lambda object or the full lambda-search output:
 ```bash
 python -m cs30.generation.experiment \
   --cases artifacts/task7/formal_test_cases.jsonl \
-  --role-labels artifacts/task7/evidence_role_labels.jsonl \
+  --role-label-manifest m3_role_labels/role_labels_v1_provenance_manifest.json \
   --selected-lambda artifacts/task7/lambda_dev_search.json \
+  --split-manifest artifacts/w6/split_manifest.json \
   --input-status formal --provider ollama --model gpt-oss:20b \
   --output-dir artifacts/task7/formal_test_run
 ```
@@ -150,8 +161,9 @@ python -m cs30.generation.experiment \
 This writes `four_condition_results.jsonl` and `run_manifest.json`. The manifest
 records the model settings, prompt versions, selected lambda, taxonomy version,
 Git commit, condition IDs and SHA-256 hashes of every input. A formal Test run
-requires exactly 180 unique questions and all three levels per question. Mock,
-fixture and proposed-data runs are always non-reportable.
+requires the Test question count declared by the split manifest and all three
+levels per question. Mock, fixture and proposed-data runs are always
+non-reportable.
 
 ## Offline smoke run
 
@@ -275,17 +287,21 @@ zero-lambda baseline restoration, missing/ambiguous-label fallback, bundle
 integrity, four independent condition switches, unchanged model/candidate
 inputs, and separate raw records for rejected and repaired outputs.
 
-## Waiting on team artefacts
+## Current limitations
 
-The implementation is ready, but the following formal execution inputs are not
-present in the repository snapshot and therefore no formal result is claimed:
+The M3 Role package is now merged and validated through its provenance
+manifest. The following formal execution inputs are still unavailable, so no
+formal result is claimed:
 
-- Loading M3's Role labels, until the taxonomy decision and versioned labels
-  are available.
-- Executing the lambda search on the final 60-question Dev set. The current
-  12-question `proposed_dev` input is explicitly non-reportable.
-- Publishing formal four-condition results on the final six-textbook inputs.
-  The current M6 handoff and local Member 7 demonstrations are non-reportable.
+- Complete Role coverage for every reranking candidate. The current M3 manifest
+  declares `reference_universe: gold_mapping`, so its 20 labels intentionally
+  cover Gold chunks rather than the full M6 candidate pool.
+- A reportable Dev split and Test split declared by the team-frozen split
+  manifest. The current 12-question `proposed_dev` input is explicitly
+  non-reportable.
+- Publishing formal four-condition results on the final team-approved corpus
+  inputs. The current M6 handoff and local Member 7 demonstrations remain
+  non-reportable.
 
 ## Integration boundaries
 

@@ -22,7 +22,8 @@ from .lambda_search import (
     InputStatus,
     SelectedLambdaConfig,
     is_sha256,
-    load_role_labels,
+    load_expected_question_count,
+    load_role_label_package,
     sha256_file,
 )
 from .prompt import PromptBuilder
@@ -120,6 +121,8 @@ def _manifest_id(payload: Mapping[str, object]) -> str:
 def _validate_formal_run(
     cases: Sequence[ConditionExperimentCase],
     role_labels: Mapping[str, RoleLabel],
+    *,
+    expected_question_counts: Mapping[str, int],
 ) -> None:
     by_split: dict[str, dict[str, list[ConditionExperimentCase]]] = {}
     for case in cases:
@@ -135,13 +138,17 @@ def _validate_formal_run(
                 "formal condition runs require a reportable matching source manifest"
             )
 
-    required_counts = {"dev": 60, "test": 180}
     expected_levels = set(StudentLevel)
     for split, by_question in by_split.items():
-        expected_count = required_counts[split]
+        expected_count = expected_question_counts.get(split)
+        if expected_count is None or expected_count < 1:
+            raise ValueError(
+                f"formal {split} run requires a positive count from the split manifest"
+            )
         if len(by_question) != expected_count:
             raise ValueError(
-                f"formal {split} run requires exactly {expected_count} unique questions; "
+                f"formal {split} question count does not match the split manifest; "
+                f"expected {expected_count}, "
                 f"found {len(by_question)}"
             )
         for question_id, question_cases in by_question.items():
@@ -187,6 +194,8 @@ def run_condition_experiment(
     cases_sha256: str | None = None,
     role_labels_sha256: str | None = None,
     selected_lambda_sha256: str | None = None,
+    split_manifest_sha256: str | None = None,
+    expected_question_counts: Mapping[str, int] | None = None,
     git_commit: str | None = None,
 ) -> ConditionExperimentOutput:
     if not cases:
@@ -203,10 +212,23 @@ def run_condition_experiment(
     if input_status == "formal":
         if not all(
             is_sha256(value)
-            for value in (cases_sha256, role_labels_sha256, selected_lambda_sha256)
+            for value in (
+                cases_sha256,
+                role_labels_sha256,
+                selected_lambda_sha256,
+                split_manifest_sha256,
+            )
         ):
             raise ValueError("formal condition runs require SHA-256 input digests")
-        _validate_formal_run(cases, role_labels)
+        if expected_question_counts is None:
+            raise ValueError(
+                "formal condition runs require question counts from the split manifest"
+            )
+        _validate_formal_run(
+            cases,
+            role_labels,
+            expected_question_counts=expected_question_counts,
+        )
 
     reranker = LevelAwareReranker(
         role_labels,
@@ -307,6 +329,7 @@ def run_condition_experiment(
         "cases_sha256": cases_sha256,
         "role_labels_sha256": role_labels_sha256,
         "selected_lambda_sha256": selected_lambda_sha256,
+        "split_manifest_sha256": split_manifest_sha256,
         "git_commit": git_commit,
     }
     manifest = {
@@ -361,8 +384,20 @@ def _git_commit() -> str | None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, required=True)
-    parser.add_argument("--role-labels", type=Path, required=True)
+    parser.add_argument(
+        "--role-label-manifest",
+        "--role-labels",
+        dest="role_label_manifest",
+        type=Path,
+        required=True,
+        help="M3 Role-label provenance manifest (legacy flag retained as an alias)",
+    )
     parser.add_argument("--selected-lambda", type=Path, required=True)
+    parser.add_argument(
+        "--split-manifest",
+        type=Path,
+        help="manifest declaring expected split sizes; required for formal runs",
+    )
     parser.add_argument(
         "--input-status",
         choices=["fixture", "provisional", "formal"],
@@ -377,21 +412,36 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     selected_lambda = load_selected_lambda(args.selected_lambda)
-    role_labels = load_role_labels(
-        args.role_labels,
+    role_package = load_role_label_package(
+        args.role_label_manifest,
         expected_taxonomy_version=selected_lambda.taxonomy_version
         if selected_lambda.taxonomy_status == "frozen"
         else None,
     )
+    cases = load_condition_cases(args.cases)
+    if args.input_status == "formal" and args.split_manifest is None:
+        raise ValueError("formal condition run requires --split-manifest")
+    expected_question_counts = (
+        {
+            split: load_expected_question_count(args.split_manifest, split)
+            for split in {case.split for case in cases}
+        }
+        if args.split_manifest is not None
+        else None
+    )
     output = run_condition_experiment(
-        load_condition_cases(args.cases),
-        role_labels,
+        cases,
+        role_package.labels,
         selected_lambda,
         _client(args.provider, args.model),
         input_status=args.input_status,
         cases_sha256=sha256_file(args.cases),
-        role_labels_sha256=sha256_file(args.role_labels),
+        role_labels_sha256=role_package.manifest.labels_sha256,
         selected_lambda_sha256=sha256_file(args.selected_lambda),
+        split_manifest_sha256=sha256_file(args.split_manifest)
+        if args.split_manifest is not None
+        else None,
+        expected_question_counts=expected_question_counts,
         git_commit=_git_commit(),
     )
     write_condition_experiment(args.output_dir, output)

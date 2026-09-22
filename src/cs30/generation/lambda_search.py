@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 from cs30.contracts import RetrievalMode, RetrievalResult, StudentLevel, StudentProfile
+from cs30.evaluation.extension_models import RoleLabelProvenanceManifest
 
 from .reranking import EvidenceRole, LevelAwareReranker, RerankConfig, RoleLabel
 
@@ -144,6 +145,7 @@ class SelectedLambdaConfig:
     dev_case_ids: tuple[str, ...]
     cases_sha256: str | None
     role_labels_sha256: str | None
+    split_manifest_sha256: str | None = None
 
     def model_dump(self) -> dict[str, object]:
         return {
@@ -164,6 +166,7 @@ class SelectedLambdaConfig:
             "dev_case_ids": list(self.dev_case_ids),
             "cases_sha256": self.cases_sha256,
             "role_labels_sha256": self.role_labels_sha256,
+            "split_manifest_sha256": self.split_manifest_sha256,
         }
 
     @classmethod
@@ -193,6 +196,7 @@ class SelectedLambdaConfig:
             "dev_case_ids": dev_case_ids,
             "cases_sha256": payload.get("cases_sha256"),
             "role_labels_sha256": payload.get("role_labels_sha256"),
+            "split_manifest_sha256": payload.get("split_manifest_sha256"),
         }
         config = cls(**values)  # type: ignore[arg-type]
         if config.selection_status not in {"provisional", "frozen"}:
@@ -219,6 +223,7 @@ class SelectedLambdaConfig:
         if config.selection_status == "frozen" and (
             not is_sha256(config.cases_sha256)
             or not is_sha256(config.role_labels_sha256)
+            or not is_sha256(config.split_manifest_sha256)
         ):
             raise ValueError("frozen lambda requires SHA-256 input digests")
         return config
@@ -233,14 +238,57 @@ class SelectedLambdaConfig:
 class LambdaSearchResult:
     selected: SelectedLambdaConfig
     metrics: tuple[LambdaMetric, ...]
+    role_label_coverage: RoleLabelCoverage
 
     def model_dump(self) -> dict[str, object]:
         return {
             "schema_version": "1.0",
             "result_type": "member7_lambda_dev_search",
             "selected_config": self.selected.model_dump(),
+            "role_label_coverage": self.role_label_coverage.model_dump(),
             "metrics": [metric.model_dump() for metric in self.metrics],
         }
+
+
+@dataclass(frozen=True)
+class RoleLabelCoverage:
+    """Coverage of reranking candidates by the supplied M3 Role package."""
+
+    labeled_candidate_count: int
+    total_candidate_count: int
+    labeled_unique_chunk_count: int
+    total_unique_chunk_count: int
+
+    @property
+    def complete(self) -> bool:
+        return self.labeled_candidate_count == self.total_candidate_count
+
+    def model_dump(self) -> dict[str, object]:
+        ratio = self.labeled_candidate_count / self.total_candidate_count
+        return {
+            "labeled_candidate_count": self.labeled_candidate_count,
+            "total_candidate_count": self.total_candidate_count,
+            "coverage_ratio": ratio,
+            "labeled_unique_chunk_count": self.labeled_unique_chunk_count,
+            "total_unique_chunk_count": self.total_unique_chunk_count,
+            "complete": self.complete,
+            "interpretation_status": "interpretable" if self.complete else "not_interpretable",
+            "warning": None
+            if self.complete
+            else (
+                "Role-label coverage is incomplete; lambda and personalisation-effect "
+                "metrics are engineering diagnostics only and are not interpretable."
+            ),
+        }
+
+
+@dataclass(frozen=True)
+class LoadedRoleLabelPackage:
+    """Validated M3 Role labels plus manifest-owned provenance."""
+
+    labels: dict[str, RoleLabel]
+    manifest: RoleLabelProvenanceManifest
+    labels_path: Path
 
 
 def _config_id(payload: Mapping[str, object]) -> str:
@@ -286,6 +334,8 @@ def _score_case(
 def _validate_formal_cases(
     cases: Sequence[LambdaSearchCase],
     role_labels: Mapping[str, RoleLabel],
+    *,
+    expected_question_count: int,
 ) -> None:
     by_question: dict[str, list[LambdaSearchCase]] = {}
     for case in cases:
@@ -301,9 +351,10 @@ def _validate_formal_cases(
                 "formal lambda search requires a reportable Dev source manifest"
             )
 
-    if len(by_question) != 60:
+    if len(by_question) != expected_question_count:
         raise ValueError(
-            "formal lambda search requires exactly 60 unique Dev questions; "
+            "formal lambda search question count does not match the split manifest; "
+            f"expected {expected_question_count}, "
             f"found {len(by_question)}"
         )
 
@@ -356,6 +407,8 @@ def search_lambda(
     metric_k: int = 5,
     cases_sha256: str | None = None,
     role_labels_sha256: str | None = None,
+    split_manifest_sha256: str | None = None,
+    expected_question_count: int | None = None,
 ) -> LambdaSearchResult:
     """Select lambda by mean MRR@k, then hit rate, recall, and smallest lambda."""
 
@@ -363,6 +416,14 @@ def search_lambda(
         raise ValueError("lambda search requires at least one Dev case")
     if metric_k < 1:
         raise ValueError("metric_k must be at least 1")
+    undersized = sorted(
+        case.case_id for case in cases if len(case.retrieval.hits) <= metric_k
+    )
+    if undersized:
+        raise ValueError(
+            "candidate pool must be larger than metric_k so hit/recall can change; "
+            f"first invalid case: {undersized[0]}"
+        )
     if not taxonomy_version.strip():
         raise ValueError("taxonomy_version must not be empty")
     if taxonomy_status not in {"fixture", "frozen"}:
@@ -372,14 +433,40 @@ def search_lambda(
     if input_status == "formal":
         if taxonomy_status != "frozen":
             raise ValueError("formal lambda search requires a frozen taxonomy")
-        if not is_sha256(cases_sha256) or not is_sha256(role_labels_sha256):
+        if not all(
+            is_sha256(value)
+            for value in (cases_sha256, role_labels_sha256, split_manifest_sha256)
+        ):
             raise ValueError("formal lambda search requires SHA-256 input digests")
-        _validate_formal_cases(cases, role_labels)
+        if expected_question_count is None or expected_question_count < 1:
+            raise ValueError(
+                "formal lambda search requires a positive question count from the "
+                "split manifest"
+            )
+        _validate_formal_cases(
+            cases,
+            role_labels,
+            expected_question_count=expected_question_count,
+        )
 
     case_ids = [case.case_id for case in cases]
     if len(set(case_ids)) != len(case_ids):
         raise ValueError("lambda search case_id values must be unique")
     lambdas = _validate_lambdas(candidate_lambdas)
+    candidate_references = {
+        (case.question_id, hit.chunk_id)
+        for case in cases
+        for hit in case.retrieval.hits
+    }
+    unique_chunk_ids = {chunk_id for _, chunk_id in candidate_references}
+    role_label_coverage = RoleLabelCoverage(
+        labeled_candidate_count=sum(
+            chunk_id in role_labels for _, chunk_id in candidate_references
+        ),
+        total_candidate_count=len(candidate_references),
+        labeled_unique_chunk_count=len(unique_chunk_ids & role_labels.keys()),
+        total_unique_chunk_count=len(unique_chunk_ids),
+    )
     metric_rows: list[LambdaMetric] = []
 
     for lambda_weight in lambdas:
@@ -436,6 +523,7 @@ def search_lambda(
         "dev_case_ids": sorted(case_ids),
         "cases_sha256": cases_sha256,
         "role_labels_sha256": role_labels_sha256,
+        "split_manifest_sha256": split_manifest_sha256,
     }
     selected = SelectedLambdaConfig(
         config_id=_config_id(identity_payload),
@@ -453,8 +541,13 @@ def search_lambda(
         dev_case_ids=tuple(sorted(case_ids)),
         cases_sha256=cases_sha256,
         role_labels_sha256=role_labels_sha256,
+        split_manifest_sha256=split_manifest_sha256,
     )
-    return LambdaSearchResult(selected=selected, metrics=tuple(metric_rows))
+    return LambdaSearchResult(
+        selected=selected,
+        metrics=tuple(metric_rows),
+        role_label_coverage=role_label_coverage,
+    )
 
 
 def load_lambda_cases(path: Path) -> list[LambdaSearchCase]:
@@ -486,38 +579,145 @@ def load_lambda_cases(path: Path) -> list[LambdaSearchCase]:
     return cases
 
 
+def load_role_label_package(
+    manifest_path: Path,
+    *,
+    expected_taxonomy_version: str | None = None,
+) -> LoadedRoleLabelPackage:
+    """Load M3 labels through M8's shared provenance-manifest contract."""
+
+    try:
+        manifest = RoleLabelProvenanceManifest.model_validate_json(
+            manifest_path.read_text(encoding="utf-8")
+        )
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"invalid Role-label manifest at {manifest_path}: {exc}") from exc
+    if (
+        expected_taxonomy_version is not None
+        and manifest.role_taxonomy_version != expected_taxonomy_version
+    ):
+        raise ValueError(
+            "role_taxonomy_version does not match the selected configuration: "
+            f"expected {expected_taxonomy_version!r}, "
+            f"found {manifest.role_taxonomy_version!r}"
+        )
+    labels_path = manifest.labels_file
+    if not labels_path.is_absolute():
+        labels_path = manifest_path.parent / labels_path
+    if not labels_path.is_file():
+        raise ValueError(f"Role-label file does not exist: {labels_path}")
+    actual_sha256 = sha256_file(labels_path)
+    if actual_sha256 != manifest.labels_sha256:
+        raise ValueError(
+            "labels_sha256 does not match the Role-label file: "
+            f"expected {manifest.labels_sha256}, found {actual_sha256}"
+        )
+
+    labels: dict[str, RoleLabel] = {}
+    record_count = 0
+    for line_number, raw in enumerate(
+        labels_path.read_text(encoding="utf-8").splitlines(), 1
+    ):
+        if not raw.strip():
+            continue
+        record_count += 1
+        try:
+            payload = json.loads(raw)
+            chunk_id = str(payload[manifest.reference_id_field]).strip()
+            if not chunk_id:
+                raise ValueError("reference ID must not be empty")
+            if chunk_id in labels:
+                raise ValueError(f"duplicate chunk_id: {chunk_id}")
+            record_schema_version = payload[manifest.record_schema_version_field]
+            if record_schema_version != manifest.role_schema_version:
+                raise ValueError(
+                    "record schema version does not match the Role-label manifest"
+                )
+            role_value = payload[manifest.role_field]
+            if not isinstance(role_value, str) or not role_value.strip():
+                raise ValueError("Role value must be a non-empty string")
+            labels[chunk_id] = RoleLabel(
+                (EvidenceRole(role_value),),
+                source=manifest.annotation_version,
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                f"invalid role label at {labels_path}:{line_number}: {exc}"
+            ) from exc
+    if not labels:
+        raise ValueError(f"no role labels found in {labels_path}")
+    if record_count != manifest.declared_record_count:
+        raise ValueError(
+            "declared_record_count does not match the Role-label file: "
+            f"expected {manifest.declared_record_count}, found {record_count}"
+        )
+    return LoadedRoleLabelPackage(
+        labels=labels,
+        manifest=manifest,
+        labels_path=labels_path,
+    )
+
+
 def load_role_labels(
-    path: Path,
+    manifest_path: Path,
     *,
     expected_taxonomy_version: str | None = None,
 ) -> dict[str, RoleLabel]:
-    labels: dict[str, RoleLabel] = {}
-    for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-        if not raw.strip():
-            continue
-        try:
-            payload = json.loads(raw)
-            chunk_id = str(payload["chunk_id"]).strip()
-            if not chunk_id:
-                raise ValueError("chunk_id must not be empty")
-            if chunk_id in labels:
-                raise ValueError(f"duplicate chunk_id: {chunk_id}")
-            if expected_taxonomy_version is not None:
-                actual_version = payload.get("taxonomy_version")
-                if actual_version != expected_taxonomy_version:
-                    raise ValueError(
-                        "taxonomy_version does not match the selected configuration: "
-                        f"expected {expected_taxonomy_version!r}, found {actual_version!r}"
-                    )
-            labels[chunk_id] = RoleLabel(
-                tuple(EvidenceRole(role) for role in payload["roles"]),
-                source=str(payload["source"]),
+    """Return validated labels while retaining the previous mapping-only API."""
+
+    return load_role_label_package(
+        manifest_path,
+        expected_taxonomy_version=expected_taxonomy_version,
+    ).labels
+
+
+def load_expected_question_count(path: Path, split: Literal["dev", "test"]) -> int:
+    """Read a split size without baking dataset-specific counts into M7."""
+
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise ValueError(f"invalid split manifest at {path}: {exc}") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("split manifest must contain a JSON object")
+
+    value: object | None = None
+    splits = payload.get("splits")
+    if isinstance(splits, Mapping) and split in splits:
+        entry = splits[split]
+        if isinstance(entry, Mapping):
+            for key in (
+                "expected_question_count",
+                "question_count",
+                "sample_count",
+                "record_count",
+            ):
+                if key in entry:
+                    value = entry[key]
+                    break
+        else:
+            value = entry
+    else:
+        declared_split = payload.get("target_split", payload.get("split"))
+        if declared_split != split:
+            raise ValueError(
+                f"split manifest describes {declared_split!r}, expected {split!r}"
             )
-        except (KeyError, TypeError, ValueError) as exc:
-            raise ValueError(f"invalid role label at {path}:{line_number}: {exc}") from exc
-    if not labels:
-        raise ValueError(f"no role labels found in {path}")
-    return labels
+        for key in (
+            "expected_question_count",
+            "question_count",
+            "sample_count",
+            "record_count",
+        ):
+            if key in payload:
+                value = payload[key]
+                break
+
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(
+            f"split manifest does not declare a positive question count for {split}"
+        )
+    return value
 
 
 def _parse_lambdas(raw: str) -> tuple[float, ...]:
@@ -530,9 +730,19 @@ def _parse_lambdas(raw: str) -> tuple[float, ...]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", type=Path, required=True)
-    parser.add_argument("--role-labels", type=Path, required=True)
-    parser.add_argument("--taxonomy-version", required=True)
-    parser.add_argument("--taxonomy-status", choices=["fixture", "frozen"], required=True)
+    parser.add_argument(
+        "--role-label-manifest",
+        "--role-labels",
+        dest="role_label_manifest",
+        type=Path,
+        required=True,
+        help="M3 Role-label provenance manifest (legacy flag retained as an alias)",
+    )
+    parser.add_argument(
+        "--split-manifest",
+        type=Path,
+        help="manifest declaring the expected Dev question count; required for formal runs",
+    )
     parser.add_argument(
         "--input-status",
         choices=["fixture", "provisional", "formal"],
@@ -547,22 +757,28 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     args = build_parser().parse_args()
     cases = load_lambda_cases(args.cases)
-    role_labels = load_role_labels(
-        args.role_labels,
-        expected_taxonomy_version=args.taxonomy_version
-        if args.taxonomy_status == "frozen"
-        else None,
+    role_package = load_role_label_package(args.role_label_manifest)
+    if args.input_status == "formal" and args.split_manifest is None:
+        raise ValueError("formal lambda search requires --split-manifest")
+    expected_question_count = (
+        load_expected_question_count(args.split_manifest, "dev")
+        if args.split_manifest is not None
+        else None
     )
     result = search_lambda(
         cases,
-        role_labels,
-        taxonomy_version=args.taxonomy_version,
-        taxonomy_status=args.taxonomy_status,
+        role_package.labels,
+        taxonomy_version=role_package.manifest.role_taxonomy_version,
+        taxonomy_status="frozen",
         input_status=args.input_status,
         candidate_lambdas=args.lambdas,
         metric_k=args.metric_k,
         cases_sha256=sha256_file(args.cases),
-        role_labels_sha256=sha256_file(args.role_labels),
+        role_labels_sha256=role_package.manifest.labels_sha256,
+        split_manifest_sha256=sha256_file(args.split_manifest)
+        if args.split_manifest is not None
+        else None,
+        expected_question_count=expected_question_count,
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

@@ -104,6 +104,7 @@ def test_prepare_cases_joins_m6_mapping_and_all_three_profiles(tmp_path) -> None
     assert all(row["source_reportable"] is False for row in rows)
     assert manifest["formally_complete"] is False
     assert manifest["question_count"] == 1
+    assert manifest["expected_question_count"] is None
     assert manifest["case_count"] == 3
 
     cases_path = tmp_path / "prepared" / "cases.jsonl"
@@ -128,12 +129,40 @@ def test_formal_preparation_rejects_nonreportable_source(tmp_path) -> None:
 
 def test_formal_preparation_rejects_incomplete_question_count(tmp_path) -> None:
     runs, source_manifest, mapping = _inputs(tmp_path, reportable=True, split="dev")
+    split_manifest = tmp_path / "split_manifest.json"
+    split_manifest.write_text(
+        json.dumps({"split": "dev", "question_count": 60}),
+        encoding="utf-8",
+    )
 
-    with pytest.raises(ValueError, match="exactly 60 questions"):
+    with pytest.raises(ValueError, match="does not match the split manifest"):
         prepare_cases(
             runs,
             source_manifest,
             mapping,
             target_split="dev",
             input_status="formal",
+            split_manifest_path=split_manifest,
         )
+
+
+def test_formal_preparation_uses_split_manifest_count(tmp_path) -> None:
+    runs, source_manifest, mapping = _inputs(tmp_path, reportable=True, split="dev")
+    split_manifest = tmp_path / "split_manifest.json"
+    split_manifest.write_text(
+        json.dumps({"split": "dev", "question_count": 1}),
+        encoding="utf-8",
+    )
+
+    _, manifest = prepare_cases(
+        runs,
+        source_manifest,
+        mapping,
+        target_split="dev",
+        input_status="formal",
+        split_manifest_path=split_manifest,
+    )
+
+    assert manifest["expected_question_count"] == 1
+    assert manifest["formally_complete"] is True
+    assert manifest["split_manifest_sha256"]

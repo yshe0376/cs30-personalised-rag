@@ -11,7 +11,7 @@ from typing import Literal
 from cs30.contracts import RetrievalResult, StudentLevel
 from cs30.profile import Week1ProfileProvider
 
-from .lambda_search import InputStatus, sha256_file
+from .lambda_search import InputStatus, load_expected_question_count, sha256_file
 
 TargetSplit = Literal["dev", "test"]
 
@@ -42,6 +42,7 @@ def prepare_cases(
     target_split: TargetSplit,
     input_status: InputStatus,
     profile_prefix: str = "member7",
+    split_manifest_path: Path | None = None,
 ) -> tuple[list[dict[str, object]], dict[str, object]]:
     source_manifest = json.loads(retrieval_manifest_path.read_text(encoding="utf-8"))
     source_split = str(source_manifest.get("split", "")).strip()
@@ -107,11 +108,21 @@ def prepare_cases(
     if not seen_questions:
         raise ValueError(f"no M6 retrieval rows found in {retrieval_runs_path}")
 
-    expected_questions = 60 if target_split == "dev" else 180
-    if input_status == "formal" and len(seen_questions) != expected_questions:
+    if input_status == "formal" and split_manifest_path is None:
+        raise ValueError("formal case preparation requires a split manifest")
+    expected_questions = (
+        load_expected_question_count(split_manifest_path, target_split)
+        if split_manifest_path is not None
+        else None
+    )
+    if (
+        input_status == "formal"
+        and expected_questions is not None
+        and len(seen_questions) != expected_questions
+    ):
         raise ValueError(
-            f"formal {target_split} preparation requires exactly {expected_questions} "
-            f"questions; found {len(seen_questions)}"
+            f"formal {target_split} question count does not match the split manifest; "
+            f"expected {expected_questions}, found {len(seen_questions)}"
         )
     formally_complete = (
         input_status == "formal"
@@ -128,11 +139,15 @@ def prepare_cases(
         "source_reportable": source_reportable,
         "formally_complete": formally_complete,
         "question_count": len(seen_questions),
+        "expected_question_count": expected_questions,
         "profile_levels": [level.value for level in StudentLevel],
         "case_count": len(rows),
         "retrieval_runs_sha256": sha256_file(retrieval_runs_path),
         "retrieval_manifest_sha256": source_manifest_sha256,
         "gold_mapping_sha256": sha256_file(gold_mapping_path),
+        "split_manifest_sha256": sha256_file(split_manifest_path)
+        if split_manifest_path is not None
+        else None,
         "retrieval_run_id": source_manifest.get("run_id"),
         "dataset_version": source_manifest.get("dataset_version"),
         "corpus_version": source_manifest.get("corpus_version"),
@@ -165,6 +180,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--retrieval-runs", type=Path, required=True)
     parser.add_argument("--retrieval-manifest", type=Path, required=True)
     parser.add_argument("--gold-mapping", type=Path, required=True)
+    parser.add_argument(
+        "--split-manifest",
+        type=Path,
+        help="manifest declaring the expected split size; required for formal inputs",
+    )
     parser.add_argument("--target-split", choices=["dev", "test"], required=True)
     parser.add_argument(
         "--input-status",
@@ -186,6 +206,7 @@ def main() -> None:
         target_split=args.target_split,
         input_status=args.input_status,
         profile_prefix=args.profile_prefix,
+        split_manifest_path=args.split_manifest,
     )
     write_prepared_cases(
         args.output_cases,
