@@ -18,7 +18,7 @@
 
 ## Task 1/2 done
 
-- Added `cs30.v2` provider-neutral contracts, stable identity helpers, exact three-book catalog, and dependency-injection ports.
+- Added `cs30.v2` provider-neutral contracts, stable identity helpers, a frozen textbook catalog (originally three books; see the 2026-09-23 ruling below), and dependency-injection ports.
 - Added draft/finalize/write Manifest lifecycle with canonical corpus/Manifest hashes, reportable derivation, tamper detection, versioned v2 config, and atomic publish lock.
 - Direct contract/Manifest/config/publish checks pass. The v2 fixture path is diagnostic-only; official builds require real parser/chunker capabilities, pinned source hashes, and an index builder.
 
@@ -37,8 +37,10 @@
 
 ## Final implementation rulings
 
-- Local branch `feat/v2-m1-three-textbooks` is being used for the isolated work; it is not pushed.
-- The current provisional three-book IDs remain `openstax_college_physics_2e`, `ck12_peoples_physics_basic`, and `ck12_physics_concepts_intermediate`. Their final composition is still an M2 decision; parser work must not start until the intended OpenStax/CK-12 set, source files, versions, licenses, and SHA-256 pins are confirmed.
+- Branch `feat/v2-m1-three-textbooks` carries the isolated work and is pushed to GitHub; nothing is merged into `main`.
+- 2026-09-23 textbook ruling: the required set is the three OpenStax books M2 parsed with parser 1.3.2 — `openstax_college_physics_2e`, `openstax_physics`, and `openstax_college_physics_ap_2e` — each pinned to its PDF SHA-256, version, and chapter range. A CK-12 book is also required but not chosen yet, so `REQUIRED_PROVIDERS = ("openstax", "ck12")` stops official builds with `REQUIRED_PROVIDER_MISSING` until M2 adds it; nothing guesses a CK-12 ID. The book count is no longer fixed at three anywhere in the contracts.
+- Parsed documents must carry the catalogue provider (`PROVIDER_MISMATCH` otherwise).
+- Every build writes `duplicate_blocks.json`, the cross-textbook duplicate block groups bound to the corpus hash. On M2's outputs it finds 16,677 groups, 16,456 of them between College Physics 2e and its AP edition.
 - Catalog-defined logical `source_name` values are required at the pipeline boundary; local filenames cannot enter locator or corpus identity.
 - Explicit fixture parsers and chunkers are rejected by official pipeline builds with `FIXTURE_NOT_ALLOWED`. Topic assignments are persisted as a corpus-bound sidecar and validated against the manifest hash/version and current chunk IDs.
 - An official build also requires an injected index builder. A complete corpus-only M1 run cannot claim `reportable=true`; it writes diagnostics with `INDEX_BUILDER_NOT_CONFIGURED` instead. Development builds may publish diagnostic records with `reportable=false`.
@@ -47,5 +49,5 @@
 ## Task 3/4 done
 
 - Added isolated batch parser/chunker reports, stable error codes, official/development gate behavior, UTF-8 synthetic parser, unique `cs30-build-v2` entry point, script inventory, CLI exit tests, output conflict tests, and provenance/hash regression tests.
-- Direct v2 verification: 52 tests passed; Ruff passed with `--no-cache`.
-- Full repository verification: 255 tests passed with exit code 0 using `python -m pytest -q -p no:cacheprovider`; Ruff passed for the full `src` and `tests` trees.
+- Direct v2 verification: 81 tests passed; Ruff passed.
+- Full repository verification (2026-09-23): 284 passed and 2 skipped (Streamlit is not installed), exit code 0, using `python -m pytest -p no:cacheprovider`; Ruff passed for the full `src` and `tests` trees.
