@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Release branches are where each version is stabilised and tested, so a
+    # push there must run the same checks as main.
+    branches: [main, "release/**"]
   pull_request:
 
 jobs:
