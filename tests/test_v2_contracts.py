@@ -11,8 +11,12 @@ from cs30.v2.contracts import (
     ChunkSpan,
     ContentType,
     EvidenceProvenance,
+    EvidenceSpan,
+    EvidenceSpanBinding,
     IndexArtifact,
     RetrievalMode,
+    SpanResolutionMethod,
+    SpanResolutionStatus,
     TextBlock,
     TextbookChapter,
     TextbookDocument,
@@ -24,6 +28,7 @@ from cs30.v2.ids import (
     make_chunk_id,
     make_document_id,
     sha256_text,
+    source_locator,
 )
 from cs30.v2.ports import TextbookInput
 
@@ -81,7 +86,7 @@ def make_document(
                 chapter_id="1",
                 section_id="1.1",
                 section_title="Force",
-                content_type=ContentType.FORMULA,
+                content_type=ContentType.EQUATION,
                 char_start=formula_start,
                 char_end=image_start,
                 page_or_location="chapter-1/section-1.1",
@@ -176,13 +181,13 @@ def test_chunk_keeps_document_global_half_open_span_and_structural_spans() -> No
             chapter_id="1",
             char_start=formula_chunk.char_start,
             char_end=formula_chunk.char_end,
-            content_type=ContentType.FORMULA,
+            content_type=ContentType.EQUATION,
         ),
     )
     assert formula_chunk.source_locator.startswith("source=openstax_college_physics_2e|")
     assert formula_chunk.section_id == "1.1"
     assert formula_chunk.section_title == "Force"
-    assert formula_chunk.content_type is ContentType.FORMULA
+    assert formula_chunk.content_types == (ContentType.EQUATION,)
     assert "section_id" not in formula_chunk.metadata
     assert "section_title" not in formula_chunk.metadata
     assert "content_type" not in formula_chunk.metadata
@@ -200,6 +205,188 @@ def test_chunker_derives_a_stable_location_when_page_data_is_unavailable() -> No
     chunk = V2BlockChunker().chunk(without_pages)[0]
 
     assert chunk.page_or_location == "chapter-1/block-body-1"
+
+
+def _paged_block(**overrides: object) -> dict[str, object]:
+    return {
+        "block_id": "b1",
+        "chapter_id": "1",
+        "char_start": 0,
+        "char_end": 10,
+        "page_start": 25,
+        "page_end": 25,
+        **overrides,
+    }
+
+
+def test_block_pages_derive_the_canonical_page_location() -> None:
+    assert TextBlock.model_validate(_paged_block()).page_or_location == "p25"
+    assert TextBlock.model_validate(_paged_block(page_end=26)).page_or_location == "p25-26"
+    unpaged = TextBlock.model_validate(
+        _paged_block(page_start=None, page_end=None, page_or_location="lesson-3")
+    )
+    assert unpaged.page_or_location == "lesson-3"
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"page_end": None}, "set together"),
+        ({"page_start": 26, "page_end": 25}, "precede"),
+        ({"page_or_location": "printed page 7"}, "must be 'p25'"),
+    ],
+)
+def test_block_pages_reject_partial_backwards_or_mismatched_locations(
+    overrides: dict[str, object], message: str
+) -> None:
+    with pytest.raises(ValueError, match=message):
+        TextBlock.model_validate(_paged_block(**overrides))
+
+
+def test_chunker_carries_block_pages_into_the_chunk_and_its_locator() -> None:
+    document = make_document()
+    payload = document.model_dump()
+    payload["blocks"] = [
+        {**block.model_dump(), "page_start": 40, "page_end": 40, "page_or_location": None}
+        for block in document.blocks
+    ]
+    chunk = V2BlockChunker().chunk(TextbookDocument.model_validate(payload))[0]
+
+    assert (chunk.page_start, chunk.page_end, chunk.page_or_location) == (40, 40, "p40")
+    assert "|location=p40|" in chunk.source_locator
+
+
+def test_formula_is_not_a_content_type_so_maths_cannot_bypass_the_evidence_policy() -> None:
+    assert "formula" not in {member.value for member in ContentType}
+    with pytest.raises(ValueError, match="content_type"):
+        TextBlock.model_validate(_paged_block(content_type="formula"))
+
+
+def _chunk_over_all_blocks(document: TextbookDocument, **overrides: object) -> Chunk:
+    blocks = document.blocks
+    payload = {
+        "chunk_id": "multi-block",
+        "provider": document.provider,
+        "textbook_id": document.textbook_id,
+        "document_id": document.document_id,
+        "chapter_id": "1",
+        "source_name": document.source_name,
+        "page_or_location": "chapter-1",
+        "source_locator": source_locator(
+            source_name=document.source_name,
+            textbook_id=document.textbook_id,
+            chapter_id="1",
+            page_or_location="chapter-1",
+            char_start=0,
+            char_end=len(document.text),
+        ),
+        "text": document.text,
+        "char_start": 0,
+        "char_end": len(document.text),
+        "spans": [
+            {
+                "block_id": block.block_id,
+                "chapter_id": block.chapter_id,
+                "char_start": block.char_start,
+                "char_end": block.char_end,
+                "content_type": block.content_type,
+            }
+            for block in blocks
+        ],
+        "chunker_version": "test",
+        "chunk_config_hash": "sha256:config",
+        "token_count": 3,
+        **overrides,
+    }
+    return Chunk.model_validate(payload)
+
+
+def test_multi_block_chunk_derives_every_content_type_from_its_spans() -> None:
+    chunk = _chunk_over_all_blocks(make_document())
+
+    assert chunk.content_types == (
+        ContentType.BODY,
+        ContentType.EQUATION,
+        ContentType.IMAGE,
+    )
+    assert Chunk.model_validate(chunk.model_dump(mode="json")) == chunk
+
+
+def test_chunk_rejects_content_types_that_disagree_with_its_spans() -> None:
+    with pytest.raises(ValueError, match="content_types"):
+        _chunk_over_all_blocks(make_document(), content_types=["body"])
+
+
+def test_evidence_span_is_chapter_local_and_hashes_its_verbatim_text() -> None:
+    span = EvidenceSpan(
+        span_id="gold:sciq-1:1",
+        textbook_id=REQUIRED_TEXTBOOK_IDS[0],
+        chapter_id="4",
+        chapter_char_start=100,
+        chapter_char_end=105,
+        verbatim_text="force",
+        origin_corpus_version="2.0.0-dev.1",
+    )
+
+    assert span.text_hash == sha256_text("force")
+    assert EvidenceSpan.model_validate_json(span.model_dump_json()) == span
+    assert "document_id" not in EvidenceSpan.model_fields
+    assert "chunk_ids" not in EvidenceSpan.model_fields
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"chapter_char_end": 106}, "length"),
+        ({"text_hash": "sha256:" + "0" * 64}, "SHA-256"),
+        ({"chapter_char_end": 100}, "exceed"),
+    ],
+)
+def test_evidence_span_rejects_inconsistent_offsets_or_hash(
+    overrides: dict[str, object], message: str
+) -> None:
+    payload = {
+        "span_id": "cc:q1:1",
+        "textbook_id": REQUIRED_TEXTBOOK_IDS[0],
+        "chapter_id": "4",
+        "chapter_char_start": 100,
+        "chapter_char_end": 105,
+        "verbatim_text": "force",
+        "origin_corpus_version": "2.0.0-dev.1",
+        **overrides,
+    }
+    with pytest.raises(ValueError, match=message):
+        EvidenceSpan.model_validate(payload)
+
+
+def test_binding_status_decides_whether_a_location_is_allowed() -> None:
+    common = {
+        "span_id": "gold:sciq-1:1",
+        "textbook_id": REQUIRED_TEXTBOOK_IDS[0],
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:corpus",
+    }
+    resolved = EvidenceSpanBinding(
+        **common,
+        resolution_status=SpanResolutionStatus.RESOLVED,
+        resolution_method=SpanResolutionMethod.VERBATIM_UNIQUE,
+        document_id="doc",
+        char_start=5000,
+        char_end=5005,
+        chunk_ids=("chunk-1",),
+    )
+    assert resolved.chunk_ids == ("chunk-1",)
+
+    with pytest.raises(ValueError, match="at least one chunk"):
+        EvidenceSpanBinding(**{**resolved.model_dump(), "chunk_ids": ()})
+    with pytest.raises(ValueError, match="must not carry"):
+        EvidenceSpanBinding(
+            **common,
+            resolution_status=SpanResolutionStatus.STALE,
+            chunk_ids=("chunk-1",),
+        )
+    stale = EvidenceSpanBinding(**common, resolution_status=SpanResolutionStatus.AMBIGUOUS)
+    assert stale.document_id is None and stale.chunk_ids == ()
 
 
 def test_fixture_provenance_url_does_not_change_document_identity(tmp_path) -> None:
@@ -270,6 +457,23 @@ def test_catalog_freezes_exactly_three_v2_textbooks_and_rejects_unknown_ids() ->
     assert all(get_textbook_spec(book_id).enabled for book_id in REQUIRED_TEXTBOOK_IDS)
     with pytest.raises(ValueError, match="unknown textbook_id"):
         get_textbook_spec("not-a-real-v2-book")
+
+
+def test_college_physics_is_pinned_to_the_pdf_m2_validated() -> None:
+    spec = get_textbook_spec("openstax_college_physics_2e")
+
+    assert spec.expected_source_sha256 == (
+        "sha256:a052d9fae2a90e135a74d70c001a78bb49b83280be58191e108d5de577699bb6"
+    )
+    assert spec.selected_chapters == tuple(str(chapter) for chapter in range(1, 35))
+    assert spec.source_version == "2e"
+    # The CK-12 entries stay unpinned until M2 delivers those sources, which keeps
+    # official builds closed with SOURCE_HASH_NOT_PINNED instead of guessing.
+    assert all(
+        get_textbook_spec(book_id).expected_source_sha256 is None
+        for book_id in REQUIRED_TEXTBOOK_IDS
+        if book_id != "openstax_college_physics_2e"
+    )
 
 
 @pytest.mark.parametrize(

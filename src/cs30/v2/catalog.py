@@ -20,9 +20,10 @@ class TextbookSpec:
     enabled: bool = False
 
 
-# M1 freezes the set; raw source hashes are filled when M2 receives the retained
+# M1 freezes the set; raw source hashes are filled when M2 delivers the retained
 # source files.  An absent hash is therefore visible and cannot be mistaken for
-# a verified source pin.
+# a verified source pin.  College Physics 2e is pinned to the PDF that M2's
+# OpenStax parser 1.3.2 was validated against (1,671 pages, chapters 1-34).
 REQUIRED_TEXTBOOK_IDS: tuple[str, ...] = (
     "openstax_college_physics_2e",
     "ck12_peoples_physics_basic",
@@ -39,6 +40,10 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         source_uri="https://openstax.org/details/books/college-physics-2e",
         license="CC BY 4.0",
         parser_name="openstax",
+        selected_chapters=tuple(str(chapter) for chapter in range(1, 35)),
+        expected_source_sha256=(
+            "sha256:a052d9fae2a90e135a74d70c001a78bb49b83280be58191e108d5de577699bb6"
+        ),
         enabled=True,
     ),
     "ck12_peoples_physics_basic": TextbookSpec(

@@ -72,10 +72,11 @@ class V2BlockChunker:
                     document_id=document.document_id,
                     chapter_id=block.chapter_id,
                     source_name=document.source_name,
+                    page_start=block.page_start,
+                    page_end=block.page_end,
                     page_or_location=page_or_location,
                     section_id=block.section_id,
                     section_title=block.section_title,
-                    content_type=block.content_type,
                     source_locator=source_locator(
                         source_name=document.source_name,
                         textbook_id=document.textbook_id,

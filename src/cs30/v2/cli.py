@@ -90,8 +90,11 @@ def run(argv: list[str] | None = None) -> int:
                     source_name=spec.source_name,
                     source_uri=spec.source_uri,
                     source_version=spec.source_version,
-                    selected_chapters=spec.selected_chapters,
-                    expected_source_sha256=spec.expected_source_sha256,
+                    # This CLI only runs fixture builds over synthetic text, so the
+                    # catalog's pinned source hash and chapter selection, which
+                    # describe the real textbook file, do not apply to its inputs.
+                    selected_chapters=(),
+                    expected_source_sha256=None,
                 )
             )
             parsers[textbook_id] = TextFixtureParser(spec)

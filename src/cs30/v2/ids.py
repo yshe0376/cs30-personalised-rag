@@ -81,6 +81,18 @@ def make_chunk_id(document_id: str, chapter_id: str, config_hash: str, ordinal: 
     return f"{slug(document_id)}__{slug(chapter_id)}__{config_fragment}__{ordinal:05d}"
 
 
+def page_location(page_start: int, page_end: int) -> str:
+    """Return the canonical ``page_or_location`` for a physical PDF page range.
+
+    Pages are 1-based physical PDF pages, not printed page labels, so the
+    value stays stable for a pinned source file: ``p25`` or ``p25-26``.
+    """
+
+    if page_start < 1 or page_end < page_start:
+        raise ValueError("page range must start at 1 and must not run backwards")
+    return f"p{page_start}" if page_end == page_start else f"p{page_start}-{page_end}"
+
+
 def source_locator(
     *,
     source_name: str,
