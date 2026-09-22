@@ -40,6 +40,15 @@ compatibility with the current port and pipeline.
 - Structured attempt records containing each raw provider output, repair status,
   failure type, model, usage and response ID. Saved batch rows retain both the
   rejected output and the repaired output.
+- A Dev-only global lambda search that compares a fixed candidate grid using
+  MRR@k, hit rate and recall, with deterministic smallest-lambda tie breaking.
+- A hash-bound selected-lambda configuration. It is marked `frozen` and
+  `reportable` only when the inputs are formal and the M3 taxonomy is frozen.
+- A batch four-condition runner that saves one JSONL row per
+  question/profile/condition and a provenance manifest for M8.
+- Formal gates for exactly 60 Dev or 180 Test questions, all three student
+  levels, identical initial candidates, complete non-fixture Role labels, real
+  retrieval provenance and input hashes.
 
 ## Four-condition fixture run
 
@@ -69,6 +78,80 @@ citation rules but contains no student level or profile identifier.
 The role mapping in this demonstration is explicitly a fixture using the six
 candidate role names from the project design. It is not a frozen taxonomy and
 must not be used for model-effectiveness claims.
+
+## Dev lambda selection and freezing
+
+First join the unchanged M6 retrieval rows with the M4 Gold-to-chunk mapping and
+the fixed three-level StudentProfiles:
+
+```bash
+python -m cs30.generation.prepare_cases \
+  --retrieval-runs artifacts/w6/m6/dev_results.jsonl \
+  --retrieval-manifest artifacts/w6/m6/dev_manifest.json \
+  --gold-mapping artifacts/w6/m4/gold_to_chunk_mapping.json \
+  --target-split dev --input-status formal \
+  --output-cases artifacts/task7/formal_dev_cases.jsonl \
+  --output-manifest artifacts/task7/formal_dev_cases.manifest.json
+```
+
+The preparation step verifies the M6 execution mode and status, rejects
+duplicate questions or missing Gold mappings, preserves M6 retrieval bytes in
+the validated contract, creates all three fixed profiles, and records SHA-256
+hashes for every upstream input. Formal preparation also requires a reportable
+M6 manifest with an exact `dev`/`test` split and the required 60/180 questions.
+
+The resulting JSONL contains one row per question and profile level:
+
+```json
+{"question_id":"q1","split":"dev","profile":{},"retrieval":{},"relevant_chunk_ids":["chunk-1"]}
+```
+
+`profile` must validate as `StudentProfile`; `retrieval` must validate as the
+unchanged M6 `RetrievalResult`. Prepare M3 Role labels as JSONL:
+
+```json
+{"chunk_id":"chunk-1","roles":["definition"],"source":"m3-role-labels-v1","taxonomy_version":"m3-role-v1"}
+```
+
+Run the search only after those inputs have been joined without changing their
+identities:
+
+```bash
+python -m cs30.generation.lambda_search \
+  --cases artifacts/task7/formal_dev_cases.jsonl \
+  --role-labels artifacts/task7/evidence_role_labels.jsonl \
+  --taxonomy-version m3-role-v1 --taxonomy-status frozen \
+  --input-status formal --lambdas 0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1 \
+  --metric-k 5 --output artifacts/task7/lambda_dev_search.json
+```
+
+The command refuses Test rows. A formal frozen configuration additionally
+requires exactly 60 unique Dev questions, Beginner/Intermediate/Advanced cases
+for every question, identical M6 candidates across the three levels, retrieval
+provenance, complete single-role M3 labels, and hashes for both input files.
+Fixture or proposed data still produces a useful search report, but the selected
+configuration is labelled `provisional` and `reportable=false`.
+
+## Four-condition batch run
+
+The condition runner consumes JSONL rows containing `question_id`, `split`,
+`question`, `profile`, and the unchanged `retrieval` object. It accepts either a
+standalone selected-lambda object or the full lambda-search output:
+
+```bash
+python -m cs30.generation.experiment \
+  --cases artifacts/task7/formal_test_cases.jsonl \
+  --role-labels artifacts/task7/evidence_role_labels.jsonl \
+  --selected-lambda artifacts/task7/lambda_dev_search.json \
+  --input-status formal --provider ollama --model gpt-oss:20b \
+  --output-dir artifacts/task7/formal_test_run
+```
+
+This writes `four_condition_results.jsonl` and `run_manifest.json`. The manifest
+records the model settings, prompt versions, selected lambda, taxonomy version,
+Git commit, condition IDs and SHA-256 hashes of every input. A formal Test run
+requires exactly 180 unique questions and all three levels per question. Mock,
+fixture and proposed-data runs are always non-reportable.
 
 ## Offline smoke run
 
@@ -194,14 +277,15 @@ inputs, and separate raw records for rejected and repaired outputs.
 
 ## Waiting on team artefacts
 
-The following W5 integration work is intentionally not claimed complete:
+The implementation is ready, but the following formal execution inputs are not
+present in the repository snapshot and therefore no formal result is claimed:
 
-- Loading M5's role labels, until the taxonomy decision and versioned labels
+- Loading M3's Role labels, until the taxonomy decision and versioned labels
   are available.
-- Choosing `lambda_weight` on the Dev split, until M3/M4 provide the versioned
-  Dev data and gold mapping. The Test split must not be used for this choice.
-- Publishing formal four-condition results, until M1 supplies the shared run
-  harness and M8 confirms the result-consumption workflow.
+- Executing the lambda search on the final 60-question Dev set. The current
+  12-question `proposed_dev` input is explicitly non-reportable.
+- Publishing formal four-condition results on the final six-textbook inputs.
+  The current M6 handoff and local Member 7 demonstrations are non-reportable.
 
 ## Integration boundaries
 
