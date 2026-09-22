@@ -1,7 +1,7 @@
 """Fixture-first level-aware reranking without changing shared contracts.
 
 Evidence-role labels are supplied as a sidecar mapping keyed by stable chunk ID.
-Until M5 freezes the taxonomy, callers must mark the configuration as
+Until M3 freezes the taxonomy, callers must mark the configuration as
 ``fixture`` and must not present the output as validated personalisation.
 """
 
