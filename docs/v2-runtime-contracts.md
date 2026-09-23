@@ -29,6 +29,8 @@ RetrievalResult
 `RetrievalResult.hits` 可以为空，表示检索成功但没有证据；非拒答的
 `GeneratedAnswer` 必须携带至少一个 citation，拒答不能携带 citation。
 `EvidenceBundle.citation_map` 必须完整映射每个展示 evidence ID 到真实 `chunk_id`。
+`ValidatedAnswer.resolved_citations` 保存的是这个映射解析出的 `chunk_id`，不是展示用的
+evidence ID。
 回答通过 citation validation 后，cited-topic resolver 还必须确认所有 resolved citation
 来自初始 retrieval；否则返回 `no_topic_available` 并记录
 `CITATION_NOT_IN_RETRIEVAL`。

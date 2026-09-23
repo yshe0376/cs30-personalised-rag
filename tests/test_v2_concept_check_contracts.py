@@ -177,10 +177,13 @@ def _retrieval_with_provenance(*hits: RetrievedEvidence) -> RetrievalResult:
 
 
 def _loaded_topic_map(topic_map: ChunkTopicMap) -> LoadedChunkTopicMap:
-    return LoadedChunkTopicMap(
-        topic_map=topic_map,
-        corpus_version=CORPUS_VERSION,
-        corpus_hash=CORPUS_HASH,
+    return LoadedChunkTopicMap.validated(
+        topic_map,
+        manifest=SimpleNamespace(
+            corpus_version=CORPUS_VERSION,
+            corpus_hash=CORPUS_HASH,
+        ),
+        corpus_chunk_ids=tuple(assignment.chunk_id for assignment in topic_map.assignments),
     )
 
 
@@ -335,16 +338,16 @@ def test_topic_map_mismatch_is_not_silently_treated_as_no_topic() -> None:
         topic_registry_version="topics-0.1",
         topics=(Topic(topic_id="mechanics", title="Mechanics"),),
     )
-    topic_map = ChunkTopicMap(
-        corpus_version="other-corpus",
-        corpus_hash=CORPUS_HASH,
-        topic_registry_version="topics-0.1",
-        assignments=(ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),),
-    )
     result = _retrieval_with_provenance(_retrieved("c1", 1))
     resolved = resolve_topic_from_retrieval(
         result,
-        _loaded_topic_map(topic_map),
+        LoadedChunkTopicMap.unavailable(
+            manifest=SimpleNamespace(
+                corpus_version=CORPUS_VERSION,
+                corpus_hash=CORPUS_HASH,
+            ),
+            error_code="TOPIC_MAP_MISMATCH",
+        ),
         registry,
     )
     assert resolved.status is TopicResolutionStatus.TOPIC_MAP_MISMATCH
@@ -392,6 +395,41 @@ def test_invalid_loaded_topic_map_stays_mismatch_for_each_resolution(tmp_path: P
     resolved = resolve_topic_from_retrieval(retrieval, loaded, _topic_registry())
     assert resolved.status is TopicResolutionStatus.TOPIC_MAP_MISMATCH
     assert resolved.error_code == "TOPIC_MAP_MISMATCH"
+
+
+def test_loaded_topic_map_cannot_be_constructed_without_validation() -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),),
+    )
+
+    with pytest.raises(TypeError, match="validated"):
+        LoadedChunkTopicMap(
+            topic_map=topic_map,
+            corpus_version=CORPUS_VERSION,
+            corpus_hash=CORPUS_HASH,
+        )
+
+
+def test_loaded_topic_map_factory_rejects_unknown_chunk_ids() -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(ChunkTopicAssignment(chunk_id="missing", topic_ids=("mechanics",)),),
+    )
+
+    with pytest.raises(ValueError, match="absent from the corpus"):
+        LoadedChunkTopicMap.validated(
+            topic_map,
+            manifest=SimpleNamespace(
+                corpus_version=CORPUS_VERSION,
+                corpus_hash=CORPUS_HASH,
+            ),
+            corpus_chunk_ids=("c1",),
+        )
 
 
 def test_cited_topic_resolution_rejects_citation_outside_retrieval() -> None:
@@ -636,6 +674,52 @@ def test_event_payloads_separate_revocation_target_and_level_override() -> None:
         created_at=datetime.now(UTC),
     )
     assert revoked.revoked_attempt_id == "attempt-1"
+
+
+def test_event_payload_rejects_fields_owned_by_other_event_types() -> None:
+    common = {
+        "profile_id": "student-1",
+        "topic_id": "mechanics",
+        "topic_registry_version": "topics-0.1",
+        "question_id": "cc:fixture:1",
+        "question_difficulty": StudentLevel.BEGINNER,
+        "state_version_before": 0,
+        "stream_version": 1,
+        "created_at": datetime.now(UTC),
+    }
+    with pytest.raises(ValueError, match="new_level"):
+        ConceptCheckEvent(
+            event_id="event-submitted-with-level",
+            attempt_id="attempt-1",
+            selected_choice="A",
+            performance=1.0,
+            event_type=ConceptCheckEventType.ATTEMPT_SUBMITTED,
+            new_level=StudentLevel.INTERMEDIATE,
+            **common,
+        )
+
+    with pytest.raises(ValueError, match="revoked_attempt_id"):
+        ConceptCheckEvent(
+            event_id="event-skipped-with-revocation",
+            attempt_id="attempt-1",
+            event_type=ConceptCheckEventType.ATTEMPT_SKIPPED,
+            revoked_attempt_id="attempt-0",
+            **common,
+        )
+
+    with pytest.raises(ValueError, match="attempt_id"):
+        ConceptCheckEvent(
+            event_id="event-revoked-with-attempt",
+            attempt_id="attempt-1",
+            revoked_attempt_id="attempt-0",
+            event_type=ConceptCheckEventType.ATTEMPT_REVOKED,
+            state_version_before=1,
+            stream_version=2,
+            created_at=datetime.now(UTC),
+            profile_id="student-1",
+            topic_id="mechanics",
+            topic_registry_version="topics-0.1",
+        )
 
 
 def test_disabled_pipeline_trace_requires_static_profile_and_no_resolver() -> None:

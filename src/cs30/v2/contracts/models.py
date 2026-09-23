@@ -928,6 +928,22 @@ class ConceptCheckEvent(V2Model):
 
     @model_validator(mode="after")
     def validate_event_payload(self) -> ConceptCheckEvent:
+        if (
+            self.new_level is not None
+            and self.event_type is not ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN
+        ):
+            raise ValueError("only level overrides may carry new_level")
+        if (
+            self.revoked_attempt_id is not None
+            and self.event_type is not ConceptCheckEventType.ATTEMPT_REVOKED
+        ):
+            raise ValueError("only revoked attempts may carry revoked_attempt_id")
+        if (
+            self.event_type is ConceptCheckEventType.ATTEMPT_REVOKED
+            and self.attempt_id is not None
+        ):
+            raise ValueError("revoked attempts must not carry attempt_id")
+
         if self.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED:
             if self.attempt_id is None or self.question_id is None:
                 raise ValueError("submitted attempts require an attempt_id and question_id")
@@ -1037,11 +1053,14 @@ class GeneratedAnswer(V2Model):
 
 
 class ValidatedAnswer(V2Model):
-    """Answer plus citations resolved against its evidence bundle."""
+    """Answer plus chunk IDs resolved from its evidence bundle citation map."""
 
     schema_version: Literal["2.0"] = "2.0"
     answer: GeneratedAnswer
-    resolved_citations: tuple[Identifier, ...] = ()
+    resolved_citations: tuple[Identifier, ...] = Field(
+        default=(),
+        description="Chunk IDs from EvidenceBundle.citation_map, never evidence IDs.",
+    )
     citation_status: Literal["passed", "failed", "skipped"]
     run_provenance: dict[str, str] = Field(default_factory=dict)
     abstained: bool = False

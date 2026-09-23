@@ -59,20 +59,86 @@ class ChunkTopicMap(V2Model):
 TopicMapErrorCode = Literal["TOPIC_MAP_UNAVAILABLE", "TOPIC_MAP_MISMATCH"]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class LoadedChunkTopicMap:
-    """A topic sidecar validated once against one published corpus identity."""
+    """A topic sidecar validated once against one published corpus identity.
+
+    Instances must be created with :meth:`validated` or :meth:`unavailable`.
+    The regular constructor is disabled so callers cannot mark an unchecked
+    topic map as loaded.
+    """
 
     topic_map: ChunkTopicMap | None
     corpus_version: str
     corpus_hash: str
     error_code: TopicMapErrorCode | None = None
 
-    def __post_init__(self) -> None:
-        if self.topic_map is None and self.error_code is None:
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        del args, kwargs
+        raise TypeError(
+            "use LoadedChunkTopicMap.validated() or "
+            "LoadedChunkTopicMap.unavailable()"
+        )
+
+    @classmethod
+    def _from_parts(
+        cls,
+        *,
+        topic_map: ChunkTopicMap | None,
+        corpus_version: str,
+        corpus_hash: str,
+        error_code: TopicMapErrorCode | None,
+    ) -> LoadedChunkTopicMap:
+        if topic_map is None and error_code is None:
             raise ValueError("an unavailable topic map must carry an error_code")
-        if self.topic_map is not None and self.error_code is not None:
+        if topic_map is not None and error_code is not None:
             raise ValueError("a valid topic map must not carry an error_code")
+
+        loaded = object.__new__(cls)
+        object.__setattr__(loaded, "topic_map", topic_map)
+        object.__setattr__(loaded, "corpus_version", corpus_version)
+        object.__setattr__(loaded, "corpus_hash", corpus_hash)
+        object.__setattr__(loaded, "error_code", error_code)
+        return loaded
+
+    @classmethod
+    def validated(
+        cls,
+        topic_map: ChunkTopicMap,
+        *,
+        manifest: CorpusManifest,
+        corpus_chunk_ids: Sequence[str],
+    ) -> LoadedChunkTopicMap:
+        """Validate and construct a loaded topic map for one corpus."""
+
+        _validate_chunk_topic_map_identity(
+            topic_map,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            chunk_ids=corpus_chunk_ids,
+        )
+        return cls._from_parts(
+            topic_map=topic_map,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            error_code=None,
+        )
+
+    @classmethod
+    def unavailable(
+        cls,
+        *,
+        manifest: CorpusManifest,
+        error_code: TopicMapErrorCode,
+    ) -> LoadedChunkTopicMap:
+        """Construct a cached unavailable or mismatched load result."""
+
+        return cls._from_parts(
+            topic_map=None,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            error_code=error_code,
+        )
 
 
 def canonical_chunk_topic_map(topic_map: ChunkTopicMap) -> ChunkTopicMap:
@@ -157,39 +223,27 @@ def load_validated_chunk_topic_map(
     try:
         topic_map = load_chunk_topic_map(path)
     except (FileNotFoundError, OSError):
-        return LoadedChunkTopicMap(
-            topic_map=None,
-            corpus_version=manifest.corpus_version,
-            corpus_hash=manifest.corpus_hash,
+        return LoadedChunkTopicMap.unavailable(
+            manifest=manifest,
             error_code="TOPIC_MAP_UNAVAILABLE",
         )
     except ValueError:
-        return LoadedChunkTopicMap(
-            topic_map=None,
-            corpus_version=manifest.corpus_version,
-            corpus_hash=manifest.corpus_hash,
+        return LoadedChunkTopicMap.unavailable(
+            manifest=manifest,
             error_code="TOPIC_MAP_MISMATCH",
         )
 
     try:
-        _validate_chunk_topic_map_identity(
+        return LoadedChunkTopicMap.validated(
             topic_map,
-            corpus_version=manifest.corpus_version,
-            corpus_hash=manifest.corpus_hash,
-            chunk_ids=corpus_chunk_ids,
+            manifest=manifest,
+            corpus_chunk_ids=corpus_chunk_ids,
         )
     except ValueError:
-        return LoadedChunkTopicMap(
-            topic_map=None,
-            corpus_version=manifest.corpus_version,
-            corpus_hash=manifest.corpus_hash,
+        return LoadedChunkTopicMap.unavailable(
+            manifest=manifest,
             error_code="TOPIC_MAP_MISMATCH",
         )
-    return LoadedChunkTopicMap(
-        topic_map=topic_map,
-        corpus_version=manifest.corpus_version,
-        corpus_hash=manifest.corpus_hash,
-    )
 
 
 def resolve_topic_from_retrieval(
