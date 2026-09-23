@@ -10,6 +10,7 @@ Concept Check 接入当前 `src/cs30/v2/pipeline.py` 的语料构建入口。
 | v2 公共模型 | `src/cs30/v2/contracts/models.py` |
 | 公共导出 | `src/cs30/v2/contracts/__init__.py` |
 | M6/M7/M8 Protocol | `src/cs30/v2/ports.py` |
+| M8 EvidenceBundle/Citation adapter | `src/cs30/v2/evidence.py` |
 | Topic sidecar 与确定性解析 | `src/cs30/v2/topics.py` |
 | LearnerContextSnapshot 纯函数 | `src/cs30/concept_check/snapshot.py` |
 | Concept Check 配置 | `src/cs30/v2/config.py` 的 `ConceptCheckConfig` |
@@ -34,6 +35,17 @@ evidence ID。
 回答通过 citation validation 后，cited-topic resolver 还必须确认所有 resolved citation
 来自初始 retrieval；否则返回 `no_topic_available` 并记录
 `CITATION_NOT_IN_RETRIEVAL`。
+
+M8 的 `EvidenceBundleAdapter` 保留 M6 命中的完整
+`provider/textbook/document/chapter/page/source_locator` 身份，按 retrieval rank
+分配本地展示编号 `E1`、`E2`，并原样携带 `EvidenceProvenance`。模型引用命名空间仍然
+是稳定 `chunk_id`；`E1` 等展示编号或 bundle 以外的 chunk 会由
+`CitationValidatorAdapter` 标记为 `failed`。拒答的 citation 状态为 `skipped`。
+
+`token_budget` 延续 ADR-0001 的 observe-only 决策：builder 记录 counter、预算和
+是否超限，并在超限时告警，但不在 M8 边界静默删除 M6 已选中的 hit。真正改变 evidence
+选择必须由上游产生不同的 `RetrievalResult`，否则 M7 实际看到的 allow-list 与 M6 trace
+会不一致。
 
 ## Concept Check 题目与证据
 
