@@ -1,0 +1,20 @@
+environment = "staging"
+fixture_mode = false
+
+[corpus]
+mode = "official"
+corpus_mode = "official"
+corpus_version = "2.0.0-rc.1"
+required_textbook_ids = [
+  "openstax_college_physics_2e",
+  "openstax_physics",
+  "openstax_college_physics_ap_2e",
+]
+output_dir = "artifacts/v2/textbooks/2.0.0-rc.1"
+# The frozen chunk ruler; changing it re-chunks the corpus and changes every
+# chunk ID, so it is a contract change, not a tuning knob.
+chunk_config = { tokenizer_name = "Alibaba-NLP/gte-modernbert-base" }
+sources_dir = "data/raw/v2"
+embedding_model = "Alibaba-NLP/gte-modernbert-base"
+embedding_max_seq_length = 8192
+index_batch_size = 32
