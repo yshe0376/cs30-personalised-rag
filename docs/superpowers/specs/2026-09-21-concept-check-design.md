@@ -168,6 +168,12 @@ Topic 不作为 v2 Chunk 的内嵌字段；resolver 只读取与当前 retrieval
   `no_topic_available`，并由 M8 单独统计；不能把它当成正常的“没有 Topic”静默处理，否则整个
   Concept Check 会在无人察觉的情况下失效。
 
+`chunk_topic_map` 在加载时针对当前 manifest 和一次性读取的 corpus `chunk_id` 集合完成
+校验；加载失败的结果在本次 resolver 生命周期内保持为对应的 unavailable/mismatch 状态，
+不能在每次查询时重新扫描 `records.jsonl`。检索结果必须带有与已校验 sidecar 相同的
+`corpus_version`/`corpus_hash` provenance；缺失 provenance 也返回
+`TOPIC_MAP_UNAVAILABLE`，不按运行模式设置例外。
+
 MVP 不依赖
 v3 的 Conversation Context，而是把 resolver 明确拆成两个时序不同的操作：
 
@@ -318,7 +324,7 @@ Gold 已有 typed `GoldSource`/`SourceSplit` 和 `GoldSample.source` 字段；Co
 它们，不在 Phase 1 再造一套 provenance 类型。这里必须区分两个命名空间：
 
 - `GoldSample.split` 是项目的评估划分（`dev`、`test`，以及现有流程可能使用的 proposed 标记）；
-- `GoldSample.source.source_split` 是 SciQ 自己的来源划分（`train`、`validation`、`test`）。
+- `GoldSample.source_split` 是 SciQ 自己的来源划分（`train`、`validation`、`test`）。
 
 不能把 SciQ 的 `source_split` 归一化成项目的 `dev/test`，也不能用项目 split 代替 SciQ
 来源 split。Practice registry 要索引 Gold 的全部 `source_question_id`，并至少单独报告 Dev/Test
@@ -560,7 +566,15 @@ ConceptCheckEvent
 LearnerStateSnapshot
 ```
 
-事件至少包含 `event_id`、`attempt_id`、`question_id`、`topic_id`、`question_difficulty`、`selected_choice`、`performance`、`event_type`、`state_version_before`、`stream_version` 和 `created_at`。`stream_version` 由 event store 按学生流单调分配，回放按它排序；`created_at` 只用于审计，不能决定状态顺序。`attempt_id` 是幂等键；同一 `attempt_id` 携带不同 payload 时必须报冲突，不能静默覆盖。
+提交和跳过事件至少包含 `event_id`、`attempt_id`、`question_id`、`topic_id`、
+`question_difficulty`、`selected_choice`、`performance`、`event_type`、
+`state_version_before`、`stream_version` 和 `created_at`。撤销事件使用独立的
+`revoked_attempt_id` 指向目标作答，不复用目标作答的 `attempt_id`；Topic level override
+事件记录 `topic_id`、`topic_registry_version`、`new_level`、`actor` 和 `reason`，不要求
+`attempt_id`、`question_id` 或 `question_difficulty`。`stream_version` 由 event store 按学生流
+单调分配，回放按它排序；`created_at` 只用于审计，不能决定状态顺序。提交/跳过事件的
+`attempt_id` 是作答幂等键；override 和 revoke 的 `event_id` 必须由重试方复用，同一事件
+标识携带不同 payload 时必须报冲突，不能静默覆盖。
 
 MVP 的 event store 是单用户 demo 假设下的**单写者 append-only JSONL**（每个学生一条
 stream，写入过程使用进程内锁或等价的单写者保护）。MVP 不要求 expected stream version

@@ -7,12 +7,22 @@ textbook identity as first-class fields.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import StrEnum
 from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
+from cs30.evaluation.models import (
+    AnnotationStatus,
+    EvaluationSplit,
+    EvidenceSufficiency,
+    GoldOption,
+    GoldSource,
+    PersonalisationEligibility,
+    SourceSplit,
+)
 from cs30.v2.ids import (
     page_location,
     sha256_text,
@@ -21,7 +31,9 @@ from cs30.v2.ids import (
 )
 
 Identifier = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 SpanText = Annotated[str, Field(min_length=1)]
+ChoiceLabel = Literal["A", "B", "C", "D"]
 
 
 class V2Model(BaseModel):
@@ -100,6 +112,53 @@ class RetrievalMode(StrEnum):
     DENSE = "dense"
     HYBRID = "hybrid"
     FIXTURE = "fixture"
+
+
+class StudentLevel(StrEnum):
+    """The three learner levels shared by prompts and Concept Check."""
+
+    BEGINNER = "beginner"
+    INTERMEDIATE = "intermediate"
+    ADVANCED = "advanced"
+
+
+class QuestionSourceType(StrEnum):
+    HUMAN_AUTHORED = "human_authored"
+    SCIQ_ALIGNED = "sciq_aligned"
+    LLM_GENERATED = "llm_generated"
+
+
+class ConceptCheckQuestionStatus(StrEnum):
+    DRAFT = "draft"
+    AUTO_VALIDATED = "auto_validated"
+    REVIEWED = "reviewed"
+    PUBLISHED = "published"
+    REJECTED = "rejected"
+
+
+class TopicResolutionStatus(StrEnum):
+    RESOLVED = "resolved"
+    NO_TOPIC_AVAILABLE = "no_topic_available"
+    TOPIC_MAP_UNAVAILABLE = "topic_map_unavailable"
+    TOPIC_MAP_MISMATCH = "topic_map_mismatch"
+
+
+class ProfileSource(StrEnum):
+    STATIC_PROFILE = "static_profile"
+    LEARNER_STATE_REPLAY = "learner_state_replay"
+
+
+class ConceptCheckResult(StrEnum):
+    CORRECT = "correct"
+    INCORRECT = "incorrect"
+    SKIPPED = "skipped"
+
+
+class ConceptCheckEventType(StrEnum):
+    ATTEMPT_SUBMITTED = "attempt_submitted"
+    ATTEMPT_SKIPPED = "attempt_skipped"
+    ATTEMPT_REVOKED = "attempt_revoked"
+    TOPIC_LEVEL_OVERRIDDEN = "topic_level_overridden"
 
 
 class TextbookChapter(V2Model):
@@ -215,6 +274,58 @@ class TextbookDocument(V2Model):
         """Return verbatim text for a document-global block span."""
 
         return self.text[block.char_start : block.char_end]
+
+
+class Topic(V2Model):
+    """One provider-neutral concept in a versioned Topic registry."""
+
+    topic_id: Identifier
+    title: NonEmptyText
+    description: NonEmptyText | None = None
+
+
+class TopicRegistry(V2Model):
+    """The reviewed Topic vocabulary used by a retrieval sidecar."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    topic_registry_version: Identifier
+    topics: tuple[Topic, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_topics(self) -> TopicRegistry:
+        topic_ids = [topic.topic_id for topic in self.topics]
+        if len(topic_ids) != len(set(topic_ids)):
+            raise ValueError("topic_ids must be unique in a Topic registry")
+        return self
+
+
+class TopicResolution(V2Model):
+    """A deterministic retrieval/citation-to-Topic decision and its trace."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    status: TopicResolutionStatus
+    topic_id: Identifier | None = None
+    topic_registry_version: Identifier | None = None
+    support: float = Field(default=0.0, ge=0.0, le=1.0)
+    topic_support: dict[Identifier, float] = Field(default_factory=dict)
+    error_code: Identifier | None = None
+    resolver_called: bool = True
+
+    @model_validator(mode="after")
+    def validate_resolution(self) -> TopicResolution:
+        if self.status is TopicResolutionStatus.RESOLVED:
+            if self.topic_id is None or self.topic_registry_version is None:
+                raise ValueError("a resolved Topic requires topic_id and registry version")
+            if self.support <= 0.0:
+                raise ValueError("a resolved Topic requires positive support")
+            if self.error_code is not None:
+                raise ValueError("a resolved Topic must not carry an error code")
+        elif self.topic_id is not None:
+            raise ValueError("an unresolved Topic result must not carry a Topic identity")
+        for topic_id, support in self.topic_support.items():
+            if support < 0.0 or support > 1.0:
+                raise ValueError(f"Topic support for {topic_id!r} must be between 0 and 1")
+        return self
 
 
 class ChunkSpan(V2Model):
@@ -421,6 +532,181 @@ class EvidenceSpanBinding(V2Model):
         return self
 
 
+class V2GoldEvidence(V2Model):
+    """M3's semantic evidence annotation around the shared v2 span."""
+
+    span: EvidenceSpan
+    sufficiency: EvidenceSufficiency
+    annotation_note: NonEmptyText | None = None
+
+
+class GoldQuestion(V2Model):
+    """The v2 question-layer hand-off from M3 to evaluation and retrieval.
+
+    The existing ``cs30.evaluation`` package owns the typed M3 provenance
+    enums/models.  This v2 wrapper changes only the evidence representation:
+    Gold evidence uses the same chapter-local :class:`EvidenceSpan` as
+    Concept Check anchors, so M4 can resolve both with one implementation.
+    """
+
+    schema_version: Literal["2.0"] = "2.0"
+    question_id: Identifier
+    question: NonEmptyText
+    options: dict[ChoiceLabel, GoldOption]
+    gold_answer: ChoiceLabel | None = None
+    answerable: bool | None
+    gold_core_evidence_sets: tuple[tuple[V2GoldEvidence, ...], ...] = ()
+    partial_evidence: tuple[V2GoldEvidence, ...] = ()
+    question_difficulty: Identifier
+    question_type: Identifier
+    concept_group: Identifier
+    personalisation_eligibility: PersonalisationEligibility
+    eligibility_reason: NonEmptyText
+    split: EvaluationSplit
+    corpus_version: Identifier
+    source_corpus_version: Identifier | None = None
+    parser_version: Identifier
+    gold_annotation_version: Identifier
+    annotation_status: AnnotationStatus
+    review_record_id: Identifier | None = None
+    source: GoldSource | None = None
+    source_split: SourceSplit | None = None
+    topic_id: Identifier | None = None
+    topic_registry_version: Identifier | None = None
+
+    @model_validator(mode="after")
+    def validate_gold_shape(self) -> GoldQuestion:
+        if set(self.options) != {"A", "B", "C", "D"}:
+            raise ValueError("options must contain exactly A, B, C, and D")
+        if any(not evidence_set for evidence_set in self.gold_core_evidence_sets):
+            raise ValueError("gold_core_evidence_sets must not contain an empty AND group")
+
+        all_evidence = [
+            evidence
+            for evidence_set in self.gold_core_evidence_sets
+            for evidence in evidence_set
+        ] + list(self.partial_evidence)
+        span_ids = [evidence.span.span_id for evidence in all_evidence]
+        if len(span_ids) != len(set(span_ids)):
+            raise ValueError("Gold evidence span_id values must be unique")
+
+        if self.answerable is True:
+            if self.gold_answer is None:
+                raise ValueError("answerable Gold questions require gold_answer")
+            if not self.gold_core_evidence_sets:
+                raise ValueError("answerable Gold questions require complete evidence")
+        elif self.answerable is False and self.gold_core_evidence_sets:
+            raise ValueError("unanswerable Gold questions must not contain complete evidence")
+
+        if self.annotation_status is AnnotationStatus.REVIEWED and self.review_record_id is None:
+            raise ValueError("reviewed Gold questions require review_record_id")
+        if (self.topic_id is None) != (self.topic_registry_version is None):
+            raise ValueError("topic_id and topic_registry_version must be set together")
+        return self
+
+
+class ConceptCheckQuestion(V2Model):
+    """A practice-only four-choice question with stable evidence anchors.
+
+    Bindings are deliberately kept in :class:`ConceptCheckQuestionRelease`.
+    Rebuilding a corpus therefore changes only the versioned binding, never the
+    durable question or its chapter-local anchor.
+    """
+
+    schema_version: Literal["0.1"] = "0.1"
+    question_id: Identifier
+    question: NonEmptyText
+    options: dict[ChoiceLabel, NonEmptyText]
+    correct_answer: ChoiceLabel
+    topic_id: Identifier
+    topic_registry_version: Identifier
+    difficulty: StudentLevel
+    evidence_anchors: tuple[EvidenceSpan, ...] = Field(min_length=1)
+    source_type: QuestionSourceType
+    split_guard: Literal["practice_only"] = "practice_only"
+    rationale: NonEmptyText
+    review_record_id: Identifier | None = None
+    status: ConceptCheckQuestionStatus = ConceptCheckQuestionStatus.DRAFT
+    source: GoldSource | None = None
+    source_split: SourceSplit | None = None
+
+    @model_validator(mode="after")
+    def validate_question_shape(self) -> ConceptCheckQuestion:
+        if set(self.options) != {"A", "B", "C", "D"}:
+            raise ValueError("options must contain exactly A, B, C, and D")
+        if self.correct_answer not in self.options:
+            raise ValueError("correct_answer must identify one of the four options")
+        anchor_ids = [anchor.span_id for anchor in self.evidence_anchors]
+        if len(anchor_ids) != len(set(anchor_ids)):
+            raise ValueError("evidence anchor span_id values must be unique")
+
+        if self.source_type is QuestionSourceType.SCIQ_ALIGNED:
+            if self.source is None or self.source.dataset.casefold() != "sciq":
+                raise ValueError("sciq_aligned questions require SciQ provenance")
+            if self.source_split not in {SourceSplit.TRAIN, SourceSplit.VALIDATION}:
+                raise ValueError("Concept Check questions may use only SciQ train/validation")
+        elif self.source is not None or self.source_split is not None:
+            raise ValueError("only sciq_aligned questions may carry SciQ provenance")
+
+        if self.status in {
+            ConceptCheckQuestionStatus.REVIEWED,
+            ConceptCheckQuestionStatus.PUBLISHED,
+        } and self.review_record_id is None:
+            raise ValueError("reviewed or published questions require review_record_id")
+        return self
+
+
+class ConceptCheckQuestionBinding(V2Model):
+    """One question's anchor bindings for a single corpus version."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    question_id: Identifier
+    corpus_version: Identifier
+    corpus_hash: Identifier
+    bindings: tuple[EvidenceSpanBinding, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_bindings(self) -> ConceptCheckQuestionBinding:
+        span_ids = [binding.span_id for binding in self.bindings]
+        if len(span_ids) != len(set(span_ids)):
+            raise ValueError("question bindings must have unique span_id values")
+        for binding in self.bindings:
+            if binding.corpus_version != self.corpus_version:
+                raise ValueError("question binding corpus_version mismatch")
+            if binding.corpus_hash != self.corpus_hash:
+                raise ValueError("question binding corpus_hash mismatch")
+        return self
+
+
+class ConceptCheckQuestionRelease(V2Model):
+    """The publish-time pair of a reviewed question and resolved bindings."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    question: ConceptCheckQuestion
+    binding: ConceptCheckQuestionBinding
+
+    @model_validator(mode="after")
+    def validate_release_gate(self) -> ConceptCheckQuestionRelease:
+        if self.question.status is not ConceptCheckQuestionStatus.PUBLISHED:
+            raise ValueError("only published questions can be released")
+        if self.binding.question_id != self.question.question_id:
+            raise ValueError("question release binding question_id mismatch")
+        anchors = {anchor.span_id: anchor for anchor in self.question.evidence_anchors}
+        expected = set(anchors)
+        actual = {item.span_id for item in self.binding.bindings}
+        if actual != expected:
+            raise ValueError("question release must bind every and only its anchors")
+        for item in self.binding.bindings:
+            if item.textbook_id != anchors[item.span_id].textbook_id:
+                raise ValueError("question binding textbook_id must match its anchor")
+        if any(
+            item.resolution_status is not SpanResolutionStatus.RESOLVED
+            for item in self.binding.bindings
+        ):
+            raise ValueError("published question releases require resolved bindings")
+        return self
+
+
 class EvidenceProvenance(V2Model):
     schema_version: Literal["2.0"] = "2.0"
     corpus_version: Identifier
@@ -470,6 +756,225 @@ class RetrievedEvidence(V2Model):
         return self
 
 
+class RetrievalResult(V2Model):
+    """Top-k v2 retrieval output; an empty hit list is a valid outcome."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    query: NonEmptyText
+    mode: RetrievalMode
+    hits: tuple[RetrievedEvidence, ...] = ()
+    provenance: EvidenceProvenance | None = None
+
+    @model_validator(mode="after")
+    def validate_hits(self) -> RetrievalResult:
+        ranks = [hit.rank for hit in self.hits]
+        if ranks != list(range(1, len(ranks) + 1)):
+            raise ValueError("retrieval ranks must be consecutive and start at 1")
+        chunk_ids = [hit.chunk_id for hit in self.hits]
+        if len(chunk_ids) != len(set(chunk_ids)):
+            raise ValueError("retrieval hits must have unique chunk_id values")
+        if self.mode is RetrievalMode.HYBRID:
+            allowed = {RetrievalMode.BM25, RetrievalMode.DENSE, RetrievalMode.HYBRID}
+            if any(hit.retriever_type not in allowed for hit in self.hits):
+                raise ValueError("hybrid retrieval hits must use a retrieval backend mode")
+        elif any(hit.retriever_type is not self.mode for hit in self.hits):
+            raise ValueError("retriever_type must match retrieval mode")
+        if self.provenance is not None:
+            if self.mode in {RetrievalMode.DENSE, RetrievalMode.HYBRID}:
+                if self.provenance.embedding_model is None:
+                    raise ValueError("dense or hybrid retrieval needs embedding provenance")
+            elif self.mode is RetrievalMode.BM25 and self.provenance.embedding_model is not None:
+                raise ValueError("BM25 retrieval must not carry embedding_model")
+        return self
+
+
+class StudentProfile(V2Model):
+    """Static profile input kept compatible with the existing v1 prompt seam."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    profile_id: Identifier
+    level: StudentLevel
+    topic_levels: dict[Identifier, StudentLevel] = Field(default_factory=dict)
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class TopicState(V2Model):
+    """Mutable-looking state derived from the append-only event stream."""
+
+    topic_id: Identifier
+    mastery_score: float = Field(default=0.5, ge=0.0, le=1.0)
+    level: StudentLevel
+    attempt_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    total_attempts: int = Field(default=0, ge=0)
+    attempts_since_level_change: int = Field(default=0, ge=0)
+    correct_attempts: int = Field(default=0, ge=0)
+    misconceptions: tuple[Identifier, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_misconceptions(self) -> TopicState:
+        if len(self.misconceptions) != len(set(self.misconceptions)):
+            raise ValueError("misconceptions must be unique")
+        if self.correct_attempts > self.total_attempts:
+            raise ValueError("correct_attempts cannot exceed total_attempts")
+        if self.attempts_since_level_change > self.total_attempts:
+            raise ValueError("attempts_since_level_change cannot exceed total_attempts")
+        return self
+
+
+class LearnerState(V2Model):
+    """Current learner state obtained by replaying Concept Check events."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    state_id: Identifier
+    profile_id: Identifier
+    topic_registry_version: Identifier
+    state_version: int = Field(default=0, ge=0)
+    derived_from_event_version: int = Field(default=0, ge=0)
+    topics: dict[Identifier, TopicState] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_topic_keys(self) -> LearnerState:
+        for topic_id, topic_state in self.topics.items():
+            if topic_id != topic_state.topic_id:
+                raise ValueError("LearnerState topic keys must match TopicState.topic_id")
+        if self.derived_from_event_version > self.state_version:
+            raise ValueError("derived event version cannot exceed state version")
+        return self
+
+
+class LearnerContextSnapshot(V2Model):
+    """One immutable-by-convention profile snapshot shared by rerank and generation."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    profile: StudentProfile
+    profile_source: ProfileSource
+    topic_id: Identifier | None = None
+    topic_state: TopicState | None = None
+    attempt_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    state_version: int = Field(default=0, ge=0)
+    topic_resolution: TopicResolution | None = None
+    resolver_called: bool = False
+
+    @model_validator(mode="after")
+    def validate_snapshot(self) -> LearnerContextSnapshot:
+        if self.topic_id is None and self.topic_state is not None:
+            raise ValueError("topic_state requires topic_id")
+        if self.topic_id is not None and self.topic_state is None:
+            raise ValueError("topic_id requires topic_state")
+        if self.topic_state is not None:
+            if self.topic_state.topic_id != self.topic_id:
+                raise ValueError("snapshot TopicState does not match topic_id")
+            if self.attempt_coverage != self.topic_state.attempt_coverage:
+                raise ValueError("snapshot attempt_coverage must mirror TopicState")
+            if self.profile.level is not self.topic_state.level:
+                raise ValueError("snapshot profile level must mirror the TopicState level")
+        if self.profile_source is ProfileSource.STATIC_PROFILE and self.resolver_called:
+            raise ValueError("static profile snapshots must not claim a resolver call")
+        return self
+
+
+class ConceptCheckGrade(V2Model):
+    """Deterministic result of grading one submitted or skipped question."""
+
+    schema_version: Literal["0.1"] = "0.1"
+    attempt_id: Identifier
+    question_id: Identifier
+    selected_choice: ChoiceLabel | None = None
+    correct_answer: ChoiceLabel
+    result: ConceptCheckResult
+    performance: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def validate_grade(self) -> ConceptCheckGrade:
+        if self.result is ConceptCheckResult.CORRECT:
+            if self.selected_choice != self.correct_answer or self.performance != 1.0:
+                raise ValueError("correct grades require the correct choice and performance 1.0")
+        elif self.result is ConceptCheckResult.INCORRECT:
+            if self.selected_choice is None or self.selected_choice == self.correct_answer:
+                raise ValueError("incorrect grades require a wrong selected choice")
+            if self.performance != 0.0:
+                raise ValueError("incorrect grades require performance 0.0")
+        elif self.selected_choice is not None or self.performance is not None:
+            raise ValueError("skipped grades must not carry a choice or performance")
+        return self
+
+
+class ConceptCheckEvent(V2Model):
+    """Append-only event used to derive a LearnerState.
+
+    ``attempt_id`` is the idempotency key for submitted or skipped attempts.
+    Revoke events point at the original attempt with ``revoked_attempt_id``;
+    level overrides are standalone events identified by ``event_id``.
+    """
+
+    schema_version: Literal["0.1"] = "0.1"
+    event_id: Identifier
+    profile_id: Identifier
+    attempt_id: Identifier | None = None
+    revoked_attempt_id: Identifier | None = None
+    question_id: Identifier | None = None
+    topic_id: Identifier
+    topic_registry_version: Identifier
+    question_difficulty: StudentLevel | None = None
+    new_level: StudentLevel | None = None
+    selected_choice: ChoiceLabel | None = None
+    performance: float | None = Field(default=None, ge=0.0, le=1.0)
+    event_type: ConceptCheckEventType
+    state_version_before: int = Field(ge=0)
+    stream_version: int = Field(ge=1)
+    created_at: datetime
+    actor: Literal["student", "system", "m3"] = "student"
+    reason: NonEmptyText | None = None
+
+    @model_validator(mode="after")
+    def validate_event_payload(self) -> ConceptCheckEvent:
+        if (
+            self.new_level is not None
+            and self.event_type is not ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN
+        ):
+            raise ValueError("only level overrides may carry new_level")
+        if (
+            self.revoked_attempt_id is not None
+            and self.event_type is not ConceptCheckEventType.ATTEMPT_REVOKED
+        ):
+            raise ValueError("only revoked attempts may carry revoked_attempt_id")
+        if (
+            self.event_type is ConceptCheckEventType.ATTEMPT_REVOKED
+            and self.attempt_id is not None
+        ):
+            raise ValueError("revoked attempts must not carry attempt_id")
+
+        if self.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED:
+            if self.attempt_id is None or self.question_id is None:
+                raise ValueError("submitted attempts require an attempt_id and question_id")
+            if self.question_difficulty is None:
+                raise ValueError("submitted attempts require question_difficulty")
+            if self.selected_choice is None or self.performance is None:
+                raise ValueError("submitted attempts require a choice and performance")
+        elif self.event_type is ConceptCheckEventType.ATTEMPT_SKIPPED:
+            if self.attempt_id is None or self.question_id is None:
+                raise ValueError("skipped attempts require an attempt_id and question_id")
+            if self.question_difficulty is None:
+                raise ValueError("skipped attempts require question_difficulty")
+            if self.selected_choice is not None or self.performance is not None:
+                raise ValueError("skipped attempts must not carry a choice or performance")
+        elif self.event_type is ConceptCheckEventType.ATTEMPT_REVOKED:
+            if self.revoked_attempt_id is None:
+                raise ValueError("revoked attempts require revoked_attempt_id")
+            if self.selected_choice is not None or self.performance is not None:
+                raise ValueError("revoked attempts must not carry a choice or performance")
+        elif self.event_type is ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN:
+            if self.new_level is None:
+                raise ValueError("level overrides require new_level")
+            if self.attempt_id is not None or self.revoked_attempt_id is not None:
+                raise ValueError("level overrides must not carry an attempt id")
+            if self.question_id is not None or self.question_difficulty is not None:
+                raise ValueError("level overrides must not carry question fields")
+            if self.actor != "student" or self.reason is None:
+                raise ValueError("student level overrides require an actor and reason")
+        return self
+
+
 class EvidenceItem(V2Model):
     schema_version: Literal["2.0"] = "2.0"
     evidence_id: Identifier
@@ -484,6 +989,7 @@ class EvidenceItem(V2Model):
     text: SpanText
     rank: int = Field(ge=1)
     score: float
+    token_count: int = Field(gt=0)
 
     @model_validator(mode="after")
     def validate_locator(self) -> EvidenceItem:
@@ -494,6 +1000,77 @@ class EvidenceItem(V2Model):
             chapter_id=self.chapter_id,
             page_or_location=self.page_or_location,
         )
+        return self
+
+
+class EvidenceBundle(V2Model):
+    """Evidence context passed to generation and retained for audit."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    query: NonEmptyText
+    retrieval_mode: RetrievalMode
+    evidence_items: tuple[EvidenceItem, ...] = ()
+    prompt_context: NonEmptyText | None = None
+    citation_map: dict[Identifier, Identifier] = Field(default_factory=dict)
+    token_count: int = Field(default=0, ge=0)
+    retrieval_provenance: EvidenceProvenance | None = None
+    run_provenance: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_evidence_map(self) -> EvidenceBundle:
+        evidence_ids = [item.evidence_id for item in self.evidence_items]
+        if len(evidence_ids) != len(set(evidence_ids)):
+            raise ValueError("evidence IDs must be unique")
+        expected = {item.evidence_id: item.chunk_id for item in self.evidence_items}
+        if self.citation_map != expected:
+            raise ValueError("citation_map must map every evidence ID to its chunk ID")
+        if self.token_count < sum(item.token_count for item in self.evidence_items):
+            raise ValueError("token_count must include every evidence item")
+        return self
+
+
+class GeneratedAnswer(V2Model):
+    """A grounded answer or an explicit refusal."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    final_choice: ChoiceLabel | None = None
+    explanation: NonEmptyText
+    citations: tuple[Identifier, ...] = ()
+    abstained: bool = False
+
+    @model_validator(mode="after")
+    def validate_answer(self) -> GeneratedAnswer:
+        if len(self.citations) != len(set(self.citations)):
+            raise ValueError("citations must be unique")
+        if self.abstained:
+            if self.final_choice is not None:
+                raise ValueError("an abstained answer must not select final_choice")
+            if self.citations:
+                raise ValueError("an abstained answer must not cite evidence")
+        elif not self.citations:
+            raise ValueError("a non-abstained answer must cite at least one chunk")
+        return self
+
+
+class ValidatedAnswer(V2Model):
+    """Answer plus chunk IDs resolved from its evidence bundle citation map."""
+
+    schema_version: Literal["2.0"] = "2.0"
+    answer: GeneratedAnswer
+    resolved_citations: tuple[Identifier, ...] = Field(
+        default=(),
+        description="Chunk IDs from EvidenceBundle.citation_map, never evidence IDs.",
+    )
+    citation_status: Literal["passed", "failed", "skipped"]
+    run_provenance: dict[str, str] = Field(default_factory=dict)
+    abstained: bool = False
+
+    @model_validator(mode="after")
+    def derive_abstention(self) -> ValidatedAnswer:
+        self.abstained = self.answer.abstained
+        if self.citation_status == "passed" and not self.answer.abstained:
+            if not self.resolved_citations:
+                raise ValueError("a passed non-abstained answer needs resolved citations")
         return self
 
 
@@ -546,7 +1123,33 @@ class PipelineRun(V2Model):
     run_id: Identifier
     environment: Literal["development", "staging", "production"]
     corpus_version: Identifier
+    concept_check_enabled: bool
+    allow_llm_generation: bool
+    allow_unreviewed_questions: bool
     manifest_hash: Identifier | None = None
     retrieval_config_hash: Identifier | None = None
     generation_config_hash: Identifier | None = None
     metadata: dict[str, str] = Field(default_factory=dict)
+    question: NonEmptyText | None = None
+    retrieval: RetrievalResult | None = None
+    evidence_bundle: EvidenceBundle | None = None
+    answer: GeneratedAnswer | None = None
+    validated_answer: ValidatedAnswer | None = None
+    learner_context: LearnerContextSnapshot | None = None
+    profile_source: ProfileSource
+    resolver_called: bool
+    concept_check_question_id: Identifier | None = None
+
+    @model_validator(mode="after")
+    def validate_trace(self) -> PipelineRun:
+        if self.learner_context is not None:
+            if self.profile_source is not self.learner_context.profile_source:
+                raise ValueError("PipelineRun profile_source must match learner_context")
+            if self.resolver_called != self.learner_context.resolver_called:
+                raise ValueError("PipelineRun resolver_called must match learner_context")
+        if not self.concept_check_enabled:
+            if self.profile_source is not ProfileSource.STATIC_PROFILE:
+                raise ValueError("disabled Concept Check runs require static_profile")
+            if self.resolver_called:
+                raise ValueError("disabled Concept Check runs must not call a resolver")
+        return self

@@ -7,7 +7,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Protocol, runtime_checkable
 
-from cs30.v2.contracts import Chunk, IndexArtifact, TextbookDocument
+from cs30.v2.contracts import (
+    Chunk,
+    ConceptCheckEvent,
+    ConceptCheckGrade,
+    ConceptCheckQuestion,
+    ConceptCheckQuestionRelease,
+    EvidenceBundle,
+    GeneratedAnswer,
+    IndexArtifact,
+    LearnerContextSnapshot,
+    LearnerState,
+    RetrievalResult,
+    StudentLevel,
+    StudentProfile,
+    TextbookDocument,
+    TopicResolution,
+    ValidatedAnswer,
+)
 from cs30.v2.corpus.manifest import CorpusManifest, CorpusManifestDraft
 
 
@@ -89,3 +106,124 @@ class IndexBuilder(Protocol):
         *,
         output_dir: Path,
     ) -> IndexArtifact: ...
+
+
+@runtime_checkable
+class RetrievalService(Protocol):
+    """M6 retrieval seam for the v2 answer path."""
+
+    def retrieve(self, query: str, *, top_k: int) -> RetrievalResult: ...
+
+
+@runtime_checkable
+class EvidenceBundleBuilder(Protocol):
+    """M8 seam that turns retrieval hits into prompt/display evidence."""
+
+    def build(
+        self,
+        retrieval: RetrievalResult,
+        *,
+        token_budget: int | None = None,
+    ) -> EvidenceBundle: ...
+
+
+@runtime_checkable
+class AnswerGenerator(Protocol):
+    """M7 seam for a grounded, profile-aware answer."""
+
+    def generate(
+        self,
+        question: str,
+        profile: StudentProfile | LearnerContextSnapshot,
+        evidence: EvidenceBundle,
+    ) -> GeneratedAnswer: ...
+
+
+@runtime_checkable
+class CitationValidator(Protocol):
+    """M8 seam for validating answer citations against one evidence bundle."""
+
+    def validate(
+        self,
+        answer: GeneratedAnswer,
+        evidence: EvidenceBundle,
+    ) -> ValidatedAnswer: ...
+
+
+@runtime_checkable
+class TopicResolver(Protocol):
+    """M7 adapter seam for retrieval-topic and cited-topic resolution."""
+
+    def resolve_retrieval_topic(self, retrieval: RetrievalResult) -> TopicResolution: ...
+
+    def resolve_cited_topic(
+        self,
+        retrieval: RetrievalResult,
+        validated: ValidatedAnswer,
+    ) -> TopicResolution: ...
+
+
+@runtime_checkable
+class LearnerStateSnapshotBuilder(Protocol):
+    """Pure snapshot seam shared by reranking and generation."""
+
+    def build(
+        self,
+        static_profile: StudentProfile,
+        *,
+        enabled: bool,
+        learner_state: LearnerState | None = None,
+        topic_resolution: TopicResolution | None = None,
+    ) -> LearnerContextSnapshot: ...
+
+
+@runtime_checkable
+class ConceptCheckQuestionProvider(Protocol):
+    """M7 fixture/production provider for published practice questions."""
+
+    def select(
+        self,
+        *,
+        topic_id: str,
+        target_levels: Sequence[StudentLevel],
+        corpus_version: str,
+        corpus_hash: str,
+        cited_chunk_ids: Sequence[str],
+        excluded_question_ids: Sequence[str] = (),
+    ) -> ConceptCheckQuestionRelease | None: ...
+
+
+@runtime_checkable
+class ConceptCheckValidator(Protocol):
+    """Publication gate for question structure, provenance, and bindings."""
+
+    def validate(self, release: ConceptCheckQuestionRelease) -> None: ...
+
+
+@runtime_checkable
+class ConceptCheckGrader(Protocol):
+    """Deterministic grader; implementations must not call an LLM."""
+
+    def grade(
+        self,
+        question: ConceptCheckQuestion,
+        *,
+        attempt_id: str,
+        selected_choice: Literal["A", "B", "C", "D"] | None,
+    ) -> ConceptCheckGrade: ...
+
+
+@runtime_checkable
+class ConceptCheckEventStore(Protocol):
+    """Single-writer append-only event log seam."""
+
+    def append(self, event: ConceptCheckEvent) -> ConceptCheckEvent: ...
+
+    def events(self, profile_id: str) -> Sequence[ConceptCheckEvent]: ...
+
+
+@runtime_checkable
+class LearnerStateReplayer(Protocol):
+    """Replay seam; the event stream remains the source of truth."""
+
+    def replay(self, events: Sequence[ConceptCheckEvent]) -> LearnerState: ...
