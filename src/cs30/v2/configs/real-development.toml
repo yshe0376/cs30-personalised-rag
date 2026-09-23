@@ -11,9 +11,11 @@ required_textbook_ids = [
   "openstax_college_physics_ap_2e",
 ]
 output_dir = "artifacts/v2/textbooks/2.0.0-dev.1-real"
-chunk_config = { tokenizer_name = "unicode-wordpunct-v1" }
+# The frozen chunk ruler: chunk sizes are counted with this tokenizer even when
+# another embedding model is being compared, so a model swap never re-chunks.
+chunk_config = { tokenizer_name = "Alibaba-NLP/gte-modernbert-base" }
 # Where scripts/install_v2_sources.py puts the pinned PDFs.
 sources_dir = "data/raw/v2"
-# embedding_model stays unset until M5 picks the v2 model; without it the build
-# publishes a diagnostic corpus and no index. Pass --embedding-model to try one.
+embedding_model = "Alibaba-NLP/gte-modernbert-base"
+embedding_max_seq_length = 8192
 index_batch_size = 32

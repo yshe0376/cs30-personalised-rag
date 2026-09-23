@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping
 
 from cs30.v2.contracts import Chunk, ChunkSpan, TextbookDocument
 from cs30.v2.ids import chunk_config_hash, make_chunk_id, source_locator
+from cs30.v2.tokenization import (
+    REGEX_TOKENIZER_NAME,
+    TokenCounter,
+    build_token_counter,
+)
 
 
 class V2BlockChunker:
@@ -20,8 +24,16 @@ class V2BlockChunker:
     version = "v2-block-v1"
     is_fixture = True
 
-    def __init__(self, *, tokenizer_name: str = "unicode-wordpunct-v1") -> None:
+    def __init__(
+        self,
+        *,
+        tokenizer_name: str = REGEX_TOKENIZER_NAME,
+        token_counter: TokenCounter | None = None,
+    ) -> None:
+        # The ruler is named in the config hash, so a corpus records which
+        # tokenizer decided its chunk sizes.
         self.tokenizer_name = tokenizer_name
+        self._token_counter = token_counter
         self._config_hash = chunk_config_hash(
             {
                 "chunker_version": self.version,
@@ -36,7 +48,15 @@ class V2BlockChunker:
         unknown = set(config) - supported
         if unknown:
             raise ValueError(f"unsupported v2 chunk configuration: {sorted(unknown)}")
-        return cls(tokenizer_name=config.get("tokenizer_name", "unicode-wordpunct-v1"))
+        return cls(tokenizer_name=config.get("tokenizer_name", REGEX_TOKENIZER_NAME))
+
+    @property
+    def token_counter(self) -> TokenCounter:
+        """Load the configured ruler on first use, not when it is named."""
+
+        if self._token_counter is None:
+            self._token_counter = build_token_counter(self.tokenizer_name)
+        return self._token_counter
 
     @property
     def config_hash(self) -> str:
@@ -107,6 +127,5 @@ class V2BlockChunker:
             raise ValueError(f"document produced no chunks: {document.document_id}")
         return chunks
 
-    @staticmethod
-    def _count_tokens(text: str) -> int:
-        return sum(1 for _ in re.finditer(r"\w+|[^\w\s]", text, flags=re.UNICODE))
+    def _count_tokens(self, text: str) -> int:
+        return self.token_counter.count(text)

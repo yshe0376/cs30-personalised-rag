@@ -77,6 +77,7 @@ class SentenceTransformerEncoder:
         *,
         revision: str | None = None,
         device: str | None = None,
+        max_seq_length: int | None = None,
     ) -> None:
         try:
             from sentence_transformers import SentenceTransformer
@@ -94,6 +95,8 @@ class SentenceTransformerEncoder:
             auto_model = getattr(self._model[0], "auto_model", None)
             resolved = getattr(getattr(auto_model, "config", None), "_commit_hash", None)
         self._revision = str(resolved or "unpinned")
+        if max_seq_length is not None:
+            self._model.max_seq_length = max_seq_length
         limit = getattr(self._model, "max_seq_length", None)
         tokenizer = self._model.tokenizer
         special = getattr(tokenizer, "num_special_tokens_to_add", None)
@@ -241,12 +244,16 @@ def build_faiss_index_builder(
     revision: str | None = None,
     batch_size: int = 32,
     device: str | None = None,
+    max_seq_length: int | None = None,
 ) -> FaissIndexBuilder:
     """Builder whose model is loaded on first use, not when it is configured."""
 
     return FaissIndexBuilder(
         encoder_factory=lambda: SentenceTransformerEncoder(
-            model_name, revision=revision, device=device
+            model_name,
+            revision=revision,
+            device=device,
+            max_seq_length=max_seq_length,
         ),
         batch_size=batch_size,
     )

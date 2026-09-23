@@ -53,6 +53,9 @@ class V2Config(BaseModel):
     # INDEX_BUILDER_NOT_CONFIGURED instead of publishing a corpus without one.
     embedding_model: str | None = None
     embedding_revision: str | None = None
+    # Set it explicitly: a model whose repository has no sentence-transformers
+    # config would otherwise leave the input limit to inference.
+    embedding_max_seq_length: int | None = Field(default=None, ge=1)
     index_batch_size: int = Field(default=32, ge=1)
 
     @model_validator(mode="after")

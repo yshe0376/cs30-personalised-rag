@@ -152,6 +152,7 @@ def _real_build(
             config.embedding_model,
             revision=config.embedding_revision,
             batch_size=config.index_batch_size,
+            max_seq_length=config.embedding_max_seq_length,
         )
         if config.embedding_model
         else None

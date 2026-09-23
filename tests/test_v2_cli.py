@@ -112,6 +112,7 @@ def test_real_build_without_an_embedding_model_configures_no_index(tmp_path: Pat
         {
             **load_v2_config("real-development").model_dump(),
             "output_dir": tmp_path / "artifacts" / "v2" / "real-no-index",
+            "embedding_model": None,
         }
     )
 
