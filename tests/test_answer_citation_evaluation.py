@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -709,18 +710,31 @@ def test_reports_are_deterministic_and_keep_failure_queue(tmp_path: Path) -> Non
     markdown = paths["markdown"].read_text(encoding="utf-8")
     csv_report = paths["csv"].read_text(encoding="utf-8")
     failures = paths["failures"].read_text(encoding="utf-8")
+    latex = paths["latex"].read_text(encoding="utf-8")
 
     assert len(per_question.splitlines()) == 4
     assert '"abstention_cause": "model_abstained_with_evidence"' in per_question
     assert paths["csv"].read_text(encoding="utf-8").startswith("metric,numerator")
     assert "Abstention confusion by cause" in markdown
     assert "Overall diagnostic aggregate" in markdown
+    assert "DEVELOPMENT / NOT FOR FORMAL CLAIMS" in markdown
+    assert result["scoring_mode"] == "development"
+    assert result["reportable"] is False
     assert "### dev | fixture | fixture_condition" in markdown
     assert "### test | fixture | fixture_condition" in markdown
     assert "model_abstained_with_evidence" in markdown
     assert "cause,outcome" in csv_report.splitlines()[0]
     assert "model_abstained_with_evidence" in csv_report
     assert '"abstention_cause": "model_abstained_with_evidence"' in failures
+    assert "\\documentclass" in latex
+    assert "DEVELOPMENT / NOT FOR FORMAL CLAIMS" in latex
+    assert "\\section*{Comparable groups}" in latex
+    assert "\t" not in latex
+    for key in ("metrics_chart", "outcomes_chart", "failures_chart"):
+        ET.fromstring(paths[key].read_text(encoding="utf-8"))
+    assert "Answer and citation metrics" in paths["metrics_chart"].read_text(
+        encoding="utf-8"
+    )
     assert all(
         "definition" not in metric
         for group in result["groups"]
@@ -758,6 +772,17 @@ def test_reports_are_deterministic_and_keep_failure_queue(tmp_path: Path) -> Non
     )
 
 
+def test_reports_label_reportable_scoring_explicitly(tmp_path: Path) -> None:
+    result = {**_score(), "scoring_mode": "reportable", "reportable": True}
+
+    paths = write_answer_citation_reports(result, tmp_path)
+
+    assert "Report status: **REPORTABLE**" in paths["markdown"].read_text(
+        encoding="utf-8"
+    )
+    assert "\\textbf{REPORTABLE}" in paths["latex"].read_text(encoding="utf-8")
+
+
 def test_cli_runs_extension_and_writes_all_report_artifacts(tmp_path: Path) -> None:
     output = tmp_path / "new-output" / "scores.json"
     reports = tmp_path / "new-output" / "answer-reports"
@@ -789,6 +814,10 @@ def test_cli_runs_extension_and_writes_all_report_artifacts(tmp_path: Path) -> N
     assert (reports / "answer_citation_scores.jsonl").is_file()
     assert (reports / "answer_citation_summary.csv").is_file()
     assert (reports / "answer_citation_report.md").is_file()
+    assert (reports / "answer_citation_report.tex").is_file()
+    assert (reports / "answer_citation_metrics.svg").is_file()
+    assert (reports / "answer_outcomes.svg").is_file()
+    assert (reports / "failure_labels.svg").is_file()
     assert (reports / "answer_citation_failures.jsonl").is_file()
     provenance_path = reports / "answer_citation_score_provenance.json"
     assert provenance_path.is_file()

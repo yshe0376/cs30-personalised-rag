@@ -26,6 +26,11 @@ from .extension_reporting import (
     write_extension_reports,
     write_score_artifact_provenance,
 )
+from .four_condition_reporting import (
+    adapt_four_condition_results,
+    score_four_condition_results,
+    write_four_condition_reports,
+)
 from .io import (
     load_gold_samples,
     load_mappings,
@@ -182,6 +187,32 @@ def _build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="one or more answer_citation_scores.jsonl files",
     )
+
+    four_conditions = commands.add_parser(
+        "report-four-conditions",
+        help="adapt M7 four-condition rows and write the formal M8 comparison package",
+    )
+    four_conditions.add_argument("--gold", required=True, type=Path)
+    four_conditions.add_argument("--mapping", required=True, type=Path)
+    four_conditions.add_argument(
+        "--cases",
+        required=True,
+        type=Path,
+        help="the immutable condition-case JSONL used by M7",
+    )
+    four_conditions.add_argument(
+        "--results",
+        required=True,
+        type=Path,
+        help="M7 four_condition_results.jsonl",
+    )
+    four_conditions.add_argument(
+        "--run-manifest",
+        required=True,
+        type=Path,
+        help="M7 run_manifest.json",
+    )
+    four_conditions.add_argument("--output-dir", required=True, type=Path)
     extension.add_argument(
         "--contexts",
         required=True,
@@ -835,6 +866,37 @@ def _report_extension_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def _report_four_conditions_command(args: argparse.Namespace) -> int:
+    for path in (
+        args.gold,
+        args.mapping,
+        args.cases,
+        args.results,
+        args.run_manifest,
+    ):
+        if not path.is_file():
+            raise FileNotFoundError(f"required four-condition input not found: {path}")
+    manifest, adapted = adapt_four_condition_results(
+        args.cases,
+        args.results,
+        args.run_manifest,
+    )
+    gold = (
+        load_normalized_gold(args.gold)
+        if manifest.get("reportable") is True
+        else load_gold_samples(args.gold)
+    )
+    result = score_four_condition_results(
+        manifest,
+        adapted,
+        gold,
+        load_mappings(args.mapping),
+    )
+    paths = write_four_condition_reports(result, adapted, args.output_dir)
+    print(json.dumps({name: str(path) for name, path in paths.items()}, ensure_ascii=False))
+    return 0
+
+
 def _prepare_blind_ratings_command(args: argparse.Namespace) -> int:
     runs = []
     seen_run_ids: set[str] = set()
@@ -901,6 +963,8 @@ def main(argv: list[str] | None = None) -> int:
             return _score_command(args)
         if args.command == "report-extension":
             return _report_extension_command(args)
+        if args.command == "report-four-conditions":
+            return _report_four_conditions_command(args)
         if args.command == "prepare-blind-ratings":
             return _prepare_blind_ratings_command(args)
         if args.command == "seal-blind-ratings":

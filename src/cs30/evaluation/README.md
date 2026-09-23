@@ -309,9 +309,42 @@ cs30-evaluate score \
 
 The generic `--output` file contains retrieval and extension aggregates but
 omits answer/citation `records`. `--answer-citation-output-dir` writes the
-answer/citation aggregate JSON, per-question JSONL, summary CSV, Markdown report,
-and focused failure-review JSONL. Fixture outputs validate the implementation
-only and must not be reported as final model quality.
+answer/citation aggregate JSON, per-question JSONL, summary CSV, Markdown and
+LaTeX reports, deterministic SVG charts for headline metrics, answer outcomes,
+and failure labels, plus a focused failure-review JSONL. Markdown and LaTeX
+state whether scoring ran in `reportable` or `development` mode. Fixture and
+development outputs are visibly marked `DEVELOPMENT / NOT FOR FORMAL CLAIMS`
+and must not be reported as final model quality. Chart generation has no
+additional plotting dependency.
+
+## M7 four-condition acceptance reporting
+
+M7's `four_condition_results.jsonl` stores answer and generation traces while
+the immutable condition-case JSONL stores the complete retrieval objects. The
+`report-four-conditions` command joins those two artifacts by `case_id`,
+reconstructs the exact ordered evidence, rebuilds the original prompt, and
+requires its SHA-256 to match M7's saved `prompt_sha256`. It therefore does not
+guess missing evidence or treat chunk IDs alone as sufficient source data.
+
+```text
+cs30-evaluate report-four-conditions \
+  --gold artifacts/gold_v1.jsonl \
+  --mapping artifacts/mapping_v1.json \
+  --cases artifacts/task7/formal_test_cases.jsonl \
+  --results artifacts/task7/formal_test_run/four_condition_results.jsonl \
+  --run-manifest artifacts/task7/formal_test_run/run_manifest.json \
+  --output-dir artifacts/evaluation/four_conditions
+```
+
+The command rejects a changed cases file, unknown or duplicate case/condition
+rows, incomplete four-condition cells, changed candidate identities, profile
+drift, and prompt-hash mismatches. It writes verified `EvaluationRunResult`
+v0.2 JSONL, aggregate JSON, a long-form comparison CSV, Markdown and LaTeX
+reports, an SVG four-condition chart, and a focused failure queue. Comparisons
+are separated by split and learner level and include answer accuracy, citation
+validity/coverage, repair rate, technical failure rate, and provider failure
+rate. A source manifest marked non-reportable always produces a visibly marked
+development report.
 
 ## Personalisation evaluation reporting
 

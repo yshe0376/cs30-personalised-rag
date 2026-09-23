@@ -27,6 +27,12 @@ _TECHNICAL_STATUSES = {
     RunStatus.PARSE_ERROR,
 }
 
+_PROVIDER_FAILURE_TYPES = {
+    "LLMProviderError",
+    "LLMTimeoutError",
+    "LLMEmptyResponseError",
+}
+
 ScoringMode = Literal["development", "reportable"]
 
 
@@ -292,11 +298,18 @@ def _score_pair(
             gold, cited_chunk_ids, mappings
         )
 
+    provider_failure = bool(
+        run.status is RunStatus.GENERATION_ERROR
+        and run.error is not None
+        and run.error.error_type in _PROVIDER_FAILURE_TYPES
+    )
     labels: set[str] = set()
     if run.status is RunStatus.RETRIEVAL_ERROR:
         labels.add("retrieval_failure")
     elif run.status is RunStatus.GENERATION_ERROR:
         labels.add("generation_failure")
+        if provider_failure:
+            labels.add("provider_failure")
     elif run.status is RunStatus.PARSE_ERROR:
         labels.add("invalid_output")
     if answered_choice_correct is False:
@@ -360,6 +373,7 @@ def _score_pair(
         "failure_labels": sorted(labels),
         "model_call_count": run.model_call_count,
         "repair_used": run.repaired_model_output is not None,
+        "provider_failure": provider_failure,
     }
 
 
@@ -563,6 +577,49 @@ def _summarise(records: Sequence[dict[str, Any]]) -> dict[str, Any]:
             "gold_evidence_covered",
             "Answered runs whose citations completely cover at least one sufficient Gold "
             "evidence path using the frozen span-to-chunk mapping.",
+        ),
+        "repair_rate": _metric(
+            sum(record["repair_used"] for record in records),
+            sum(record["model_call_count"] > 0 for record in records),
+            eligible=sum(record["model_call_count"] > 0 for record in records),
+            total=total,
+            definition="Runs retaining a repaired model output divided by runs where the "
+            "model was invoked.",
+        ),
+        "technical_failure_rate": _metric(
+            sum(
+                record["status"] in {status.value for status in _TECHNICAL_STATUSES}
+                for record in records
+            ),
+            sum(
+                record["execution_mode"]
+                == ExecutionMode.RETRIEVAL_AND_GENERATION.value
+                for record in records
+            ),
+            eligible=sum(
+                record["execution_mode"]
+                == ExecutionMode.RETRIEVAL_AND_GENERATION.value
+                for record in records
+            ),
+            total=total,
+            definition="Technical retrieval, generation, or parsing failures divided by "
+            "all retrieval-and-generation runs.",
+        ),
+        "provider_failure_rate": _metric(
+            sum(record["provider_failure"] for record in records),
+            sum(
+                record["execution_mode"]
+                == ExecutionMode.RETRIEVAL_AND_GENERATION.value
+                for record in records
+            ),
+            eligible=sum(
+                record["execution_mode"]
+                == ExecutionMode.RETRIEVAL_AND_GENERATION.value
+                for record in records
+            ),
+            total=total,
+            definition="Runs whose terminal generation error is an identified provider "
+            "failure divided by all retrieval-and-generation runs.",
         ),
     }
 
@@ -836,6 +893,8 @@ class AnswerCitationScorer:
             )
         return {
             **summary,
+            "scoring_mode": mode,
+            "reportable": mode == "reportable",
             "excluded_runs": excluded_runs,
             "missing_run_count": len(missing_run_question_ids),
             "missing_run_question_ids": missing_run_question_ids,

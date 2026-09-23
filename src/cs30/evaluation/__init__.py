@@ -20,6 +20,12 @@ from .extension_reporting import (
     write_extension_reports,
     write_score_artifact_provenance,
 )
+from .four_condition_reporting import (
+    AdaptedConditionRun,
+    adapt_four_condition_results,
+    score_four_condition_results,
+    write_four_condition_reports,
+)
 from .io import (
     append_jsonl_record,
     load_gold_samples,
@@ -101,6 +107,7 @@ from .span_resolution import SpanResolution, resolve_span_to_corpus
 
 __all__ = [
     "AbstentionCause",
+    "AdaptedConditionRun",
     "AnswerCitationScorer",
     "BlindedAnswerKey",
     "BlindRatingSubmissionManifest",
@@ -139,6 +146,7 @@ __all__ = [
     "SpanChunkMapping",
     "SpanResolution",
     "append_jsonl_record",
+    "adapt_four_condition_results",
     "assert_reportable_gold",
     "assert_clean_for_report",
     "assert_manifests_comparable",
@@ -178,6 +186,7 @@ __all__ = [
     "run_evaluation",
     "run_scoring_extensions",
     "score_saved_run",
+    "score_four_condition_results",
     "seal_blind_rating_submission",
     "score_retrieval_batch",
     "RetrievalScoreRow",
@@ -186,6 +195,7 @@ __all__ = [
     "write_answer_citation_reports",
     "write_blind_rating_materials",
     "write_extension_reports",
+    "write_four_condition_reports",
     "write_score_artifact_provenance",
     "write_normalized_gold",
     "write_prepared_corpus",

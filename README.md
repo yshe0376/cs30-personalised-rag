@@ -155,10 +155,17 @@ The evaluator reports answer-choice accuracy, separate system-level and evidence
 abstention metrics with cause-aware confusion tables, separate
 first/repaired-output validity, retry/repair counts, per-citation and per-answer validity,
 complete Gold-evidence citation coverage, and coexisting failure labels. It exports per-question
-JSONL plus summary JSON, CSV and Markdown, grouped by retrieval mode, condition, Gold version,
-split and corpus. Every metric includes its numerator, denominator, excluded count, and definition.
+JSONL plus summary JSON, CSV, Markdown, LaTeX, and deterministic SVG charts, grouped by retrieval
+mode, condition, Gold version, split and corpus. Every metric includes its numerator, denominator,
+excluded count, and definition. Narrative reports visibly distinguish reportable scoring from
+development output that must not be used for formal claims.
 The extension consumes the shared `GoldSample` and `EvaluationRunResult` contracts; unresolved
 answerability and missing mappings remain visibly excluded instead of being guessed.
+M7 four-condition artifacts can be converted with `cs30-evaluate
+report-four-conditions`: the adapter joins the saved rows to their immutable
+case file and refuses the conversion unless the reconstructed prompt hash
+matches M7's trace. The resulting package includes verified v0.2 run JSONL,
+four-condition CSV/JSON, Markdown, LaTeX, SVG, and a failure queue.
 
 Ask something the sample chapter does not cover and the system refuses instead
 of inventing an answer:
