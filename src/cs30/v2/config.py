@@ -12,6 +12,33 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
 
 
+class ConceptCheckConfig(BaseModel):
+    """Feature flags and learner-update knobs for the post-answer micro-check."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    allow_llm_generation: bool = False
+    allow_unreviewed_questions: bool = False
+    promotion_threshold: float = Field(default=0.75, ge=0.0, le=1.0)
+    demotion_threshold: float = Field(default=0.25, ge=0.0, le=1.0)
+    level_change_window: int = Field(default=3, ge=1)
+    attempt_coverage_window: int = Field(default=5, ge=1)
+    correct_difficulty_weights: tuple[float, float, float] = (0.5, 1.0, 1.0)
+    wrong_difficulty_weights: tuple[float, float, float] = (1.0, 1.0, 0.5)
+    min_topic_support: float = Field(default=0.5, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def validate_weights(self) -> ConceptCheckConfig:
+        for name, weights in (
+            ("correct_difficulty_weights", self.correct_difficulty_weights),
+            ("wrong_difficulty_weights", self.wrong_difficulty_weights),
+        ):
+            if any(weight <= 0.0 for weight in weights):
+                raise ValueError(f"{name} must contain positive weights")
+        return self
+
+
 def validate_v2_output_dir(output_dir: Path) -> None:
     """Require a resolved path below an exact ``artifacts/v2`` directory."""
 
@@ -57,6 +84,7 @@ class V2Config(BaseModel):
     # config would otherwise leave the input limit to inference.
     embedding_max_seq_length: int | None = Field(default=None, ge=1)
     index_batch_size: int = Field(default=32, ge=1)
+    concept_check: ConceptCheckConfig = Field(default_factory=ConceptCheckConfig)
 
     @model_validator(mode="after")
     def validate_v2_boundary(self) -> V2Config:
@@ -69,6 +97,13 @@ class V2Config(BaseModel):
             )
         if self.corpus_mode == "official" and self.fixture_mode:
             raise ValueError("official mode cannot run with fixture_mode enabled")
+        if self.environment != "development" and (
+            self.concept_check.allow_llm_generation
+            or self.concept_check.allow_unreviewed_questions
+        ):
+            raise ValueError(
+                "allow_llm_generation and allow_unreviewed_questions are development-only"
+            )
         validate_v2_output_dir(self.output_dir)
         return self
 
@@ -98,6 +133,7 @@ def load_v2_config(profile: str, *, config_dir: Path | None = None) -> V2Config:
     values = {
         "environment": payload.get("environment", profile),
         "fixture_mode": payload.get("fixture_mode", False),
+        "concept_check": payload.get("concept_check", {}),
         **corpus,
     }
     if "mode" in values:

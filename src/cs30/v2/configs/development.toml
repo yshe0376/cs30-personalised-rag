@@ -12,3 +12,15 @@ required_textbook_ids = [
 ]
 output_dir = "artifacts/v2/textbooks/2.0.0-dev.1"
 chunk_config = { tokenizer_name = "unicode-wordpunct-v1" }
+
+[concept_check]
+enabled = false
+allow_llm_generation = false
+allow_unreviewed_questions = false
+promotion_threshold = 0.75
+demotion_threshold = 0.25
+level_change_window = 3
+attempt_coverage_window = 5
+correct_difficulty_weights = [0.5, 1.0, 1.0]
+wrong_difficulty_weights = [1.0, 1.0, 0.5]
+min_topic_support = 0.5

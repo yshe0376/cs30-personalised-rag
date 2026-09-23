@@ -18,3 +18,15 @@ sources_dir = "data/raw/v2"
 embedding_model = "Alibaba-NLP/gte-modernbert-base"
 embedding_max_seq_length = 8192
 index_batch_size = 32
+
+[concept_check]
+enabled = false
+allow_llm_generation = false
+allow_unreviewed_questions = false
+promotion_threshold = 0.75
+demotion_threshold = 0.25
+level_change_window = 3
+attempt_coverage_window = 5
+correct_difficulty_weights = [0.5, 1.0, 1.0]
+wrong_difficulty_weights = [1.0, 1.0, 0.5]
+min_topic_support = 0.5
