@@ -1,0 +1,432 @@
+{
+  "result_type": "engineering_fixture",
+  "run_classification": {
+    "generation": "fixture",
+    "evidence": "fixture",
+    "role_labels": "fixture",
+    "reportable": false
+  },
+  "provider": "mock",
+  "model": "mock-json-generator",
+  "warning": "Not a model-quality or validated-personalisation result.",
+  "results": [
+    {
+      "condition": "plain",
+      "condition_id": "P0R0_plain",
+      "prompt_personalisation": false,
+      "reranking": false,
+      "profile_snapshot": {
+        "schema_version": "1.0",
+        "profile_id": "member7-ablation-beginner",
+        "level": "beginner",
+        "topic_levels": {},
+        "confidence": 1.0
+      },
+      "input_candidate_ids": [
+        "fixture_derivation",
+        "fixture_definition",
+        "fixture_application"
+      ],
+      "output_candidate_ids": [
+        "fixture_derivation",
+        "fixture_definition",
+        "fixture_application"
+      ],
+      "answer": {
+        "schema_version": "1.0",
+        "final_choice": null,
+        "explanation": "The governing physics principle is stated in the first retrieved passage.",
+        "citations": [
+          "fixture_derivation"
+        ],
+        "abstained": false
+      },
+      "generation_trace": {
+        "generation_model": "mock-json-generator",
+        "generation_temperature": "0.0",
+        "generation_attempts": "1",
+        "generation_ms": "0.1",
+        "input_tokens": "532",
+        "output_tokens": "37",
+        "total_tokens": "569",
+        "generation_failures": "none",
+        "generation_response_id": "mock-response",
+        "generation_abstained": "false",
+        "generation_raw_output_present": "true",
+        "generation_repaired_output_present": "false",
+        "prompt_evidence_chunk_ids": [
+          "fixture_derivation",
+          "fixture_definition",
+          "fixture_application"
+        ],
+        "prompt_sha256": "81893f5b88302d0fdcf7823d228f62b383eba1e4d6d0709ac0a689f3b4aa7e64",
+        "generation_prompt_version": "member7-base-prompt-v1",
+        "generation_prompt_sha256": "81893f5b88302d0fdcf7823d228f62b383eba1e4d6d0709ac0a689f3b4aa7e64",
+        "generation_prompt_personalised": "false",
+        "raw_model_output": "{\"final_choice\": null, \"explanation\": \"The governing physics principle is stated in the first retrieved passage.\", \"citations\": [\"fixture_derivation\"]}",
+        "repaired_model_output": null,
+        "profile_snapshot": {
+          "schema_version": "1.0",
+          "profile_id": "member7-ablation-beginner",
+          "level": "beginner",
+          "topic_levels": {},
+          "confidence": 1.0
+        },
+        "attempt_records": [
+          {
+            "attempt": 1,
+            "is_repair": false,
+            "status": "completed",
+            "raw_output": "{\"final_choice\": null, \"explanation\": \"The governing physics principle is stated in the first retrieved passage.\", \"citations\": [\"fixture_derivation\"]}",
+            "model": "mock-json-generator",
+            "usage": {
+              "input_tokens": 532,
+              "output_tokens": 37,
+              "total_tokens": 569
+            },
+            "response_id": "mock-response",
+            "failure_type": null,
+            "error": null
+          }
+        ]
+      },
+      "rerank_trace": null
+    },
+    {
+      "condition": "prompt-only",
+      "condition_id": "P1R0_prompt_only",
+      "prompt_personalisation": true,
+      "reranking": false,
+      "profile_snapshot": {
+        "schema_version": "1.0",
+        "profile_id": "member7-ablation-beginner",
+        "level": "beginner",
+        "topic_levels": {},
+        "confidence": 1.0
+      },
+      "input_candidate_ids": [
+        "fixture_derivation",
+        "fixture_definition",
+        "fixture_application"
+      ],
+      "output_candidate_ids": [
+        "fixture_derivation",
+        "fixture_definition",
+        "fixture_application"
+      ],
+      "answer": {
+        "schema_version": "1.0",
+        "final_choice": null,
+        "explanation": "In simple terms, the first retrieved passage answers the question.",
+        "citations": [
+          "fixture_derivation"
+        ],
+        "abstained": false
+      },
+      "generation_trace": {
+        "generation_model": "mock-json-generator",
+        "generation_temperature": "0.0",
+        "generation_attempts": "1",
+        "generation_ms": "0.0",
+        "input_tokens": "586",
+        "output_tokens": "36",
+        "total_tokens": "622",
+        "generation_failures": "none",
+        "generation_response_id": "mock-response",
+        "generation_abstained": "false",
+        "generation_raw_output_present": "true",
+        "generation_repaired_output_present": "false",
+        "prompt_evidence_chunk_ids": [
+          "fixture_derivation",
+          "fixture_definition",
+          "fixture_application"
+        ],
+        "prompt_sha256": "fbb8fc69b681e9cc9b9b56f62ada7f64397f4113319f098060aaa0cabadaef58",
+        "generation_prompt_version": "member7-prompt-v1",
+        "generation_prompt_sha256": "fbb8fc69b681e9cc9b9b56f62ada7f64397f4113319f098060aaa0cabadaef58",
+        "generation_prompt_personalised": "true",
+        "raw_model_output": "{\"final_choice\": null, \"explanation\": \"In simple terms, the first retrieved passage answers the question.\", \"citations\": [\"fixture_derivation\"]}",
+        "repaired_model_output": null,
+        "profile_snapshot": {
+          "schema_version": "1.0",
+          "profile_id": "member7-ablation-beginner",
+          "level": "beginner",
+          "topic_levels": {},
+          "confidence": 1.0
+        },
+        "attempt_records": [
+          {
+            "attempt": 1,
+            "is_repair": false,
+            "status": "completed",
+            "raw_output": "{\"final_choice\": null, \"explanation\": \"In simple terms, the first retrieved passage answers the question.\", \"citations\": [\"fixture_derivation\"]}",
+            "model": "mock-json-generator",
+            "usage": {
+              "input_tokens": 586,
+              "output_tokens": 36,
+              "total_tokens": 622
+            },
+            "response_id": "mock-response",
+            "failure_type": null,
+            "error": null
+          }
+        ]
+      },
+      "rerank_trace": null
+    },
+    {
+      "condition": "reranking-only",
+      "condition_id": "P0R1_reranking_only",
+      "prompt_personalisation": false,
+      "reranking": true,
+      "profile_snapshot": {
+        "schema_version": "1.0",
+        "profile_id": "member7-ablation-beginner",
+        "level": "beginner",
+        "topic_levels": {},
+        "confidence": 1.0
+      },
+      "input_candidate_ids": [
+        "fixture_derivation",
+        "fixture_definition",
+        "fixture_application"
+      ],
+      "output_candidate_ids": [
+        "fixture_definition",
+        "fixture_derivation",
+        "fixture_application"
+      ],
+      "answer": {
+        "schema_version": "1.0",
+        "final_choice": null,
+        "explanation": "The governing physics principle is stated in the first retrieved passage.",
+        "citations": [
+          "fixture_definition"
+        ],
+        "abstained": false
+      },
+      "generation_trace": {
+        "generation_model": "mock-json-generator",
+        "generation_temperature": "0.0",
+        "generation_attempts": "1",
+        "generation_ms": "0.0",
+        "input_tokens": "532",
+        "output_tokens": "37",
+        "total_tokens": "569",
+        "generation_failures": "none",
+        "generation_response_id": "mock-response",
+        "generation_abstained": "false",
+        "generation_raw_output_present": "true",
+        "generation_repaired_output_present": "false",
+        "prompt_evidence_chunk_ids": [
+          "fixture_definition",
+          "fixture_derivation",
+          "fixture_application"
+        ],
+        "prompt_sha256": "15831c3b5132131ad607754ef565276c0869f33dc9b7427ce678942652cd17a0",
+        "generation_prompt_version": "member7-base-prompt-v1",
+        "generation_prompt_sha256": "15831c3b5132131ad607754ef565276c0869f33dc9b7427ce678942652cd17a0",
+        "generation_prompt_personalised": "false",
+        "raw_model_output": "{\"final_choice\": null, \"explanation\": \"The governing physics principle is stated in the first retrieved passage.\", \"citations\": [\"fixture_definition\"]}",
+        "repaired_model_output": null,
+        "profile_snapshot": {
+          "schema_version": "1.0",
+          "profile_id": "member7-ablation-beginner",
+          "level": "beginner",
+          "topic_levels": {},
+          "confidence": 1.0
+        },
+        "attempt_records": [
+          {
+            "attempt": 1,
+            "is_repair": false,
+            "status": "completed",
+            "raw_output": "{\"final_choice\": null, \"explanation\": \"The governing physics principle is stated in the first retrieved passage.\", \"citations\": [\"fixture_definition\"]}",
+            "model": "mock-json-generator",
+            "usage": {
+              "input_tokens": 532,
+              "output_tokens": 37,
+              "total_tokens": 569
+            },
+            "response_id": "mock-response",
+            "failure_type": null,
+            "error": null
+          }
+        ]
+      },
+      "rerank_trace": {
+        "enabled": true,
+        "lambda_weight": 0.8,
+        "confidence": 1.0,
+        "effective_lambda": 0.8,
+        "parameter_source": "fixture",
+        "taxonomy_status": "fixture",
+        "taxonomy_version": "candidate-v1",
+        "normalizer": "minmax-v1",
+        "fallback_strategy": "retrieval_only",
+        "candidates": [
+          {
+            "chunk_id": "fixture_definition",
+            "original_rank": 2,
+            "reranked_rank": 1,
+            "retrieval_score": 0.9,
+            "normalised_retrieval_score": 0.8000000000000003,
+            "role": "definition",
+            "role_match": 1.0,
+            "final_score": 0.9600000000000001,
+            "fallback_reason": null
+          },
+          {
+            "chunk_id": "fixture_derivation",
+            "original_rank": 1,
+            "reranked_rank": 2,
+            "retrieval_score": 0.95,
+            "normalised_retrieval_score": 1.0,
+            "role": "derivation",
+            "role_match": 0.0,
+            "final_score": 0.19999999999999996,
+            "fallback_reason": null
+          },
+          {
+            "chunk_id": "fixture_application",
+            "original_rank": 3,
+            "reranked_rank": 3,
+            "retrieval_score": 0.7,
+            "normalised_retrieval_score": 0.0,
+            "role": "application",
+            "role_match": 0.0,
+            "final_score": 0.0,
+            "fallback_reason": null
+          }
+        ]
+      }
+    },
+    {
+      "condition": "combined",
+      "condition_id": "P1R1_combined",
+      "prompt_personalisation": true,
+      "reranking": true,
+      "profile_snapshot": {
+        "schema_version": "1.0",
+        "profile_id": "member7-ablation-beginner",
+        "level": "beginner",
+        "topic_levels": {},
+        "confidence": 1.0
+      },
+      "input_candidate_ids": [
+        "fixture_derivation",
+        "fixture_definition",
+        "fixture_application"
+      ],
+      "output_candidate_ids": [
+        "fixture_definition",
+        "fixture_derivation",
+        "fixture_application"
+      ],
+      "answer": {
+        "schema_version": "1.0",
+        "final_choice": null,
+        "explanation": "In simple terms, the first retrieved passage answers the question.",
+        "citations": [
+          "fixture_definition"
+        ],
+        "abstained": false
+      },
+      "generation_trace": {
+        "generation_model": "mock-json-generator",
+        "generation_temperature": "0.0",
+        "generation_attempts": "1",
+        "generation_ms": "0.0",
+        "input_tokens": "586",
+        "output_tokens": "36",
+        "total_tokens": "622",
+        "generation_failures": "none",
+        "generation_response_id": "mock-response",
+        "generation_abstained": "false",
+        "generation_raw_output_present": "true",
+        "generation_repaired_output_present": "false",
+        "prompt_evidence_chunk_ids": [
+          "fixture_definition",
+          "fixture_derivation",
+          "fixture_application"
+        ],
+        "prompt_sha256": "ab2709ada1f0a03cba25999c4c88dc1e85f41d1446ed289bc9c3d1850d6c89ab",
+        "generation_prompt_version": "member7-prompt-v1",
+        "generation_prompt_sha256": "ab2709ada1f0a03cba25999c4c88dc1e85f41d1446ed289bc9c3d1850d6c89ab",
+        "generation_prompt_personalised": "true",
+        "raw_model_output": "{\"final_choice\": null, \"explanation\": \"In simple terms, the first retrieved passage answers the question.\", \"citations\": [\"fixture_definition\"]}",
+        "repaired_model_output": null,
+        "profile_snapshot": {
+          "schema_version": "1.0",
+          "profile_id": "member7-ablation-beginner",
+          "level": "beginner",
+          "topic_levels": {},
+          "confidence": 1.0
+        },
+        "attempt_records": [
+          {
+            "attempt": 1,
+            "is_repair": false,
+            "status": "completed",
+            "raw_output": "{\"final_choice\": null, \"explanation\": \"In simple terms, the first retrieved passage answers the question.\", \"citations\": [\"fixture_definition\"]}",
+            "model": "mock-json-generator",
+            "usage": {
+              "input_tokens": 586,
+              "output_tokens": 36,
+              "total_tokens": 622
+            },
+            "response_id": "mock-response",
+            "failure_type": null,
+            "error": null
+          }
+        ]
+      },
+      "rerank_trace": {
+        "enabled": true,
+        "lambda_weight": 0.8,
+        "confidence": 1.0,
+        "effective_lambda": 0.8,
+        "parameter_source": "fixture",
+        "taxonomy_status": "fixture",
+        "taxonomy_version": "candidate-v1",
+        "normalizer": "minmax-v1",
+        "fallback_strategy": "retrieval_only",
+        "candidates": [
+          {
+            "chunk_id": "fixture_definition",
+            "original_rank": 2,
+            "reranked_rank": 1,
+            "retrieval_score": 0.9,
+            "normalised_retrieval_score": 0.8000000000000003,
+            "role": "definition",
+            "role_match": 1.0,
+            "final_score": 0.9600000000000001,
+            "fallback_reason": null
+          },
+          {
+            "chunk_id": "fixture_derivation",
+            "original_rank": 1,
+            "reranked_rank": 2,
+            "retrieval_score": 0.95,
+            "normalised_retrieval_score": 1.0,
+            "role": "derivation",
+            "role_match": 0.0,
+            "final_score": 0.19999999999999996,
+            "fallback_reason": null
+          },
+          {
+            "chunk_id": "fixture_application",
+            "original_rank": 3,
+            "reranked_rank": 3,
+            "retrieval_score": 0.7,
+            "normalised_retrieval_score": 0.0,
+            "role": "application",
+            "role_match": 0.0,
+            "final_score": 0.0,
+            "fallback_reason": null
+          }
+        ]
+      }
+    }
+  ]
+}

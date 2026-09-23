@@ -1,0 +1,24 @@
+{
+  "case_count": 36,
+  "chunk_version": "sha256:4c3c35e13eec2dc04a5fea85ebd912704846d04f31dd2d9006eb36f0db264b61",
+  "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+  "dataset_version": "gold-v0.2-from-m3-v0.1.1",
+  "formally_complete": false,
+  "gold_mapping_sha256": "7de5b9e16462aab8dd6729e659be09a0ceeb2aa6291fe2dea2318cc2e8cc01a8",
+  "index_version": "bge-m3-1024-0.5.0",
+  "input_status": "provisional",
+  "profile_levels": [
+    "beginner",
+    "intermediate",
+    "advanced"
+  ],
+  "question_count": 12,
+  "result_type": "member7_prepared_condition_cases",
+  "retrieval_manifest_sha256": "c0167ac5abd499209824093b61829a194561e8c9e397789a401017633cfeb903",
+  "retrieval_run_id": "w5-bge-m3-hybrid-25-75-release-v2_hybrid_proposed_dev",
+  "retrieval_runs_sha256": "2524eb19c90c3c295c2b0c5dcd7fcb6913ac23167fceead8c80695d673ae0c95",
+  "schema_version": "1.0",
+  "source_reportable": false,
+  "source_split": "proposed_dev",
+  "target_split": "dev"
+}
