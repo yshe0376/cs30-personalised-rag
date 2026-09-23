@@ -1,0 +1,5251 @@
+{
+  "schema_version": "1.0",
+  "source_type": "member7_four_condition_run",
+  "source_run_id": "member7-four-condition-861e54acc967c869",
+  "scoring_mode": "development",
+  "reportable": false,
+  "row_count": 144,
+  "case_count": 36,
+  "conditions": [
+    "P0R0_plain",
+    "P1R0_prompt_only",
+    "P0R1_reranking_only",
+    "P1R1_combined"
+  ],
+  "groups": [
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R0_plain",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 1,
+          "value": 0.0,
+          "excluded": 11
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 1,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 11
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 1,
+        "wrong_option": 1
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P0R0_plain",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 1,
+              "value": 0.0,
+              "excluded": 11
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 1,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 11
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 1,
+            "wrong_option": 1
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R1_reranking_only",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 1,
+          "value": 0.0,
+          "excluded": 11
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 1,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 11
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 1,
+        "wrong_option": 1
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P0R1_reranking_only",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 1,
+              "value": 0.0,
+              "excluded": 11
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 1,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 11
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 1,
+            "wrong_option": 1
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P1R0_prompt_only",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 3,
+          "value": 0.0,
+          "excluded": 9
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 14,
+          "denominator": 14,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 3,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 9
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 3,
+        "wrong_option": 3
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P1R0_prompt_only",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 3,
+              "value": 0.0,
+              "excluded": 9
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 14,
+              "denominator": 14,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 3,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 9
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 3,
+            "wrong_option": 3
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P1R1_combined",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 3,
+          "value": 0.0,
+          "excluded": 9
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 14,
+          "denominator": 14,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 3,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 9
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 3,
+        "wrong_option": 3
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P1R1_combined",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 3,
+              "value": 0.0,
+              "excluded": 9
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 14,
+              "denominator": 14,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 3,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 9
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 3,
+            "wrong_option": 3
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R0_plain",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 1,
+          "value": 0.0,
+          "excluded": 11
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 1,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 11
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 1,
+        "wrong_option": 1
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P0R0_plain",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 1,
+              "value": 0.0,
+              "excluded": 11
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 1,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 11
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 1,
+            "wrong_option": 1
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R1_reranking_only",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 1,
+          "value": 0.0,
+          "excluded": 11
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 1,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 11
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 1,
+        "wrong_option": 1
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P0R1_reranking_only",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 1,
+              "value": 0.0,
+              "excluded": 11
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 1,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 11
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 1,
+            "wrong_option": 1
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R0_prompt_only",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 3,
+          "value": 0.0,
+          "excluded": 9
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 18,
+          "denominator": 18,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 3,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 9
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 3,
+        "wrong_option": 3
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P1R0_prompt_only",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 3,
+              "value": 0.0,
+              "excluded": 9
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 18,
+              "denominator": 18,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 3,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 9
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 3,
+            "wrong_option": 3
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R1_combined",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 3,
+          "value": 0.0,
+          "excluded": 9
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 18,
+          "denominator": 18,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 3,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 9
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 3,
+        "wrong_option": 3
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P1R1_combined",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 3,
+              "value": 0.0,
+              "excluded": 9
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 18,
+              "denominator": 18,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 3,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 9
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 3,
+            "wrong_option": 3
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R0_plain",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 1,
+          "value": 0.0,
+          "excluded": 11
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 1,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 11
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 1,
+        "wrong_option": 1
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P0R0_plain",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 1,
+              "value": 0.0,
+              "excluded": 11
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 1,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 11
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 1,
+            "wrong_option": 1
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R1_reranking_only",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 1,
+          "value": 0.0,
+          "excluded": 11
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 1,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 11
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 1,
+        "wrong_option": 1
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P0R1_reranking_only",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 1,
+              "value": 0.0,
+              "excluded": 11
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 1,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 11
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 1,
+            "wrong_option": 1
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P1R0_prompt_only",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 5,
+          "value": 0.0,
+          "excluded": 7
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 5,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 7
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 5,
+        "wrong_option": 5
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P1R0_prompt_only",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 5,
+              "value": 0.0,
+              "excluded": 7
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 5,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 7
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 5,
+            "wrong_option": 5
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P1R1_combined",
+      "provider_failure_observed_count": 0,
+      "provider_failure_observed_rate": 0.0,
+      "total_records": 12,
+      "applicability": "applicable",
+      "metric_definitions": {
+        "answer_choice_accuracy_all": "Correct choices divided by successful generation outcomes with resolved Gold answerability and a gold choice; abstentions count as incorrect and technical failures are reported separately.",
+        "answer_choice_accuracy_parsed": "Correct choices divided by successfully parsed answer or abstention outcomes with resolved Gold answerability and a gold choice.",
+        "answer_choice_accuracy_answered": "Correct choices divided by non-abstained answers with resolved Gold answerability and a gold choice.",
+        "abstention_accuracy": "System-level correct abstain/non-abstain decisions divided by generation runs with resolved answerability. Both no_retrieval_hits and model_abstained_with_evidence are system abstentions; technical failures are reported separately.",
+        "abstention_precision": "System-level correct abstentions divided by all system-predicted abstentions with resolved Gold answerability. The numerator and denominator include both no_retrieval_hits and model_abstained_with_evidence; abstentions with unresolved Gold answerability are reported by cause but excluded here.",
+        "abstention_recall": "System-level correct abstentions, including both no_retrieval_hits and model_abstained_with_evidence, divided by all gold-unanswerable generation outcomes with resolved answerability; technical failures are excluded.",
+        "abstention_f1": "System-level abstention F1 computed as 2TP / (2TP + FP + FN), where both abstention causes are predicted positives, TP is a correct abstention, FP is a wrong abstention, and FN is a gold-unanswerable run that did not abstain correctly. Only resolved Gold answerability is eligible; F1 is not applicable when the Gold set has no unanswerable runs.",
+        "model_abstention_accuracy": "Model-level correct abstain/non-abstain decisions divided by successful generation runs with resolved Gold answerability where the model was invoked with evidence. no_retrieval_hits runs, unresolved Gold, and technical failures are excluded.",
+        "model_abstention_precision": "Correct model_abstained_with_evidence outcomes divided by all model_abstained_with_evidence outcomes with resolved Gold answerability. no_retrieval_hits and unresolved Gold are excluded.",
+        "model_abstention_recall": "Correct model_abstained_with_evidence outcomes divided by gold-unanswerable successful generation runs where the model was invoked with evidence. no_retrieval_hits and technical failures are excluded.",
+        "model_abstention_f1": "Model-level abstention F1 computed as 2TP / (2TP + FP + FN), where model_abstained_with_evidence is the predicted positive. Only successful model decisions with evidence and resolved Gold answerability are eligible; F1 is not applicable when those decisions contain no gold-unanswerable runs.",
+        "raw_json_validity": "Valid first-attempt JSON divided by runs retaining a first model output.",
+        "raw_schema_validity": "GeneratedAnswer-schema-valid first outputs divided by retained first outputs.",
+        "repaired_json_validity": "Valid repaired JSON divided by runs retaining a repaired output.",
+        "repaired_schema_validity": "GeneratedAnswer-schema-valid repaired outputs divided by repaired outputs.",
+        "citation_validity": "Answered runs whose non-empty citations resolve through evidence actually sent to the model, exactly match the upstream resolved citation sequence, and pass upstream validation.",
+        "gold_evidence_citation_coverage": "Answered runs whose citations completely cover at least one sufficient Gold evidence path using the frozen span-to-chunk mapping.",
+        "repair_rate": "Runs retaining a repaired model output divided by runs where the model was invoked.",
+        "technical_failure_rate": "Technical retrieval, generation, or parsing failures divided by all retrieval-and-generation runs.",
+        "provider_failure_rate": "Runs whose terminal generation error is an identified provider failure divided by all retrieval-and-generation runs.",
+        "per_citation_validity": "Citations resolving to a chunk and source in evidence sent to the model."
+      },
+      "metrics": {
+        "answer_choice_accuracy_all": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_parsed": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "answer_choice_accuracy_answered": {
+          "numerator": 0,
+          "denominator": 4,
+          "value": 0.0,
+          "excluded": 8
+        },
+        "abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "model_abstention_accuracy": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "model_abstention_precision": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_recall": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "model_abstention_f1": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 0
+        },
+        "raw_json_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "raw_schema_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "repaired_json_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "repaired_schema_validity": {
+          "numerator": 0,
+          "denominator": 0,
+          "value": null,
+          "excluded": 12
+        },
+        "citation_validity": {
+          "numerator": 12,
+          "denominator": 12,
+          "value": 1.0,
+          "excluded": 0
+        },
+        "gold_evidence_citation_coverage": {
+          "numerator": 10,
+          "denominator": 12,
+          "value": 0.8333333333333334,
+          "excluded": 0
+        },
+        "repair_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "technical_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "provider_failure_rate": {
+          "numerator": 0,
+          "denominator": 12,
+          "value": 0.0,
+          "excluded": 0
+        },
+        "per_citation_validity": {
+          "numerator": 16,
+          "denominator": 16,
+          "value": 1.0,
+          "excluded": 0
+        }
+      },
+      "answer_outcome_counts": {
+        "correct": 0,
+        "wrong": 4,
+        "abstained": 0,
+        "retrieval_failed": 0,
+        "generation_failed": 0,
+        "format_failed": 0,
+        "missing_prediction": 8
+      },
+      "abstention_confusion": {
+        "correct_abstention": 0,
+        "wrong_abstention": 0,
+        "answered_when_unanswerable": 0,
+        "answered_when_answerable": 12,
+        "technical_failure": 0,
+        "unresolved": 0
+      },
+      "abstention_cause_counts": {
+        "no_retrieval_hits": 0,
+        "model_abstained_with_evidence": 0
+      },
+      "abstention_confusion_by_cause": {
+        "no_retrieval_hits": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        },
+        "model_abstained_with_evidence": {
+          "correct_abstention": 0,
+          "wrong_abstention": 0,
+          "unresolved": 0
+        }
+      },
+      "failure_label_counts": {
+        "gold_missed": 4,
+        "wrong_option": 4
+      },
+      "execution_status_counts": {
+        "answered": 12
+      },
+      "operation_counts": {
+        "runs_retried": 0,
+        "retry_attempts": 0,
+        "runs_repaired": 0
+      },
+      "unresolved_count": 0,
+      "scoring_mode": "development",
+      "reportable": false,
+      "excluded_runs": {
+        "total": 0,
+        "missing_gold": 0,
+        "split_mismatch": 0,
+        "mode_mismatch": 0,
+        "condition_mismatch": 0
+      },
+      "missing_run_count": 0,
+      "missing_run_question_ids": [],
+      "groups": [
+        {
+          "mode": "hybrid",
+          "condition_id": "P1R1_combined",
+          "data_version": "m3_gold_v0.1.1",
+          "split": "dev",
+          "corpus_version": "openstax-cp2e-a052d9fae2a90e13-ch01-34-v9c54ac0e04d23864",
+          "total_records": 12,
+          "applicability": "applicable",
+          "metrics": {
+            "answer_choice_accuracy_all": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_parsed": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "answer_choice_accuracy_answered": {
+              "numerator": 0,
+              "denominator": 4,
+              "value": 0.0,
+              "excluded": 8
+            },
+            "abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "model_abstention_accuracy": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "model_abstention_precision": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_recall": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "model_abstention_f1": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 0
+            },
+            "raw_json_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "raw_schema_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "repaired_json_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "repaired_schema_validity": {
+              "numerator": 0,
+              "denominator": 0,
+              "value": null,
+              "excluded": 12
+            },
+            "citation_validity": {
+              "numerator": 12,
+              "denominator": 12,
+              "value": 1.0,
+              "excluded": 0
+            },
+            "gold_evidence_citation_coverage": {
+              "numerator": 10,
+              "denominator": 12,
+              "value": 0.8333333333333334,
+              "excluded": 0
+            },
+            "repair_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "technical_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "provider_failure_rate": {
+              "numerator": 0,
+              "denominator": 12,
+              "value": 0.0,
+              "excluded": 0
+            },
+            "per_citation_validity": {
+              "numerator": 16,
+              "denominator": 16,
+              "value": 1.0,
+              "excluded": 0
+            }
+          },
+          "answer_outcome_counts": {
+            "correct": 0,
+            "wrong": 4,
+            "abstained": 0,
+            "retrieval_failed": 0,
+            "generation_failed": 0,
+            "format_failed": 0,
+            "missing_prediction": 8
+          },
+          "abstention_confusion": {
+            "correct_abstention": 0,
+            "wrong_abstention": 0,
+            "answered_when_unanswerable": 0,
+            "answered_when_answerable": 12,
+            "technical_failure": 0,
+            "unresolved": 0
+          },
+          "abstention_cause_counts": {
+            "no_retrieval_hits": 0,
+            "model_abstained_with_evidence": 0
+          },
+          "abstention_confusion_by_cause": {
+            "no_retrieval_hits": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            },
+            "model_abstained_with_evidence": {
+              "correct_abstention": 0,
+              "wrong_abstention": 0,
+              "unresolved": 0
+            }
+          },
+          "failure_label_counts": {
+            "gold_missed": 4,
+            "wrong_option": 4
+          },
+          "execution_status_counts": {
+            "answered": 12
+          },
+          "operation_counts": {
+            "runs_retried": 0,
+            "retry_attempts": 0,
+            "runs_repaired": 0
+          },
+          "unresolved_count": 0
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "answer_choice_accuracy_all",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "answer_choice_accuracy_answered",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "abstention_accuracy",
+      "values": {
+        "P0R0_plain": 1.0,
+        "P1R0_prompt_only": 1.0,
+        "P0R1_reranking_only": 1.0,
+        "P1R1_combined": 1.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "citation_validity",
+      "values": {
+        "P0R0_plain": 1.0,
+        "P1R0_prompt_only": 1.0,
+        "P0R1_reranking_only": 1.0,
+        "P1R1_combined": 1.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "gold_evidence_citation_coverage",
+      "values": {
+        "P0R0_plain": 0.8333333333333334,
+        "P1R0_prompt_only": 0.8333333333333334,
+        "P0R1_reranking_only": 0.8333333333333334,
+        "P1R1_combined": 0.8333333333333334
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "repair_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "technical_failure_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "metric": "provider_failure_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "answer_choice_accuracy_all",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "answer_choice_accuracy_answered",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "abstention_accuracy",
+      "values": {
+        "P0R0_plain": 1.0,
+        "P1R0_prompt_only": 1.0,
+        "P0R1_reranking_only": 1.0,
+        "P1R1_combined": 1.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "citation_validity",
+      "values": {
+        "P0R0_plain": 1.0,
+        "P1R0_prompt_only": 1.0,
+        "P0R1_reranking_only": 1.0,
+        "P1R1_combined": 1.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "gold_evidence_citation_coverage",
+      "values": {
+        "P0R0_plain": 0.8333333333333334,
+        "P1R0_prompt_only": 0.8333333333333334,
+        "P0R1_reranking_only": 0.8333333333333334,
+        "P1R1_combined": 0.8333333333333334
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "repair_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "technical_failure_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "metric": "provider_failure_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "answer_choice_accuracy_all",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "answer_choice_accuracy_answered",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "abstention_accuracy",
+      "values": {
+        "P0R0_plain": 1.0,
+        "P1R0_prompt_only": 1.0,
+        "P0R1_reranking_only": 1.0,
+        "P1R1_combined": 1.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "citation_validity",
+      "values": {
+        "P0R0_plain": 1.0,
+        "P1R0_prompt_only": 1.0,
+        "P0R1_reranking_only": 1.0,
+        "P1R1_combined": 1.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "gold_evidence_citation_coverage",
+      "values": {
+        "P0R0_plain": 0.8333333333333334,
+        "P1R0_prompt_only": 0.8333333333333334,
+        "P0R1_reranking_only": 0.8333333333333334,
+        "P1R1_combined": 0.8333333333333334
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "repair_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "technical_failure_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "metric": "provider_failure_rate",
+      "values": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      },
+      "delta_vs_plain": {
+        "P0R0_plain": 0.0,
+        "P1R0_prompt_only": 0.0,
+        "P0R1_reranking_only": 0.0,
+        "P1R1_combined": 0.0
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+\documentclass[10pt]{article}
+\usepackage[margin=1.6cm,landscape]{geometry}
+\usepackage{booktabs}
+\usepackage{longtable}
+\begin{document}
+\section*{Four-condition evaluation report}
+\textbf{DEVELOPMENT / NOT FOR FORMAL CLAIMS}\\
+Source run: \texttt{member7-four-condition-861e54acc967c869}\\
+Cases: 36; rows: 144\\
+Every row was joined to its immutable source case and accepted only after the reconstructed prompt SHA-256 matched the saved M7 trace.
+\begin{longtable}{lllrrrr}
+\toprule
+Split & Level & Metric & Plain & Prompt & Rerank & Combined \\
+\midrule
+\endhead
+dev & advanced & answer\_choice\_accuracy\_all & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & advanced & answer\_choice\_accuracy\_answered & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & advanced & abstention\_accuracy & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+dev & advanced & citation\_validity & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+dev & advanced & gold\_evidence\_citation\_coverage & 0.8333 & 0.8333 & 0.8333 & 0.8333 \\
+dev & advanced & repair\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & advanced & technical\_failure\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & advanced & provider\_failure\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & beginner & answer\_choice\_accuracy\_all & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & beginner & answer\_choice\_accuracy\_answered & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & beginner & abstention\_accuracy & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+dev & beginner & citation\_validity & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+dev & beginner & gold\_evidence\_citation\_coverage & 0.8333 & 0.8333 & 0.8333 & 0.8333 \\
+dev & beginner & repair\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & beginner & technical\_failure\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & beginner & provider\_failure\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & intermediate & answer\_choice\_accuracy\_all & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & intermediate & answer\_choice\_accuracy\_answered & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & intermediate & abstention\_accuracy & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+dev & intermediate & citation\_validity & 1.0000 & 1.0000 & 1.0000 & 1.0000 \\
+dev & intermediate & gold\_evidence\_citation\_coverage & 0.8333 & 0.8333 & 0.8333 & 0.8333 \\
+dev & intermediate & repair\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & intermediate & technical\_failure\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+dev & intermediate & provider\_failure\_rate & 0.0000 & 0.0000 & 0.0000 & 0.0000 \\
+\bottomrule
+\end{longtable}
+\end{document}

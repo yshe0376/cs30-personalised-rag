@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="1416" viewBox="0 0 1180 1416" role="img" aria-label="Four-condition comparison">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="20" y="30" font-family="Arial" font-size="20" font-weight="700" fill="#111827">Four-condition comparison</text>
+<rect x="20" y="48" width="14" height="14" fill="#6b7280"/>
+<text x="40" y="60" font-family="Arial" font-size="12" fill="#374151">P0R0_plain</text>
+<rect x="290" y="48" width="14" height="14" fill="#2563eb"/>
+<text x="310" y="60" font-family="Arial" font-size="12" fill="#374151">P1R0_prompt_only</text>
+<rect x="560" y="48" width="14" height="14" fill="#f59e0b"/>
+<text x="580" y="60" font-family="Arial" font-size="12" fill="#374151">P0R1_reranking_only</text>
+<rect x="830" y="48" width="14" height="14" fill="#10b981"/>
+<text x="850" y="60" font-family="Arial" font-size="12" fill="#374151">P1R1_combined</text>
+<text x="20" y="110" font-family="Arial" font-size="12" fill="#111827">dev / advanced / answer_choice_accuracy_all</text>
+<rect x="390" y="92" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="98" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="99" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="105" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="106" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="112" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="113" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="119" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="164" font-family="Arial" font-size="12" fill="#111827">dev / advanced / answer_choice_accuracy_answered</text>
+<rect x="390" y="146" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="152" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="153" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="159" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="160" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="166" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="167" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="173" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="218" font-family="Arial" font-size="12" fill="#111827">dev / advanced / abstention_accuracy</text>
+<rect x="390" y="200" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="200" width="650.00" height="5" fill="#6b7280"/>
+<text x="1050" y="206" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="207" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="207" width="650.00" height="5" fill="#2563eb"/>
+<text x="1050" y="213" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="214" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="214" width="650.00" height="5" fill="#f59e0b"/>
+<text x="1050" y="220" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="221" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="221" width="650.00" height="5" fill="#10b981"/>
+<text x="1050" y="227" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<text x="20" y="272" font-family="Arial" font-size="12" fill="#111827">dev / advanced / citation_validity</text>
+<rect x="390" y="254" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="254" width="650.00" height="5" fill="#6b7280"/>
+<text x="1050" y="260" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="261" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="261" width="650.00" height="5" fill="#2563eb"/>
+<text x="1050" y="267" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="268" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="268" width="650.00" height="5" fill="#f59e0b"/>
+<text x="1050" y="274" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="275" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="275" width="650.00" height="5" fill="#10b981"/>
+<text x="1050" y="281" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<text x="20" y="326" font-family="Arial" font-size="12" fill="#111827">dev / advanced / gold_evidence_citation_coverage</text>
+<rect x="390" y="308" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="308" width="541.67" height="5" fill="#6b7280"/>
+<text x="1050" y="314" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="315" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="315" width="541.67" height="5" fill="#2563eb"/>
+<text x="1050" y="321" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="322" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="322" width="541.67" height="5" fill="#f59e0b"/>
+<text x="1050" y="328" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="329" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="329" width="541.67" height="5" fill="#10b981"/>
+<text x="1050" y="335" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<text x="20" y="380" font-family="Arial" font-size="12" fill="#111827">dev / advanced / repair_rate</text>
+<rect x="390" y="362" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="368" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="369" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="375" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="376" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="382" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="383" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="389" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="434" font-family="Arial" font-size="12" fill="#111827">dev / advanced / technical_failure_rate</text>
+<rect x="390" y="416" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="422" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="423" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="429" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="430" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="436" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="437" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="443" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="488" font-family="Arial" font-size="12" fill="#111827">dev / advanced / provider_failure_rate</text>
+<rect x="390" y="470" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="476" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="477" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="483" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="484" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="490" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="491" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="497" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="542" font-family="Arial" font-size="12" fill="#111827">dev / beginner / answer_choice_accuracy_all</text>
+<rect x="390" y="524" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="530" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="531" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="537" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="538" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="544" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="545" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="551" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="596" font-family="Arial" font-size="12" fill="#111827">dev / beginner / answer_choice_accuracy_answered</text>
+<rect x="390" y="578" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="584" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="585" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="591" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="592" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="598" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="599" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="605" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="650" font-family="Arial" font-size="12" fill="#111827">dev / beginner / abstention_accuracy</text>
+<rect x="390" y="632" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="632" width="650.00" height="5" fill="#6b7280"/>
+<text x="1050" y="638" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="639" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="639" width="650.00" height="5" fill="#2563eb"/>
+<text x="1050" y="645" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="646" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="646" width="650.00" height="5" fill="#f59e0b"/>
+<text x="1050" y="652" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="653" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="653" width="650.00" height="5" fill="#10b981"/>
+<text x="1050" y="659" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<text x="20" y="704" font-family="Arial" font-size="12" fill="#111827">dev / beginner / citation_validity</text>
+<rect x="390" y="686" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="686" width="650.00" height="5" fill="#6b7280"/>
+<text x="1050" y="692" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="693" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="693" width="650.00" height="5" fill="#2563eb"/>
+<text x="1050" y="699" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="700" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="700" width="650.00" height="5" fill="#f59e0b"/>
+<text x="1050" y="706" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="707" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="707" width="650.00" height="5" fill="#10b981"/>
+<text x="1050" y="713" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<text x="20" y="758" font-family="Arial" font-size="12" fill="#111827">dev / beginner / gold_evidence_citation_coverage</text>
+<rect x="390" y="740" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="740" width="541.67" height="5" fill="#6b7280"/>
+<text x="1050" y="746" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="747" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="747" width="541.67" height="5" fill="#2563eb"/>
+<text x="1050" y="753" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="754" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="754" width="541.67" height="5" fill="#f59e0b"/>
+<text x="1050" y="760" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="761" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="761" width="541.67" height="5" fill="#10b981"/>
+<text x="1050" y="767" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<text x="20" y="812" font-family="Arial" font-size="12" fill="#111827">dev / beginner / repair_rate</text>
+<rect x="390" y="794" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="800" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="801" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="807" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="808" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="814" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="815" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="821" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="866" font-family="Arial" font-size="12" fill="#111827">dev / beginner / technical_failure_rate</text>
+<rect x="390" y="848" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="854" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="855" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="861" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="862" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="868" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="869" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="875" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="920" font-family="Arial" font-size="12" fill="#111827">dev / beginner / provider_failure_rate</text>
+<rect x="390" y="902" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="908" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="909" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="915" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="916" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="922" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="923" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="929" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="974" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / answer_choice_accuracy_all</text>
+<rect x="390" y="956" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="962" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="963" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="969" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="970" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="976" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="977" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="983" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="1028" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / answer_choice_accuracy_answered</text>
+<rect x="390" y="1010" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1016" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1017" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1023" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1024" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1030" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1031" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1037" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="1082" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / abstention_accuracy</text>
+<rect x="390" y="1064" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1064" width="650.00" height="5" fill="#6b7280"/>
+<text x="1050" y="1070" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="1071" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1071" width="650.00" height="5" fill="#2563eb"/>
+<text x="1050" y="1077" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="1078" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1078" width="650.00" height="5" fill="#f59e0b"/>
+<text x="1050" y="1084" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="1085" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1085" width="650.00" height="5" fill="#10b981"/>
+<text x="1050" y="1091" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<text x="20" y="1136" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / citation_validity</text>
+<rect x="390" y="1118" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1118" width="650.00" height="5" fill="#6b7280"/>
+<text x="1050" y="1124" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="1125" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1125" width="650.00" height="5" fill="#2563eb"/>
+<text x="1050" y="1131" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="1132" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1132" width="650.00" height="5" fill="#f59e0b"/>
+<text x="1050" y="1138" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<rect x="390" y="1139" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1139" width="650.00" height="5" fill="#10b981"/>
+<text x="1050" y="1145" font-family="Arial" font-size="10" fill="#111827">1.0000</text>
+<text x="20" y="1190" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / gold_evidence_citation_coverage</text>
+<rect x="390" y="1172" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1172" width="541.67" height="5" fill="#6b7280"/>
+<text x="1050" y="1178" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="1179" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1179" width="541.67" height="5" fill="#2563eb"/>
+<text x="1050" y="1185" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="1186" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1186" width="541.67" height="5" fill="#f59e0b"/>
+<text x="1050" y="1192" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<rect x="390" y="1193" width="650" height="5" fill="#e5e7eb"/>
+<rect x="390" y="1193" width="541.67" height="5" fill="#10b981"/>
+<text x="1050" y="1199" font-family="Arial" font-size="10" fill="#111827">0.8333</text>
+<text x="20" y="1244" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / repair_rate</text>
+<rect x="390" y="1226" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1232" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1233" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1239" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1240" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1246" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1247" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1253" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="1298" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / technical_failure_rate</text>
+<rect x="390" y="1280" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1286" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1287" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1293" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1294" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1300" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1301" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1307" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<text x="20" y="1352" font-family="Arial" font-size="12" fill="#111827">dev / intermediate / provider_failure_rate</text>
+<rect x="390" y="1334" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1340" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1341" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1347" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1348" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1354" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+<rect x="390" y="1355" width="650" height="5" fill="#e5e7eb"/>
+<text x="1050" y="1361" font-family="Arial" font-size="10" fill="#111827">0.0000</text>
+</svg>

@@ -346,6 +346,14 @@ validity/coverage, repair rate, technical failure rate, and provider failure
 rate. A source manifest marked non-reportable always produces a visibly marked
 development report.
 
+A checked-in integration snapshot generated from M7 commit `f487077` is
+available under
+[`docs/evaluation-results/m7-provisional-dev-f487077`](../../../docs/evaluation-results/m7-provisional-dev-f487077/README.md).
+It demonstrates technical acceptance of the adapter and reporting pipeline,
+but its upstream manifest is provisional and non-reportable. The snapshot
+README records the input limitations and explicitly prohibits formal model
+quality or personalisation claims.
+
 ## Personalisation evaluation reporting
 
 The `report-extension` command combines existing offline answer/citation scores
