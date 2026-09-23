@@ -691,10 +691,14 @@ class ConceptCheckQuestionRelease(V2Model):
             raise ValueError("only published questions can be released")
         if self.binding.question_id != self.question.question_id:
             raise ValueError("question release binding question_id mismatch")
-        expected = {anchor.span_id for anchor in self.question.evidence_anchors}
+        anchors = {anchor.span_id: anchor for anchor in self.question.evidence_anchors}
+        expected = set(anchors)
         actual = {item.span_id for item in self.binding.bindings}
         if actual != expected:
             raise ValueError("question release must bind every and only its anchors")
+        for item in self.binding.bindings:
+            if item.textbook_id != anchors[item.span_id].textbook_id:
+                raise ValueError("question binding textbook_id must match its anchor")
         if any(
             item.resolution_status is not SpanResolutionStatus.RESOLVED
             for item in self.binding.bindings
@@ -896,15 +900,23 @@ class ConceptCheckGrade(V2Model):
 
 
 class ConceptCheckEvent(V2Model):
-    """Append-only event used to derive a LearnerState."""
+    """Append-only event used to derive a LearnerState.
+
+    ``attempt_id`` is the idempotency key for submitted or skipped attempts.
+    Revoke events point at the original attempt with ``revoked_attempt_id``;
+    level overrides are standalone events identified by ``event_id``.
+    """
 
     schema_version: Literal["0.1"] = "0.1"
     event_id: Identifier
     profile_id: Identifier
-    attempt_id: Identifier
-    question_id: Identifier
+    attempt_id: Identifier | None = None
+    revoked_attempt_id: Identifier | None = None
+    question_id: Identifier | None = None
     topic_id: Identifier
-    question_difficulty: StudentLevel
+    topic_registry_version: Identifier
+    question_difficulty: StudentLevel | None = None
+    new_level: StudentLevel | None = None
     selected_choice: ChoiceLabel | None = None
     performance: float | None = Field(default=None, ge=0.0, le=1.0)
     event_type: ConceptCheckEventType
@@ -917,12 +929,31 @@ class ConceptCheckEvent(V2Model):
     @model_validator(mode="after")
     def validate_event_payload(self) -> ConceptCheckEvent:
         if self.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED:
+            if self.attempt_id is None or self.question_id is None:
+                raise ValueError("submitted attempts require an attempt_id and question_id")
+            if self.question_difficulty is None:
+                raise ValueError("submitted attempts require question_difficulty")
             if self.selected_choice is None or self.performance is None:
                 raise ValueError("submitted attempts require a choice and performance")
         elif self.event_type is ConceptCheckEventType.ATTEMPT_SKIPPED:
+            if self.attempt_id is None or self.question_id is None:
+                raise ValueError("skipped attempts require an attempt_id and question_id")
+            if self.question_difficulty is None:
+                raise ValueError("skipped attempts require question_difficulty")
             if self.selected_choice is not None or self.performance is not None:
                 raise ValueError("skipped attempts must not carry a choice or performance")
+        elif self.event_type is ConceptCheckEventType.ATTEMPT_REVOKED:
+            if self.revoked_attempt_id is None:
+                raise ValueError("revoked attempts require revoked_attempt_id")
+            if self.selected_choice is not None or self.performance is not None:
+                raise ValueError("revoked attempts must not carry a choice or performance")
         elif self.event_type is ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN:
+            if self.new_level is None:
+                raise ValueError("level overrides require new_level")
+            if self.attempt_id is not None or self.revoked_attempt_id is not None:
+                raise ValueError("level overrides must not carry an attempt id")
+            if self.question_id is not None or self.question_difficulty is not None:
+                raise ValueError("level overrides must not carry question fields")
             if self.actor != "student" or self.reason is None:
                 raise ValueError("student level overrides require an actor and reason")
         return self
@@ -1073,6 +1104,9 @@ class PipelineRun(V2Model):
     run_id: Identifier
     environment: Literal["development", "staging", "production"]
     corpus_version: Identifier
+    concept_check_enabled: bool
+    allow_llm_generation: bool
+    allow_unreviewed_questions: bool
     manifest_hash: Identifier | None = None
     retrieval_config_hash: Identifier | None = None
     generation_config_hash: Identifier | None = None
@@ -1083,6 +1117,20 @@ class PipelineRun(V2Model):
     answer: GeneratedAnswer | None = None
     validated_answer: ValidatedAnswer | None = None
     learner_context: LearnerContextSnapshot | None = None
-    profile_source: ProfileSource | None = None
-    resolver_called: bool | None = None
+    profile_source: ProfileSource
+    resolver_called: bool
     concept_check_question_id: Identifier | None = None
+
+    @model_validator(mode="after")
+    def validate_trace(self) -> PipelineRun:
+        if self.learner_context is not None:
+            if self.profile_source is not self.learner_context.profile_source:
+                raise ValueError("PipelineRun profile_source must match learner_context")
+            if self.resolver_called != self.learner_context.resolver_called:
+                raise ValueError("PipelineRun resolver_called must match learner_context")
+        if not self.concept_check_enabled:
+            if self.profile_source is not ProfileSource.STATIC_PROFILE:
+                raise ValueError("disabled Concept Check runs require static_profile")
+            if self.resolver_called:
+                raise ValueError("disabled Concept Check runs must not call a resolver")
+        return self

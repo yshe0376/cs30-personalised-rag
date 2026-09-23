@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -23,8 +25,10 @@ from cs30.v2.contracts import (
     EvidenceProvenance,
     EvidenceSpan,
     EvidenceSpanBinding,
+    GeneratedAnswer,
     GoldQuestion,
     LearnerState,
+    PipelineRun,
     ProfileSource,
     RetrievalMode,
     RetrievalResult,
@@ -38,9 +42,17 @@ from cs30.v2.contracts import (
     TopicResolution,
     TopicResolutionStatus,
     TopicState,
+    ValidatedAnswer,
 )
 from cs30.v2.ids import sha256_text, source_locator
-from cs30.v2.topics import ChunkTopicAssignment, ChunkTopicMap, resolve_topic_from_retrieval
+from cs30.v2.topics import (
+    ChunkTopicAssignment,
+    ChunkTopicMap,
+    LoadedChunkTopicMap,
+    load_validated_chunk_topic_map,
+    resolve_topic_from_citations,
+    resolve_topic_from_retrieval,
+)
 
 TEXTBOOK_ID = REQUIRED_TEXTBOOK_IDS[0]
 CORPUS_VERSION = "2.0.0-dev.1"
@@ -141,6 +153,45 @@ def _retrieved(chunk_id: str, rank: int) -> RetrievedEvidence:
 
 def _retrieval(*hits: RetrievedEvidence) -> RetrievalResult:
     return RetrievalResult(query="How does motion change?", mode=RetrievalMode.FIXTURE, hits=hits)
+
+
+def _provenance() -> EvidenceProvenance:
+    return EvidenceProvenance(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        manifest_hash="sha256:manifest",
+        chunk_config_hash="sha256:chunks",
+        index_version="index-1",
+        retrieval_mode=RetrievalMode.FIXTURE,
+        retrieval_config_hash="sha256:retrieval",
+    )
+
+
+def _retrieval_with_provenance(*hits: RetrievedEvidence) -> RetrievalResult:
+    return RetrievalResult(
+        query="How does motion change?",
+        mode=RetrievalMode.FIXTURE,
+        hits=hits,
+        provenance=_provenance(),
+    )
+
+
+def _loaded_topic_map(topic_map: ChunkTopicMap) -> LoadedChunkTopicMap:
+    return LoadedChunkTopicMap(
+        topic_map=topic_map,
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+    )
+
+
+def _topic_registry() -> TopicRegistry:
+    return TopicRegistry(
+        topic_registry_version="topics-0.1",
+        topics=(
+            Topic(topic_id="mechanics", title="Mechanics"),
+            Topic(topic_id="energy", title="Energy"),
+        ),
+    )
 
 
 def test_published_question_requires_four_options_review_and_stable_anchor() -> None:
@@ -244,13 +295,7 @@ def test_v2_gold_question_uses_the_same_evidence_span_type() -> None:
 
 
 def test_topic_resolution_splits_multi_topic_chunk_weight_and_records_ties() -> None:
-    registry = TopicRegistry(
-        topic_registry_version="topics-0.1",
-        topics=(
-            Topic(topic_id="mechanics", title="Mechanics"),
-            Topic(topic_id="energy", title="Energy"),
-        ),
-    )
+    registry = _topic_registry()
     topic_map = ChunkTopicMap(
         corpus_version=CORPUS_VERSION,
         corpus_hash=CORPUS_HASH,
@@ -259,7 +304,11 @@ def test_topic_resolution_splits_multi_topic_chunk_weight_and_records_ties() -> 
             ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics", "energy")),
         ),
     )
-    resolved = resolve_topic_from_retrieval(_retrieval(_retrieved("c1", 1)), topic_map, registry)
+    resolved = resolve_topic_from_retrieval(
+        _retrieval_with_provenance(_retrieved("c1", 1)),
+        _loaded_topic_map(topic_map),
+        registry,
+    )
     assert resolved.status is TopicResolutionStatus.NO_TOPIC_AVAILABLE
     assert resolved.error_code == "TOPIC_TIE"
 
@@ -272,8 +321,8 @@ def test_topic_resolution_splits_multi_topic_chunk_weight_and_records_ties() -> 
         }
     )
     resolved = resolve_topic_from_retrieval(
-        _retrieval(_retrieved("c1", 1), _retrieved("c2", 2)),
-        topic_map,
+        _retrieval_with_provenance(_retrieved("c1", 1), _retrieved("c2", 2)),
+        _loaded_topic_map(topic_map),
         registry,
     )
     assert resolved.status is TopicResolutionStatus.RESOLVED
@@ -292,24 +341,160 @@ def test_topic_map_mismatch_is_not_silently_treated_as_no_topic() -> None:
         topic_registry_version="topics-0.1",
         assignments=(ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),),
     )
-    provenance = EvidenceProvenance(
-        corpus_version=CORPUS_VERSION,
-        corpus_hash=CORPUS_HASH,
-        manifest_hash="sha256:manifest",
-        chunk_config_hash="sha256:chunks",
-        index_version="index-1",
-        retrieval_mode=RetrievalMode.FIXTURE,
-        retrieval_config_hash="sha256:retrieval",
+    result = _retrieval_with_provenance(_retrieved("c1", 1))
+    resolved = resolve_topic_from_retrieval(
+        result,
+        _loaded_topic_map(topic_map),
+        registry,
     )
-    result = RetrievalResult(
-        query="q",
-        mode=RetrievalMode.FIXTURE,
-        hits=(_retrieved("c1", 1),),
-        provenance=provenance,
-    )
-    resolved = resolve_topic_from_retrieval(result, topic_map, registry)
     assert resolved.status is TopicResolutionStatus.TOPIC_MAP_MISMATCH
     assert resolved.error_code == "TOPIC_MAP_MISMATCH"
+
+
+def test_topic_resolution_requires_retrieval_provenance() -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),),
+    )
+
+    resolved = resolve_topic_from_retrieval(
+        _retrieval(_retrieved("c1", 1)),
+        _loaded_topic_map(topic_map),
+        _topic_registry(),
+    )
+
+    assert resolved.status is TopicResolutionStatus.TOPIC_MAP_UNAVAILABLE
+    assert resolved.error_code == "TOPIC_MAP_UNAVAILABLE"
+
+
+def test_invalid_loaded_topic_map_stays_mismatch_for_each_resolution(tmp_path: Path) -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(ChunkTopicAssignment(chunk_id="missing", topic_ids=("mechanics",)),),
+    )
+    path = tmp_path / "chunk_topic_map.json"
+    path.write_text(topic_map.model_dump_json(), encoding="utf-8")
+    loaded = load_validated_chunk_topic_map(
+        path,
+        manifest=SimpleNamespace(
+            corpus_version=CORPUS_VERSION,
+            corpus_hash=CORPUS_HASH,
+        ),
+        corpus_chunk_ids=("c1",),
+    )
+    retrieval = _retrieval_with_provenance(_retrieved("c1", 1))
+
+    assert loaded.error_code == "TOPIC_MAP_MISMATCH"
+    resolved = resolve_topic_from_retrieval(retrieval, loaded, _topic_registry())
+    assert resolved.status is TopicResolutionStatus.TOPIC_MAP_MISMATCH
+    assert resolved.error_code == "TOPIC_MAP_MISMATCH"
+
+
+def test_cited_topic_resolution_rejects_citation_outside_retrieval() -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),),
+    )
+    answer = GeneratedAnswer(
+        explanation="The answer cites an unavailable chunk.",
+        citations=("missing",),
+    )
+    validated = ValidatedAnswer(
+        answer=answer,
+        resolved_citations=("missing",),
+        citation_status="passed",
+    )
+    retrieval = _retrieval_with_provenance(_retrieved("c1", 1))
+
+    resolved = resolve_topic_from_citations(
+        retrieval,
+        validated,
+        _loaded_topic_map(topic_map),
+        _topic_registry(),
+    )
+
+    assert resolved.status is TopicResolutionStatus.NO_TOPIC_AVAILABLE
+    assert resolved.error_code == "CITATION_NOT_IN_RETRIEVAL"
+
+
+def test_cited_topic_resolution_returns_no_topic_for_refusal() -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),),
+    )
+    answer = GeneratedAnswer(
+        explanation="I cannot answer from the available evidence.",
+        abstained=True,
+    )
+    validated = ValidatedAnswer(answer=answer, citation_status="skipped")
+    retrieval = _retrieval_with_provenance(_retrieved("c1", 1))
+
+    resolved = resolve_topic_from_citations(
+        retrieval,
+        validated,
+        _loaded_topic_map(topic_map),
+        _topic_registry(),
+    )
+
+    assert resolved.status is TopicResolutionStatus.NO_TOPIC_AVAILABLE
+    assert resolved.error_code == "NO_CITATIONS"
+
+
+def test_cited_topic_resolution_uses_original_retrieval_ranks() -> None:
+    topic_map = ChunkTopicMap(
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        topic_registry_version="topics-0.1",
+        assignments=(
+            ChunkTopicAssignment(chunk_id="c1", topic_ids=("mechanics",)),
+            ChunkTopicAssignment(chunk_id="c2", topic_ids=("energy",)),
+        ),
+    )
+    answer = GeneratedAnswer(
+        explanation="The cited evidence is ordered by the answer, not retrieval.",
+        citations=("c2", "c1"),
+    )
+    validated = ValidatedAnswer(
+        answer=answer,
+        resolved_citations=("c2", "c1"),
+        citation_status="passed",
+    )
+    retrieval = _retrieval_with_provenance(
+        _retrieved("c1", 1),
+        _retrieved("c2", 2),
+    )
+
+    resolved = resolve_topic_from_citations(
+        retrieval,
+        validated,
+        _loaded_topic_map(topic_map),
+        _topic_registry(),
+    )
+
+    assert resolved.status is TopicResolutionStatus.RESOLVED
+    assert resolved.topic_id == "mechanics"
+    assert resolved.topic_support["mechanics"] == pytest.approx(2 / 3)
+
+
+def test_published_release_rejects_binding_from_another_textbook() -> None:
+    question = _question()
+    binding = ConceptCheckQuestionBinding(
+        question_id=question.question_id,
+        corpus_version=CORPUS_VERSION,
+        corpus_hash=CORPUS_HASH,
+        bindings=(_binding().model_copy(update={"textbook_id": "other-textbook"}),),
+    )
+
+    with pytest.raises(ValueError, match="textbook_id"):
+        ConceptCheckQuestionRelease(question=question, binding=binding)
 
 
 def test_snapshot_disabled_bypasses_state_and_preserves_static_profile() -> None:
@@ -397,6 +582,7 @@ def test_grade_and_event_contracts_keep_submission_deterministic() -> None:
         question_id=grade.question_id,
         topic_id="mechanics",
         question_difficulty=StudentLevel.BEGINNER,
+        topic_registry_version="topics-0.1",
         selected_choice=grade.selected_choice,
         performance=grade.performance,
         event_type=ConceptCheckEventType.ATTEMPT_SUBMITTED,
@@ -408,6 +594,74 @@ def test_grade_and_event_contracts_keep_submission_deterministic() -> None:
 
     with pytest.raises(ValueError, match="performance 1.0"):
         ConceptCheckGrade.model_validate({**grade.model_dump(), "performance": 0.5})
+
+
+def test_event_payloads_separate_revocation_target_and_level_override() -> None:
+    common = {
+        "profile_id": "student-1",
+        "topic_id": "mechanics",
+        "topic_registry_version": "topics-0.1",
+        "state_version_before": 0,
+        "stream_version": 1,
+        "created_at": datetime.now(UTC),
+        "actor": "student",
+        "reason": "The level estimate needs correction.",
+    }
+    with pytest.raises(ValueError, match="new_level"):
+        ConceptCheckEvent(
+            event_id="event-override-missing-level",
+            event_type=ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN,
+            **common,
+        )
+
+    override = ConceptCheckEvent(
+        event_id="event-override-1",
+        event_type=ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN,
+        new_level=StudentLevel.INTERMEDIATE,
+        **common,
+    )
+    assert override.attempt_id is None
+    assert override.question_id is None
+    assert override.question_difficulty is None
+
+    revoked = ConceptCheckEvent(
+        event_id="event-revoke-1",
+        profile_id="student-1",
+        topic_id="mechanics",
+        topic_registry_version="topics-0.1",
+        revoked_attempt_id="attempt-1",
+        event_type=ConceptCheckEventType.ATTEMPT_REVOKED,
+        state_version_before=1,
+        stream_version=2,
+        created_at=datetime.now(UTC),
+    )
+    assert revoked.revoked_attempt_id == "attempt-1"
+
+
+def test_disabled_pipeline_trace_requires_static_profile_and_no_resolver() -> None:
+    profile = StudentProfile(
+        profile_id="student-1",
+        level=StudentLevel.BEGINNER,
+        confidence=0.8,
+    )
+    context = build_learner_context_snapshot(profile, enabled=False)
+    valid = PipelineRun(
+        run_id="run-1",
+        environment="development",
+        corpus_version=CORPUS_VERSION,
+        concept_check_enabled=False,
+        allow_llm_generation=False,
+        allow_unreviewed_questions=False,
+        learner_context=context,
+        profile_source=ProfileSource.STATIC_PROFILE,
+        resolver_called=False,
+    )
+    assert valid.concept_check_enabled is False
+
+    invalid = valid.model_dump()
+    invalid["profile_source"] = ProfileSource.LEARNER_STATE_REPLAY
+    with pytest.raises(ValueError, match="profile_source"):
+        PipelineRun.model_validate(invalid)
 
 
 def test_evidence_bundle_requires_exact_citation_map() -> None:

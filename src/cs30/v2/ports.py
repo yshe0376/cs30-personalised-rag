@@ -19,6 +19,7 @@ from cs30.v2.contracts import (
     LearnerContextSnapshot,
     LearnerState,
     RetrievalResult,
+    StudentLevel,
     StudentProfile,
     TextbookDocument,
     TopicResolution,
@@ -155,7 +156,11 @@ class TopicResolver(Protocol):
 
     def resolve_retrieval_topic(self, retrieval: RetrievalResult) -> TopicResolution: ...
 
-    def resolve_cited_topic(self, citations: Sequence[str]) -> TopicResolution: ...
+    def resolve_cited_topic(
+        self,
+        retrieval: RetrievalResult,
+        validated: ValidatedAnswer,
+    ) -> TopicResolution: ...
 
 
 @runtime_checkable
@@ -180,9 +185,12 @@ class ConceptCheckQuestionProvider(Protocol):
         self,
         *,
         topic_id: str,
-        level: str,
+        target_levels: Sequence[StudentLevel],
+        corpus_version: str,
+        corpus_hash: str,
+        cited_chunk_ids: Sequence[str],
         excluded_question_ids: Sequence[str] = (),
-    ) -> ConceptCheckQuestion | None: ...
+    ) -> ConceptCheckQuestionRelease | None: ...
 
 
 @runtime_checkable

@@ -30,6 +30,10 @@ class ConceptCheckConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_weights(self) -> ConceptCheckConfig:
+        if self.demotion_threshold >= self.promotion_threshold:
+            raise ValueError(
+                "demotion_threshold must be less than promotion_threshold"
+            )
         for name, weights in (
             ("correct_difficulty_weights", self.correct_difficulty_weights),
             ("wrong_difficulty_weights", self.wrong_difficulty_weights),

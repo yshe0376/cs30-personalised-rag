@@ -67,6 +67,11 @@ def test_invalid_concept_check_weights_fail_closed() -> None:
         ConceptCheckConfig(correct_difficulty_weights=(0.0, 1.0, 1.0))
 
 
+def test_demotion_threshold_must_be_below_promotion_threshold() -> None:
+    with pytest.raises(ValueError, match="demotion_threshold"):
+        ConceptCheckConfig(promotion_threshold=0.5, demotion_threshold=0.5)
+
+
 def test_required_catalogue_is_still_reached_when_concept_check_is_disabled() -> None:
     config = load_v2_config("development")
     assert config.required_textbook_ids == REQUIRED_TEXTBOOK_IDS

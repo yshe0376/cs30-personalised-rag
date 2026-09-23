@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -12,10 +13,12 @@ from pydantic import Field, model_validator
 from cs30.v2.contracts.models import (
     Identifier,
     RetrievalResult,
+    RetrievedEvidence,
     TopicRegistry,
     TopicResolution,
     TopicResolutionStatus,
     V2Model,
+    ValidatedAnswer,
 )
 from cs30.v2.ids import canonical_json_bytes
 
@@ -53,6 +56,25 @@ class ChunkTopicMap(V2Model):
         return self
 
 
+TopicMapErrorCode = Literal["TOPIC_MAP_UNAVAILABLE", "TOPIC_MAP_MISMATCH"]
+
+
+@dataclass(frozen=True)
+class LoadedChunkTopicMap:
+    """A topic sidecar validated once against one published corpus identity."""
+
+    topic_map: ChunkTopicMap | None
+    corpus_version: str
+    corpus_hash: str
+    error_code: TopicMapErrorCode | None = None
+
+    def __post_init__(self) -> None:
+        if self.topic_map is None and self.error_code is None:
+            raise ValueError("an unavailable topic map must carry an error_code")
+        if self.topic_map is not None and self.error_code is not None:
+            raise ValueError("a valid topic map must not carry an error_code")
+
+
 def canonical_chunk_topic_map(topic_map: ChunkTopicMap) -> ChunkTopicMap:
     """Return deterministic assignment and topic ordering for persistence."""
 
@@ -70,9 +92,24 @@ def validate_chunk_topic_map(
 ) -> None:
     """Verify that a topic sidecar belongs to the supplied corpus."""
 
-    if topic_map.corpus_version != manifest.corpus_version:
+    _validate_chunk_topic_map_identity(
+        topic_map,
+        corpus_version=manifest.corpus_version,
+        corpus_hash=manifest.corpus_hash,
+        chunk_ids=chunk_ids,
+    )
+
+
+def _validate_chunk_topic_map_identity(
+    topic_map: ChunkTopicMap,
+    *,
+    corpus_version: str,
+    corpus_hash: str,
+    chunk_ids: Sequence[str],
+) -> None:
+    if topic_map.corpus_version != corpus_version:
         raise ValueError("topic map corpus_version does not match the manifest")
-    if topic_map.corpus_hash != manifest.corpus_hash:
+    if topic_map.corpus_hash != corpus_hash:
         raise ValueError("topic map corpus_hash does not match the manifest")
 
     corpus_chunk_ids = tuple(chunk_ids)
@@ -103,9 +140,61 @@ def load_chunk_topic_map(path: Path) -> ChunkTopicMap:
     return ChunkTopicMap.model_validate_json(path.read_text(encoding="utf-8"))
 
 
+def load_validated_chunk_topic_map(
+    path: Path,
+    *,
+    manifest: CorpusManifest,
+    corpus_chunk_ids: Sequence[str],
+) -> LoadedChunkTopicMap:
+    """Load and validate a topic map once for one corpus identity.
+
+    Missing files are unavailable.  A present but malformed or mismatched map
+    is a mismatch and remains a mismatch for every resolver call using the
+    returned value.  ``corpus_chunk_ids`` should come from the already-loaded
+    corpus/index records; this function never rescans records per query.
+    """
+
+    try:
+        topic_map = load_chunk_topic_map(path)
+    except (FileNotFoundError, OSError):
+        return LoadedChunkTopicMap(
+            topic_map=None,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            error_code="TOPIC_MAP_UNAVAILABLE",
+        )
+    except ValueError:
+        return LoadedChunkTopicMap(
+            topic_map=None,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            error_code="TOPIC_MAP_MISMATCH",
+        )
+
+    try:
+        _validate_chunk_topic_map_identity(
+            topic_map,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            chunk_ids=corpus_chunk_ids,
+        )
+    except ValueError:
+        return LoadedChunkTopicMap(
+            topic_map=None,
+            corpus_version=manifest.corpus_version,
+            corpus_hash=manifest.corpus_hash,
+            error_code="TOPIC_MAP_MISMATCH",
+        )
+    return LoadedChunkTopicMap(
+        topic_map=topic_map,
+        corpus_version=manifest.corpus_version,
+        corpus_hash=manifest.corpus_hash,
+    )
+
+
 def resolve_topic_from_retrieval(
     retrieval: RetrievalResult,
-    topic_map: ChunkTopicMap | None,
+    topic_map: LoadedChunkTopicMap | None,
     registry: TopicRegistry | None,
     *,
     min_topic_support: float = 0.5,
@@ -120,9 +209,96 @@ def resolve_topic_from_retrieval(
 
     if not 0.0 <= min_topic_support <= 1.0:
         raise ValueError("min_topic_support must be between 0 and 1")
-    if topic_map is None:
+    failure = _validate_resolution_context(retrieval, topic_map, registry)
+    if failure is not None:
+        return failure
+    assert registry is not None
+    assert topic_map.topic_map is not None
+    if not retrieval.hits:
+        return TopicResolution(
+            status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
+            error_code="NO_RETRIEVAL_HITS",
+        )
+
+    return _resolve_topic_from_hits(
+        retrieval.hits,
+        topic_map.topic_map,
+        registry,
+        min_topic_support=min_topic_support,
+        empty_error_code="NO_RETRIEVAL_HITS",
+    )
+
+
+def resolve_topic_from_citations(
+    retrieval: RetrievalResult,
+    validated: ValidatedAnswer,
+    topic_map: LoadedChunkTopicMap | None,
+    registry: TopicRegistry | None,
+    *,
+    min_topic_support: float = 0.5,
+) -> TopicResolution:
+    """Resolve a Topic from validated citations using their original ranks."""
+
+    if (
+        validated.citation_status != "passed"
+        or validated.abstained
+        or not validated.resolved_citations
+    ):
+        return TopicResolution(
+            status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
+            error_code="NO_CITATIONS",
+        )
+    failure = _validate_resolution_context(retrieval, topic_map, registry)
+    if failure is not None:
+        return failure
+    assert registry is not None
+    assert topic_map.topic_map is not None
+
+    hits_by_id = {hit.chunk_id: hit for hit in retrieval.hits}
+    missing = set(validated.resolved_citations) - set(hits_by_id)
+    if missing:
+        return TopicResolution(
+            status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
+            topic_registry_version=registry.topic_registry_version,
+            error_code="CITATION_NOT_IN_RETRIEVAL",
+        )
+    cited_ids = set(validated.resolved_citations)
+    cited_hits = tuple(hit for hit in retrieval.hits if hit.chunk_id in cited_ids)
+    return _resolve_topic_from_hits(
+        cited_hits,
+        topic_map.topic_map,
+        registry,
+        min_topic_support=min_topic_support,
+        empty_error_code="NO_CITATIONS",
+    )
+
+
+def _validate_resolution_context(
+    retrieval: RetrievalResult,
+    loaded: LoadedChunkTopicMap | None,
+    registry: TopicRegistry | None,
+) -> TopicResolution | None:
+    if loaded is None:
         return TopicResolution(
             status=TopicResolutionStatus.TOPIC_MAP_UNAVAILABLE,
+            topic_registry_version=(registry.topic_registry_version if registry else None),
+            error_code="TOPIC_MAP_UNAVAILABLE",
+        )
+    if loaded.error_code is not None:
+        status = (
+            TopicResolutionStatus.TOPIC_MAP_MISMATCH
+            if loaded.error_code == "TOPIC_MAP_MISMATCH"
+            else TopicResolutionStatus.TOPIC_MAP_UNAVAILABLE
+        )
+        return TopicResolution(
+            status=status,
+            topic_registry_version=(registry.topic_registry_version if registry else None),
+            error_code=loaded.error_code,
+        )
+    if loaded.topic_map is None:
+        return TopicResolution(
+            status=TopicResolutionStatus.TOPIC_MAP_UNAVAILABLE,
+            topic_registry_version=(registry.topic_registry_version if registry else None),
             error_code="TOPIC_MAP_UNAVAILABLE",
         )
     if registry is None:
@@ -130,23 +306,51 @@ def resolve_topic_from_retrieval(
             status=TopicResolutionStatus.TOPIC_MAP_UNAVAILABLE,
             error_code="TOPIC_REGISTRY_UNAVAILABLE",
         )
-    if retrieval.provenance is not None and (
-        topic_map.corpus_version != retrieval.provenance.corpus_version
-        or topic_map.corpus_hash != retrieval.provenance.corpus_hash
+    if (
+        loaded.topic_map.corpus_version != loaded.corpus_version
+        or loaded.topic_map.corpus_hash != loaded.corpus_hash
     ):
         return TopicResolution(
             status=TopicResolutionStatus.TOPIC_MAP_MISMATCH,
+            topic_registry_version=registry.topic_registry_version,
             error_code="TOPIC_MAP_MISMATCH",
         )
-    if topic_map.topic_registry_version != registry.topic_registry_version:
+    if retrieval.provenance is None:
+        return TopicResolution(
+            status=TopicResolutionStatus.TOPIC_MAP_UNAVAILABLE,
+            topic_registry_version=registry.topic_registry_version,
+            error_code="TOPIC_MAP_UNAVAILABLE",
+        )
+    if (
+        retrieval.provenance.corpus_version != loaded.corpus_version
+        or retrieval.provenance.corpus_hash != loaded.corpus_hash
+    ):
+        return TopicResolution(
+            status=TopicResolutionStatus.TOPIC_MAP_MISMATCH,
+            topic_registry_version=registry.topic_registry_version,
+            error_code="TOPIC_MAP_MISMATCH",
+        )
+    if loaded.topic_map.topic_registry_version != registry.topic_registry_version:
         return TopicResolution(
             status=TopicResolutionStatus.TOPIC_MAP_MISMATCH,
             error_code="TOPIC_REGISTRY_MISMATCH",
         )
-    if not retrieval.hits:
+    return None
+
+
+def _resolve_topic_from_hits(
+    hits: Sequence[RetrievedEvidence],
+    topic_map: ChunkTopicMap,
+    registry: TopicRegistry,
+    *,
+    min_topic_support: float,
+    empty_error_code: str,
+) -> TopicResolution:
+    if not hits:
         return TopicResolution(
             status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
-            error_code="NO_RETRIEVAL_HITS",
+            topic_registry_version=registry.topic_registry_version,
+            error_code=empty_error_code,
         )
 
     known_topics = {topic.topic_id for topic in registry.topics}
@@ -164,7 +368,7 @@ def resolve_topic_from_retrieval(
         assignment.chunk_id: assignment.topic_ids for assignment in topic_map.assignments
     }
     weights: dict[str, float] = {}
-    for hit in retrieval.hits:
+    for hit in hits:
         topic_ids = tuple(
             topic_id
             for topic_id in assignments.get(hit.chunk_id, ())
@@ -218,9 +422,12 @@ def resolve_topic_from_retrieval(
 __all__ = [
     "ChunkTopicAssignment",
     "ChunkTopicMap",
+    "LoadedChunkTopicMap",
     "canonical_chunk_topic_map",
     "load_chunk_topic_map",
+    "load_validated_chunk_topic_map",
     "validate_chunk_topic_map",
     "write_chunk_topic_map",
+    "resolve_topic_from_citations",
     "resolve_topic_from_retrieval",
 ]
