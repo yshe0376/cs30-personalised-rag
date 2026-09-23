@@ -1,0 +1,4133 @@
+{
+  "metrics": [
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        }
+      ],
+      "hit_rate": 0.75,
+      "lambda_weight": 0.0,
+      "mean_recall": 0.75,
+      "mean_reciprocal_rank": 0.6111111111111112
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        }
+      ],
+      "hit_rate": 0.7777777777777778,
+      "lambda_weight": 0.1,
+      "mean_recall": 0.7777777777777778,
+      "mean_reciprocal_rank": 0.5555555555555556
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        }
+      ],
+      "hit_rate": 0.7777777777777778,
+      "lambda_weight": 0.2,
+      "mean_recall": 0.7777777777777778,
+      "mean_reciprocal_rank": 0.5046296296296297
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        }
+      ],
+      "hit_rate": 0.7777777777777778,
+      "lambda_weight": 0.3,
+      "mean_recall": 0.7777777777777778,
+      "mean_reciprocal_rank": 0.4490740740740741
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        }
+      ],
+      "hit_rate": 0.6666666666666666,
+      "lambda_weight": 0.4,
+      "mean_recall": 0.6666666666666666,
+      "mean_reciprocal_rank": 0.4074074074074074
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ],
+      "hit_rate": 0.6111111111111112,
+      "lambda_weight": 0.5,
+      "mean_recall": 0.6111111111111112,
+      "mean_reciprocal_rank": 0.3888888888888889
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ],
+      "hit_rate": 0.5833333333333334,
+      "lambda_weight": 0.6,
+      "mean_recall": 0.5833333333333334,
+      "mean_reciprocal_rank": 0.3564814814814815
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ],
+      "hit_rate": 0.5833333333333334,
+      "lambda_weight": 0.7,
+      "mean_recall": 0.5833333333333334,
+      "mean_reciprocal_rank": 0.3287037037037037
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ],
+      "hit_rate": 0.5833333333333334,
+      "lambda_weight": 0.8,
+      "mean_recall": 0.5833333333333334,
+      "mean_reciprocal_rank": 0.3287037037037037
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": 3,
+          "hit": 1.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 0.3333333333333333
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ],
+      "hit_rate": 0.4166666666666667,
+      "lambda_weight": 0.9,
+      "mean_recall": 0.4166666666666667,
+      "mean_reciprocal_rank": 0.27314814814814814
+    },
+    {
+      "cases": [
+        {
+          "case_id": "sciq-test-00536:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00536",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00536",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00536:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00536",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00246:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00246",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00246:member7-intermediate",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00246",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00246:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00246",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00333",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00333",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00333:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00333",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00116",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00116",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00116:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00116",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00401",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00401:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00401:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00401",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00614:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00614",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00315",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00315",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00315:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00315",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00620:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00620",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00068",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00068:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00068:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00068",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-beginner",
+          "first_relevant_rank": 2,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00024",
+          "recall": 1.0,
+          "reciprocal_rank": 0.5
+        },
+        {
+          "case_id": "sciq-test-00024:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00024:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00024",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-beginner",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00432",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-intermediate",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00432",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00432:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00432",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-beginner",
+          "first_relevant_rank": 1,
+          "hit": 1.0,
+          "level": "beginner",
+          "profile_id": "member7-beginner",
+          "question_id": "sciq-test-00955",
+          "recall": 1.0,
+          "reciprocal_rank": 1.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-intermediate",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "intermediate",
+          "profile_id": "member7-intermediate",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        },
+        {
+          "case_id": "sciq-test-00955:member7-advanced",
+          "first_relevant_rank": null,
+          "hit": 0.0,
+          "level": "advanced",
+          "profile_id": "member7-advanced",
+          "question_id": "sciq-test-00955",
+          "recall": 0.0,
+          "reciprocal_rank": 0.0
+        }
+      ],
+      "hit_rate": 0.2777777777777778,
+      "lambda_weight": 1.0,
+      "mean_recall": 0.2777777777777778,
+      "mean_reciprocal_rank": 0.2222222222222222
+    }
+  ],
+  "result_type": "member7_lambda_dev_search",
+  "role_label_coverage": {
+    "complete": false,
+    "coverage_ratio": 0.2,
+    "interpretation_status": "not_interpretable",
+    "labeled_candidate_count": 12,
+    "labeled_unique_chunk_count": 10,
+    "total_candidate_count": 60,
+    "total_unique_chunk_count": 55,
+    "warning": "Role-label coverage is incomplete; lambda and personalisation-effect metrics are engineering diagnostics only and are not interpretable."
+  },
+  "schema_version": "1.0",
+  "selected_config": {
+    "candidate_lambdas": [
+      0.0,
+      0.1,
+      0.2,
+      0.3,
+      0.4,
+      0.5,
+      0.6,
+      0.7,
+      0.8,
+      0.9,
+      1.0
+    ],
+    "cases_sha256": "132965e391b9c9e1557425d208245657889d32d1aa628f23e4002c739392850c",
+    "config_id": "member7-lambda-64549133b9c5edbf",
+    "dev_case_ids": [
+      "sciq-test-00024:member7-advanced",
+      "sciq-test-00024:member7-beginner",
+      "sciq-test-00024:member7-intermediate",
+      "sciq-test-00068:member7-advanced",
+      "sciq-test-00068:member7-beginner",
+      "sciq-test-00068:member7-intermediate",
+      "sciq-test-00116:member7-advanced",
+      "sciq-test-00116:member7-beginner",
+      "sciq-test-00116:member7-intermediate",
+      "sciq-test-00246:member7-advanced",
+      "sciq-test-00246:member7-beginner",
+      "sciq-test-00246:member7-intermediate",
+      "sciq-test-00315:member7-advanced",
+      "sciq-test-00315:member7-beginner",
+      "sciq-test-00315:member7-intermediate",
+      "sciq-test-00333:member7-advanced",
+      "sciq-test-00333:member7-beginner",
+      "sciq-test-00333:member7-intermediate",
+      "sciq-test-00401:member7-advanced",
+      "sciq-test-00401:member7-beginner",
+      "sciq-test-00401:member7-intermediate",
+      "sciq-test-00432:member7-advanced",
+      "sciq-test-00432:member7-beginner",
+      "sciq-test-00432:member7-intermediate",
+      "sciq-test-00536:member7-advanced",
+      "sciq-test-00536:member7-beginner",
+      "sciq-test-00536:member7-intermediate",
+      "sciq-test-00614:member7-advanced",
+      "sciq-test-00614:member7-beginner",
+      "sciq-test-00614:member7-intermediate",
+      "sciq-test-00620:member7-advanced",
+      "sciq-test-00620:member7-beginner",
+      "sciq-test-00620:member7-intermediate",
+      "sciq-test-00955:member7-advanced",
+      "sciq-test-00955:member7-beginner",
+      "sciq-test-00955:member7-intermediate"
+    ],
+    "input_status": "provisional",
+    "lambda_weight": 0.0,
+    "metric_k": 3,
+    "objective": "mean_reciprocal_rank@3",
+    "parameter_source": "dev",
+    "reportable": false,
+    "role_labels_sha256": "d4f9a40bd00829b3663467af29b1d03f47f8ad45fca74650f004d86e8ae97c33",
+    "schema_version": "1.0",
+    "selected_on_split": "dev",
+    "selection_rule": "max_mrr_then_hit_rate_then_recall_then_smallest_lambda",
+    "selection_status": "provisional",
+    "split_manifest_sha256": null,
+    "taxonomy_status": "frozen",
+    "taxonomy_version": "evidence-role-v1"
+  }
+}
