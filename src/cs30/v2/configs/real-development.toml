@@ -13,7 +13,8 @@ required_textbook_ids = [
 output_dir = "artifacts/v2/textbooks/2.0.0-dev.1-real"
 # The frozen chunk ruler: chunk sizes are counted with this tokenizer even when
 # another embedding model is being compared, so a model swap never re-chunks.
-chunk_config = { tokenizer_name = "Alibaba-NLP/gte-modernbert-base" }
+# It is chosen separately from embedding_model below.
+chunk_config = { tokenizer_name = "google-bert/bert-base-uncased", tokenizer_revision = "86b5e0934494bd15c9632b12f734a8a67f723594" }
 # Where scripts/install_v2_sources.py puts the pinned PDFs.
 sources_dir = "data/raw/v2"
 embedding_model = "Alibaba-NLP/gte-modernbert-base"
