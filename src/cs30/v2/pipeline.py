@@ -144,6 +144,7 @@ def parse_material_batch(
                 )
             )
             continue
+        parsed = input.source_format == "parsed"
         if require_source_hash and not input.expected_source_sha256:
             failures.append(
                 _failure(
@@ -154,20 +155,36 @@ def parse_material_batch(
                 )
             )
             continue
+        if require_source_hash and parsed and not input.expected_parsed_sha256:
+            failures.append(
+                _failure(
+                    input,
+                    stage="input",
+                    code="SOURCE_HASH_NOT_PINNED",
+                    error=ValueError(
+                        "official builds from a parsed delivery require its SHA-256"
+                    ),
+                )
+            )
+            continue
         try:
             actual_hash = sha256_file(input.source_path)
         except OSError as exc:
             failures.append(_failure(input, stage="input", code="INPUT_NOT_FOUND", error=exc))
             continue
-        if input.expected_source_sha256 and actual_hash != input.expected_source_sha256:
+        # A parsed delivery is pinned by its own hash. The document it yields
+        # must still name the pinned raw source, which is then never hashed here.
+        expected_file_hash = (
+            input.expected_parsed_sha256 if parsed else input.expected_source_sha256
+        )
+        expected_raw_hash = input.expected_source_sha256 if parsed else actual_hash
+        if expected_file_hash and actual_hash != expected_file_hash:
             failures.append(
                 _failure(
                     input,
                     stage="input",
                     code="SOURCE_HASH_MISMATCH",
-                    error=ValueError(
-                        f"expected {input.expected_source_sha256}, received {actual_hash}"
-                    ),
+                    error=ValueError(f"expected {expected_file_hash}, received {actual_hash}"),
                 )
             )
             continue
@@ -212,9 +229,10 @@ def parse_material_batch(
                     "parser source identity does not match TextbookInput",
                     code="ASSET_VERSION_MISMATCH",
                 )
-            if document.raw_source_sha256 != actual_hash:
+            if expected_raw_hash and document.raw_source_sha256 != expected_raw_hash:
                 raise ContractError(
-                    "document raw_source_sha256 does not match the input file",
+                    "document raw_source_sha256 does not match "
+                    + ("the pinned raw source" if parsed else "the input file"),
                     code="HASH_MISMATCH",
                 )
             if document.document_id in seen_document_ids:

@@ -1,17 +1,21 @@
-"""Install the pinned v2 textbook PDFs from a GitHub Release, or from a folder.
+"""Install the pinned v2 textbook sources from a GitHub Release, or from disk.
 
-The catalogue already pins each book's PDF SHA-256, so this module never needs a
-second list of hashes: it downloads (or copies) a file, hashes it while reading,
-and only then puts it in place under its canonical name.  A local file with
-different content is never overwritten, and a mismatching download is deleted
-instead of installed.
+Real builds read M2's parsed delivery: one ``openstax_document.json`` per book,
+taken from the archive on M2's Release.  The pinned PDFs themselves are only
+needed to re-parse from source.  The catalogue already pins every file's
+SHA-256, so this module never needs a second list of hashes: it downloads (or
+copies) a file, hashes it while reading, and only then puts it in place under
+its canonical name.  A local file with different content is never overwritten,
+and a mismatching file is deleted instead of installed.
 """
 
 from __future__ import annotations
 
 import os
+import shutil
 import urllib.error
 import urllib.request
+import zipfile
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from contextlib import closing
 from dataclasses import dataclass
@@ -25,6 +29,21 @@ from cs30.v2.ids import sha256_file
 RELEASE_REPOSITORY = "yshe0376/cs30-personalised-rag"
 DEFAULT_RELEASE_TAG = "v2-sources-openstax-v1"
 DEFAULT_DESTINATION = Path("data/raw/v2")
+
+# M2's parsed delivery.  The _r1 archive differs from M2's original upload only
+# in its test file; every openstax_document.json is byte-identical.
+PARSED_RELEASE_TAG = "M2_data_ingestion"
+PARSED_ARCHIVE_NAME = "openstax_parser_v1_3_2_r1.zip"
+PARSED_ARCHIVE_MEMBERS: dict[str, str] = {
+    "openstax_college_physics_2e": (
+        "openstax_parser_v1_3_2/college_output/openstax_document.json"
+    ),
+    "openstax_physics": "openstax_parser_v1_3_2/physics_output/openstax_document.json",
+    "openstax_college_physics_ap_2e": (
+        "openstax_parser_v1_3_2/ap_output/openstax_document.json"
+    ),
+}
+DEFAULT_PARSED_DESTINATION = Path("data/parsed/v2")
 _READ_CHUNK = 1024 * 1024
 _TIMEOUT_SECONDS = 120
 
@@ -59,14 +78,39 @@ def asset_url(textbook_id: str, *, tag: str = DEFAULT_RELEASE_TAG) -> str:
     )
 
 
+def parsed_file_name(textbook_id: str) -> str:
+    """The local file name of M2's parsed delivery for one textbook."""
+
+    return f"{textbook_id}.json"
+
+
+def parsed_archive_url(
+    *, tag: str = PARSED_RELEASE_TAG, archive_name: str = PARSED_ARCHIVE_NAME
+) -> str:
+    return f"https://github.com/{RELEASE_REPOSITORY}/releases/download/{tag}/{archive_name}"
+
+
 def pinned_sources(
     textbook_ids: Sequence[str] = REQUIRED_TEXTBOOK_IDS,
 ) -> dict[str, str]:
-    """Return ``{textbook_id: hex sha256}`` for every book the catalogue pins."""
+    """Return ``{textbook_id: hex sha256}`` for every book whose PDF is pinned."""
 
     pins: dict[str, str] = {}
     for textbook_id in textbook_ids:
         expected = get_textbook_spec(textbook_id).expected_source_sha256
+        if expected:
+            pins[textbook_id] = expected.removeprefix("sha256:")
+    return pins
+
+
+def pinned_parsed_sources(
+    textbook_ids: Sequence[str] = REQUIRED_TEXTBOOK_IDS,
+) -> dict[str, str]:
+    """Return ``{textbook_id: hex sha256}`` for every book whose parse is pinned."""
+
+    pins: dict[str, str] = {}
+    for textbook_id in textbook_ids:
+        expected = get_textbook_spec(textbook_id).expected_parsed_sha256
         if expected:
             pins[textbook_id] = expected.removeprefix("sha256:")
     return pins
@@ -93,9 +137,10 @@ def _install_stream(
     expected_sha256: str,
     destination: Path,
     description: str,
+    file_name: str | None = None,
 ) -> InstalledSource:
     destination.mkdir(parents=True, exist_ok=True)
-    target = destination / asset_name(textbook_id)
+    target = destination / (file_name or asset_name(textbook_id))
     partial = destination / f".{target.name}.part"
     try:
         with partial.open("wb") as handle:
@@ -120,16 +165,19 @@ def _install_stream(
 
 
 def _already_installed(
-    textbook_id: str, expected_sha256: str, destination: Path
+    textbook_id: str,
+    expected_sha256: str,
+    destination: Path,
+    file_name: str | None = None,
 ) -> InstalledSource | None:
-    target = destination / asset_name(textbook_id)
+    target = destination / (file_name or asset_name(textbook_id))
     if not target.is_file():
         return None
     present = _hex_digest(target)
     if present != expected_sha256:
         raise SourceInstallError(
             f"{textbook_id}: {target} already exists with SHA-256 {present}; "
-            "refusing to overwrite it. Move it aside if it is not the pinned PDF.",
+            "refusing to overwrite it. Move it aside if it is not the pinned file.",
             code="LOCAL_FILE_DIFFERS",
         )
     return InstalledSource(
@@ -246,6 +294,120 @@ def missing_sources(
     missing: list[str] = []
     for textbook_id, expected in sorted(resolved.items()):
         target = destination / asset_name(textbook_id)
+        if not target.is_file() or _hex_digest(target) != expected:
+            missing.append(textbook_id)
+    return missing
+
+
+def _resolved_parsed_pins(pins: Mapping[str, str] | None) -> dict[str, str]:
+    resolved = dict(pins) if pins is not None else pinned_parsed_sources()
+    if not resolved:
+        raise SourceInstallError(
+            "the catalogue pins no parsed sources yet", code="NO_PINNED_SOURCES"
+        )
+    return resolved
+
+
+def install_parsed_from_archive(
+    archive: Path,
+    destination: Path = DEFAULT_PARSED_DESTINATION,
+    *,
+    pins: Mapping[str, str] | None = None,
+    members: Mapping[str, str] = PARSED_ARCHIVE_MEMBERS,
+) -> list[InstalledSource]:
+    """Install each pinned book's parse from a copy of M2's delivery archive."""
+
+    resolved = _resolved_parsed_pins(pins)
+    if not archive.is_file():
+        raise SourceInstallError(
+            f"not a file: {archive}", code="SOURCE_ARCHIVE_NOT_FOUND"
+        )
+    results: list[InstalledSource] = []
+    try:
+        with zipfile.ZipFile(archive) as bundle:
+            for textbook_id, expected in sorted(resolved.items()):
+                file_name = parsed_file_name(textbook_id)
+                existing = _already_installed(textbook_id, expected, destination, file_name)
+                if existing is not None:
+                    results.append(existing)
+                    continue
+                member = members.get(textbook_id)
+                if member is None or member not in bundle.namelist():
+                    raise SourceInstallError(
+                        f"{textbook_id}: {archive.name} has no member "
+                        f"{member or '(none is known for this textbook)'}",
+                        code="ARCHIVE_MEMBER_MISSING",
+                    )
+                with bundle.open(member) as stream:
+                    results.append(
+                        _install_stream(
+                            stream,
+                            textbook_id=textbook_id,
+                            expected_sha256=expected,
+                            destination=destination,
+                            description=f"{archive.name}:{member}",
+                            file_name=file_name,
+                        )
+                    )
+    except zipfile.BadZipFile as exc:
+        raise SourceInstallError(
+            f"not a valid zip archive: {archive}", code="SOURCE_ARCHIVE_INVALID"
+        ) from exc
+    return results
+
+
+def install_parsed_from_release(
+    destination: Path = DEFAULT_PARSED_DESTINATION,
+    *,
+    tag: str = PARSED_RELEASE_TAG,
+    archive_name: str = PARSED_ARCHIVE_NAME,
+    pins: Mapping[str, str] | None = None,
+    members: Mapping[str, str] = PARSED_ARCHIVE_MEMBERS,
+    opener: Opener = _default_opener,
+) -> list[InstalledSource]:
+    """Download M2's delivery archive once and install every pinned book's parse.
+
+    The archive itself is not pinned: each file taken from it is, and the
+    download is deleted afterwards.
+    """
+
+    resolved = _resolved_parsed_pins(pins)
+    existing = [
+        _already_installed(textbook_id, expected, destination, parsed_file_name(textbook_id))
+        for textbook_id, expected in sorted(resolved.items())
+    ]
+    if all(source is not None for source in existing):
+        return [source for source in existing if source is not None]
+
+    destination.mkdir(parents=True, exist_ok=True)
+    download = destination / f".{archive_name}.part"
+    url = parsed_archive_url(tag=tag, archive_name=archive_name)
+    try:
+        try:
+            with closing(opener(url)) as stream, download.open("wb") as handle:
+                shutil.copyfileobj(stream, handle, _READ_CHUNK)
+        except urllib.error.URLError as exc:
+            raise SourceInstallError(
+                f"cannot download {url}: {exc}", code="SOURCE_DOWNLOAD_FAILED"
+            ) from exc
+        return install_parsed_from_archive(
+            download, destination, pins=resolved, members=members
+        )
+    finally:
+        download.unlink(missing_ok=True)
+
+
+def missing_parsed_sources(
+    destination: Path = DEFAULT_PARSED_DESTINATION,
+    *,
+    pins: Mapping[str, str] | None = None,
+) -> list[str]:
+    """Pinned textbooks whose parse is not installed with the pinned content."""
+
+    resolved = dict(pins) if pins is not None else pinned_parsed_sources()
+    missing: list[str] = []
+    for textbook_id, expected in sorted(resolved.items()):
+        target = destination / parsed_file_name(textbook_id)
         if not target.is_file() or _hex_digest(target) != expected:
             missing.append(textbook_id)
     return missing

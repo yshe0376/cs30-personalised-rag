@@ -18,6 +18,7 @@ build/
 
 # Runtime outputs and large artifacts
 data/raw/*
+data/parsed/
 data/private/
 data/processed/
 models/
