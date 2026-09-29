@@ -17,14 +17,19 @@ class TextbookSpec:
     parser_name: str
     selected_chapters: tuple[str, ...] = ()
     expected_source_sha256: str | None = None
+    # SHA-256 of M2's delivered parse of that source (openstax_document.json
+    # for OpenStax), which real builds read instead of re-parsing the PDF.
+    expected_parsed_sha256: str | None = None
     enabled: bool = False
 
 
 # M1 freezes the set; the number of books is whatever this tuple holds, not a
 # fixed three.  Every entry is pinned to the exact PDF that M2's OpenStax
 # parser 1.3.2 was validated against, so an official build cannot silently read
-# another printing.  Licences follow OpenStax's CC BY 4.0 and are re-checked
-# against each PDF's licence page before the first official build.
+# another printing.  Real builds read M2's parse of that PDF from the Release
+# M2_data_ingestion, pinned by expected_parsed_sha256.  Licences follow
+# OpenStax's CC BY 4.0 and are re-checked against each PDF's licence page before
+# the first official build.
 REQUIRED_TEXTBOOK_IDS: tuple[str, ...] = (
     "openstax_college_physics_2e",
     "openstax_physics",
@@ -50,6 +55,9 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         expected_source_sha256=(
             "sha256:a052d9fae2a90e135a74d70c001a78bb49b83280be58191e108d5de577699bb6"
         ),
+        expected_parsed_sha256=(
+            "sha256:548281102331a1ecfac3ff928ac98dfdb2bbec748cc73dcd89513c555c8f58da"
+        ),
         enabled=True,
     ),
     "openstax_physics": TextbookSpec(
@@ -64,6 +72,9 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         selected_chapters=tuple(str(chapter) for chapter in range(1, 24)),
         expected_source_sha256=(
             "sha256:a3f75487411ef13d0270c65fc801ceff2b28e6b339afed9b407fe477f7e8453e"
+        ),
+        expected_parsed_sha256=(
+            "sha256:16e3414de0ec4e798dd01c4a24a768d0729cbb1d52972767a9697649a1b69e63"
         ),
         enabled=True,
     ),
@@ -81,6 +92,9 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         selected_chapters=tuple(str(chapter) for chapter in range(1, 35)),
         expected_source_sha256=(
             "sha256:de438d7a0ed13339340d3e6bb93346920ef146c99e1275e8c84ba476555943d7"
+        ),
+        expected_parsed_sha256=(
+            "sha256:be096dc24ef5dccad587e7222a522efaf7b98c4dd4f77ef2b6cc989647322746"
         ),
         enabled=True,
     ),

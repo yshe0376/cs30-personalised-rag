@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
-from cs30.v2.cli import _real_build
+from cs30.v2.cli import _config_with_overrides, _real_build, build_parser
 from cs30.v2.config import V2Config, load_v2_config
 from cs30.v2.errors import InputError
 
@@ -77,7 +77,7 @@ def test_cli_official_stops_on_the_fixture_chunker_until_m4_provides_one(
     assert not output_dir.exists()
 
 
-def test_real_build_reads_pinned_pdfs_and_configures_the_index(tmp_path: Path) -> None:
+def test_real_build_reads_m2_parsed_json_and_configures_the_index(tmp_path: Path) -> None:
     config = V2Config.model_validate(
         {
             **load_v2_config("real-development").model_dump(),
@@ -92,19 +92,63 @@ def test_real_build_reads_pinned_pdfs_and_configures_the_index(tmp_path: Path) -
 
     assert [input.textbook_id for input in inputs] == list(REQUIRED_TEXTBOOK_IDS)
     assert [input.source_path for input in inputs] == [
-        tmp_path / "sources" / f"{textbook_id}.pdf"
+        tmp_path / "sources" / f"{textbook_id}.json"
         for textbook_id in REQUIRED_TEXTBOOK_IDS
     ]
-    # Real builds carry the catalogue's pins and chapter selection.
+    # Real builds carry the catalogue's pins and chapter selection: the parse
+    # is pinned by its own hash and must still name the pinned PDF.
+    assert {input.source_format for input in inputs} == {"parsed"}
+    assert all(input.expected_parsed_sha256 for input in inputs)
     assert all(input.expected_source_sha256 for input in inputs)
     assert inputs[0].selected_chapters == tuple(str(n) for n in range(1, 35))
     assert type(deps.parser_registry.parser_for(REQUIRED_TEXTBOOK_IDS[0])).__name__ == (
-        "OpenStaxPdfParser"
+        "OpenStaxParsedParser"
     )
     assert deps.index_builder is not None
     assert deps.index_builder.batch_size == 8
     # The model is only named here; it is loaded on the first build.
     assert deps.index_builder._encoder is None
+
+
+def test_real_build_can_still_reparse_the_pinned_pdfs(tmp_path: Path) -> None:
+    config = V2Config.model_validate(
+        {
+            **load_v2_config("real-development").model_dump(),
+            "source_format": "raw",
+            "output_dir": tmp_path / "artifacts" / "v2" / "real-raw",
+        }
+    )
+
+    inputs, deps = _real_build(config, [])
+
+    # Without an explicit sources_dir each format reads its install directory.
+    assert [input.source_path for input in inputs] == [
+        Path("data/raw/v2") / f"{textbook_id}.pdf" for textbook_id in REQUIRED_TEXTBOOK_IDS
+    ]
+    assert {input.source_format for input in inputs} == {"raw"}
+    assert not any(input.expected_parsed_sha256 for input in inputs)
+    assert type(deps.parser_registry.parser_for(REQUIRED_TEXTBOOK_IDS[0])).__name__ == (
+        "OpenStaxPdfParser"
+    )
+
+
+def test_real_profiles_read_the_parsed_install_directory() -> None:
+    for profile in ("real-development", "staging"):
+        config = load_v2_config(profile)
+
+        assert config.source_format == "parsed"
+        assert config.resolved_sources_dir == Path("data/parsed/v2")
+
+
+def test_cli_source_format_overrides_the_profile() -> None:
+    args = build_parser().parse_args(
+        ["--config", "real-development", "--source-format", "raw"]
+    )
+
+    config = _config_with_overrides(args)
+
+    assert config.source_format == "raw"
+    assert config.resolved_sources_dir == Path("data/raw/v2")
 
 
 def test_real_build_without_an_embedding_model_configures_no_index(tmp_path: Path) -> None:

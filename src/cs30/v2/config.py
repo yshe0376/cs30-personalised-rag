@@ -10,6 +10,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
+from cs30.v2.sources import DEFAULT_DESTINATION, DEFAULT_PARSED_DESTINATION
 
 
 class ConceptCheckConfig(BaseModel):
@@ -78,8 +79,11 @@ class V2Config(BaseModel):
     output_dir: Path
     fixture_mode: bool = False
     chunk_config: dict[str, str] = Field(default_factory=dict)
-    # Where `scripts/install_v2_sources.py` puts the pinned textbook PDFs.
-    sources_dir: Path = Path("data/raw/v2")
+    # Real builds read M2's parsed delivery ("parsed") or re-parse the pinned
+    # PDFs ("raw"). Unless sources_dir is set, each reads the directory where
+    # `scripts/install_v2_sources.py` installs that format.
+    source_format: Literal["raw", "parsed"] = "raw"
+    sources_dir: Path | None = None
     # No model configured means no index: an official build then stops with
     # INDEX_BUILDER_NOT_CONFIGURED instead of publishing a corpus without one.
     embedding_model: str | None = None
@@ -114,6 +118,14 @@ class V2Config(BaseModel):
     @property
     def index_dir(self) -> Path:
         return self.output_dir / "index"
+
+    @property
+    def resolved_sources_dir(self) -> Path:
+        if self.sources_dir is not None:
+            return self.sources_dir
+        if self.source_format == "parsed":
+            return DEFAULT_PARSED_DESTINATION
+        return DEFAULT_DESTINATION
 
 
 def _config_path(profile: str, config_dir: Path | None = None) -> Path:

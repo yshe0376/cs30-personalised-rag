@@ -3,19 +3,24 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 from test_v2_contracts import make_document
+from test_v2_ingest_openstax import make_payload
 
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS, get_textbook_spec
 from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.contracts import IndexArtifact, TextbookDocument
 from cs30.v2.corpus import load_duplicate_report
 from cs30.v2.errors import BuildGateError, ContractError, InputError, PublishConflictError
-from cs30.v2.ids import sha256_text
+from cs30.v2.ids import sha256_file, sha256_text
+from cs30.v2.ingest import OpenStaxParsedParser
 from cs30.v2.pipeline import (
     BuildDeps,
+    MappingParserRegistry,
     MultiTextbookBuildSpec,
     chunk_material_batch,
     parse_material_batch,
@@ -185,6 +190,78 @@ def test_parse_batch_rejects_source_hash_mismatch_before_parser(tmp_path: Path) 
 
     assert report.documents == ()
     assert report.failures[0].error_code == "SOURCE_HASH_MISMATCH"
+
+
+PARSED_ID = "openstax_college_physics_2e"
+
+
+def make_parsed_input(
+    tmp_path: Path, payload: dict[str, Any], **overrides: Any
+) -> tuple[TextbookInput, MappingParserRegistry]:
+    spec = get_textbook_spec(PARSED_ID)
+    source = tmp_path / f"{PARSED_ID}.json"
+    source.write_text(json.dumps(payload), encoding="utf-8")
+    input = TextbookInput(
+        textbook_id=PARSED_ID,
+        source_path=source,
+        source_name=spec.source_name,
+        source_version=spec.source_version,
+        source_uri=spec.source_uri,
+        selected_chapters=("1",),
+        expected_source_sha256=spec.expected_source_sha256,
+        source_format="parsed",
+        expected_parsed_sha256=sha256_file(source),
+    )
+    registry = MappingParserRegistry({PARSED_ID: OpenStaxParsedParser(spec)})
+    return replace(input, **overrides), registry
+
+
+def test_a_parsed_delivery_is_pinned_by_its_own_hash_and_names_the_pinned_pdf(
+    tmp_path: Path,
+) -> None:
+    input, registry = make_parsed_input(tmp_path, make_payload())
+
+    report = parse_material_batch((input,), registry, require_source_hash=True)
+
+    assert report.failures == ()
+    # The JSON file's own hash differs from the PDF hash the document carries.
+    assert input.expected_parsed_sha256 != input.expected_source_sha256
+    assert report.documents[0].raw_source_sha256 == input.expected_source_sha256
+
+
+def test_a_parsed_delivery_that_differs_from_its_pin_is_rejected(tmp_path: Path) -> None:
+    input, registry = make_parsed_input(
+        tmp_path, make_payload(), expected_parsed_sha256="sha256:" + "0" * 64
+    )
+
+    report = parse_material_batch((input,), registry)
+
+    assert report.documents == ()
+    assert report.failures[0].error_code == "SOURCE_HASH_MISMATCH"
+
+
+def test_a_parsed_delivery_of_another_pdf_is_rejected(tmp_path: Path) -> None:
+    other_pdf = "b" * 64
+    payload = make_payload(
+        document_hash=other_pdf, document_id="openstax-cp2e-" + other_pdf[:16]
+    )
+    input, registry = make_parsed_input(tmp_path, payload)
+
+    report = parse_material_batch((input,), registry)
+
+    assert report.documents == ()
+    assert report.failures[0].error_code == "HASH_MISMATCH"
+
+
+def test_official_builds_require_the_parsed_delivery_to_be_pinned(tmp_path: Path) -> None:
+    input, registry = make_parsed_input(
+        tmp_path, make_payload(), expected_parsed_sha256=None
+    )
+
+    report = parse_material_batch((input,), registry, require_source_hash=True)
+
+    assert report.documents == ()
+    assert report.failures[0].error_code == "SOURCE_HASH_NOT_PINNED"
 
 
 def test_parse_batch_rejects_a_local_filename_as_source_name(tmp_path: Path) -> None:

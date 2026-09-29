@@ -12,9 +12,11 @@ import pytest
 
 from cs30.v2.catalog import get_textbook_spec
 from cs30.v2.contracts import ContentType
-from cs30.v2.errors import ContractError, InputError
+from cs30.v2.errors import ContractError, InputError, ParseError
+from cs30.v2.ids import sha256_file
 from cs30.v2.ingest import (
     ADAPTER_VERSION,
+    OpenStaxParsedParser,
     OpenStaxPdfParser,
     build_parser_registry,
     openstax_payload_to_document,
@@ -183,6 +185,54 @@ def test_a_non_pdf_source_is_an_input_error(tmp_path: Path) -> None:
     assert exc_info.value.code == "UNSUPPORTED_SOURCE_FORMAT"
 
 
+def parse_delivered(tmp_path: Path, content: str, *, name: str = "book.json") -> Any:
+    source = tmp_path / name
+    source.write_text(content, encoding="utf-8")
+    parser = OpenStaxParsedParser(get_textbook_spec(TEXTBOOK_ID))
+    return parser.parse(replace(make_input(), source_path=source, source_format="parsed"))
+
+
+def test_m2_delivered_json_gives_the_same_document_as_its_payload(tmp_path: Path) -> None:
+    document = parse_delivered(tmp_path, json.dumps(make_payload()))
+
+    # Identical to converting the same payload after a PDF re-parse, so both
+    # routes produce the same document and chunk IDs.
+    assert document == convert()
+    assert document.raw_source_sha256 == "sha256:" + PDF_SHA256
+
+
+@pytest.mark.parametrize(
+    ("name", "content", "error", "code"),
+    [
+        ("book.pdf", "{}", InputError, "UNSUPPORTED_SOURCE_FORMAT"),
+        ("book.json", "{not json", ParseError, "PARSER_OUTPUT_INVALID"),
+        ("book.json", "[]", ContractError, "PARSER_OUTPUT_INVALID"),
+    ],
+)
+def test_unusable_m2_json_files_are_rejected(
+    tmp_path: Path, name: str, content: str, error: type[Exception], code: str
+) -> None:
+    with pytest.raises(error) as exc_info:
+        parse_delivered(tmp_path, content, name=name)
+
+    assert exc_info.value.code == code
+
+
+def test_m2_json_whose_document_id_breaks_m2s_rule_is_rejected(tmp_path: Path) -> None:
+    payload = make_payload(document_id="openstax-cp2e-renamed")
+
+    with pytest.raises(ContractError) as exc_info:
+        parse_delivered(tmp_path, json.dumps(payload))
+
+    assert exc_info.value.code == "ASSET_VERSION_MISMATCH"
+
+
+def test_the_parsed_format_registers_the_json_reader() -> None:
+    registry = build_parser_registry(("openstax_physics",), source_format="parsed")
+
+    assert isinstance(registry.parser_for("openstax_physics"), OpenStaxParsedParser)
+
+
 def test_only_textbooks_with_a_real_parser_are_registered(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -225,12 +275,16 @@ def test_m2_delivered_output_converts_and_matches_its_catalogue_pin() -> None:
         "ap_output": "openstax_college_physics_ap_2e",
     }
     for folder, textbook_id in folders.items():
-        payload = json.loads(
-            (root / folder / "openstax_document.json").read_text(encoding="utf-8")
-        )
+        delivered = root / folder / "openstax_document.json"
         spec = get_textbook_spec(textbook_id)
-        document = openstax_payload_to_document(
-            payload, spec=spec, input=make_input(textbook_id, spec.selected_chapters)
+        # Real builds read exactly these files, so the catalogue pins them.
+        assert sha256_file(delivered) == spec.expected_parsed_sha256
+        document = OpenStaxParsedParser(spec).parse(
+            replace(
+                make_input(textbook_id, spec.selected_chapters),
+                source_path=delivered,
+                source_format="parsed",
+            )
         )
         assert document.raw_source_sha256 == spec.expected_source_sha256
         assert document.selected_chapters == spec.selected_chapters

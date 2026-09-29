@@ -37,6 +37,11 @@ class TextbookInput:
     source_uri: str | None = None
     selected_chapters: tuple[str, ...] = ()
     expected_source_sha256: str | None = None
+    # "parsed": source_path is a parser's delivered output, not the raw file.
+    # expected_parsed_sha256 then pins that file, while expected_source_sha256
+    # still pins the raw source the document must say it was parsed from.
+    source_format: Literal["raw", "parsed"] = "raw"
+    expected_parsed_sha256: str | None = None
 
 
 @dataclass(frozen=True)
