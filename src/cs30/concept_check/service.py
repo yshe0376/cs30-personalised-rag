@@ -44,6 +44,8 @@ class ConceptCheckService:
         event_store: ConceptCheckEventStore,
         replayer: EventReplayer,
     ) -> None:
+        if config.allow_unreviewed_questions:
+            raise ValueError("allow_unreviewed_questions is not supported by this runtime")
         self.config = config
         self.resolver = resolver
         self.provider = provider
@@ -59,6 +61,8 @@ class ConceptCheckService:
                 snapshot=build_learner_context_snapshot(static_profile, enabled=False),
                 retrieval_topic=None,
             )
+        if static_profile != self.replayer.static_profile:
+            raise ValueError("prepare static_profile must match the replayer's static profile")
         state = self.replayer.replay(self.event_store.events(static_profile.profile_id))
         resolution = self.resolver.resolve_retrieval_topic(retrieval)
         if (
@@ -100,13 +104,14 @@ class ConceptCheckService:
         topic_id = cited_topic.topic_id
         if topic_id is None:
             return None
-        state = self.replayer.replay(self.event_store.events(prepared.snapshot.profile.profile_id))
+        events = self.event_store.events(prepared.snapshot.profile.profile_id)
+        state = self.replayer.replay(events)
         topic_state = state.topics.get(topic_id) or prepared.snapshot.topic_state
         if topic_state is None:
             return None
         used_ids = tuple(
             event.question_id
-            for event in self.event_store.events(state.profile_id)
+            for event in events
             if event.event_type
             in {
                 ConceptCheckEventType.ATTEMPT_SUBMITTED,
@@ -150,12 +155,9 @@ class ConceptCheckService:
             attempt_id=attempt_id,
             selected_choice=selected_choice,
         )
-        before = self.replayer.replay(
-            self.event_store.events(self.replayer.static_profile.profile_id)
-        )
         event = ConceptCheckEvent(
             event_id=event_id,
-            profile_id=before.profile_id,
+            profile_id=self.replayer.static_profile.profile_id,
             attempt_id=attempt_id,
             question_id=question.question_id,
             topic_id=question.topic_id,
@@ -168,9 +170,10 @@ class ConceptCheckService:
                 if grade.result is ConceptCheckResult.SKIPPED
                 else ConceptCheckEventType.ATTEMPT_SUBMITTED
             ),
-            state_version_before=before.state_version,
-            stream_version=before.state_version + 1,
+            # The event store assigns authoritative stream versions under its writer lock.
+            state_version_before=0,
+            stream_version=1,
             created_at=created_at or datetime.now(UTC),
         )
-        self.event_store.append(event)
-        return grade, self.replayer.replay(self.event_store.events(before.profile_id))
+        stored = self.event_store.append(event)
+        return grade, self.replayer.replay(self.event_store.events(stored.profile_id))

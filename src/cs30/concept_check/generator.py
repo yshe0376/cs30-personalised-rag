@@ -10,7 +10,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, ValidationError
 
 from cs30.generation.client import LLMClient
-from cs30.v2.config import ConceptCheckConfig
+from cs30.v2.config import ConceptCheckConfig, V2Config
 from cs30.v2.contracts import (
     ConceptCheckQuestion,
     ConceptCheckQuestionStatus,
@@ -39,14 +39,16 @@ class DraftResult:
 class OfflineDraftGenerator:
     """Produces drafts only; M3 review and M4 binding are separate gates."""
 
-    def __init__(
-        self, client: LLMClient, *, config: ConceptCheckConfig, environment: str = "development"
-    ) -> None:
+    def __init__(self, client: LLMClient, *, config: ConceptCheckConfig, environment: str) -> None:
         if environment != "development":
             raise ValueError("Concept Check draft generation is development-only")
         if not config.allow_llm_generation:
             raise ValueError("offline draft generation requires allow_llm_generation=true")
         self.client = client
+
+    @classmethod
+    def from_runtime_config(cls, client: LLMClient, config: V2Config) -> OfflineDraftGenerator:
+        return cls(client, config=config.concept_check, environment=config.environment)
 
     def generate_draft(
         self,

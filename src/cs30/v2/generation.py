@@ -3,19 +3,18 @@
 from __future__ import annotations
 
 import hashlib
-import json
 from dataclasses import dataclass
 
-from pydantic import ValidationError
-
 from cs30.generation.client import LLMClient
-from cs30.generation.schema import openai_text_format
+from cs30.generation.exceptions import LLMOutputValidationError
+from cs30.generation.schema import openai_text_format, parse_answer_payload
 from cs30.v2.contracts import (
     EvidenceBundle,
     GeneratedAnswer,
     LearnerContextSnapshot,
     StudentProfile,
 )
+from cs30.v2.generation_prompt import V2PromptAdapter
 
 _NO_EVIDENCE = "The available evidence does not support a grounded answer."
 
@@ -26,6 +25,7 @@ class V2GenerationAttempt:
     status: str
     raw_output: str | None
     error: str | None = None
+    failure_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +51,10 @@ class V2GenerationFailure(Exception):
     def __init__(self, message: str, trace: V2GenerationTrace) -> None:
         super().__init__(message)
         self.trace = trace
+
+
+class V2CitationFailure(ValueError):
+    """A structurally valid answer cited evidence outside the supplied bundle."""
 
 
 class V2AnswerGenerator:
@@ -93,42 +97,58 @@ class V2AnswerGenerator:
                 abstained=abstained,
             )
 
+        if not question.strip():
+            self.last_trace = trace(
+                (
+                    V2GenerationAttempt(
+                        0, "input_failure", None, "question must not be empty", "ValueError"
+                    ),
+                )
+            )
+            raise V2GenerationFailure("question must not be empty", self.last_trace)
         if not chunk_ids:
             answer = GeneratedAnswer(explanation=_NO_EVIDENCE, abstained=True)
             self.last_trace = trace((), abstained=True)
             return answer
-        if not question.strip():
-            raise ValueError("question must not be empty")
-        prompt = self._prompt(question, student, evidence)
-        prompt_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
+        adapter = V2PromptAdapter(student, evidence)
+        original_prompt = adapter.build_prompt(question)
+        prompt = original_prompt
+        prompt_hash = hashlib.sha256(original_prompt.encode("utf-8")).hexdigest()
         records: list[V2GenerationAttempt] = []
         allowed = set(chunk_ids)
         for number in range(1, self.max_retries + 2):
-            raw: str | None = None
             try:
                 response = self.client.complete(prompt, openai_text_format())
-                raw = response.text
-                payload = json.loads(raw)
-                if not isinstance(payload, dict) or set(payload) != {
-                    "final_choice",
-                    "explanation",
-                    "citations",
-                }:
-                    raise ValueError(
-                        "answer must contain exactly final_choice, explanation, citations"
+            except Exception as exc:
+                records.append(
+                    V2GenerationAttempt(
+                        number, "provider_failure", None, str(exc), type(exc).__name__
                     )
-                answer = GeneratedAnswer.model_validate({**payload, "abstained": False})
+                )
+                prompt = original_prompt
+                continue
+            raw = response.text
+            try:
+                payload = parse_answer_payload(raw)
+                answer = GeneratedAnswer(
+                    final_choice=payload.final_choice,
+                    explanation=payload.explanation,
+                    citations=tuple(payload.citations),
+                )
                 if not set(answer.citations).issubset(allowed):
-                    raise ValueError("answer cited a chunk outside the input EvidenceBundle")
+                    raise V2CitationFailure("answer cited a chunk outside the input EvidenceBundle")
                 records.append(V2GenerationAttempt(number, "completed", raw))
                 self.last_trace = trace(tuple(records), prompt_sha256=prompt_hash)
                 return answer
-            except (ValueError, ValidationError, TypeError) as exc:
-                records.append(V2GenerationAttempt(number, "invalid_output", raw, str(exc)))
-            except Exception as exc:
-                records.append(V2GenerationAttempt(number, "provider_failure", raw, str(exc)))
-            if number <= self.max_retries:
-                prompt = self._repair_prompt(prompt, records[-1])
+            except (LLMOutputValidationError, V2CitationFailure) as exc:
+                status = (
+                    "citation_failure" if isinstance(exc, V2CitationFailure) else "invalid_output"
+                )
+                records.append(
+                    V2GenerationAttempt(number, status, raw, str(exc), type(exc).__name__)
+                )
+                if number <= self.max_retries:
+                    prompt = adapter.repair_prompt(original_prompt, raw, exc)
         self.last_trace = trace(tuple(records), prompt_sha256=prompt_hash)
         raise V2GenerationFailure("generation failed after bounded retries", self.last_trace)
 
@@ -156,44 +176,3 @@ class V2AnswerGenerator:
                 )
                 results.append(V2BatchResult(None, trace, str(exc)))
         return tuple(results)
-
-    @staticmethod
-    def _prompt(question: str, profile: StudentProfile, evidence: EvidenceBundle) -> str:
-        items = [
-            {
-                "chunk_id": item.chunk_id,
-                "provider": item.provider,
-                "textbook_id": item.textbook_id,
-                "document_id": item.document_id,
-                "chapter_id": item.chapter_id,
-                "source_locator": item.source_locator,
-                "text": item.text,
-            }
-            for item in evidence.evidence_items
-        ]
-        return (
-            "Answer the multiple-choice question using only the supplied evidence. "
-            "Return strict JSON with exactly final_choice, explanation, citations. "
-            "Citations must be chunk_id values from the evidence. "
-            "Match explanation depth to the student's level.\n"
-            + json.dumps(
-                {
-                    "question": question,
-                    "student_level": profile.level.value,
-                    "topic_levels": {
-                        key: value.value for key, value in profile.topic_levels.items()
-                    },
-                    "evidence": items,
-                },
-                ensure_ascii=False,
-                sort_keys=True,
-            )
-        )
-
-    @staticmethod
-    def _repair_prompt(original: str, failed: V2GenerationAttempt) -> str:
-        return (
-            original
-            + "\nPrevious response failed validation. Return corrected JSON only. "
-            + json.dumps({"error": failed.error, "raw_output": failed.raw_output})
-        )
