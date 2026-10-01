@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from typing import Literal
 
 from cs30.evaluation.models import AnnotationStatus, EvaluationSplit
 from cs30.v2.contracts import (
@@ -23,6 +24,15 @@ class LeakageTrace:
     similarity_threshold: float
     matched_gold_ids: tuple[str, ...]
     evidence_overlap_gold_ids: tuple[str, ...]
+    similarity_outcome: Literal["clear", "suspected", "cleared_by_m3"]
+
+
+class LeakageValidationError(ValueError):
+    """A blocked candidate with the structured leakage result retained for M3."""
+
+    def __init__(self, message: str, trace: LeakageTrace) -> None:
+        super().__init__(message)
+        self.trace = trace
 
 
 class PublicationValidator:
@@ -42,6 +52,7 @@ class PublicationValidator:
             [ConceptCheckQuestion, Sequence[GoldQuestion], float], Sequence[str]
         ],
         cross_book_overlap: Callable[[EvidenceSpanBinding, EvidenceSpanBinding], bool],
+        similarity_clearances: Mapping[str, Sequence[str]] | None = None,
     ) -> None:
         if not gold_questions:
             raise ValueError("frozen Gold is required for Concept Check validation")
@@ -56,13 +67,23 @@ class PublicationValidator:
         self.similarity_threshold = similarity_threshold
         self.similarity_matches = similarity_matches
         self.cross_book_overlap = cross_book_overlap
+        # M3 supplies decisions keyed by its review record ID. A bare ID is not a clearance.
+        self.similarity_clearances = {
+            review_id: frozenset(ids) for review_id, ids in (similarity_clearances or {}).items()
+        }
         if any(
             gold.annotation_status is not AnnotationStatus.REVIEWED
-            or gold.split not in {EvaluationSplit.DEV, EvaluationSplit.TEST}
+            or gold.split
+            not in {EvaluationSplit.DEV, EvaluationSplit.TEST, EvaluationSplit.HOLDOUT}
             for gold in self.gold_questions
         ):
-            raise ValueError("Gold must be reviewed and frozen into Dev/Test")
-        for gold in self.gold_questions:
+            raise ValueError("Gold must be reviewed and frozen")
+        self.evaluation_gold = tuple(
+            gold
+            for gold in self.gold_questions
+            if gold.split in {EvaluationSplit.DEV, EvaluationSplit.TEST}
+        )
+        for gold in self.evaluation_gold:
             evidence = [item for group in gold.gold_core_evidence_sets for item in group]
             evidence.extend(gold.partial_evidence)
             for item in evidence:
@@ -111,7 +132,7 @@ class PublicationValidator:
             raise ValueError("SciQ source question already belongs to frozen Gold")
 
         overlaps: set[str] = set()
-        for gold in self.gold_questions:
+        for gold in self.evaluation_gold:
             evidence = [item for group in gold.gold_core_evidence_sets for item in group]
             evidence.extend(gold.partial_evidence)
             for item in evidence:
@@ -120,38 +141,47 @@ class PublicationValidator:
                 for practice_binding in binding.bindings:
                     practice_span = anchors[practice_binding.span_id]
                     same_text = practice_span.text_hash == gold_span.text_hash
-                    same_chapter_overlap = (
-                        practice_span.textbook_id == gold_span.textbook_id
-                        and practice_span.chapter_id == gold_span.chapter_id
-                        and practice_span.chapter_char_start < gold_span.chapter_char_end
-                        and gold_span.chapter_char_start < practice_span.chapter_char_end
+                    same_bound_overlap = (
+                        practice_binding.textbook_id == gold_binding.textbook_id
+                        and practice_binding.document_id == gold_binding.document_id
+                        and practice_binding.char_start < gold_binding.char_end
+                        and gold_binding.char_start < practice_binding.char_end
                     )
                     duplicate_overlap = self.cross_book_overlap(practice_binding, gold_binding)
-                    if same_text or same_chapter_overlap or duplicate_overlap:
+                    if same_text or same_bound_overlap or duplicate_overlap:
                         overlaps.add(gold.question_id)
-        matched = tuple(
-            sorted(
-                set(
-                    self.similarity_matches(
-                        question, self.gold_questions, self.similarity_threshold
+        matched = (
+            tuple(
+                sorted(
+                    set(
+                        self.similarity_matches(
+                            question, self.evaluation_gold, self.similarity_threshold
+                        )
                     )
                 )
             )
+            if self.evaluation_gold
+            else ()
         )
-        known_gold_ids = {gold.question_id for gold in self.gold_questions}
+        known_gold_ids = {gold.question_id for gold in self.evaluation_gold}
         if not set(matched).issubset(known_gold_ids):
             raise ValueError("similarity checker returned an unknown Gold question ID")
+        cleared_ids = self.similarity_clearances.get(question.review_record_id or "", frozenset())
+        cleared = bool(matched) and set(matched).issubset(cleared_ids)
         trace = LeakageTrace(
             checker_version=self.checker_version,
             similarity_threshold=self.similarity_threshold,
             matched_gold_ids=matched,
             evidence_overlap_gold_ids=tuple(sorted(overlaps)),
+            similarity_outcome="cleared_by_m3" if cleared else "suspected" if matched else "clear",
         )
         if overlaps:
-            raise ValueError(f"practice evidence overlaps Gold: {trace.evidence_overlap_gold_ids}")
-        if matched:
-            raise ValueError(f"gold_leakage_suspected: {trace.matched_gold_ids}")
+            raise LeakageValidationError(
+                f"practice evidence overlaps Gold: {trace.evidence_overlap_gold_ids}", trace
+            )
+        if matched and not cleared:
+            raise LeakageValidationError(f"gold_leakage_suspected: {trace.matched_gold_ids}", trace)
         return trace
 
-    def validate(self, release: ConceptCheckQuestionRelease) -> None:
-        self.check(release.question, release.binding)
+    def validate(self, release: ConceptCheckQuestionRelease) -> LeakageTrace:
+        return self.check(release.question, release.binding)

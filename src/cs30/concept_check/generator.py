@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict
 
 from cs30.generation.client import LLMClient
 from cs30.v2.config import ConceptCheckConfig, V2Config
@@ -20,11 +20,20 @@ from cs30.v2.contracts import (
 )
 
 
+class _DraftOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    A: str
+    B: str
+    C: str
+    D: str
+
+
 class _CandidatePayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     question: str
-    options: dict[Literal["A", "B", "C", "D"], str]
+    options: _DraftOptions
     correct_answer: Literal["A", "B", "C", "D"]
     rationale: str
 
@@ -93,7 +102,7 @@ class OfflineDraftGenerator:
             question = ConceptCheckQuestion(
                 question_id=question_id,
                 question=payload.question,
-                options=payload.options,
+                options=payload.options.model_dump(),
                 correct_answer=payload.correct_answer,
                 topic_id=topic_id,
                 topic_registry_version=topic_registry_version,
@@ -104,7 +113,7 @@ class OfflineDraftGenerator:
                 status=ConceptCheckQuestionStatus.DRAFT,
             )
             return DraftResult(question, raw, None)
-        except (ValueError, ValidationError) as exc:
+        except ValueError as exc:
             return DraftResult(None, raw, f"invalid_output: {exc}")
         except Exception as exc:
             return DraftResult(None, raw, f"provider_failure: {exc}")

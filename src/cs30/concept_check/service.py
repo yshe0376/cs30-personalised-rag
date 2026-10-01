@@ -23,6 +23,7 @@ from cs30.v2.contracts import (
     StudentProfile,
     TopicResolution,
     TopicResolutionStatus,
+    TopicState,
     ValidatedAnswer,
 )
 from cs30.v2.ports import ConceptCheckEventStore, ConceptCheckQuestionProvider, TopicResolver
@@ -99,16 +100,17 @@ class ConceptCheckService:
             return None
         if cited_topic.topic_registry_version != self.replayer.topic_registry_version:
             raise ValueError("cited Topic registry version mismatch")
-        if cited_topic.topic_id != prepared.retrieval_topic.topic_id:
-            return None
         topic_id = cited_topic.topic_id
         if topic_id is None:
             return None
         events = self.event_store.events(prepared.snapshot.profile.profile_id)
         state = self.replayer.replay(events)
-        topic_state = state.topics.get(topic_id) or prepared.snapshot.topic_state
-        if topic_state is None:
-            return None
+        topic_state = state.topics.get(topic_id) or TopicState(
+            topic_id=topic_id,
+            level=self.replayer.static_profile.topic_levels.get(
+                topic_id, self.replayer.static_profile.level
+            ),
+        )
         used_ids = tuple(
             event.question_id
             for event in events

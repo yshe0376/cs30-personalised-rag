@@ -14,7 +14,7 @@ from cs30.concept_check.grader import DeterministicGrader
 from cs30.concept_check.learner_state import EventReplayer
 from cs30.concept_check.provider import FixtureQuestionProvider, target_levels
 from cs30.concept_check.service import ConceptCheckService
-from cs30.concept_check.validator import PublicationValidator
+from cs30.concept_check.validator import LeakageValidationError, PublicationValidator
 from cs30.evaluation.models import GoldOption, PersonalisationEligibility
 from cs30.generation.client import LLMResponse, TokenUsage
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
@@ -324,6 +324,28 @@ def test_enabled_service_selects_once_then_replays_submission(tmp_path) -> None:
     assert state.topics["motion"].mastery_score == pytest.approx(0.6)
     assert service.select(prepared, retrieval, validated) is None
     assert resolver.calls == 3
+
+    class DifferentCitedTopic(Resolver):
+        def resolve_cited_topic(self, retrieval, validated):
+            return TopicResolution(
+                status=TopicResolutionStatus.RESOLVED,
+                topic_id="heat",
+                topic_registry_version="topics-1",
+                support=1.0,
+            )
+
+    heat_release = _release("heat-1")
+    heat_release = heat_release.model_copy(
+        update={"question": heat_release.question.model_copy(update={"topic_id": "heat"})}
+    )
+    cited_service = ConceptCheckService(
+        config=ConceptCheckConfig(enabled=True),
+        resolver=DifferentCitedTopic(),
+        provider=FixtureQuestionProvider((heat_release,)),
+        event_store=store,
+        replayer=replayer,
+    )
+    assert cited_service.select(prepared, retrieval, validated) == heat_release
     with pytest.raises(ValueError, match="current corpus"):
         service.submit(
             release,
@@ -437,6 +459,116 @@ def test_publication_validator_requires_gold_binding_and_rejects_overlap() -> No
     with pytest.raises(ValueError, match="overlaps Gold"):
         overlap_validator.check(_release("q-1").question, _release("q-1").binding)
 
+    # The chapter offsets belong to the origin corpus; M4 bindings locate this corpus.
+    shifted = gold_binding.model_copy(update={"char_start": 0, "char_end": 5})
+    shifted_validator = PublicationValidator(
+        corpus_version="v2-dev",
+        corpus_hash="sha256:fixture",
+        gold_questions=(gold,),
+        gold_bindings={gold_span.span_id: shifted},
+        existing_practice_ids=(),
+        checker_version="fixture-checker",
+        similarity_threshold=0.9,
+        similarity_matches=lambda *_: (),
+        cross_book_overlap=lambda *_: False,
+    )
+    with pytest.raises(LeakageValidationError, match="overlaps Gold") as blocked:
+        shifted_validator.check(_release("q-1").question, _release("q-1").binding)
+    assert blocked.value.trace.evidence_overlap_gold_ids == ("gold-1",)
+
+
+def test_publication_validator_retains_similarity_trace_and_checks_holdout_provenance() -> None:
+    release = _release("q-1")
+    gold_span = EvidenceSpan(
+        span_id="gold:1",
+        textbook_id="book-1",
+        chapter_id="chapter-1",
+        chapter_char_start=100,
+        chapter_char_end=105,
+        verbatim_text="Speed",
+        origin_corpus_version="v2-dev",
+    )
+    gold = GoldQuestion(
+        question_id="gold-1",
+        question="What is speed?",
+        options={label: GoldOption(text=label, source_field="fixture") for label in "ABCD"},
+        gold_answer="A",
+        answerable=True,
+        gold_core_evidence_sets=(({"span": gold_span, "sufficiency": "core_sufficient"},),),
+        question_difficulty="beginner",
+        question_type="definition",
+        concept_group="motion",
+        personalisation_eligibility=PersonalisationEligibility.FULL,
+        eligibility_reason="fixture",
+        split="holdout",
+        corpus_version="v2-dev",
+        parser_version="fixture-parser",
+        gold_annotation_version="fixture-gold",
+        annotation_status="reviewed",
+        review_record_id="gold-review",
+        source={"dataset": "SciQ", "source_question_id": "sciq-1", "support": "fixture"},
+    )
+
+    def make_validator(golds, clearances=None):
+        return PublicationValidator(
+            corpus_version="v2-dev",
+            corpus_hash="sha256:fixture",
+            gold_questions=golds,
+            gold_bindings={},
+            existing_practice_ids=(),
+            checker_version="fixture-checker",
+            similarity_threshold=0.9,
+            similarity_matches=lambda *_: ("gold-1",),
+            cross_book_overlap=lambda *_: False,
+            similarity_clearances=clearances,
+        )
+
+    holdout_validator = make_validator((gold,))
+    sciq = ConceptCheckQuestion.model_validate(
+        {
+            **release.question.model_dump(mode="json"),
+            "source_type": "sciq_aligned",
+            "source": gold.source.model_dump(mode="json"),
+            "source_split": "train",
+        }
+    )
+    with pytest.raises(ValueError, match="frozen Gold"):
+        holdout_validator.check(sciq, release.binding)
+    assert holdout_validator.check(release.question, release.binding).matched_gold_ids == ()
+
+    # A Dev/Test match needs an explicit M3 decision for every matched Gold ID.
+    dev_gold = gold.model_copy(update={"split": "dev"})
+    binding = release.binding.bindings[0].model_copy(
+        update={
+            "span_id": "gold:1",
+            "char_start": 100,
+            "char_end": 105,
+        }
+    )
+
+    def dev_validator(clearances=None):
+        return PublicationValidator(
+            corpus_version="v2-dev",
+            corpus_hash="sha256:fixture",
+            gold_questions=(dev_gold,),
+            gold_bindings={"gold:1": binding},
+            existing_practice_ids=(),
+            checker_version="fixture-checker",
+            similarity_threshold=0.9,
+            similarity_matches=lambda *_: ("gold-1",),
+            cross_book_overlap=lambda *_: False,
+            similarity_clearances=clearances,
+        )
+
+    with pytest.raises(LeakageValidationError, match="gold_leakage_suspected") as blocked:
+        dev_validator().check(release.question, release.binding)
+    assert blocked.value.trace.matched_gold_ids == ("gold-1",)
+    assert blocked.value.trace.similarity_outcome == "suspected"
+    trace = dev_validator({"synthetic-review": ("gold-1",)}).check(
+        release.question, release.binding
+    )
+    assert trace.similarity_outcome == "cleared_by_m3"
+
 
 def test_offline_generator_outputs_drafts_and_isolates_provider_failure() -> None:
     class Client:
@@ -449,6 +581,10 @@ def test_offline_generator_outputs_drafts_and_isolates_provider_failure() -> Non
         def complete(self, prompt, text_format):
             self.calls += 1
             assert text_format["strict"] is True
+            options_schema = text_format["schema"]["$defs"]["_DraftOptions"]
+            assert options_schema["additionalProperties"] is False
+            assert set(options_schema["required"]) == {"A", "B", "C", "D"}
+            assert "propertyNames" not in str(text_format["schema"])
             if self.calls == 2:
                 raise RuntimeError("fixture provider failure")
             return LLMResponse(

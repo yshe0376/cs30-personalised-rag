@@ -48,8 +48,8 @@ class V2PromptAdapter(PromptBuilder):
             token_count=evidence.token_count,
         )
 
-    def build_prompt(self, question: str) -> str:
-        return super().build(question, self._profile, self._evidence)
+    def build_prompt(self, question: str, *, personalise: bool = True) -> str:
+        return super().build(question, self._profile, self._evidence, personalise=personalise)
 
     def repair_prompt(self, original: str, raw_output: str, error: Exception) -> str:
         return super().build_repair(original, raw_output, error, self._evidence)

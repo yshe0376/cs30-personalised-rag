@@ -172,6 +172,22 @@ def test_prompt_reuses_level_guidance_and_all_grounding_rules(level) -> None:
     assert "Motion text" in prompt
 
 
+def test_v2_prompt_personalisation_can_be_disabled_for_p0_conditions() -> None:
+    profile = StudentProfile(profile_id="s", level=StudentLevel.ADVANCED)
+    plain_client = StubClient([_answer("chunk-1")])
+    personalised_client = StubClient([_answer("chunk-1")])
+    V2AnswerGenerator(plain_client).generate(
+        "What is motion?", profile, _bundle(), personalise_prompt=False
+    )
+    V2AnswerGenerator(personalised_client).generate(
+        "What is motion?", profile, _bundle(), personalise_prompt=True
+    )
+    assert "PROMPT_PERSONALISATION: disabled" in plain_client.prompts[0]
+    assert "STUDENT_PROFILE_JSON" not in plain_client.prompts[0]
+    assert "PERSONALISATION_GUIDANCE" in personalised_client.prompts[0]
+    assert plain_client.prompts[0] != personalised_client.prompts[0]
+
+
 def test_empty_question_failure_has_trace_and_does_not_abort_batch() -> None:
     client = StubClient([_answer("chunk-1")])
     generator = V2AnswerGenerator(client)

@@ -72,6 +72,8 @@ class V2AnswerGenerator:
         question: str,
         profile: StudentProfile | LearnerContextSnapshot,
         evidence: EvidenceBundle,
+        *,
+        personalise_prompt: bool = True,
     ) -> GeneratedAnswer:
         self.last_trace = None
         snapshot = profile if isinstance(profile, LearnerContextSnapshot) else None
@@ -111,7 +113,7 @@ class V2AnswerGenerator:
             self.last_trace = trace((), abstained=True)
             return answer
         adapter = V2PromptAdapter(student, evidence)
-        original_prompt = adapter.build_prompt(question)
+        original_prompt = adapter.build_prompt(question, personalise=personalise_prompt)
         prompt = original_prompt
         prompt_hash = hashlib.sha256(original_prompt.encode("utf-8")).hexdigest()
         records: list[V2GenerationAttempt] = []
