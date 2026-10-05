@@ -10,7 +10,6 @@ Concept Check 接入当前 `src/cs30/v2/pipeline.py` 的语料构建入口。
 | v2 公共模型 | `src/cs30/v2/contracts/models.py` |
 | 公共导出 | `src/cs30/v2/contracts/__init__.py` |
 | M6/M7/M8 Protocol | `src/cs30/v2/ports.py` |
-| M8 EvidenceBundle/Citation adapter | `src/cs30/v2/evidence.py` |
 | Topic sidecar 与确定性解析 | `src/cs30/v2/topics.py` |
 | LearnerContextSnapshot 纯函数 | `src/cs30/concept_check/snapshot.py` |
 | Concept Check 配置 | `src/cs30/v2/config.py` 的 `ConceptCheckConfig` |
@@ -35,25 +34,6 @@ evidence ID。
 回答通过 citation validation 后，cited-topic resolver 还必须确认所有 resolved citation
 来自初始 retrieval；否则返回 `no_topic_available` 并记录
 `CITATION_NOT_IN_RETRIEVAL`。
-
-M8 的 `EvidenceBundleAdapter` 保留 M6 命中的完整
-`provider/textbook/document/chapter/page/source_locator` 身份，按 retrieval rank
-分配本地展示编号 `E1`、`E2`，并原样携带 `EvidenceProvenance`。模型引用命名空间仍然
-是稳定 `chunk_id`；`E1` 等展示编号或 bundle 以外的 chunk 会由
-`CitationValidatorAdapter` 标记为 `failed`。拒答的 citation 状态为 `skipped`。
-
-`EvidenceBundle.evidence_items` 是生成、引用校验、UI 和 trace 共享的权威证据集合。
-`prompt_context` 是由这些 items 确定性生成的审计/UI 缓存，不是第二套证据来源。
-生成侧可以在加入问题、学习者信息和输出规则时重新格式化同一组 items，但不能通过
-prompt 格式化重新检索、增加、删除或替换 chunk。生成 trace 必须按模型实际接收的顺序
-保存 `evidence_chunk_ids` 和最终 prompt 的 SHA-256；引用校验继续使用原
-`EvidenceBundle` 的稳定 chunk-ID 集合。
-
-`token_budget` 延续 ADR-0001 的 observe-only 决策：builder 记录 counter、预算和
-是否超限，并在超限时告警，但不在 M8 边界静默删除 M6 已选中的 hit。若后续个性化
-reranking 有意改变顺序或最终选择，必须把模型实际使用的 chunk 顺序和选择写入运行
-trace；不能只在 prompt 格式化过程中静默改变上下文，否则生成 allow-list、M6 trace
-和 M8 校验会失去可审计的一致性。
 
 ## Concept Check 题目与证据
 
