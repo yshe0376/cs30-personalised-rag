@@ -1,7 +1,10 @@
 """Adapt M2's OpenStax PDF parser (schema 1.0 output) to the v2 document contract.
 
-M2's parser keeps its v1-shaped output unchanged.  This adapter is the single
-place that maps it to :class:`~cs30.v2.contracts.TextbookDocument`:
+M2's parser keeps its v1-shaped output unchanged.  Real builds read the
+``openstax_document.json`` M2 delivered (:class:`OpenStaxParsedParser`), or
+re-parse the pinned PDF with the vendored parser (:class:`OpenStaxPdfParser`).
+Either way this adapter is the single place that maps the output to
+:class:`~cs30.v2.contracts.TextbookDocument`:
 
 * M2's ``document_hash`` is the SHA-256 of the PDF, so it becomes the v2
   ``raw_source_sha256``; the v2 ``document_hash`` is recomputed from the parsed
@@ -14,12 +17,13 @@ place that maps it to :class:`~cs30.v2.contracts.TextbookDocument`:
 
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from importlib import metadata as importlib_metadata
 from types import ModuleType
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Literal
 
 from cs30.v2.catalog import TextbookSpec, get_textbook_spec
 from cs30.v2.contracts import TextBlock, TextbookChapter, TextbookDocument
@@ -45,6 +49,15 @@ _M2_DOCUMENT_PREFIXES = {
 _UNRECORDED_DOWNLOAD_DATE = "unrecorded"
 _PARSE_LIBRARIES = ("PyMuPDF", "pdfplumber", "pdfminer.six")
 _SHA256_HEX = re.compile(r"[0-9a-f]{64}")
+
+
+def _m2_document_id(textbook_id: str, pdf_sha256: str) -> str:
+    """The document ID M2's parser gives this PDF; block IDs are prefixed with it."""
+
+    prefix = _M2_DOCUMENT_PREFIXES.get(
+        textbook_id, "openstax-" + textbook_id.replace("_", "-")
+    )
+    return f"{prefix}-{pdf_sha256[:16]}"
 
 
 def _library_versions() -> dict[str, str]:
@@ -192,9 +205,6 @@ class OpenStaxPdfParser:
             )
         parser = _load_m2_parser()
         pdf_sha256 = parser.sha256_file(input.source_path)
-        prefix = _M2_DOCUMENT_PREFIXES.get(
-            input.textbook_id, "openstax-" + input.textbook_id.replace("_", "-")
-        )
         parsed = parser.parse_openstax(
             pdf_path=input.source_path,
             selected_chapters=list(chapters),
@@ -202,7 +212,7 @@ class OpenStaxPdfParser:
             download_date=_UNRECORDED_DOWNLOAD_DATE,
             title=self.spec.title,
             edition=self.spec.source_version,
-            document_id=f"{prefix}-{pdf_sha256[:16]}",
+            document_id=_m2_document_id(input.textbook_id, pdf_sha256),
         )
         payload = parser.build_contract_payload(parsed)
         problems = parser.validate_contract_payload(payload)
@@ -220,9 +230,60 @@ class OpenStaxPdfParser:
         )
 
 
-def build_parser_registry(textbook_ids: Sequence[str]) -> MappingParserRegistry:
+@dataclass(frozen=True)
+class OpenStaxParsedParser:
+    """v2 ``DocumentParser`` that reads M2's delivered ``openstax_document.json``.
+
+    It needs neither the PDF nor the ``[parse]`` extra.  The pipeline checks the
+    file against its pin and the document against the pinned PDF hash, so the
+    result is the document a re-parse of that PDF gives when it reproduces M2's
+    output, with the same document and chunk IDs.
+    """
+
+    spec: TextbookSpec
+    is_fixture: ClassVar[bool] = False
+
+    def parse(self, input: TextbookInput) -> TextbookDocument:
+        if input.source_path.suffix.lower() != ".json":
+            raise InputError(
+                f"M2's OpenStax output must be a JSON file: {input.source_path.name}",
+                code="UNSUPPORTED_SOURCE_FORMAT",
+            )
+        try:
+            payload = json.loads(input.source_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ParseError(
+                f"M2's OpenStax output is not valid JSON: {exc}",
+                code="PARSER_OUTPUT_INVALID",
+            ) from exc
+        if not isinstance(payload, dict):
+            raise ContractError(
+                "M2's OpenStax output must be a JSON object",
+                code="PARSER_OUTPUT_INVALID",
+            )
+        document = openstax_payload_to_document(payload, spec=self.spec, input=input)
+        # Block IDs carry M2's document ID, so it must follow the same rule as a
+        # re-parse; otherwise the two routes would give different chunk IDs.
+        expected_id = _m2_document_id(
+            input.textbook_id, document.raw_source_sha256.removeprefix("sha256:")
+        )
+        if document.metadata["m2_document_id"] != expected_id:
+            raise ContractError(
+                f"M2 document_id {document.metadata['m2_document_id']!r} should be "
+                f"{expected_id!r}",
+                code="ASSET_VERSION_MISMATCH",
+            )
+        return document
+
+
+def build_parser_registry(
+    textbook_ids: Sequence[str],
+    *,
+    source_format: Literal["raw", "parsed"] = "raw",
+) -> MappingParserRegistry:
     """Register the real parser for each catalogue textbook that has one.
 
+    ``source_format="parsed"`` reads M2's delivered output instead of the PDF.
     A textbook whose ``parser_name`` has no implementation yet (CK-12, for
     now) is left out, so the pipeline reports ``PARSER_NOT_REGISTERED``.
     """
@@ -231,5 +292,9 @@ def build_parser_registry(textbook_ids: Sequence[str]) -> MappingParserRegistry:
     for textbook_id in textbook_ids:
         spec = get_textbook_spec(textbook_id)
         if spec.parser_name == "openstax":
-            parsers[textbook_id] = OpenStaxPdfParser(spec)
+            parsers[textbook_id] = (
+                OpenStaxParsedParser(spec)
+                if source_format == "parsed"
+                else OpenStaxPdfParser(spec)
+            )
     return MappingParserRegistry(parsers)

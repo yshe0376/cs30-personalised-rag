@@ -21,6 +21,7 @@ from cs30.v2.pipeline import (
     run_build_pipeline,
 )
 from cs30.v2.ports import TextbookInput
+from cs30.v2.sources import asset_name, parsed_file_name
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,10 +34,22 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", choices=["development", "official"], default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument(
+        "--source-format",
+        choices=["parsed", "raw"],
+        default=None,
+        help=(
+            "real builds: read M2's pinned parse (parsed) or re-parse the pinned "
+            "PDFs (raw); the profile decides by default"
+        ),
+    )
+    parser.add_argument(
         "--sources-dir",
         type=Path,
         default=None,
-        help="where the pinned textbook PDFs are installed (real builds)",
+        help=(
+            "where the pinned sources are installed (real builds; default "
+            "data/parsed/v2 for parsed, data/raw/v2 for raw)"
+        ),
     )
     parser.add_argument(
         "--embedding-model",
@@ -50,7 +63,7 @@ def build_parser() -> argparse.ArgumentParser:
         metavar="TEXTBOOK_ID=PATH",
         help=(
             "repeat once per textbook; fixture builds take UTF-8 text files and "
-            "real builds take PDFs, overriding the sources directory"
+            "real builds take M2's JSON or PDFs, overriding the sources directory"
         ),
     )
     return parser
@@ -73,6 +86,8 @@ def _config_with_overrides(args: argparse.Namespace) -> V2Config:
         updates["corpus_mode"] = args.mode
     if args.output_dir is not None:
         updates["output_dir"] = args.output_dir
+    if args.source_format is not None:
+        updates["source_format"] = args.source_format
     if args.sources_dir is not None:
         updates["sources_dir"] = args.sources_dir
     if args.embedding_model is not None:
@@ -116,11 +131,11 @@ def _fixture_build(
 def _real_build(
     config: V2Config, raw_inputs: list[str]
 ) -> tuple[list[TextbookInput], BuildDeps]:
-    """Real sources: pinned PDFs, the catalogue's parsers, and an optional index.
+    """Real sources: M2's pinned parse or the pinned PDFs, and an optional index.
 
     The chunker is still M1's block adapter, which is marked as a fixture, so an
     official build stops with FIXTURE_NOT_ALLOWED until M4's production chunker
-    is wired in; development builds produce diagnostic corpora from real PDFs.
+    is wired in; development builds produce diagnostic corpora from real sources.
     """
 
     overrides = dict(_parse_input(raw_input) for raw_input in raw_inputs)
@@ -130,12 +145,12 @@ def _real_build(
             f"--input names textbooks outside the catalogue set: {sorted(unknown)}",
             code="UNKNOWN_TEXTBOOK",
         )
+    parsed = config.source_format == "parsed"
     inputs: list[TextbookInput] = []
     for textbook_id in config.required_textbook_ids:
         spec = _spec(textbook_id)
-        source_path = overrides.get(
-            textbook_id, config.sources_dir / f"{textbook_id}.pdf"
-        )
+        file_name = parsed_file_name(textbook_id) if parsed else asset_name(textbook_id)
+        source_path = overrides.get(textbook_id, config.resolved_sources_dir / file_name)
         inputs.append(
             TextbookInput(
                 textbook_id=textbook_id,
@@ -145,6 +160,8 @@ def _real_build(
                 source_version=spec.source_version,
                 selected_chapters=spec.selected_chapters,
                 expected_source_sha256=spec.expected_source_sha256,
+                source_format=config.source_format,
+                expected_parsed_sha256=spec.expected_parsed_sha256 if parsed else None,
             )
         )
     index_builder = (
@@ -158,7 +175,9 @@ def _real_build(
         else None
     )
     return inputs, BuildDeps(
-        parser_registry=build_parser_registry(config.required_textbook_ids),
+        parser_registry=build_parser_registry(
+            config.required_textbook_ids, source_format=config.source_format
+        ),
         chunker=V2BlockChunker.from_config(config.chunk_config),
         index_builder=index_builder,
     )

@@ -10,6 +10,7 @@ from cs30.v2.tokenization import (
     REGEX_TOKENIZER_NAME,
     TokenCounter,
     build_token_counter,
+    is_pinned_revision,
 )
 
 
@@ -28,34 +29,49 @@ class V2BlockChunker:
         self,
         *,
         tokenizer_name: str = REGEX_TOKENIZER_NAME,
+        tokenizer_revision: str | None = None,
         token_counter: TokenCounter | None = None,
     ) -> None:
         # The ruler is named in the config hash, so a corpus records which
-        # tokenizer decided its chunk sizes.
+        # tokenizer decided its chunk sizes. The revision joins the hash only
+        # when set, so unpinned fixture rulers keep their existing hashes.
         self.tokenizer_name = tokenizer_name
+        self.tokenizer_revision = tokenizer_revision
         self._token_counter = token_counter
-        self._config_hash = chunk_config_hash(
-            {
-                "chunker_version": self.version,
-                "tokenizer_name": tokenizer_name,
-                "grouping": "one-block",
-            }
-        )
+        config: dict[str, str] = {
+            "chunker_version": self.version,
+            "tokenizer_name": tokenizer_name,
+            "grouping": "one-block",
+        }
+        if tokenizer_revision is not None:
+            config["tokenizer_revision"] = tokenizer_revision
+        self._config_hash = chunk_config_hash(config)
 
     @classmethod
     def from_config(cls, config: Mapping[str, str]) -> V2BlockChunker:
-        supported = {"tokenizer_name"}
+        supported = {"tokenizer_name", "tokenizer_revision"}
         unknown = set(config) - supported
         if unknown:
             raise ValueError(f"unsupported v2 chunk configuration: {sorted(unknown)}")
-        return cls(tokenizer_name=config.get("tokenizer_name", REGEX_TOKENIZER_NAME))
+        name = config.get("tokenizer_name", REGEX_TOKENIZER_NAME)
+        revision = config.get("tokenizer_revision")
+        # A Hugging Face ruler can change under the same name; only a commit
+        # hash keeps the configured chunk sizes reproducible.
+        if name != REGEX_TOKENIZER_NAME and not is_pinned_revision(revision):
+            raise ValueError(
+                f"chunk ruler {name!r} needs tokenizer_revision set to a full "
+                f"40-character commit hash, got {revision!r}"
+            )
+        return cls(tokenizer_name=name, tokenizer_revision=revision)
 
     @property
     def token_counter(self) -> TokenCounter:
         """Load the configured ruler on first use, not when it is named."""
 
         if self._token_counter is None:
-            self._token_counter = build_token_counter(self.tokenizer_name)
+            self._token_counter = build_token_counter(
+                self.tokenizer_name, revision=self.tokenizer_revision
+            )
         return self._token_counter
 
     @property
@@ -77,6 +93,8 @@ class V2BlockChunker:
                 "chunker_version": self.version,
                 "tokenizer_name": self.tokenizer_name,
             }
+            if self.tokenizer_revision is not None:
+                metadata["tokenizer_revision"] = self.tokenizer_revision
             if block.asset_ref:
                 metadata["asset_ref"] = block.asset_ref
             chunks.append(
