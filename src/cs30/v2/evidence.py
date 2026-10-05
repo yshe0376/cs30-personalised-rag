@@ -139,7 +139,11 @@ class CitationValidatorAdapter:
 
 
 def _prompt_context(items: tuple[EvidenceItem, ...]) -> str | None:
-    """Render deterministic context with full source identity for M7 and the UI."""
+    """Render a deterministic audit/UI view derived from authoritative items.
+
+    Generation may serialize ``evidence_items`` into its personalised prompt,
+    but it must not use this cached text to add, remove, or replace evidence.
+    """
 
     if not items:
         return None
@@ -173,4 +177,3 @@ __all__ = [
     "EvidenceBundleAdapter",
     "TOKEN_BUDGET_POLICY",
 ]
-
