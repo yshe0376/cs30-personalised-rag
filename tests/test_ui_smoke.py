@@ -45,8 +45,8 @@ def test_streamlit_smoke_path() -> None:
     assert any("Generated answer" in item.value for item in app.markdown)
     assert any("Source:" in item.value for item in app.caption)
     assert "FIXTURE" in app.info[0].value
-    assert app.toggle[0].label == "Enable Concept Check fixture preview"
-    assert app.toggle[0].value is False
+    assert any(button.label == "Quiz me" for button in app.button)
+    assert not app.radio
 
 
 def test_streamlit_concept_check_fixture_path() -> None:
@@ -56,13 +56,47 @@ def test_streamlit_concept_check_fixture_path() -> None:
     app.selectbox[0].select("beginner")
     app.text_area[0].set_value("What is acceleration?")
     next(button for button in app.button if button.label == "Run pipeline").click().run()
-    app.toggle[0].set_value(True).run()
+    next(button for button in app.button if button.label == "Quiz me").click().run()
 
     assert not app.exception
-    assert any("Quiz me" in item.value for item in app.markdown)
-    app.radio[0].set_value("A")
+    assert any("Quick check" in item.value for item in app.markdown)
+    app.radio[0].set_value("A").run()
     next(button for button in app.button if button.label == "Submit answer").click().run()
 
     assert not app.exception
     assert any("Correct" in item.value for item in app.success)
+    assert any("Quiz result" in item.value for item in app.markdown)
+    assert any("Scored attempts" in item.value for item in app.markdown)
     assert any("Learner state" in item.value for item in app.markdown)
+    assert any(expander.label == "Attempt record" for expander in app.expander)
+    assert not app.radio
+
+
+def test_streamlit_incorrect_answer_can_start_a_new_attempt() -> None:
+    app_path = Path(__file__).parents[1] / "src" / "cs30" / "ui" / "app.py"
+    app = AppTest.from_file(app_path).run()
+
+    app.selectbox[0].select("beginner")
+    app.text_area[0].set_value("What is acceleration?")
+    next(button for button in app.button if button.label == "Run pipeline").click().run()
+    next(button for button in app.button if button.label == "Quiz me").click().run()
+    app.radio[0].set_value("C").run()
+    next(button for button in app.button if button.label == "Submit answer").click().run()
+
+    assert not app.exception
+    assert any("Incorrect" in item.value for item in app.error)
+    assert not app.radio
+
+    next(button for button in app.button if button.label == "Try again").click().run()
+    assert not app.exception
+    assert len(app.radio) == 1
+
+    app.radio[0].set_value("A").run()
+    next(button for button in app.button if button.label == "Submit answer").click().run()
+
+    assert not app.exception
+    assert any("Correct" in item.value for item in app.success)
+    assert any(
+        "Scored attempts</span><span class=\"cs30-state-value\">2" in item.value
+        for item in app.markdown
+    )

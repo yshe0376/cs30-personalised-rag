@@ -28,11 +28,17 @@ builder at the composition boundary only after the leader wires the real adapter
 ## Concept Check fixture preview
 
 The existing question-and-answer UI is retained. After a cited answer passes
-validation, the result panel offers an optional Concept Check preview. The
-preview is off by default and is explicitly labelled fixture/development. It
+validation, the result panel offers an optional **Quiz me** action. The
+Concept Check is off until the learner selects that action and is explicitly
+labelled fixture/development. It
 adapts the saved `PipelineRun` to the v2 contracts, then delegates question
 selection, deterministic grading, JSONL event storage, and LearnerState replay
 to M7's `ConceptCheckService`.
+
+Each submission or skip creates an immutable attempt record. Incorrect and
+skipped results can start a new attempt without changing the earlier event.
+The result view keeps the question and submitted choice visible, gives immediate
+feedback, and shows compact LearnerState values plus the attempt history.
 
 This adapter does not create official v2 identities or results. Real-mode
 Concept Check remains unavailable until the v2 retrieval result, reviewed

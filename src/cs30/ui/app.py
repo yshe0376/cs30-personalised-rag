@@ -157,6 +157,58 @@ def inject_styles() -> None:
             background: #fff8e6;
             font-size: .92rem;
         }
+        .cs30-answer-review {
+            display: grid;
+            gap: 7px;
+            margin: 10px 0 18px;
+        }
+        .cs30-answer-option {
+            padding: 8px 11px;
+            border: 1px solid var(--cs30-line);
+            border-radius: 9px;
+            color: #49433e;
+            background: #ffffff;
+            font-size: .94rem;
+        }
+        .cs30-answer-option.correct {
+            border-color: #a9d8bd;
+            color: #1f7045;
+            background: #edf8f1;
+        }
+        .cs30-answer-option.incorrect {
+            border-color: #efb8ac;
+            color: #a33e2b;
+            background: #fff4f1;
+        }
+        .cs30-state-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin: 8px 0 16px;
+        }
+        .cs30-state-item {
+            padding: 10px 12px;
+            border: 1px solid var(--cs30-line);
+            border-radius: 9px;
+            background: #ffffff;
+        }
+        .cs30-state-label {
+            display: block;
+            margin-bottom: 3px;
+            color: var(--cs30-muted);
+            font-size: .86rem;
+        }
+        .cs30-state-value {
+            display: block;
+            color: var(--cs30-ink);
+            font-size: .98rem;
+            font-weight: 700;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
+        }
+        @media (max-width: 720px) {
+            .cs30-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         .cs30-footer {
             margin-top: 26px;
             padding-top: 14px;
@@ -278,6 +330,7 @@ def _reset_concept_check_state(run_id: str) -> None:
         "concept_check_learner_state",
         "concept_check_trace",
         "concept_check_choice",
+        "concept_check_attempts",
     )
     for key in keys:
         st.session_state.pop(key, None)
@@ -289,9 +342,33 @@ def _render_concept_check_feedback(
     state: LearnerState,
     release: ConceptCheckQuestionRelease,
     trace: dict[str, object],
+    attempts: list[dict[str, object]],
 ) -> None:
     result = grade.result
     question = release.question
+    st.markdown('<p class="cs30-field-title">Quiz result</p>', unsafe_allow_html=True)
+    st.write(question.question)
+    option_rows: list[str] = []
+    for choice, option in question.options.items():
+        classes = ["cs30-answer-option"]
+        notes: list[str] = []
+        if choice == grade.correct_answer:
+            classes.append("correct")
+            notes.append("Correct answer")
+        if choice == grade.selected_choice:
+            notes.append("Your answer")
+            if result is ConceptCheckResult.INCORRECT:
+                classes.append("incorrect")
+        suffix = f" <strong>· {' · '.join(notes)}</strong>" if notes else ""
+        option_rows.append(
+            f'<div class="{" ".join(classes)}">'
+            f"{escape(choice)} — {escape(option)}{suffix}</div>"
+        )
+    st.markdown(
+        f'<div class="cs30-answer-review">{"".join(option_rows)}</div>',
+        unsafe_allow_html=True,
+    )
+
     if result is ConceptCheckResult.CORRECT:
         st.success("Correct — the learner state was updated deterministically.")
     elif result is ConceptCheckResult.INCORRECT:
@@ -302,17 +379,49 @@ def _render_concept_check_feedback(
     else:
         st.warning("Skipped — the event was recorded without changing mastery.")
     st.write(question.rationale)
+    st.caption(
+        f"Attempt {trace['attempt_number']} recorded · "
+        f"{str(trace['attempt_id'])[:20]}… · result: {grade.result.value}"
+    )
 
     topic_state = state.topics.get(question.topic_id)
     st.markdown('<p class="cs30-field-title">Learner state</p>', unsafe_allow_html=True)
     if topic_state is None:
         st.caption("No scored attempt has changed this topic state yet.")
     else:
-        state_columns = st.columns(4)
-        state_columns[0].metric("Topic level", topic_state.level.value.title())
-        state_columns[1].metric("Mastery", f"{topic_state.mastery_score:.2f}")
-        state_columns[2].metric("Attempts", topic_state.total_attempts)
-        state_columns[3].metric("Correct", topic_state.correct_attempts)
+        values = (
+            ("Topic level", topic_state.level.value.title()),
+            ("Mastery", f"{topic_state.mastery_score:.2f}"),
+            ("Scored attempts", str(topic_state.total_attempts)),
+            ("Correct", str(topic_state.correct_attempts)),
+        )
+        state_items = "".join(
+            '<div class="cs30-state-item">'
+            f'<span class="cs30-state-label">{escape(label)}</span>'
+            f'<span class="cs30-state-value">{escape(value)}</span>'
+            "</div>"
+            for label, value in values
+        )
+        st.markdown(f'<div class="cs30-state-grid">{state_items}</div>', unsafe_allow_html=True)
+
+    if result is not ConceptCheckResult.CORRECT:
+        retry_label = (
+            "Try again"
+            if result is ConceptCheckResult.INCORRECT
+            else "Answer this question"
+        )
+        if st.button(retry_label, type="primary", use_container_width=True):
+            for key in (
+                "concept_check_grade",
+                "concept_check_learner_state",
+                "concept_check_trace",
+                "concept_check_choice",
+            ):
+                st.session_state.pop(key, None)
+            st.rerun()
+
+    with st.expander("Attempt record"):
+        st.json({"attempts": attempts})
 
     with st.expander("Question evidence"):
         st.json(_concept_check_evidence(release))
@@ -343,14 +452,16 @@ def render_concept_check(run: PipelineRun) -> None:
         "Optional post-answer micro-check. This preview uses reviewed synthetic fixture data "
         "and is not a formal v2 experiment."
     )
-    enabled = st.toggle(
-        "Enable Concept Check fixture preview",
-        value=False,
-        key="concept_check_enabled",
-        help="Off by default. When off, no Topic resolver or event store is accessed.",
-    )
-    if not enabled:
-        st.info("Concept Check is disabled. The static-profile answer run remains unchanged.")
+    if not st.session_state.get("concept_check_enabled", False):
+        st.write("Check your understanding with one short question about the answer above.")
+        if st.button(
+            "Quiz me",
+            type="primary",
+            use_container_width=True,
+            help="Starts the fixture Concept Check. No event store is accessed before this.",
+        ):
+            st.session_state["concept_check_enabled"] = True
+            st.rerun()
         return
     if run.mode != "fixture":
         st.warning(
@@ -384,16 +495,19 @@ def render_concept_check(run: PipelineRun) -> None:
     grade = st.session_state.get("concept_check_grade")
     learner_state = st.session_state.get("concept_check_learner_state")
     trace = st.session_state.get("concept_check_trace")
+    attempts = st.session_state.get("concept_check_attempts", [])
+    if not isinstance(attempts, list):
+        attempts = []
     if grade is not None and isinstance(learner_state, LearnerState) and isinstance(trace, dict):
         assert release is not None
-        _render_concept_check_feedback(grade, learner_state, release, trace)
+        _render_concept_check_feedback(grade, learner_state, release, trace, attempts)
         return
     if release is None:
         st.info("No eligible fixture question remains for this answer run.")
         return
 
     question = release.question
-    st.markdown('<p class="cs30-field-title">Quiz me</p>', unsafe_allow_html=True)
+    st.markdown('<p class="cs30-field-title">Quick check</p>', unsafe_allow_html=True)
     st.write(question.question)
     selected_choice = st.radio(
         "Concept Check answer",
@@ -424,6 +538,7 @@ def render_concept_check(run: PipelineRun) -> None:
             selected_choice=choice,
             attempt_id=attempt_id,
             event_id=event_id,
+            release=release,
         )
     except ValueError as exc:
         LOGGER.exception("concept_check_submit_failed run_id=%s error=%s", run.run_id, exc)
@@ -446,11 +561,14 @@ def render_concept_check(run: PipelineRun) -> None:
         "corpus_version": provenance.corpus_version,
         "corpus_hash": provenance.corpus_hash,
         "state_version": learner_state.state_version,
+        "attempt_number": len(attempts) + 1,
     }
+    attempts.append(trace)
     st.session_state["concept_check_grade"] = grade
     st.session_state["concept_check_learner_state"] = learner_state
     st.session_state["concept_check_trace"] = trace
-    _render_concept_check_feedback(grade, learner_state, release, trace)
+    st.session_state["concept_check_attempts"] = attempts
+    st.rerun()
 
 
 def main() -> None:

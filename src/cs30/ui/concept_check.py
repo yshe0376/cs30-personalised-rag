@@ -100,14 +100,16 @@ class ConceptCheckFixtureSession:
         selected_choice: Literal["A", "B", "C", "D"] | None,
         attempt_id: str,
         event_id: str,
+        release: ConceptCheckQuestionRelease | None = None,
     ) -> tuple[ConceptCheckGrade, LearnerState]:
-        if self.release is None:
+        selected_release = release or self.release
+        if selected_release is None:
             raise ValueError("no Concept Check question is available")
         provenance = self.retrieval.provenance
         if provenance is None:
             raise ValueError("fixture retrieval provenance is required")
         return self.service.submit(
-            self.release,
+            selected_release,
             attempt_id=attempt_id,
             selected_choice=selected_choice,
             event_id=event_id,

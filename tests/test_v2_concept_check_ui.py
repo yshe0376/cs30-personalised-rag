@@ -58,6 +58,33 @@ def test_fixture_ui_adapter_records_skip_without_topic_score(tmp_path) -> None:
     assert state.topics == {}
 
 
+def test_fixture_ui_adapter_can_record_a_new_attempt_for_the_displayed_question(tmp_path) -> None:
+    run = execute_fixture_run("What is acceleration?", StudentLevel.BEGINNER)
+    first_session = build_fixture_session(run, event_directory=tmp_path)
+    assert first_session.release is not None
+    release = first_session.release
+
+    first_session.submit(
+        selected_choice="C",
+        attempt_id="attempt-ui-wrong",
+        event_id="event-ui-wrong",
+        release=release,
+    )
+    retry_session = build_fixture_session(run, event_directory=tmp_path)
+    assert retry_session.release is None
+
+    grade, state = retry_session.submit(
+        selected_choice="A",
+        attempt_id="attempt-ui-retry",
+        event_id="event-ui-retry",
+        release=release,
+    )
+
+    assert grade.result is ConceptCheckResult.CORRECT
+    assert state.topics["motion"].total_attempts == 2
+    assert state.topics["motion"].correct_attempts == 1
+
+
 def test_fixture_ui_adapter_does_not_offer_question_after_abstention(tmp_path) -> None:
     run = execute_fixture_run(
         "What is quantum entanglement in condensed matter?",
