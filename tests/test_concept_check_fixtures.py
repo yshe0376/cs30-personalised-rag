@@ -6,12 +6,16 @@ import pytest
 
 from cs30.concept_check.event_store import JsonlEventStore
 from cs30.concept_check.fixtures import (
+    FIXTURE_CHUNK_CONFIG_HASH,
     FIXTURE_CORPUS_HASH,
     FIXTURE_CORPUS_VERSION,
     FIXTURE_TOPIC_REGISTRY_VERSION,
     fixture_retrieval_result,
+    load_fixture_chunk_topic_map,
     load_fixture_corpus,
+    load_fixture_manifest,
     load_fixture_releases,
+    load_fixture_scenarios,
     load_fixture_topic_registry,
 )
 from cs30.concept_check.learner_state import EventReplayer
@@ -21,13 +25,15 @@ from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
     ConceptCheckQuestionStatus,
     ConceptCheckResult,
-    GeneratedAnswer,
     QuestionSourceType,
     StudentLevel,
     StudentProfile,
-    TopicResolution,
     TopicResolutionStatus,
-    ValidatedAnswer,
+)
+from cs30.v2.topics import (
+    canonical_chunk_topic_map,
+    resolve_topic_from_citations,
+    resolve_topic_from_retrieval,
 )
 
 
@@ -103,8 +109,9 @@ def test_anchors_quote_the_corpus_and_bindings_locate_them() -> None:
             )
 
 
-def test_retrieval_fixture_carries_the_corpus_identity_of_the_bindings() -> None:
+def test_retrieval_fixture_carries_the_corpus_and_manifest_identity() -> None:
     corpus = load_fixture_corpus()
+    manifest = load_fixture_manifest()
     retrieval = fixture_retrieval_result(("fixture-cp2e-ch4-p1", "fixture-cp2e-ch2-p2"))
 
     assert retrieval.provenance is not None
@@ -112,6 +119,8 @@ def test_retrieval_fixture_carries_the_corpus_identity_of_the_bindings() -> None
         FIXTURE_CORPUS_VERSION,
         FIXTURE_CORPUS_HASH,
     )
+    assert retrieval.provenance.manifest_hash == manifest.manifest_hash
+    assert retrieval.provenance.chunk_config_hash == FIXTURE_CHUNK_CONFIG_HASH
     assert [hit.rank for hit in retrieval.hits] == [1, 2]
     assert [hit.chapter_id for hit in retrieval.hits] == ["4", "2"]
     assert all(hit.text == corpus.chunk_text(hit.chunk_id) for hit in retrieval.hits)
@@ -119,46 +128,104 @@ def test_retrieval_fixture_carries_the_corpus_identity_of_the_bindings() -> None
         fixture_retrieval_result(("not-a-fixture-chunk",))
 
 
-class _ChapterTopicResolver:
-    """Stand-in for M7's topics.py: each fixture chapter carries one Topic."""
+def test_topic_map_validates_against_the_fixture_manifest() -> None:
+    corpus = load_fixture_corpus()
+    manifest = load_fixture_manifest()
+    registry = load_fixture_topic_registry()
+    loaded = load_fixture_chunk_topic_map()
 
-    _topics = {"2": "acceleration", "4": "newtons-second-law"}
+    assert loaded.error_code is None and loaded.topic_map is not None
+    assert (loaded.corpus_version, loaded.corpus_hash) == (
+        FIXTURE_CORPUS_VERSION,
+        FIXTURE_CORPUS_HASH,
+    )
+    assert manifest.mode == "development" and not manifest.reportable
+    assert manifest.record_count == len(corpus.chunks)
+    topic_map = loaded.topic_map
+    assert topic_map.topic_registry_version == registry.topic_registry_version
+    assert canonical_chunk_topic_map(topic_map) == topic_map
+    assignments = {item.chunk_id: item.topic_ids for item in topic_map.assignments}
+    known = {topic.topic_id for topic in registry.topics}
+    assert all(set(topic_ids) <= known for topic_ids in assignments.values())
+    # Deliberate edge cases: one chunk splits its weight, one has no Topic.
+    assert [len(topic_ids) for topic_ids in assignments.values()].count(2) == 1
+    assert {chunk.chunk_id for chunk in corpus.chunks} - set(assignments) == {"fixture-cp2e-ch2-p3"}
 
-    def _resolve(self, chapter_id: str) -> TopicResolution:
-        return TopicResolution(
-            status=TopicResolutionStatus.RESOLVED,
-            topic_id=self._topics[chapter_id],
-            topic_registry_version=FIXTURE_TOPIC_REGISTRY_VERSION,
-            support=1.0,
-        )
+
+def test_every_question_is_bound_to_chunks_of_its_own_topic() -> None:
+    loaded = load_fixture_chunk_topic_map()
+    assert loaded.topic_map is not None
+    assignments = {item.chunk_id: item.topic_ids for item in loaded.topic_map.assignments}
+
+    for release in load_fixture_releases():
+        for binding in release.binding.bindings:
+            for chunk_id in binding.chunk_ids:
+                assert release.question.topic_id in assignments[chunk_id]
+
+
+@pytest.mark.parametrize(
+    "scenario", load_fixture_scenarios(), ids=lambda scenario: scenario.scenario_id
+)
+def test_scenarios_resolve_as_documented_with_the_m1_resolver(scenario) -> None:
+    topic_map = load_fixture_chunk_topic_map()
+    registry = load_fixture_topic_registry()
+    retrieval = scenario.retrieval()
+
+    resolutions = (
+        (
+            resolve_topic_from_retrieval(retrieval, topic_map, registry),
+            scenario.expected_retrieval_topic,
+            scenario.expected_retrieval_error,
+        ),
+        (
+            resolve_topic_from_citations(
+                retrieval, scenario.validated_answer(), topic_map, registry
+            ),
+            scenario.expected_cited_topic,
+            scenario.expected_cited_error,
+        ),
+    )
+    for resolution, topic_id, error_code in resolutions:
+        assert resolution.topic_id == topic_id
+        assert resolution.error_code == error_code
+        assert (resolution.status is TopicResolutionStatus.RESOLVED) == (topic_id is not None)
+
+
+class _FixtureTopicResolver:
+    """Stand-in for M7's topics.py: the M1 resolver functions over the fixture map."""
+
+    def __init__(self) -> None:
+        self.topic_map = load_fixture_chunk_topic_map()
+        self.registry = load_fixture_topic_registry()
 
     def resolve_retrieval_topic(self, retrieval):
-        return self._resolve(retrieval.hits[0].chapter_id)
+        return resolve_topic_from_retrieval(retrieval, self.topic_map, self.registry)
 
     def resolve_cited_topic(self, retrieval, validated):
-        cited = {hit.chunk_id: hit for hit in retrieval.hits}
-        return self._resolve(cited[validated.resolved_citations[0]].chapter_id)
+        return resolve_topic_from_citations(retrieval, validated, self.topic_map, self.registry)
 
 
-def test_fixture_pack_drives_select_and_submit(tmp_path) -> None:
+def _service(tmp_path) -> tuple[ConceptCheckService, StudentProfile]:
     profile = StudentProfile(profile_id="fixture-student", level=StudentLevel.BEGINNER)
     replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION)
     service = ConceptCheckService(
         config=ConceptCheckConfig(enabled=True),
-        resolver=_ChapterTopicResolver(),
+        resolver=_FixtureTopicResolver(),
         provider=FixtureQuestionProvider(load_fixture_releases()),
         event_store=JsonlEventStore(tmp_path, replayer),
         replayer=replayer,
     )
-    retrieval = fixture_retrieval_result(("fixture-cp2e-ch4-p1", "fixture-cp2e-ch4-p2"))
-    validated = ValidatedAnswer(
-        answer=GeneratedAnswer(
-            explanation="Acceleration is proportional to the net force.",
-            citations=("fixture-cp2e-ch4-p1",),
-        ),
-        citation_status="passed",
-        resolved_citations=("fixture-cp2e-ch4-p1",),
-    )
+    return service, profile
+
+
+def _scenario(scenario_id: str):
+    return next(item for item in load_fixture_scenarios() if item.scenario_id == scenario_id)
+
+
+def test_fixture_pack_drives_select_and_submit(tmp_path) -> None:
+    service, profile = _service(tmp_path)
+    scenario = _scenario("newtons-second-law")
+    retrieval, validated = scenario.retrieval(), scenario.validated_answer()
 
     prepared = service.prepare(retrieval, profile)
     first = service.select(prepared, retrieval, validated)
@@ -178,3 +245,20 @@ def test_fixture_pack_drives_select_and_submit(tmp_path) -> None:
     # The answered beginner question is excluded; the nearest level comes next.
     second = service.select(prepared, retrieval, validated)
     assert second is not None and second.question.question_id == "cc-fixture-004"
+
+
+def test_cited_topic_chooses_the_question_and_a_tie_offers_none(tmp_path) -> None:
+    service, profile = _service(tmp_path)
+
+    differs = _scenario("cited-topic-differs")
+    retrieval = differs.retrieval()
+    prepared = service.prepare(retrieval, profile)
+    assert prepared.snapshot.topic_id == "newtons-second-law"
+    release = service.select(prepared, retrieval, differs.validated_answer())
+    assert release is not None and release.question.question_id == "cc-fixture-001"
+
+    tie = _scenario("topic-tie")
+    retrieval = tie.retrieval()
+    prepared = service.prepare(retrieval, profile)
+    assert prepared.snapshot.topic_id is None
+    assert service.select(prepared, retrieval, tie.validated_answer()) is None
