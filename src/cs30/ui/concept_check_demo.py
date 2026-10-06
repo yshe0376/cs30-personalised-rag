@@ -208,6 +208,33 @@ def _session_token() -> str:
     return str(value)
 
 
+def _inject_demo_styles() -> None:
+    """Reuse the v1 orange for demo action buttons and the selected quiz option."""
+
+    st.markdown(
+        """
+        <style>
+        div[data-testid="stButton"] > button {
+            border-color: #f06f54;
+            color: white;
+            background: #f06f54;
+        }
+        div[data-testid="stButton"] > button:hover {
+            border-color: #df5b40;
+            color: white;
+            background: #df5b40;
+        }
+        label[data-testid="stRadioOption"][data-selected="true"]
+        > div > div:first-child {
+            border-color: #f06f54;
+            background: #f06f54;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _reset_selection() -> None:
     st.session_state.pop("concept_check_demo_release", None)
     st.session_state.pop("concept_check_demo_selection_trace", None)
@@ -232,6 +259,7 @@ def main() -> None:
     """Render the independent M8 fixture demonstration page."""
 
     st.set_page_config(page_title="Concept Check fixture demo", page_icon="✅", layout="wide")
+    _inject_demo_styles()
     st.title("Concept Check demo")
     st.warning("TEST-DATA DEMO — NOT REAL PRACTICE QUESTIONS.")
     st.caption(
