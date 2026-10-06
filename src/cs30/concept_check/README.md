@@ -40,6 +40,33 @@ checkers. Until those inputs exist, no real question can pass that gate. Fixture
 tests use synthetic Gold, bindings, and checkers and do not establish official
 question quality or evaluation results.
 
+## Shared fixture pack
+
+`cs30.concept_check.fixtures` is the one fixture set M7 and M8 build against
+until real Topics, Gold and bindings exist. It ships five hand-written practice
+questions over two Topics (`acceleration` at two levels, `newtons-second-law`
+at all three), the `fixture-topics-v1` registry, a small synthetic corpus
+paraphrasing College Physics 2e chapters 2 and 4, and bindings to that corpus:
+
+```python
+from cs30.concept_check.fixtures import (
+    fixture_retrieval_result,
+    load_fixture_releases,
+    load_fixture_topic_registry,
+)
+from cs30.concept_check.provider import FixtureQuestionProvider
+
+provider = FixtureQuestionProvider(load_fixture_releases())
+retrieval = fixture_retrieval_result(("fixture-cp2e-ch4-p1",))
+```
+
+`fixture_retrieval_result` carries the fixture corpus identity, so `select`
+finds these releases for it and for nothing else. The corpus hash is a fixture
+value rather than a build output, and the `fixture-review:` IDs stand in for
+M3 review records: these questions have not been reviewed by M3 and must never
+be shown as real practice questions. The pack does not include a
+`chunk_topic_map` yet.
+
 The answer generator in `cs30.v2.generation` adapts the selected bundle to the
 existing M7 `PromptBuilder`, reusing its three level guidance texts, seven
 grounding rules, and shared JSON parser. Source identity remains in the prompt.

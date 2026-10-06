@@ -1,0 +1,121 @@
+[
+  {
+    "question_id": "cc-fixture-001",
+    "corpus_version": "2.0.0-dev.1",
+    "corpus_hash": "sha256:fixture-concept-check-v1",
+    "bindings": [
+      {
+        "span_id": "cc:cc-fixture-001:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:fixture-concept-check-v1",
+        "resolution_status": "resolved",
+        "resolution_method": "chapter_offset",
+        "document_id": "fixture-openstax-college-physics-2e-concept-check",
+        "char_start": 0,
+        "char_end": 61,
+        "chunk_ids": [
+          "fixture-cp2e-ch2-p1"
+        ]
+      }
+    ]
+  },
+  {
+    "question_id": "cc-fixture-002",
+    "corpus_version": "2.0.0-dev.1",
+    "corpus_hash": "sha256:fixture-concept-check-v1",
+    "bindings": [
+      {
+        "span_id": "cc:cc-fixture-002:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:fixture-concept-check-v1",
+        "resolution_status": "resolved",
+        "resolution_method": "chapter_offset",
+        "document_id": "fixture-openstax-college-physics-2e-concept-check",
+        "char_start": 198,
+        "char_end": 343,
+        "chunk_ids": [
+          "fixture-cp2e-ch2-p2"
+        ]
+      }
+    ]
+  },
+  {
+    "question_id": "cc-fixture-003",
+    "corpus_version": "2.0.0-dev.1",
+    "corpus_hash": "sha256:fixture-concept-check-v1",
+    "bindings": [
+      {
+        "span_id": "cc:cc-fixture-003:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:fixture-concept-check-v1",
+        "resolution_status": "resolved",
+        "resolution_method": "chapter_offset",
+        "document_id": "fixture-openstax-college-physics-2e-concept-check",
+        "char_start": 854,
+        "char_end": 937,
+        "chunk_ids": [
+          "fixture-cp2e-ch4-p1"
+        ]
+      }
+    ]
+  },
+  {
+    "question_id": "cc-fixture-004",
+    "corpus_version": "2.0.0-dev.1",
+    "corpus_hash": "sha256:fixture-concept-check-v1",
+    "bindings": [
+      {
+        "span_id": "cc:cc-fixture-004:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:fixture-concept-check-v1",
+        "resolution_status": "resolved",
+        "resolution_method": "chapter_offset",
+        "document_id": "fixture-openstax-college-physics-2e-concept-check",
+        "char_start": 674,
+        "char_end": 853,
+        "chunk_ids": [
+          "fixture-cp2e-ch4-p1"
+        ]
+      },
+      {
+        "span_id": "cc:cc-fixture-004:2",
+        "textbook_id": "openstax_college_physics_2e",
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:fixture-concept-check-v1",
+        "resolution_status": "resolved",
+        "resolution_method": "chapter_offset",
+        "document_id": "fixture-openstax-college-physics-2e-concept-check",
+        "char_start": 979,
+        "char_end": 1078,
+        "chunk_ids": [
+          "fixture-cp2e-ch4-p2"
+        ]
+      }
+    ]
+  },
+  {
+    "question_id": "cc-fixture-005",
+    "corpus_version": "2.0.0-dev.1",
+    "corpus_hash": "sha256:fixture-concept-check-v1",
+    "bindings": [
+      {
+        "span_id": "cc:cc-fixture-005:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "corpus_version": "2.0.0-dev.1",
+        "corpus_hash": "sha256:fixture-concept-check-v1",
+        "resolution_status": "resolved",
+        "resolution_method": "chapter_offset",
+        "document_id": "fixture-openstax-college-physics-2e-concept-check",
+        "char_start": 1080,
+        "char_end": 1330,
+        "chunk_ids": [
+          "fixture-cp2e-ch4-p3"
+        ]
+      }
+    ]
+  }
+]

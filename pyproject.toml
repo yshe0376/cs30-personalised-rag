@@ -55,6 +55,7 @@ where = ["src"]
 "cs30" = ["configs/*.toml"]
 "cs30.v2" = ["configs/*.toml"]
 "cs30.fixtures" = ["*.json"]
+"cs30.concept_check.fixtures" = ["*.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

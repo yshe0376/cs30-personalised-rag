@@ -1,0 +1,156 @@
+[
+  {
+    "question_id": "cc-fixture-001",
+    "question": "What does acceleration describe?",
+    "options": {
+      "A": "How quickly velocity changes with time",
+      "B": "How far an object travels in a given time",
+      "C": "The total distance covered during a trip",
+      "D": "The force needed to keep an object moving"
+    },
+    "correct_answer": "A",
+    "topic_id": "acceleration",
+    "topic_registry_version": "fixture-topics-v1",
+    "difficulty": "beginner",
+    "evidence_anchors": [
+      {
+        "span_id": "cc:cc-fixture-001:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "chapter_id": "2",
+        "chapter_char_start": 0,
+        "chapter_char_end": 61,
+        "verbatim_text": "Acceleration is the rate at which velocity changes with time.",
+        "origin_corpus_version": "2.0.0-dev.1"
+      }
+    ],
+    "source_type": "human_authored",
+    "rationale": "The evidence defines acceleration as the rate at which velocity changes with time. Option B describes speed, option C describes distance, and option D confuses acceleration with force.",
+    "review_record_id": "fixture-review:cc-fixture-001",
+    "status": "published"
+  },
+  {
+    "question_id": "cc-fixture-002",
+    "question": "A car's velocity increases from 10 m/s to 20 m/s in 5 s. What is its average acceleration?",
+    "options": {
+      "A": "4 m/s^2",
+      "B": "2 m/s^2",
+      "C": "0.5 m/s^2",
+      "D": "50 m/s^2"
+    },
+    "correct_answer": "B",
+    "topic_id": "acceleration",
+    "topic_registry_version": "fixture-topics-v1",
+    "difficulty": "intermediate",
+    "evidence_anchors": [
+      {
+        "span_id": "cc:cc-fixture-002:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "chapter_id": "2",
+        "chapter_char_start": 198,
+        "chapter_char_end": 343,
+        "verbatim_text": "Average acceleration over a time interval equals the change in velocity divided by the time taken for that change: a = (v_final - v_initial) / t.",
+        "origin_corpus_version": "2.0.0-dev.1"
+      }
+    ],
+    "source_type": "human_authored",
+    "rationale": "Average acceleration is the change in velocity divided by the time taken: (20 - 10) / 5 = 2 m/s^2. Option A divides the final velocity alone by the time, option C inverts the ratio, and option D multiplies instead of dividing.",
+    "review_record_id": "fixture-review:cc-fixture-002",
+    "status": "published"
+  },
+  {
+    "question_id": "cc-fixture-003",
+    "question": "According to Newton's second law, what happens to an object's acceleration if the net force on it doubles while its mass stays the same?",
+    "options": {
+      "A": "It halves",
+      "B": "It stays the same",
+      "C": "It doubles",
+      "D": "It becomes four times larger"
+    },
+    "correct_answer": "C",
+    "topic_id": "newtons-second-law",
+    "topic_registry_version": "fixture-topics-v1",
+    "difficulty": "beginner",
+    "evidence_anchors": [
+      {
+        "span_id": "cc:cc-fixture-003:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "chapter_id": "4",
+        "chapter_char_start": 180,
+        "chapter_char_end": 263,
+        "verbatim_text": "If the net force on an object of fixed mass doubles, its acceleration also doubles.",
+        "origin_corpus_version": "2.0.0-dev.1"
+      }
+    ],
+    "source_type": "human_authored",
+    "rationale": "Acceleration is directly proportional to the net force when the mass is fixed, so doubling the net force doubles the acceleration. Halving would describe doubling the mass instead, and nothing in the law makes the change fourfold.",
+    "review_record_id": "fixture-review:cc-fixture-003",
+    "status": "published"
+  },
+  {
+    "question_id": "cc-fixture-004",
+    "question": "A net force of 12 N acts on a 3 kg object. What is the object's acceleration?",
+    "options": {
+      "A": "36 m/s^2",
+      "B": "0.25 m/s^2",
+      "C": "15 m/s^2",
+      "D": "4 m/s^2"
+    },
+    "correct_answer": "D",
+    "topic_id": "newtons-second-law",
+    "topic_registry_version": "fixture-topics-v1",
+    "difficulty": "intermediate",
+    "evidence_anchors": [
+      {
+        "span_id": "cc:cc-fixture-004:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "chapter_id": "4",
+        "chapter_char_start": 0,
+        "chapter_char_end": 179,
+        "verbatim_text": "Newton's second law states that the acceleration of a system is directly proportional to the net external force acting on it and inversely proportional to its mass: a = F_net / m.",
+        "origin_corpus_version": "2.0.0-dev.1"
+      },
+      {
+        "span_id": "cc:cc-fixture-004:2",
+        "textbook_id": "openstax_college_physics_2e",
+        "chapter_id": "4",
+        "chapter_char_start": 305,
+        "chapter_char_end": 404,
+        "verbatim_text": "One newton is the net force that gives a 1 kg mass an acceleration of 1 m/s^2, so 1 N = 1 kg m/s^2.",
+        "origin_corpus_version": "2.0.0-dev.1"
+      }
+    ],
+    "source_type": "human_authored",
+    "rationale": "By a = F_net / m, the acceleration is 12 N / 3 kg = 4 m/s^2, because 1 N = 1 kg m/s^2. Option A multiplies force and mass, option B inverts the ratio, and option C adds the two numbers.",
+    "review_record_id": "fixture-review:cc-fixture-004",
+    "status": "published"
+  },
+  {
+    "question_id": "cc-fixture-005",
+    "question": "Two blocks of 2 kg and 4 kg sit side by side on a frictionless floor. A horizontal 12 N push on the 2 kg block moves both blocks together. What is the net force on the 4 kg block?",
+    "options": {
+      "A": "12 N",
+      "B": "8 N",
+      "C": "4 N",
+      "D": "6 N"
+    },
+    "correct_answer": "B",
+    "topic_id": "newtons-second-law",
+    "topic_registry_version": "fixture-topics-v1",
+    "difficulty": "advanced",
+    "evidence_anchors": [
+      {
+        "span_id": "cc:cc-fixture-005:1",
+        "textbook_id": "openstax_college_physics_2e",
+        "chapter_id": "4",
+        "chapter_char_start": 406,
+        "chapter_char_end": 656,
+        "verbatim_text": "Objects that move together can be treated as one system whose mass is the sum of their masses. Applying the second law to the whole system gives the common acceleration; applying it again to one object gives the net force acting on that object alone.",
+        "origin_corpus_version": "2.0.0-dev.1"
+      }
+    ],
+    "source_type": "human_authored",
+    "rationale": "Treat both blocks as one 6 kg system: a = 12 N / 6 kg = 2 m/s^2. The 4 kg block shares this acceleration, so its net force is 4 kg x 2 m/s^2 = 8 N. Option A is the push on the whole system, option C is the net force on the 2 kg block, and option D splits the push equally.",
+    "review_record_id": "fixture-review:cc-fixture-005",
+    "status": "published"
+  }
+]
