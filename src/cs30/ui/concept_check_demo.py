@@ -243,7 +243,7 @@ def _reset_selection() -> None:
 
 
 def _scenario_summary(runtime: DemoRuntime, scenario: DemoScenario) -> None:
-    st.markdown("### Just-answered scenario")
+    st.markdown("### Simulated previous Q&A scenario")
     st.write(scenario.answered_question)
     st.caption(f"Fixture answer: {scenario.answer}")
     with st.expander("Cited evidence used by the scenario"):
@@ -278,10 +278,14 @@ def main() -> None:
         )
     with control_right:
         scenario_name = st.selectbox(
-            "Just-answered question scenario",
+            "Simulated previous Q&A scenario",
             options=list(SCENARIOS),
             key="concept_check_demo_scenario",
             on_change=_reset_selection,
+        )
+        st.caption(
+            "Select fixture context that simulates the answer and cited evidence normally "
+            "provided by the future v2 Q&A flow."
         )
 
     level = StudentLevel(level_value)
