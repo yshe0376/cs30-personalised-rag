@@ -45,3 +45,24 @@ def test_streamlit_smoke_path() -> None:
     assert any("Generated answer" in item.value for item in app.markdown)
     assert any("Source:" in item.value for item in app.caption)
     assert "FIXTURE" in app.info[0].value
+    assert app.toggle[0].label == "Enable Concept Check fixture preview"
+    assert app.toggle[0].value is False
+
+
+def test_streamlit_concept_check_fixture_path() -> None:
+    app_path = Path(__file__).parents[1] / "src" / "cs30" / "ui" / "app.py"
+    app = AppTest.from_file(app_path).run()
+
+    app.selectbox[0].select("beginner")
+    app.text_area[0].set_value("What is acceleration?")
+    next(button for button in app.button if button.label == "Run pipeline").click().run()
+    app.toggle[0].set_value(True).run()
+
+    assert not app.exception
+    assert any("Quiz me" in item.value for item in app.markdown)
+    app.radio[0].set_value("A")
+    next(button for button in app.button if button.label == "Submit answer").click().run()
+
+    assert not app.exception
+    assert any("Correct" in item.value for item in app.success)
+    assert any("Learner state" in item.value for item in app.markdown)

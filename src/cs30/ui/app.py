@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from html import escape
+from pathlib import Path
+from tempfile import mkdtemp
+from uuid import uuid4
 
 import streamlit as st
 
@@ -11,6 +14,13 @@ from cs30.contracts import PipelineRun, StudentLevel
 from cs30.errors import CS30Error
 from cs30.logging import configure_logging, get_logger
 from cs30.pipeline import build_fixture_deps, build_real_deps, run_pipeline
+from cs30.ui.concept_check import build_fixture_session
+from cs30.v2.contracts import (
+    ConceptCheckGrade,
+    ConceptCheckQuestionRelease,
+    ConceptCheckResult,
+    LearnerState,
+)
 
 DEFAULT_QUESTION = "What is acceleration?"
 EXAMPLE_QUESTIONS = {
@@ -258,6 +268,191 @@ def render_result(run: PipelineRun) -> None:
         )
 
 
+def _reset_concept_check_state(run_id: str) -> None:
+    """Keep a Concept Check attempt attached to exactly one answer run."""
+
+    keys = (
+        "concept_check_event_dir",
+        "concept_check_release",
+        "concept_check_grade",
+        "concept_check_learner_state",
+        "concept_check_trace",
+        "concept_check_choice",
+    )
+    for key in keys:
+        st.session_state.pop(key, None)
+    st.session_state["concept_check_run_id"] = run_id
+
+
+def _render_concept_check_feedback(
+    grade: ConceptCheckGrade,
+    state: LearnerState,
+    release: ConceptCheckQuestionRelease,
+    trace: dict[str, object],
+) -> None:
+    result = grade.result
+    question = release.question
+    if result is ConceptCheckResult.CORRECT:
+        st.success("Correct — the learner state was updated deterministically.")
+    elif result is ConceptCheckResult.INCORRECT:
+        st.error(
+            f"Incorrect. The correct answer is {grade.correct_answer}: "
+            f"{question.options[grade.correct_answer]}"
+        )
+    else:
+        st.warning("Skipped — the event was recorded without changing mastery.")
+    st.write(question.rationale)
+
+    topic_state = state.topics.get(question.topic_id)
+    st.markdown('<p class="cs30-field-title">Learner state</p>', unsafe_allow_html=True)
+    if topic_state is None:
+        st.caption("No scored attempt has changed this topic state yet.")
+    else:
+        state_columns = st.columns(4)
+        state_columns[0].metric("Topic level", topic_state.level.value.title())
+        state_columns[1].metric("Mastery", f"{topic_state.mastery_score:.2f}")
+        state_columns[2].metric("Attempts", topic_state.total_attempts)
+        state_columns[3].metric("Correct", topic_state.correct_attempts)
+
+    with st.expander("Question evidence"):
+        st.json(_concept_check_evidence(release))
+
+    with st.expander("Concept Check trace"):
+        st.json(trace)
+
+
+def _concept_check_evidence(release: ConceptCheckQuestionRelease) -> dict[str, object]:
+    question = release.question
+    return {
+        "fixture": True,
+        "topic_id": question.topic_id,
+        "difficulty": question.difficulty.value,
+        "chunk_ids": [
+            chunk_id
+            for binding in release.binding.bindings
+            for chunk_id in binding.chunk_ids
+        ],
+    }
+
+
+def render_concept_check(run: PipelineRun) -> None:
+    """Render M8's fixture-only UI over M7's Concept Check runtime."""
+
+    st.markdown('<p class="cs30-section-label">CONCEPT CHECK</p>', unsafe_allow_html=True)
+    st.caption(
+        "Optional post-answer micro-check. This preview uses reviewed synthetic fixture data "
+        "and is not a formal v2 experiment."
+    )
+    enabled = st.toggle(
+        "Enable Concept Check fixture preview",
+        value=False,
+        key="concept_check_enabled",
+        help="Off by default. When off, no Topic resolver or event store is accessed.",
+    )
+    if not enabled:
+        st.info("Concept Check is disabled. The static-profile answer run remains unchanged.")
+        return
+    if run.mode != "fixture":
+        st.warning(
+            "The real v2 UI composition seam is not connected yet. Use the fixture preview "
+            "until the official v2 retrieval and question assets pass their gates."
+        )
+        return
+    if run.answer.abstained or run.citation_integrity != "passed":
+        st.warning("A cited, validated answer is required before a Concept Check can be offered.")
+        return
+
+    if st.session_state.get("concept_check_run_id") != run.run_id:
+        _reset_concept_check_state(run.run_id)
+    event_dir = st.session_state.get("concept_check_event_dir")
+    if event_dir is None:
+        event_dir = Path(mkdtemp(prefix="cs30-concept-check-ui-"))
+        st.session_state["concept_check_event_dir"] = event_dir
+
+    try:
+        session = build_fixture_session(run, event_directory=Path(event_dir))
+    except ValueError as exc:
+        LOGGER.exception("concept_check_fixture_failed run_id=%s error=%s", run.run_id, exc)
+        st.error(f"The Concept Check preview could not start: {exc}")
+        return
+
+    release = st.session_state.get("concept_check_release")
+    if release is None and st.session_state.get("concept_check_grade") is None:
+        release = session.release
+        if release is not None:
+            st.session_state["concept_check_release"] = release
+    grade = st.session_state.get("concept_check_grade")
+    learner_state = st.session_state.get("concept_check_learner_state")
+    trace = st.session_state.get("concept_check_trace")
+    if grade is not None and isinstance(learner_state, LearnerState) and isinstance(trace, dict):
+        assert release is not None
+        _render_concept_check_feedback(grade, learner_state, release, trace)
+        return
+    if release is None:
+        st.info("No eligible fixture question remains for this answer run.")
+        return
+
+    question = release.question
+    st.markdown('<p class="cs30-field-title">Quiz me</p>', unsafe_allow_html=True)
+    st.write(question.question)
+    selected_choice = st.radio(
+        "Concept Check answer",
+        options=list(question.options),
+        index=None,
+        format_func=lambda choice: f"{choice} — {question.options[choice]}",
+        key="concept_check_choice",
+        label_visibility="collapsed",
+    )
+    submit_column, skip_column = st.columns(2)
+    submit = submit_column.button(
+        "Submit answer",
+        type="primary",
+        use_container_width=True,
+        disabled=selected_choice is None,
+    )
+    skip = skip_column.button("Skip", use_container_width=True)
+    if not submit and not skip:
+        with st.expander("Question evidence"):
+            st.json(_concept_check_evidence(release))
+        return
+
+    attempt_id = f"attempt-{uuid4().hex}"
+    event_id = f"event-{uuid4().hex}"
+    choice = selected_choice if submit else None
+    try:
+        grade, learner_state = session.submit(
+            selected_choice=choice,
+            attempt_id=attempt_id,
+            event_id=event_id,
+        )
+    except ValueError as exc:
+        LOGGER.exception("concept_check_submit_failed run_id=%s error=%s", run.run_id, exc)
+        st.error(f"The Concept Check attempt could not be recorded: {exc}")
+        return
+    provenance = session.retrieval.provenance
+    assert provenance is not None
+    trace = {
+        "mode": "fixture",
+        "reportable": False,
+        "source_run_id": run.run_id,
+        "profile_id": session.profile.profile_id,
+        "attempt_id": attempt_id,
+        "event_id": event_id,
+        "question_id": question.question_id,
+        "topic_id": question.topic_id,
+        "result": grade.result.value,
+        "selected_choice": grade.selected_choice,
+        "correct_answer": grade.correct_answer,
+        "corpus_version": provenance.corpus_version,
+        "corpus_hash": provenance.corpus_hash,
+        "state_version": learner_state.state_version,
+    }
+    st.session_state["concept_check_grade"] = grade
+    st.session_state["concept_check_learner_state"] = learner_state
+    st.session_state["concept_check_trace"] = trace
+    _render_concept_check_feedback(grade, learner_state, release, trace)
+
+
 def main() -> None:
     """Render the demo and submit questions to the fixture pipeline."""
 
@@ -353,6 +548,7 @@ def main() -> None:
         stored_run = st.session_state.get("pipeline_run")
         if isinstance(stored_run, PipelineRun):
             render_result(stored_run)
+            render_concept_check(stored_run)
         else:
             st.markdown(
                 """
@@ -365,7 +561,7 @@ def main() -> None:
             )
 
     st.markdown(
-        '<div class="cs30-footer">CS-30 · v0.1 thin-slice · Demo interface</div>',
+        '<div class="cs30-footer">CS-30 · v2 development · M8 demo interface</div>',
         unsafe_allow_html=True,
     )
 

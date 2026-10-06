@@ -1,4 +1,4 @@
-# Member 8 - demo interface
+# Member 8 - v2 demo interface
 
 This module consumes `PipelineRun`.
 
@@ -24,3 +24,17 @@ python -m streamlit run src/cs30/ui/app.py
 
 The first version intentionally calls the fixture pipeline. Replace the dependency
 builder at the composition boundary only after the leader wires the real adapters.
+
+## Concept Check fixture preview
+
+The existing question-and-answer UI is retained. After a cited answer passes
+validation, the result panel offers an optional Concept Check preview. The
+preview is off by default and is explicitly labelled fixture/development. It
+adapts the saved `PipelineRun` to the v2 contracts, then delegates question
+selection, deterministic grading, JSONL event storage, and LearnerState replay
+to M7's `ConceptCheckService`.
+
+This adapter does not create official v2 identities or results. Real-mode
+Concept Check remains unavailable until the v2 retrieval result, reviewed
+question release, current-corpus binding, Topic map, and post-answer composition
+seam have passed their upstream gates.
