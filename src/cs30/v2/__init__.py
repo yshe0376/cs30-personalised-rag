@@ -5,5 +5,10 @@ being frozen.  It does not auto-upgrade or read v1 assets.
 """
 
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
+from cs30.v2.evidence import CitationValidatorAdapter, EvidenceBundleAdapter
 
-__all__ = ["REQUIRED_TEXTBOOK_IDS"]
+__all__ = [
+    "CitationValidatorAdapter",
+    "EvidenceBundleAdapter",
+    "REQUIRED_TEXTBOOK_IDS",
+]
