@@ -20,6 +20,9 @@ LOGGER = logging.getLogger(__name__)
 EVIDENCE_BUILDER_VERSION = "m8-v2-evidence-bundle-1"
 DEFAULT_TOKEN_BUDGET = 1500
 TOKEN_BUDGET_POLICY = "observe_only"
+CITATION_FAILURE_REFUSAL = (
+    "The answer could not be verified against the retrieved evidence, so no answer is given."
+)
 
 
 class EvidenceBundleAdapter:
@@ -107,7 +110,12 @@ class EvidenceBundleAdapter:
 
 
 class CitationValidatorAdapter:
-    """Resolve only stable chunk-ID citations against one exact bundle."""
+    """Resolve only stable chunk-ID citations against one exact bundle.
+
+    A failed check replaces the answer with an abstention, so no caller can show
+    an answer that cites evidence outside the bundle. ``citation_status`` stays
+    ``failed`` and the rejected IDs are kept in ``run_provenance`` for analysis.
+    """
 
     def validate(
         self,
@@ -123,12 +131,17 @@ class CitationValidatorAdapter:
             )
 
         allowed_chunk_ids = set(evidence.citation_map.values())
-        if any(citation not in allowed_chunk_ids for citation in answer.citations):
+        rejected = sorted(set(answer.citations) - allowed_chunk_ids)
+        if rejected:
             return ValidatedAnswer(
-                answer=answer,
+                answer=GeneratedAnswer(explanation=CITATION_FAILURE_REFUSAL, abstained=True),
                 resolved_citations=(),
                 citation_status="failed",
-                run_provenance=evidence.run_provenance,
+                run_provenance={
+                    **evidence.run_provenance,
+                    "citation_failure": "unknown_citation_ids",
+                    "rejected_citation_ids": ",".join(rejected),
+                },
             )
         return ValidatedAnswer(
             answer=answer,
@@ -171,6 +184,7 @@ def _prompt_context(items: tuple[EvidenceItem, ...]) -> str | None:
 
 
 __all__ = [
+    "CITATION_FAILURE_REFUSAL",
     "CitationValidatorAdapter",
     "DEFAULT_TOKEN_BUDGET",
     "EVIDENCE_BUILDER_VERSION",

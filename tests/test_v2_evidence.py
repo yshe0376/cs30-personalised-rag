@@ -11,7 +11,11 @@ from cs30.v2.contracts import (
     RetrievalResult,
     RetrievedEvidence,
 )
-from cs30.v2.evidence import CitationValidatorAdapter, EvidenceBundleAdapter
+from cs30.v2.evidence import (
+    CITATION_FAILURE_REFUSAL,
+    CitationValidatorAdapter,
+    EvidenceBundleAdapter,
+)
 from cs30.v2.ids import source_locator
 from cs30.v2.ports import CitationValidator, EvidenceBundleBuilder
 from cs30.v2.tokenization import RegexTokenCounter
@@ -187,11 +191,36 @@ def test_validator_accepts_only_chunk_ids_and_preserves_run_provenance() -> None
     display_id_result = validator.validate(display_id_answer, bundle)
     assert display_id_result.citation_status == "failed"
     assert display_id_result.resolved_citations == ()
+    assert display_id_result.run_provenance["rejected_citation_ids"] == "E1"
 
     unknown_answer = answer.model_copy(update={"citations": ("unknown-chunk",)})
     unknown_result = validator.validate(unknown_answer, bundle)
     assert unknown_result.citation_status == "failed"
     assert unknown_result.resolved_citations == ()
+
+
+def test_failed_citations_become_an_abstention_even_when_some_are_valid() -> None:
+    bundle = EvidenceBundleAdapter(run_provenance={"trace_id": "trace-3"}).build(_retrieval())
+    answer = GeneratedAnswer(
+        final_choice="A",
+        explanation="Unsupported claim.",
+        citations=("chunk-openstax", "made-up-chunk"),
+    )
+
+    validated = CitationValidatorAdapter().validate(answer, bundle)
+
+    assert validated.citation_status == "failed"
+    assert validated.abstained is True
+    assert validated.answer.abstained is True
+    assert validated.answer.final_choice is None
+    assert validated.answer.citations == ()
+    assert validated.answer.explanation == CITATION_FAILURE_REFUSAL
+    assert "Unsupported claim." not in validated.model_dump_json()
+    assert validated.resolved_citations == ()
+    assert validated.run_provenance["trace_id"] == "trace-3"
+    assert validated.run_provenance["citation_failure"] == "unknown_citation_ids"
+    assert validated.run_provenance["rejected_citation_ids"] == "made-up-chunk"
+    assert "citation_failure" not in bundle.run_provenance
 
 
 def test_validator_skips_citations_for_abstention() -> None:
