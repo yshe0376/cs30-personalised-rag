@@ -1,0 +1,28 @@
+{
+  "schema_version": "2.0",
+  "corpus_version": "2.0.0-dev.1",
+  "corpus_hash": "sha256:fixture-concept-check-v1",
+  "topic_registry_version": "fixture-topics-v1",
+  "assignments": [
+    {
+      "chunk_id": "fixture-cp2e-ch2-p1",
+      "topic_ids": ["acceleration"]
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch2-p2",
+      "topic_ids": ["acceleration"]
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch4-p1",
+      "topic_ids": ["acceleration", "newtons-second-law"]
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch4-p2",
+      "topic_ids": ["newtons-second-law"]
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch4-p3",
+      "topic_ids": ["newtons-second-law"]
+    }
+  ]
+}

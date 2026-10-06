@@ -1,0 +1,57 @@
+[
+  {
+    "scenario_id": "newtons-second-law",
+    "title": "Answer cites Newton's second law",
+    "query": "How does the net force on an object change its acceleration?",
+    "retrieved_chunk_ids": ["fixture-cp2e-ch4-p2", "fixture-cp2e-ch4-p3", "fixture-cp2e-ch4-p1"],
+    "cited_chunk_ids": ["fixture-cp2e-ch4-p2"],
+    "expected_retrieval_topic": "newtons-second-law",
+    "expected_retrieval_error": null,
+    "expected_cited_topic": "newtons-second-law",
+    "expected_cited_error": null
+  },
+  {
+    "scenario_id": "acceleration",
+    "title": "Answer cites average acceleration",
+    "query": "How is average acceleration calculated?",
+    "retrieved_chunk_ids": ["fixture-cp2e-ch2-p2", "fixture-cp2e-ch2-p1"],
+    "cited_chunk_ids": ["fixture-cp2e-ch2-p2"],
+    "expected_retrieval_topic": "acceleration",
+    "expected_retrieval_error": null,
+    "expected_cited_topic": "acceleration",
+    "expected_cited_error": null
+  },
+  {
+    "scenario_id": "cited-topic-differs",
+    "title": "Retrieval leans to force, but the answer cites acceleration",
+    "query": "What makes a moving object speed up?",
+    "retrieved_chunk_ids": ["fixture-cp2e-ch4-p2", "fixture-cp2e-ch2-p1"],
+    "cited_chunk_ids": ["fixture-cp2e-ch2-p1"],
+    "expected_retrieval_topic": "newtons-second-law",
+    "expected_retrieval_error": null,
+    "expected_cited_topic": "acceleration",
+    "expected_cited_error": null
+  },
+  {
+    "scenario_id": "topic-tie",
+    "title": "Only a chunk mapped to two Topics is retrieved",
+    "query": "How are force and acceleration related?",
+    "retrieved_chunk_ids": ["fixture-cp2e-ch4-p1"],
+    "cited_chunk_ids": ["fixture-cp2e-ch4-p1"],
+    "expected_retrieval_topic": null,
+    "expected_retrieval_error": "TOPIC_TIE",
+    "expected_cited_topic": null,
+    "expected_cited_error": "TOPIC_TIE"
+  },
+  {
+    "scenario_id": "unmapped-chunk",
+    "title": "Only a chunk without a Topic is retrieved",
+    "query": "Does negative acceleration always mean slowing down?",
+    "retrieved_chunk_ids": ["fixture-cp2e-ch2-p3"],
+    "cited_chunk_ids": ["fixture-cp2e-ch2-p3"],
+    "expected_retrieval_topic": null,
+    "expected_retrieval_error": "NO_TOPIC_AVAILABLE",
+    "expected_cited_topic": null,
+    "expected_cited_error": "NO_TOPIC_AVAILABLE"
+  }
+]
