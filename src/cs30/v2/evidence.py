@@ -84,10 +84,9 @@ class EvidenceBundleAdapter:
         if total_tokens > budget:
             LOGGER.warning(
                 "v2 evidence exceeds the observational token budget; preserving all hits: "
-                "tokens=%s budget=%s query=%r",
+                "tokens=%s budget=%s",
                 total_tokens,
                 budget,
-                retrieval.query,
             )
         provenance = {
             **self.run_provenance,
