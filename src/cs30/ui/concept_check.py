@@ -1,301 +1,294 @@
-"""M8 fixture composition for the post-answer v2 Concept Check UI.
+"""Reusable Streamlit renderer for one published Concept Check question.
 
-The existing Streamlit shell still consumes the v1-compatible ``PipelineRun``.
-This module is an explicit development adapter: it converts that saved run to
-the M1-owned v2 contracts, then delegates selection, grading, event storage and
-state replay to M7's ``ConceptCheckService``.  It must never be presented as an
-official v2 experiment or used to invent production corpus identity.
+The component owns presentation only. Runtime composition, question selection,
+grading, event persistence, and learner-state replay stay behind callbacks so a
+future v2 answer page can reuse this renderer without copying the quiz logic.
 """
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
+from html import escape
 from typing import Literal
 
-from cs30.concept_check.event_store import JsonlEventStore
-from cs30.concept_check.learner_state import EventReplayer
-from cs30.concept_check.provider import FixtureQuestionProvider
-from cs30.concept_check.service import ConceptCheckService
-from cs30.contracts import PipelineRun
-from cs30.v2.config import ConceptCheckConfig
+import streamlit as st
+
+from cs30.v2.catalog import get_textbook_spec
 from cs30.v2.contracts import (
+    ConceptCheckEvent,
     ConceptCheckGrade,
-    ConceptCheckQuestion,
-    ConceptCheckQuestionBinding,
     ConceptCheckQuestionRelease,
-    ConceptCheckQuestionStatus,
-    EvidenceProvenance,
-    EvidenceSpan,
-    EvidenceSpanBinding,
-    GeneratedAnswer,
+    ConceptCheckResult,
     LearnerState,
-    QuestionSourceType,
-    RetrievalMode,
-    RetrievalResult,
-    RetrievedEvidence,
-    SpanResolutionMethod,
-    SpanResolutionStatus,
     StudentLevel,
-    StudentProfile,
-    TopicResolution,
-    TopicResolutionStatus,
-    ValidatedAnswer,
+    TopicState,
 )
-from cs30.v2.ids import source_locator
 
-FIXTURE_CORPUS_VERSION = "v2-ui-fixture-1"
-FIXTURE_CORPUS_HASH = "sha256:v2-ui-fixture-corpus"
-FIXTURE_TOPIC_ID = "motion"
-FIXTURE_TOPIC_REGISTRY_VERSION = "topics-ui-fixture-1"
-FIXTURE_TEXTBOOK_ID = "fixture-physics"
-FIXTURE_DOCUMENT_ID = "fixture-physics-document"
-FIXTURE_SOURCE_NAME = "fixture-physics-source"
-
-
-class FixtureTopicResolver:
-    """Resolve the single fixture topic without touching production mappings."""
-
-    def resolve_retrieval_topic(self, retrieval: RetrievalResult) -> TopicResolution:
-        return self._resolution(bool(retrieval.hits))
-
-    def resolve_cited_topic(
-        self,
-        retrieval: RetrievalResult,
-        validated: ValidatedAnswer,
-    ) -> TopicResolution:
-        available = {hit.chunk_id for hit in retrieval.hits}
-        return self._resolution(bool(set(validated.resolved_citations) & available))
-
-    @staticmethod
-    def _resolution(resolved: bool) -> TopicResolution:
-        if resolved:
-            return TopicResolution(
-                status=TopicResolutionStatus.RESOLVED,
-                topic_id=FIXTURE_TOPIC_ID,
-                topic_registry_version=FIXTURE_TOPIC_REGISTRY_VERSION,
-                support=1.0,
-                topic_support={FIXTURE_TOPIC_ID: 1.0},
-            )
-        return TopicResolution(
-            status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
-            support=0.0,
-            error_code="fixture_topic_unavailable",
-        )
+Choice = Literal["A", "B", "C", "D"]
 
 
 @dataclass(frozen=True)
-class ConceptCheckFixtureSession:
-    """One UI-ready fixture session backed by M7's real service objects."""
+class QuizAttemptView:
+    """Everything the component needs after one immutable attempt."""
 
-    service: ConceptCheckService
-    retrieval: RetrievalResult
-    validated: ValidatedAnswer
-    profile: StudentProfile
-    release: ConceptCheckQuestionRelease | None
+    grade: ConceptCheckGrade
+    previous_state: LearnerState
+    learner_state: LearnerState
+    event: ConceptCheckEvent
+    baseline_level: StudentLevel
 
-    def submit(
-        self,
-        *,
-        selected_choice: Literal["A", "B", "C", "D"] | None,
-        attempt_id: str,
-        event_id: str,
-        release: ConceptCheckQuestionRelease | None = None,
-    ) -> tuple[ConceptCheckGrade, LearnerState]:
-        selected_release = release or self.release
-        if selected_release is None:
-            raise ValueError("no Concept Check question is available")
-        provenance = self.retrieval.provenance
-        if provenance is None:
-            raise ValueError("fixture retrieval provenance is required")
-        return self.service.submit(
-            selected_release,
-            attempt_id=attempt_id,
-            selected_choice=selected_choice,
-            event_id=event_id,
-            corpus_version=provenance.corpus_version,
-            corpus_hash=provenance.corpus_hash,
+
+SubmitCallback = Callable[[Choice], QuizAttemptView]
+SkipCallback = Callable[[], QuizAttemptView]
+
+
+def inject_concept_check_styles() -> None:
+    """Apply component-scoped styling without changing the v1 application."""
+
+    st.markdown(
+        """
+        <style>
+        :root {
+            --cc-orange: #f06f54;
+            --cc-orange-dark: #df5b40;
+            --cc-ink: #171411;
+            --cc-muted: #706a64;
+            --cc-line: #e8e4e1;
+        }
+        .cc-field-title {
+            margin: 16px 0 8px;
+            color: var(--cc-ink);
+            font-size: 1.05rem !important;
+            font-weight: 750;
+        }
+        .cc-answer-review {
+            display: grid;
+            gap: 7px;
+            margin: 10px 0 18px;
+        }
+        .cc-answer-option {
+            padding: 8px 11px;
+            border: 1px solid var(--cc-line);
+            border-radius: 9px;
+            color: #49433e;
+            background: #ffffff;
+            font-size: .94rem;
+        }
+        .cc-answer-option.correct {
+            border-color: #a9d8bd;
+            color: #1f7045;
+            background: #edf8f1;
+        }
+        .cc-answer-option.incorrect {
+            border-color: #efb8ac;
+            color: #a33e2b;
+            background: #fff4f1;
+        }
+        .cc-state-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin: 8px 0 16px;
+        }
+        .cc-state-item {
+            padding: 10px 12px;
+            border: 1px solid var(--cc-line);
+            border-radius: 9px;
+            background: #ffffff;
+        }
+        .cc-state-label {
+            display: block;
+            margin-bottom: 3px;
+            color: var(--cc-muted);
+            font-size: .82rem;
+        }
+        .cc-state-value {
+            display: block;
+            color: var(--cc-ink);
+            font-size: .96rem;
+            font-weight: 700;
+            line-height: 1.3;
+            overflow-wrap: anywhere;
+        }
+        @media (max-width: 720px) {
+            .cc-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def clear_quiz_component(key: str) -> None:
+    """Clear rendered state while leaving previously persisted events intact."""
+
+    for suffix in ("choice", "question_id", "result"):
+        st.session_state.pop(f"{key}:{suffix}", None)
+
+
+def _topic_state(
+    state: LearnerState,
+    topic_id: str,
+    baseline_level: StudentLevel,
+) -> TopicState:
+    return state.topics.get(topic_id) or TopicState(topic_id=topic_id, level=baseline_level)
+
+
+def _render_options(release: ConceptCheckQuestionRelease, grade: ConceptCheckGrade) -> None:
+    question = release.question
+    rows: list[str] = []
+    for choice, option in question.options.items():
+        classes = ["cc-answer-option"]
+        notes: list[str] = []
+        if choice == grade.correct_answer:
+            classes.append("correct")
+            notes.append("Correct answer")
+        if choice == grade.selected_choice:
+            notes.append("Your answer")
+            if grade.result is ConceptCheckResult.INCORRECT:
+                classes.append("incorrect")
+        suffix = f" <strong>· {' · '.join(notes)}</strong>" if notes else ""
+        rows.append(
+            f'<div class="{" ".join(classes)}">'
+            f"{escape(choice)} — {escape(option)}{suffix}</div>"
         )
-
-
-def build_fixture_session(
-    run: PipelineRun,
-    *,
-    event_directory: Path,
-) -> ConceptCheckFixtureSession:
-    """Adapt one fixture ``PipelineRun`` and select an eligible micro-check."""
-
-    if run.mode != "fixture":
-        raise ValueError("the temporary Concept Check adapter accepts fixture runs only")
-    if run.validated_answer is None:
-        raise ValueError("PipelineRun must include a validated answer")
-
-    retrieval = _adapt_retrieval(run)
-    validated = _adapt_validated_answer(run)
-    profile = StudentProfile(
-        profile_id=run.profile.profile_id,
-        level=StudentLevel(run.profile.level.value),
-        topic_levels={
-            topic_id: StudentLevel(level.value)
-            for topic_id, level in run.profile.topic_levels.items()
-        },
-        confidence=run.profile.confidence,
-    )
-    config = ConceptCheckConfig(enabled=True)
-    replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION, config)
-    store = JsonlEventStore(event_directory, replayer)
-    release = _fixture_release(retrieval, profile.level)
-    provider = (
-        FixtureQuestionProvider((release,))
-        if release is not None
-        else FixtureQuestionProvider(())
-    )
-    service = ConceptCheckService(
-        config=config,
-        resolver=FixtureTopicResolver(),
-        provider=provider,
-        event_store=store,
-        replayer=replayer,
-    )
-    prepared = service.prepare(retrieval, profile)
-    selected = service.select(prepared, retrieval, validated)
-    return ConceptCheckFixtureSession(
-        service=service,
-        retrieval=retrieval,
-        validated=validated,
-        profile=profile,
-        release=selected,
+    st.markdown(
+        f'<div class="cc-answer-review">{"".join(rows)}</div>',
+        unsafe_allow_html=True,
     )
 
 
-def _adapt_retrieval(run: PipelineRun) -> RetrievalResult:
-    hits: list[RetrievedEvidence] = []
-    offset = 0
-    for hit in run.retrieval.hits:
-        location = f"chapter-{hit.chapter_id}"
-        locator = source_locator(
-            source_name=FIXTURE_SOURCE_NAME,
-            textbook_id=FIXTURE_TEXTBOOK_ID,
-            chapter_id=hit.chapter_id,
-            page_or_location=location,
-            char_start=offset,
-            char_end=offset + len(hit.text),
-        )
-        hits.append(
-            RetrievedEvidence(
-                provider="fixture",
-                textbook_id=FIXTURE_TEXTBOOK_ID,
-                document_id=FIXTURE_DOCUMENT_ID,
-                chunk_id=hit.chunk_id,
-                chapter_id=hit.chapter_id,
-                source_name=FIXTURE_SOURCE_NAME,
-                page_or_location=location,
-                source_locator=locator,
-                text=hit.text,
-                score=hit.score,
-                rank=hit.rank,
-                retriever_type=RetrievalMode(hit.retriever_type.value),
+def _render_evidence(release: ConceptCheckQuestionRelease) -> None:
+    bindings = {item.span_id: item for item in release.binding.bindings}
+    st.markdown('<p class="cc-field-title">Evidence</p>', unsafe_allow_html=True)
+    for anchor in release.question.evidence_anchors:
+        binding = bindings[anchor.span_id]
+        textbook = get_textbook_spec(anchor.textbook_id)
+        with st.container(border=True):
+            st.write(anchor.verbatim_text)
+            st.caption(
+                f"Textbook: {textbook.title} · Chapter {anchor.chapter_id} · "
+                f"Chunk(s): {', '.join(binding.chunk_ids)}"
             )
+
+
+def _render_state_change(release: ConceptCheckQuestionRelease, result: QuizAttemptView) -> None:
+    topic_id = release.question.topic_id
+    before = _topic_state(result.previous_state, topic_id, result.baseline_level)
+    after = _topic_state(result.learner_state, topic_id, result.baseline_level)
+    values = (
+        ("Topic level", f"{before.level.value.title()} → {after.level.value.title()}"),
+        ("Mastery", f"{before.mastery_score:.2f} → {after.mastery_score:.2f}"),
+        ("Scored attempts", f"{before.total_attempts} → {after.total_attempts}"),
+        ("Correct", f"{before.correct_attempts} → {after.correct_attempts}"),
+    )
+    items = "".join(
+        '<div class="cc-state-item">'
+        f'<span class="cc-state-label">{escape(label)}</span>'
+        f'<span class="cc-state-value">{escape(value)}</span>'
+        "</div>"
+        for label, value in values
+    )
+    st.markdown('<p class="cc-field-title">Learner state change</p>', unsafe_allow_html=True)
+    st.markdown(f'<div class="cc-state-grid">{items}</div>', unsafe_allow_html=True)
+
+
+def _render_result(
+    release: ConceptCheckQuestionRelease,
+    result: QuizAttemptView,
+    *,
+    key: str,
+    allow_retry: bool,
+) -> None:
+    grade = result.grade
+    question = release.question
+    st.markdown('<p class="cc-field-title">Quiz result</p>', unsafe_allow_html=True)
+    st.write(question.question)
+    _render_options(release, grade)
+
+    if grade.result is ConceptCheckResult.CORRECT:
+        st.success("Correct — this scored attempt was recorded.")
+    elif grade.result is ConceptCheckResult.INCORRECT:
+        st.error(
+            f"Incorrect. The correct answer is {grade.correct_answer}: "
+            f"{question.options[grade.correct_answer]}"
         )
-        offset += len(hit.text) + 1
-    mode = RetrievalMode(run.retrieval.mode.value)
-    return RetrievalResult(
-        query=run.retrieval.query,
-        mode=mode,
-        hits=tuple(hits),
-        provenance=EvidenceProvenance(
-            corpus_version=FIXTURE_CORPUS_VERSION,
-            corpus_hash=FIXTURE_CORPUS_HASH,
-            manifest_hash="sha256:v2-ui-fixture-manifest",
-            chunk_config_hash="sha256:v2-ui-fixture-chunks",
-            index_version="v2-ui-fixture-index-1",
-            retrieval_mode=mode,
-            retrieval_config_hash="sha256:v2-ui-fixture-retrieval",
-        ),
+    else:
+        st.warning("Skipped — the event was recorded, but it is not counted as a scored attempt.")
+
+    st.markdown('<p class="cc-field-title">Explanation</p>', unsafe_allow_html=True)
+    st.write(question.rationale)
+    _render_evidence(release)
+    _render_state_change(release, result)
+
+    with st.expander("Attempt record"):
+        st.json(result.event.model_dump(mode="json"))
+
+    if allow_retry and grade.result is not ConceptCheckResult.CORRECT:
+        label = "Try again" if grade.result is ConceptCheckResult.INCORRECT else "Answer now"
+        if st.button(label, key=f"{key}:retry", type="primary", use_container_width=True):
+            st.session_state.pop(f"{key}:result", None)
+            st.session_state.pop(f"{key}:choice", None)
+            st.rerun()
+
+
+def render_quiz(
+    release: ConceptCheckQuestionRelease,
+    *,
+    on_submit: SubmitCallback,
+    on_skip: SkipCallback,
+    key: str = "concept-check-quiz",
+    allow_retry: bool = True,
+) -> QuizAttemptView | None:
+    """Render one reusable A–D quiz and invoke the supplied persistence callbacks.
+
+    The correct answer, rationale, and evidence are rendered only after submit
+    or skip. The component never calls an LLM and never constructs a service or
+    event store itself.
+    """
+
+    inject_concept_check_styles()
+    question = release.question
+    question_key = f"{key}:question_id"
+    if st.session_state.get(question_key) != question.question_id:
+        clear_quiz_component(key)
+        st.session_state[question_key] = question.question_id
+
+    stored = st.session_state.get(f"{key}:result")
+    if isinstance(stored, QuizAttemptView):
+        _render_result(release, stored, key=key, allow_retry=allow_retry)
+        return stored
+
+    st.markdown('<p class="cc-field-title">Quick check</p>', unsafe_allow_html=True)
+    st.write(question.question)
+    selected = st.radio(
+        "Concept Check answer",
+        options=list(question.options),
+        index=None,
+        format_func=lambda choice: f"{choice} — {question.options[choice]}",
+        key=f"{key}:choice",
+        label_visibility="collapsed",
     )
-
-
-def _adapt_validated_answer(run: PipelineRun) -> ValidatedAnswer:
-    source = run.validated_answer
-    assert source is not None
-    answer = GeneratedAnswer(
-        final_choice=run.answer.final_choice,
-        explanation=run.answer.explanation,
-        citations=tuple(run.answer.citations),
-        abstained=run.answer.abstained,
+    submit_column, skip_column = st.columns(2)
+    submit = submit_column.button(
+        "Submit answer",
+        key=f"{key}:submit",
+        type="primary",
+        use_container_width=True,
+        disabled=selected is None,
     )
-    return ValidatedAnswer(
-        answer=answer,
-        resolved_citations=tuple(source.resolved_citations),
-        citation_status=source.citation_status,
-        run_provenance={
-            **source.run_provenance,
-            "ui_adapter": "v1-pipeline-run-to-v2-concept-check-fixture",
-            "source_run_id": run.run_id,
-        },
-    )
-
-
-def _fixture_release(
-    retrieval: RetrievalResult,
-    difficulty: StudentLevel,
-) -> ConceptCheckQuestionRelease | None:
-    if not retrieval.hits:
+    skip = skip_column.button("Skip", key=f"{key}:skip", use_container_width=True)
+    if not submit and not skip:
         return None
-    hit = retrieval.hits[0]
-    anchor = EvidenceSpan(
-        span_id="cc:ui-fixture-motion:1",
-        textbook_id=hit.textbook_id,
-        chapter_id=hit.chapter_id,
-        chapter_char_start=0,
-        chapter_char_end=5,
-        verbatim_text="Force",
-        origin_corpus_version=FIXTURE_CORPUS_VERSION,
-    )
-    question = ConceptCheckQuestion(
-        question_id=f"ui-fixture-motion-{difficulty.value}",
-        question="Which statement best describes how a net force affects an object?",
-        options={
-            "A": "A net force can change the object's motion.",
-            "B": "A net force can only change the object's colour.",
-            "C": "A net force always keeps velocity unchanged.",
-            "D": "A net force has no relationship to acceleration.",
-        },
-        correct_answer="A",
-        topic_id=FIXTURE_TOPIC_ID,
-        topic_registry_version=FIXTURE_TOPIC_REGISTRY_VERSION,
-        difficulty=difficulty,
-        evidence_anchors=(anchor,),
-        source_type=QuestionSourceType.HUMAN_AUTHORED,
-        rationale="A non-zero net force produces acceleration and can change motion.",
-        review_record_id="ui-fixture-review",
-        status=ConceptCheckQuestionStatus.PUBLISHED,
-    )
-    binding = ConceptCheckQuestionBinding(
-        question_id=question.question_id,
-        corpus_version=FIXTURE_CORPUS_VERSION,
-        corpus_hash=FIXTURE_CORPUS_HASH,
-        bindings=(
-            EvidenceSpanBinding(
-                span_id=anchor.span_id,
-                textbook_id=anchor.textbook_id,
-                corpus_version=FIXTURE_CORPUS_VERSION,
-                corpus_hash=FIXTURE_CORPUS_HASH,
-                resolution_status=SpanResolutionStatus.RESOLVED,
-                resolution_method=SpanResolutionMethod.VERBATIM_UNIQUE,
-                document_id=hit.document_id,
-                char_start=0,
-                char_end=5,
-                chunk_ids=(hit.chunk_id,),
-            ),
-        ),
-    )
-    return ConceptCheckQuestionRelease(question=question, binding=binding)
 
-
-__all__ = [
-    "ConceptCheckFixtureSession",
-    "FIXTURE_CORPUS_HASH",
-    "FIXTURE_CORPUS_VERSION",
-    "build_fixture_session",
-]
+    try:
+        result = on_submit(selected) if submit else on_skip()
+    except ValueError as exc:
+        st.error(f"The attempt could not be recorded: {exc}")
+        return None
+    if result.grade.question_id != question.question_id:
+        raise ValueError("quiz callback returned a grade for a different question")
+    st.session_state[f"{key}:result"] = result
+    st.rerun()
+    return result

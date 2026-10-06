@@ -1,4 +1,4 @@
-# Member 8 - v2 demo interface
+# Member 8 UI interfaces
 
 This module consumes `PipelineRun`.
 
@@ -25,22 +25,43 @@ python -m streamlit run src/cs30/ui/app.py
 The first version intentionally calls the fixture pipeline. Replace the dependency
 builder at the composition boundary only after the leader wires the real adapters.
 
-## Concept Check fixture preview
+## Independent Concept Check fixture demo
 
-The existing question-and-answer UI is retained. After a cited answer passes
-validation, the result panel offers an optional **Quiz me** action. The
-Concept Check is off until the learner selects that action and is explicitly
-labelled fixture/development. It
-adapts the saved `PipelineRun` to the v2 contracts, then delegates question
-selection, deterministic grading, JSONL event storage, and LearnerState replay
-to M7's `ConceptCheckService`.
+The v1 question-and-answer page is unchanged. Start the standalone multipage
+demo with the same command above, then select **Concept Check Demo** in the
+Streamlit navigation. It can also be launched directly:
+
+```bash
+python -m streamlit run src/cs30/ui/pages/1_Concept_Check_Demo.py
+```
+
+The page is visibly labelled test-data-only. It uses the shared
+`load_fixture_releases()` and `fixture_retrieval_result()` assets, calls
+`ConceptCheckService.prepare`, `select`, and `submit`, and stores events in one
+temporary JSONL directory per Streamlit session. No LLM is called.
+
+`cs30.ui.concept_check.render_quiz` is the reusable M8-1 component. It accepts
+one published `ConceptCheckQuestionRelease` plus submit and skip callbacks, so
+the future v2 answer flow can embed it without copying presentation logic.
+Answers, rationale, and evidence stay hidden until submit or skip.
 
 Each submission or skip creates an immutable attempt record. Incorrect and
-skipped results can start a new attempt without changing the earlier event.
-The result view keeps the question and submitted choice visible, gives immediate
-feedback, and shows compact LearnerState values plus the attempt history.
+skipped results can start a new attempt without changing the earlier event. The
+result view shows the correct answer, rationale, textbook/chapter evidence, and
+the replay-derived LearnerState change. Skips are explicitly marked as not
+counted.
 
-This adapter does not create official v2 identities or results. Real-mode
-Concept Check remains unavailable until the v2 retrieval result, reviewed
-question release, current-corpus binding, Topic map, and post-answer composition
-seam have passed their upstream gates.
+## Concept Check event report
+
+Generate CSV, JSON, and Markdown summaries from one JSONL event stream:
+
+```bash
+cs30-concept-check-report path/to/events.jsonl path/to/output --starting-level beginner
+```
+
+The report includes submitted attempts, accuracy, skip rate, revocation rate,
+topic/difficulty breakdowns, promotion/demotion counts, and final states rebuilt
+with M7's `EventReplayer`.
+
+The student control panel (revoke/override/feature toggle) remains deferred until
+M7's control-event signatures are finalized.
