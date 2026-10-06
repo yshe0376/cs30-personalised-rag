@@ -1,0 +1,15 @@
+{
+  "topic_registry_version": "fixture-topics-v1",
+  "topics": [
+    {
+      "topic_id": "acceleration",
+      "title": "Acceleration",
+      "description": "Rate of change of velocity, including average acceleration."
+    },
+    {
+      "topic_id": "newtons-second-law",
+      "title": "Newton's second law",
+      "description": "Net force, mass and acceleration, including multi-object systems."
+    }
+  ]
+}

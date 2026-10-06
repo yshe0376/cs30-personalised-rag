@@ -1,0 +1,59 @@
+{
+  "corpus_version": "2.0.0-dev.1",
+  "corpus_hash": "sha256:fixture-concept-check-v1",
+  "textbook_id": "openstax_college_physics_2e",
+  "document_id": "fixture-openstax-college-physics-2e-concept-check",
+  "chapters": [
+    {
+      "chapter_id": "2",
+      "title": "Kinematics",
+      "char_start": 0,
+      "char_end": 672
+    },
+    {
+      "chapter_id": "4",
+      "title": "Dynamics: Force and Newton's Laws of Motion",
+      "char_start": 674,
+      "char_end": 1330
+    }
+  ],
+  "chunks": [
+    {
+      "chunk_id": "fixture-cp2e-ch2-p1",
+      "chapter_id": "2",
+      "char_start": 0,
+      "char_end": 196
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch2-p2",
+      "chapter_id": "2",
+      "char_start": 198,
+      "char_end": 451
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch2-p3",
+      "chapter_id": "2",
+      "char_start": 453,
+      "char_end": 672
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch4-p1",
+      "chapter_id": "4",
+      "char_start": 674,
+      "char_end": 937
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch4-p2",
+      "chapter_id": "4",
+      "char_start": 939,
+      "char_end": 1078
+    },
+    {
+      "chunk_id": "fixture-cp2e-ch4-p3",
+      "chapter_id": "4",
+      "char_start": 1080,
+      "char_end": 1330
+    }
+  ],
+  "text": "Acceleration is the rate at which velocity changes with time. Because velocity has both a size and a direction, acceleration is a vector quantity. Its SI unit is metres per second squared (m/s^2).\n\nAverage acceleration over a time interval equals the change in velocity divided by the time taken for that change: a = (v_final - v_initial) / t. For example, if a cyclist's velocity rises from 2 m/s to 8 m/s in 3 s, the average acceleration is 2 m/s^2.\n\nA negative acceleration only means that the acceleration points in the negative direction of the chosen axis. An object slows down when its acceleration points opposite to its velocity, whichever sign the axis gives it.\n\nNewton's second law states that the acceleration of a system is directly proportional to the net external force acting on it and inversely proportional to its mass: a = F_net / m. If the net force on an object of fixed mass doubles, its acceleration also doubles.\n\nThe SI unit of force is the newton (N). One newton is the net force that gives a 1 kg mass an acceleration of 1 m/s^2, so 1 N = 1 kg m/s^2.\n\nObjects that move together can be treated as one system whose mass is the sum of their masses. Applying the second law to the whole system gives the common acceleration; applying it again to one object gives the net force acting on that object alone."
+}
