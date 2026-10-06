@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from cs30.v2.catalog import get_textbook_spec
-from cs30.v2.chunking import V2BlockChunker
+from cs30.v2.chunking import V2BlockChunker, V2ProductionChunker
 from cs30.v2.config import V2Config, load_v2_config
 from cs30.v2.errors import BuildGateError, InputError, V2Error
 from cs30.v2.fixture import TextFixtureParser
@@ -131,12 +131,7 @@ def _fixture_build(
 def _real_build(
     config: V2Config, raw_inputs: list[str]
 ) -> tuple[list[TextbookInput], BuildDeps]:
-    """Real sources: M2's pinned parse or the pinned PDFs, and an optional index.
-
-    The chunker is still M1's block adapter, which is marked as a fixture, so an
-    official build stops with FIXTURE_NOT_ALLOWED until M4's production chunker
-    is wired in; development builds produce diagnostic corpora from real sources.
-    """
+    """Build M2's pinned parse or PDFs with the production M4 chunker."""
 
     overrides = dict(_parse_input(raw_input) for raw_input in raw_inputs)
     unknown = set(overrides) - set(config.required_textbook_ids)
@@ -178,7 +173,7 @@ def _real_build(
         parser_registry=build_parser_registry(
             config.required_textbook_ids, source_format=config.source_format
         ),
-        chunker=V2BlockChunker.from_config(config.chunk_config),
+        chunker=V2ProductionChunker.from_config(config.chunk_config),
         index_builder=index_builder,
     )
 
