@@ -35,15 +35,16 @@ Streamlit navigation. It can also be launched directly:
 python -m streamlit run src/cs30/ui/pages/1_Concept_Check_Demo.py
 ```
 
-The page is visibly labelled test-data-only. It uses the shared
-`load_fixture_releases()` and `fixture_retrieval_result()` assets, calls
-`ConceptCheckService.prepare`, `select`, and `submit`, and stores events in one
+The page is visibly labelled test-data-only. It uses the shared fixture scenarios,
+question releases, chunk-to-Topic map, and Topic registry; calls
+`ConceptCheckService.prepare`, `select`, and `submit`; and stores events in one
 temporary JSONL directory per Streamlit session. No LLM is called.
 
 `cs30.ui.concept_check.render_quiz` is the reusable M8-1 component. It accepts
-one published `ConceptCheckQuestionRelease` plus submit and skip callbacks, so
-the future v2 answer flow can embed it without copying presentation logic.
-Answers, rationale, and evidence stay hidden until submit or skip.
+one published `ConceptCheckQuestionRelease`, submit and skip callbacks, and an
+optional next-question callback, so the future v2 answer flow can embed it
+without copying presentation logic. Answers, rationale, and evidence stay hidden
+until submit or skip.
 
 Each submission or skip creates an immutable attempt record. After feedback is
 revealed, the same question cannot be retried as a new scored attempt. The result
@@ -51,9 +52,9 @@ view shows the correct answer, rationale, textbook/chapter evidence, and the
 replay-derived LearnerState change. Skips are explicitly marked as not counted.
 
 The fixture page also rebuilds a current-session report automatically after each
-submit or skip event. It displays compact overall and grouped metrics and exposes
-the same CSV, JSON, and Markdown outputs as download buttons. The generated files
-remain in the session's temporary directory; they are not repository artifacts.
+submit or skip event. It displays compact overall and grouped metrics and renders
+the CSV, JSON, and Markdown downloads directly in memory. A report failure is
+shown as a warning and does not interrupt the quiz.
 
 ## Concept Check event report
 
@@ -64,8 +65,10 @@ cs30-concept-check-report path/to/events.jsonl path/to/output --starting-level b
 ```
 
 The report includes submitted attempts, accuracy, skip rate, revocation rate,
-topic/difficulty breakdowns, promotion/demotion counts, and final states rebuilt
-with M7's `EventReplayer`.
+topic/difficulty breakdowns, answer-driven promotion/demotion counts, and final
+states rebuilt with M7's `EventReplayer`. Accuracy includes submissions that were
+later revoked; revocations are reported separately. `--starting-level` is required
+so a formal report cannot silently assume a beginner profile.
 
 The student control panel (revoke/override/feature toggle) remains deferred until
 M7's control-event signatures are finalized.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import mkdtemp
@@ -16,8 +17,11 @@ from cs30.concept_check.fixtures import (
     FIXTURE_CORPUS_HASH,
     FIXTURE_CORPUS_VERSION,
     FIXTURE_TOPIC_REGISTRY_VERSION,
-    fixture_retrieval_result,
+    FixtureScenario,
+    load_fixture_chunk_topic_map,
     load_fixture_releases,
+    load_fixture_scenarios,
+    load_fixture_topic_registry,
 )
 from cs30.concept_check.learner_state import EventReplayer
 from cs30.concept_check.provider import FixtureQuestionProvider
@@ -25,95 +29,43 @@ from cs30.concept_check.service import ConceptCheckService
 from cs30.evaluation.concept_check_reporting import (
     build_concept_check_report,
     load_concept_check_events,
+    render_concept_check_csv,
+    render_concept_check_json,
     render_concept_check_markdown,
-    write_concept_check_report,
 )
 from cs30.ui.concept_check import Choice, QuizAttemptView, clear_quiz_component, render_quiz
 from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
     ConceptCheckEvent,
     ConceptCheckQuestionRelease,
-    GeneratedAnswer,
     RetrievalResult,
     StudentLevel,
     StudentProfile,
     TopicResolution,
-    TopicResolutionStatus,
     ValidatedAnswer,
 )
+from cs30.v2.topics import resolve_topic_from_citations, resolve_topic_from_retrieval
 
 QUIZ_KEY = "concept-check-demo-quiz"
+_LOGGER = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class DemoScenario:
-    label: str
-    answered_question: str
-    answer: str
-    chunk_ids: tuple[str, ...]
-    cited_chunk_ids: tuple[str, ...]
+class _FixtureTopicResolver:
+    """Adapt the shared fixture map to the Concept Check service port."""
 
-
-SCENARIOS = {
-    "Acceleration definition": DemoScenario(
-        label="Acceleration definition",
-        answered_question="What does acceleration tell us about motion?",
-        answer="Acceleration describes how velocity changes with time.",
-        chunk_ids=("fixture-cp2e-ch2-p1", "fixture-cp2e-ch2-p2"),
-        cited_chunk_ids=("fixture-cp2e-ch2-p1",),
-    ),
-    "Newton's second law": DemoScenario(
-        label="Newton's second law",
-        answered_question="How does net force affect acceleration?",
-        answer="For fixed mass, acceleration is proportional to net force.",
-        chunk_ids=("fixture-cp2e-ch4-p1", "fixture-cp2e-ch4-p2"),
-        cited_chunk_ids=("fixture-cp2e-ch4-p1",),
-    ),
-    "Two-block system": DemoScenario(
-        label="Two-block system",
-        answered_question="How do we analyse two blocks that move together?",
-        answer="Treat both blocks as one system, then analyse one block separately.",
-        chunk_ids=("fixture-cp2e-ch4-p3", "fixture-cp2e-ch4-p1"),
-        cited_chunk_ids=("fixture-cp2e-ch4-p3",),
-    ),
-}
-
-
-class FixtureChapterTopicResolver:
-    """Temporary chapter resolver copied from the shared fixture test seam."""
-
-    _topics = {"2": "acceleration", "4": "newtons-second-law"}
-
-    def _resolve(self, chapter_id: str) -> TopicResolution:
-        topic_id = self._topics.get(chapter_id)
-        if topic_id is None:
-            return TopicResolution(
-                status=TopicResolutionStatus.UNRESOLVED,
-                topic_registry_version=FIXTURE_TOPIC_REGISTRY_VERSION,
-                support=0.0,
-            )
-        return TopicResolution(
-            status=TopicResolutionStatus.RESOLVED,
-            topic_id=topic_id,
-            topic_registry_version=FIXTURE_TOPIC_REGISTRY_VERSION,
-            support=1.0,
-        )
+    def __init__(self) -> None:
+        self.topic_map = load_fixture_chunk_topic_map()
+        self.registry = load_fixture_topic_registry()
 
     def resolve_retrieval_topic(self, retrieval: RetrievalResult) -> TopicResolution:
-        if not retrieval.hits:
-            return self._resolve("")
-        return self._resolve(retrieval.hits[0].chapter_id)
+        return resolve_topic_from_retrieval(retrieval, self.topic_map, self.registry)
 
     def resolve_cited_topic(
         self,
         retrieval: RetrievalResult,
         validated: ValidatedAnswer,
     ) -> TopicResolution:
-        hits = {hit.chunk_id: hit for hit in retrieval.hits}
-        if not validated.resolved_citations:
-            return self._resolve("")
-        cited = hits.get(validated.resolved_citations[0])
-        return self._resolve(cited.chapter_id if cited is not None else "")
+        return resolve_topic_from_citations(retrieval, validated, self.topic_map, self.registry)
 
 
 @dataclass(frozen=True)
@@ -130,27 +82,17 @@ def build_demo_runtime(
     *,
     event_directory: Path,
     profile: StudentProfile,
-    scenario: DemoScenario,
+    scenario: FixtureScenario,
 ) -> DemoRuntime:
     """Compose only the shared deterministic fixture dependencies."""
 
     replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION)
     event_store = JsonlEventStore(event_directory, replayer)
-    retrieval = fixture_retrieval_result(
-        scenario.chunk_ids,
-        query=scenario.answered_question,
-    )
-    validated = ValidatedAnswer(
-        answer=GeneratedAnswer(
-            explanation=scenario.answer,
-            citations=scenario.cited_chunk_ids,
-        ),
-        citation_status="passed",
-        resolved_citations=scenario.cited_chunk_ids,
-    )
+    retrieval = scenario.retrieval()
+    validated = scenario.validated_answer()
     service = ConceptCheckService(
         config=ConceptCheckConfig(enabled=True),
-        resolver=FixtureChapterTopicResolver(),
+        resolver=_FixtureTopicResolver(),
         provider=FixtureQuestionProvider(load_fixture_releases()),
         event_store=event_store,
         replayer=replayer,
@@ -272,11 +214,15 @@ def _inject_demo_styles() -> None:
     )
 
 
-def _session_events(event_directory: Path) -> tuple[ConceptCheckEvent, ...]:
+def _session_events(
+    event_directory: Path,
+) -> tuple[tuple[ConceptCheckEvent, ...], tuple[str, ...]]:
     events: list[ConceptCheckEvent] = []
+    warnings: list[str] = []
     for path in sorted(event_directory.glob("*.jsonl")):
-        events.extend(load_concept_check_events(path))
-    return tuple(sorted(events, key=lambda event: (event.profile_id, event.stream_version)))
+        events.extend(load_concept_check_events(path, on_warning=warnings.append))
+    ordered = tuple(sorted(events, key=lambda event: (event.profile_id, event.stream_version)))
+    return ordered, tuple(warnings)
 
 
 def _starting_levels() -> dict[str, StudentLevel]:
@@ -309,15 +255,15 @@ def _display_markdown(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _render_session_report(event_directory: Path) -> None:
-    st.divider()
-    st.markdown("### Current session report")
-    st.caption(
-        "Automatically generated from submit and skip events recorded in this "
-        "fixture session."
-    )
-
-    events = _session_events(event_directory)
+def _render_session_report_contents(event_directory: Path) -> None:
+    events, warnings = _session_events(event_directory)
+    if warnings:
+        warning = (
+            warnings[0]
+            if len(warnings) == 1
+            else f"{len(warnings)} incomplete records ignored."
+        )
+        st.warning(warning)
     if not events:
         st.info("Submit or skip at least one quiz to generate the session report.")
         return
@@ -332,12 +278,8 @@ def _render_session_report(event_directory: Path) -> None:
             events,
             starting_levels=_starting_levels(),
         )
-        output_directory = event_directory / "report"
-        write_concept_check_report(report, output_directory)
         st.session_state["concept_check_demo_report"] = report
         st.session_state["concept_check_demo_report_signature"] = signature
-    else:
-        output_directory = event_directory / "report"
 
     overall = report["overall"]
     values = (
@@ -375,25 +317,39 @@ def _render_session_report(event_directory: Path) -> None:
     downloads = st.columns(3)
     downloads[0].download_button(
         "Download CSV",
-        data=(output_directory / "concept_check_report.csv").read_bytes(),
+        data=render_concept_check_csv(report).encode("utf-8"),
         file_name="concept_check_report.csv",
         mime="text/csv",
         use_container_width=True,
     )
     downloads[1].download_button(
         "Download JSON",
-        data=(output_directory / "concept_check_report.json").read_bytes(),
+        data=render_concept_check_json(report).encode("utf-8"),
         file_name="concept_check_report.json",
         mime="application/json",
         use_container_width=True,
     )
     downloads[2].download_button(
         "Download Markdown",
-        data=(output_directory / "concept_check_report.md").read_bytes(),
+        data=render_concept_check_markdown(report).encode("utf-8"),
         file_name="concept_check_report.md",
         mime="text/markdown",
         use_container_width=True,
     )
+
+
+def _render_session_report(event_directory: Path) -> None:
+    st.divider()
+    st.markdown("### Current session report")
+    st.caption(
+        "Automatically generated from submit and skip events recorded in this "
+        "fixture session."
+    )
+    try:
+        _render_session_report_contents(event_directory)
+    except Exception:  # The report must never take down the quiz interaction.
+        _LOGGER.exception("Concept Check session report could not be rendered")
+        st.warning("The session report is temporarily unavailable. The quiz remains usable.")
 
 
 def _reset_selection() -> None:
@@ -403,9 +359,9 @@ def _reset_selection() -> None:
     clear_quiz_component(QUIZ_KEY)
 
 
-def _scenario_summary(runtime: DemoRuntime, scenario: DemoScenario) -> None:
+def _scenario_summary(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
     st.markdown("### Simulated previous Q&A scenario")
-    st.write(scenario.answered_question)
+    st.write(scenario.query)
     st.caption(f"Fixture answer: {scenario.answer}")
     with st.expander("Cited evidence used by the scenario"):
         cited = set(scenario.cited_chunk_ids)
@@ -414,6 +370,25 @@ def _scenario_summary(runtime: DemoRuntime, scenario: DemoScenario) -> None:
             st.markdown(f"**{hit.chunk_id} · Chapter {hit.chapter_id} · {marker}**")
             st.write(hit.text)
             st.caption(f"Textbook: {hit.textbook_id} · Source: {hit.source_locator}")
+
+
+def _select_and_store_question(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
+    clear_quiz_component(QUIZ_KEY)
+    release = select_demo_question(runtime)
+    st.session_state["concept_check_demo_selection_trace"] = {
+        "steps": ["prepare", "select"],
+        "profile_id": runtime.profile.profile_id,
+        "scenario_id": scenario.scenario_id,
+        "scenario_title": scenario.title,
+        "retrieval_chunk_ids": [hit.chunk_id for hit in runtime.retrieval.hits],
+        "selected_question_id": release.question.question_id if release else None,
+    }
+    if release is None:
+        st.session_state["concept_check_demo_no_question"] = True
+        st.session_state.pop("concept_check_demo_release", None)
+    else:
+        st.session_state["concept_check_demo_release"] = release
+        st.session_state.pop("concept_check_demo_no_question", None)
 
 
 def main() -> None:
@@ -428,6 +403,9 @@ def main() -> None:
         "It does not call an LLM or alter the v1 question-and-answer page."
     )
 
+    scenarios = load_fixture_scenarios()
+    scenarios_by_id = {scenario.scenario_id: scenario for scenario in scenarios}
+
     control_left, control_right = st.columns(2)
     with control_left:
         level_value = st.selectbox(
@@ -438,9 +416,10 @@ def main() -> None:
             on_change=_reset_selection,
         )
     with control_right:
-        scenario_name = st.selectbox(
+        scenario_id = st.selectbox(
             "Simulated previous Q&A scenario",
-            options=list(SCENARIOS),
+            options=list(scenarios_by_id),
+            format_func=lambda value: scenarios_by_id[value].title,
             key="concept_check_demo_scenario",
             on_change=_reset_selection,
         )
@@ -450,7 +429,7 @@ def main() -> None:
         )
 
     level = StudentLevel(level_value)
-    scenario = SCENARIOS[scenario_name]
+    scenario = scenarios_by_id[scenario_id]
     profile = StudentProfile(
         profile_id=f"fixture-demo-{_session_token()}-{level.value}",
         level=level,
@@ -465,21 +444,7 @@ def main() -> None:
     _scenario_summary(runtime, scenario)
 
     if st.button("Quiz me", type="primary", use_container_width=True):
-        clear_quiz_component(QUIZ_KEY)
-        release = select_demo_question(runtime)
-        st.session_state["concept_check_demo_selection_trace"] = {
-            "steps": ["prepare", "select"],
-            "profile_id": profile.profile_id,
-            "scenario": scenario.label,
-            "retrieval_chunk_ids": [hit.chunk_id for hit in runtime.retrieval.hits],
-            "selected_question_id": release.question.question_id if release else None,
-        }
-        if release is None:
-            st.session_state["concept_check_demo_no_question"] = True
-            st.session_state.pop("concept_check_demo_release", None)
-        else:
-            st.session_state["concept_check_demo_release"] = release
-            st.session_state.pop("concept_check_demo_no_question", None)
+        _select_and_store_question(runtime, scenario)
         st.rerun()
 
     release = st.session_state.get("concept_check_demo_release")
@@ -488,12 +453,12 @@ def main() -> None:
             release,
             on_submit=lambda choice: record_demo_attempt(runtime, release, choice),
             on_skip=lambda: record_demo_attempt(runtime, release, None),
+            on_next=lambda: _select_and_store_question(runtime, scenario),
             key=QUIZ_KEY,
         )
     elif st.session_state.get("concept_check_demo_no_question"):
         st.info(
-            "No eligible published fixture question remains for this scenario. "
-            "A more specific reason can be shown after M7 exposes the planned selection-result API."
+            "No eligible published fixture question is available for this scenario."
         )
 
     trace = st.session_state.get("concept_check_demo_selection_trace")

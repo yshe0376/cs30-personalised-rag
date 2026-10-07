@@ -5,9 +5,11 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import logging
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +21,8 @@ from cs30.v2.contracts import (
     StudentLevel,
     StudentProfile,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -32,16 +36,31 @@ class AttemptMetrics:
     revocation_rate: float | None
 
 
-def load_concept_check_events(path: Path) -> tuple[ConceptCheckEvent, ...]:
-    """Load and validate one JSON object per non-empty line."""
+def load_concept_check_events(
+    path: Path,
+    *,
+    on_warning: Callable[[str], None] | None = None,
+) -> tuple[ConceptCheckEvent, ...]:
+    """Load typed JSONL events, ignoring only an incomplete final record."""
 
     events: list[ConceptCheckEvent] = []
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
-    for line_number, line in enumerate(lines, start=1):
+    lines = Path(path).read_bytes().splitlines(keepends=True)
+    for index, line in enumerate(lines):
+        line_number = index + 1
         if not line.strip():
             continue
         try:
-            events.append(ConceptCheckEvent.model_validate_json(line))
+            value = json.loads(line)
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            if index == len(lines) - 1 and not line.endswith((b"\n", b"\r")):
+                message = f"Ignoring incomplete final Concept Check record in {path}"
+                _LOGGER.warning(message)
+                if on_warning is not None:
+                    on_warning(message)
+                break
+            raise ValueError(f"invalid Concept Check event at line {line_number}: {exc}") from exc
+        try:
+            events.append(ConceptCheckEvent.model_validate(value))
         except ValueError as exc:
             raise ValueError(f"invalid Concept Check event at line {line_number}: {exc}") from exc
     return tuple(events)
@@ -82,24 +101,29 @@ def _transition_counts(
     replayer: EventReplayer,
     events: Sequence[ConceptCheckEvent],
 ) -> dict[str, dict[str, int]]:
-    """Count state transitions by replaying each valid event prefix."""
+    """Count only level transitions caused by submitted answers."""
 
     counts: dict[str, dict[str, int]] = defaultdict(lambda: {"promotions": 0, "demotions": 0})
-    previous: dict[str, StudentLevel] = dict(replayer.static_profile.topic_levels)
-    for event in sorted(events, key=lambda item: item.stream_version):
-        state = replayer.replay(
-            tuple(item for item in events if item.stream_version <= event.stream_version)
-        )
-        topic_ids = set(previous) | set(state.topics)
-        for topic_id in topic_ids:
-            before = previous.get(topic_id, replayer.static_profile.level)
-            after = state.topics.get(topic_id)
-            after_level = after.level if after is not None else replayer.static_profile.level
-            if _level_index(after_level) > _level_index(before):
+    ordered = tuple(sorted(events, key=lambda item: item.stream_version))
+    previous_state = replayer.replay(())
+    for index, event in enumerate(ordered, start=1):
+        state = replayer.replay(ordered[:index])
+        if (
+            event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
+            and event.topic_id is not None
+        ):
+            topic_id = event.topic_id
+            before_state = previous_state.topics.get(topic_id)
+            after_state = state.topics.get(topic_id)
+            before = (
+                before_state.level if before_state is not None else replayer.static_profile.level
+            )
+            after = after_state.level if after_state is not None else replayer.static_profile.level
+            if _level_index(after) > _level_index(before):
                 counts[topic_id]["promotions"] += 1
-            elif _level_index(after_level) < _level_index(before):
+            elif _level_index(after) < _level_index(before):
                 counts[topic_id]["demotions"] += 1
-            previous[topic_id] = after_level
+        previous_state = state
     return dict(counts)
 
 
@@ -193,9 +217,12 @@ def build_concept_check_report(
     return {
         "schema_version": "0.1",
         "definitions": {
-            "accuracy": "correct / submitted",
+            "accuracy": (
+                "correct / submitted; both counts include submissions that were later revoked"
+            ),
             "skip_rate": "skipped / (submitted + skipped)",
             "revocation_rate": "revoked / submitted",
+            "level_transitions": "answer-driven changes only; overrides and revocations excluded",
             "state_source": "EventReplayer",
         },
         "overall": asdict(_metrics(events)),
@@ -245,6 +272,13 @@ def render_concept_check_markdown(report: Mapping[str, Any]) -> str:
     lines = [
         "# Concept Check event report",
         "",
+        "## Definitions",
+        "",
+        f"- Accuracy: {report['definitions']['accuracy']}",
+        f"- Skip rate: {report['definitions']['skip_rate']}",
+        f"- Revocation rate: {report['definitions']['revocation_rate']}",
+        f"- Level transitions: {report['definitions']['level_transitions']}",
+        "",
         "## Overall",
         "",
         _markdown_table([overall], metric_columns),
@@ -271,48 +305,67 @@ def render_concept_check_markdown(report: Mapping[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def write_concept_check_report(report: Mapping[str, Any], output_directory: Path) -> None:
-    """Write JSON, CSV, and Markdown representations of one report."""
+_REPORT_FIELDNAMES = (
+    "group",
+    "topic_id",
+    "difficulty",
+    "submitted",
+    "correct",
+    "skipped",
+    "revoked",
+    "accuracy",
+    "skip_rate",
+    "revocation_rate",
+    "promotions",
+    "demotions",
+)
 
-    output_directory = Path(output_directory)
-    output_directory.mkdir(parents=True, exist_ok=True)
-    (output_directory / "concept_check_report.json").write_text(
-        json.dumps(report, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    (output_directory / "concept_check_report.md").write_text(
-        render_concept_check_markdown(report),
-        encoding="utf-8",
-    )
 
-    fieldnames = (
-        "group",
-        "topic_id",
-        "difficulty",
-        "submitted",
-        "correct",
-        "skipped",
-        "revoked",
-        "accuracy",
-        "skip_rate",
-        "revocation_rate",
-        "promotions",
-        "demotions",
-    )
-    rows: list[dict[str, Any]] = []
-    rows.append({"group": "overall", **report["overall"]})
+def render_concept_check_json(report: Mapping[str, Any]) -> str:
+    """Render one report as stable, human-readable JSON."""
+
+    return json.dumps(report, indent=2, sort_keys=True) + "\n"
+
+
+def _report_rows(report: Mapping[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = [{"group": "overall", **report["overall"]}]
     rows.extend({"group": "topic", **row} for row in report["by_topic"])
     rows.extend({"group": "difficulty", **row} for row in report["by_difficulty"])
     rows.extend(
         {"group": "topic_and_difficulty", **row}
         for row in report["by_topic_and_difficulty"]
     )
-    with (output_directory / "concept_check_report.csv").open(
-        "w", encoding="utf-8", newline=""
-    ) as stream:
-        writer = csv.DictWriter(stream, fieldnames=fieldnames, extrasaction="ignore")
-        writer.writeheader()
-        writer.writerows(rows)
+    return rows
+
+
+def render_concept_check_csv(report: Mapping[str, Any]) -> str:
+    """Render one report as CSV without writing an intermediate file."""
+
+    stream = StringIO(newline="")
+    writer = csv.DictWriter(stream, fieldnames=_REPORT_FIELDNAMES, extrasaction="ignore")
+    writer.writeheader()
+    writer.writerows(_report_rows(report))
+    return stream.getvalue()
+
+
+def write_concept_check_report(report: Mapping[str, Any], output_directory: Path) -> None:
+    """Write JSON, CSV, and Markdown representations of one report."""
+
+    output_directory = Path(output_directory)
+    output_directory.mkdir(parents=True, exist_ok=True)
+    (output_directory / "concept_check_report.json").write_text(
+        render_concept_check_json(report),
+        encoding="utf-8",
+    )
+    (output_directory / "concept_check_report.md").write_text(
+        render_concept_check_markdown(report),
+        encoding="utf-8",
+    )
+    (output_directory / "concept_check_report.csv").write_text(
+        render_concept_check_csv(report),
+        encoding="utf-8",
+        newline="",
+    )
 
 
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -322,7 +375,7 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--starting-level",
         choices=[level.value for level in StudentLevel],
-        default=StudentLevel.BEGINNER.value,
+        required=True,
         help="Static starting level applied to every profile in this event file",
     )
     return parser.parse_args(argv)

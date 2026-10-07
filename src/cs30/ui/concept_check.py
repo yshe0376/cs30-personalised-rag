@@ -41,6 +41,7 @@ class QuizAttemptView:
 
 SubmitCallback = Callable[[Choice], QuizAttemptView]
 SkipCallback = Callable[[], QuizAttemptView]
+NextCallback = Callable[[], None]
 
 
 def inject_concept_check_styles() -> None:
@@ -228,6 +229,7 @@ def render_quiz(
     *,
     on_submit: SubmitCallback,
     on_skip: SkipCallback,
+    on_next: NextCallback | None = None,
     key: str = "concept-check-quiz",
 ) -> QuizAttemptView | None:
     """Render one reusable A–D quiz and invoke the supplied persistence callbacks.
@@ -247,6 +249,14 @@ def render_quiz(
     stored = st.session_state.get(f"{key}:result")
     if isinstance(stored, QuizAttemptView):
         _render_result(release, stored)
+        if on_next is not None and st.button(
+            "Next question",
+            key=f"{key}:next",
+            type="primary",
+            use_container_width=True,
+        ):
+            on_next()
+            st.rerun()
         return stored
 
     st.markdown('<p class="cc-field-title">Quick check</p>', unsafe_allow_html=True)
