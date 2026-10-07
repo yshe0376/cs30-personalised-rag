@@ -8,9 +8,15 @@ from collections.abc import Sequence
 import pytest
 
 from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS, get_textbook_spec
-from cs30.v2.chunking import V2ChunkingStrategy, V2ProductionChunker
+from cs30.v2.chunking import (
+    V2_EVIDENCE_POLICY_ID,
+    V2_EXCLUDED_SECTION_TITLES,
+    V2_INLINE_HEADING_PATTERN,
+    V2ChunkingStrategy,
+    V2ProductionChunker,
+)
 from cs30.v2.contracts import ContentType, TextBlock, TextbookChapter, TextbookDocument
-from cs30.v2.ids import make_document_id, sha256_text
+from cs30.v2.ids import chunk_config_hash, make_document_id, sha256_text
 from cs30.v2.tokenization import CHUNK_TOKENIZER_NAME, CHUNK_TOKENIZER_REVISION
 
 
@@ -23,14 +29,19 @@ class WordCounter:
 
 
 def make_document(
-    rows: Sequence[tuple[str, ContentType, str, int | None]],
+    rows: Sequence[
+        tuple[str, ContentType, str, int | None]
+        | tuple[str, ContentType, str, int | None, str]
+    ],
     *,
     document_suffix: str = "a",
 ) -> TextbookDocument:
     text_parts: list[str] = []
     blocks: list[TextBlock] = []
     cursor = 0
-    for index, (text, content_type, section_id, page) in enumerate(rows, start=1):
+    for index, row in enumerate(rows, start=1):
+        text, content_type, section_id, page = row[:4]
+        section_title = row[4] if len(row) == 5 else f"Section {section_id}"
         if text_parts:
             text_parts.append("\n")
             cursor += 1
@@ -42,7 +53,7 @@ def make_document(
                 block_id=f"b{index}",
                 chapter_id="1",
                 section_id=section_id,
-                section_title=f"Section {section_id}",
+                section_title=section_title,
                 content_type=content_type,
                 char_start=start,
                 char_end=cursor,
@@ -156,6 +167,125 @@ def test_excluded_assessment_blocks_are_hard_boundaries_and_never_leak() -> None
     assert [chunk.metadata["source_block_ids"] for chunk in chunks] == ["b1", "b3"]
 
 
+def test_exercise_section_excludes_eligible_media_types_by_structure() -> None:
+    document = make_document(
+        (
+            ("retrievable introduction", ContentType.BODY, "1.1", None, "Motion"),
+            (
+                "[FIGURE DESCRIPTION: force diagram]",
+                ContentType.FIGURE_CAPTION,
+                "1.2",
+                None,
+                "Problems & Exercises",
+            ),
+            (
+                "[EQUATION: F = ma]",
+                ContentType.EQUATION,
+                "1.2",
+                None,
+                "Problems & Exercises",
+            ),
+            ("retrievable conclusion", ContentType.BODY, "1.3", None, "Momentum"),
+        )
+    )
+
+    chunks = make_chunker().chunk(document)
+
+    assert [chunk.metadata["source_block_ids"] for chunk in chunks] == ["b1", "b4"]
+    assert all("force diagram" not in chunk.text for chunk in chunks)
+    assert all("F = ma" not in chunk.text for chunk in chunks)
+
+
+def test_cyu_region_excludes_minor_headings_and_answers_until_formal_heading() -> None:
+    document = make_document(
+        (
+            ("retrievable explanation", ContentType.BODY, "1.1", None),
+            ("Which object moves faster?", ContentType.CHECK_UNDERSTANDING, "1.1", None),
+            ("Solution", ContentType.HEADING, "1.1", None),
+            ("The hidden answer is A.", ContentType.BODY, "1.1", None),
+            ("Newton's Second Law", ContentType.HEADING, "1.1", None),
+            ("normal content resumes here", ContentType.BODY, "1.1", None),
+        )
+    )
+
+    chunks = make_chunker(max_tokens=20).chunk(document)
+
+    assert [chunk.metadata["source_block_ids"] for chunk in chunks] == ["b1", "b6"]
+    joined = "\n".join(chunk.text for chunk in chunks)
+    assert "hidden answer" not in joined
+    assert "normal content resumes" in joined
+
+
+@pytest.mark.parametrize("stop_type", [ContentType.EXAMPLE, ContentType.GLOSSARY])
+def test_cyu_region_ends_before_example_or_glossary(stop_type: ContentType) -> None:
+    document = make_document(
+        (
+            ("Check your understanding", ContentType.CHECK_UNDERSTANDING, "1.1", None),
+            ("excluded answer", ContentType.BODY, "1.1", None),
+            ("retrieval restarts", stop_type, "1.1", None),
+            ("continued explanation", ContentType.BODY, "1.1", None),
+        )
+    )
+
+    chunks = make_chunker(max_tokens=20).chunk(document)
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata["source_block_ids"] == "b3,b4"
+    assert "excluded answer" not in chunks[0].text
+
+
+def test_cyu_region_ends_when_the_section_changes() -> None:
+    document = make_document(
+        (
+            ("Check your understanding", ContentType.CHECK_UNDERSTANDING, "1.1", None),
+            ("excluded answer", ContentType.BODY, "1.1", None),
+            ("new section explanation", ContentType.BODY, "1.2", None),
+        )
+    )
+
+    chunks = make_chunker(max_tokens=20).chunk(document)
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata["source_block_ids"] == "b3"
+
+
+def test_worked_example_keeps_minor_headings_in_one_chunk() -> None:
+    document = make_document(
+        (
+            ("Worked example setup", ContentType.EXAMPLE, "1.1", None),
+            ("Strategy", ContentType.HEADING, "1.1", None),
+            ("choose the relevant law", ContentType.BODY, "1.1", None),
+            ("Solution", ContentType.HEADING, "1.1", None),
+            ("substitute the values", ContentType.BODY, "1.1", None),
+            ("Discussion", ContentType.HEADING, "1.1", None),
+            ("interpret the result", ContentType.BODY, "1.1", None),
+        )
+    )
+
+    chunks = make_chunker(target_tokens=30, max_tokens=40).chunk(document)
+
+    assert len(chunks) == 1
+    assert [span.content_type for span in chunks[0].spans].count(ContentType.HEADING) == 3
+    assert chunks[0].metadata["source_block_ids"] == "b1,b2,b3,b4,b5,b6,b7"
+
+
+def test_chunk_made_only_of_minor_headings_is_discarded() -> None:
+    document = make_document(
+        (
+            ("Strategy", ContentType.HEADING, "1.1", None),
+            ("Solution", ContentType.HEADING, "1.1", None),
+            ("Ordinary topic", ContentType.HEADING, "1.1", None),
+            ("retrievable explanation", ContentType.BODY, "1.1", None),
+        )
+    )
+
+    chunks = make_chunker(max_tokens=20).chunk(document)
+
+    assert len(chunks) == 1
+    assert chunks[0].metadata["source_block_ids"] == "b4"
+    assert "Strategy" not in chunks[0].text
+
+
 def test_ids_and_config_hash_are_stable_and_bound_to_the_document() -> None:
     document = make_document((("one two three", ContentType.BODY, "1.1", None),))
     same_chunker = make_chunker()
@@ -214,6 +344,30 @@ def test_production_config_requires_and_records_a_pinned_wordpiece_revision() ->
     assert chunker.strategy.target_tokens == 500
     assert chunker.strategy.min_tokens == 100
     assert chunker.strategy.max_tokens == 600
+
+
+def test_v2_policy_identity_records_structure_aware_rules() -> None:
+    chunker = make_chunker()
+    identity = chunker.strategy.identity(chunker_version=chunker.version)
+    new_rule_keys = {
+        "excluded_section_titles",
+        "excluded_section_prefixes",
+        "cyu_start_content_type",
+        "cyu_stop_content_types",
+        "cyu_stop_on_formal_heading",
+        "cyu_stop_on_scope_change",
+        "inline_heading_pattern",
+    }
+    old_identity = {key: value for key, value in identity.items() if key not in new_rule_keys}
+    old_identity["chunker_version"] = "v2-structure-aware-v1"
+    old_identity["evidence_policy_id"] = "v2-retrieval-evidence-v1"
+
+    assert chunker.version == "v2-structure-aware-v2"
+    assert identity["evidence_policy_id"] == V2_EVIDENCE_POLICY_ID
+    assert identity["excluded_section_titles"] == list(V2_EXCLUDED_SECTION_TITLES)
+    assert identity["cyu_stop_on_formal_heading"] is True
+    assert identity["inline_heading_pattern"] == V2_INLINE_HEADING_PATTERN
+    assert chunker.config_hash != chunk_config_hash(old_identity)
 
 
 def test_production_chunks_record_the_wordpiece_revision() -> None:
