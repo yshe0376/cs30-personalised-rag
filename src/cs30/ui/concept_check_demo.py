@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import mkdtemp
+from typing import Any
 from uuid import uuid4
 
 import streamlit as st
@@ -20,9 +22,16 @@ from cs30.concept_check.fixtures import (
 from cs30.concept_check.learner_state import EventReplayer
 from cs30.concept_check.provider import FixtureQuestionProvider
 from cs30.concept_check.service import ConceptCheckService
+from cs30.evaluation.concept_check_reporting import (
+    build_concept_check_report,
+    load_concept_check_events,
+    render_concept_check_markdown,
+    write_concept_check_report,
+)
 from cs30.ui.concept_check import Choice, QuizAttemptView, clear_quiz_component, render_quiz
 from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
+    ConceptCheckEvent,
     ConceptCheckQuestionRelease,
     GeneratedAnswer,
     RetrievalResult,
@@ -229,9 +238,161 @@ def _inject_demo_styles() -> None:
             border-color: #f06f54;
             background: #f06f54;
         }
+        .cc-report-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 9px;
+            margin: 8px 0 14px;
+        }
+        .cc-report-item {
+            padding: 8px 10px;
+            border: 1px solid #e8e4e1;
+            border-radius: 9px;
+            background: #ffffff;
+        }
+        .cc-report-label {
+            display: block;
+            margin-bottom: 2px;
+            color: #706a64;
+            font-size: .76rem;
+        }
+        .cc-report-value {
+            display: block;
+            color: #171411;
+            font-size: 1.12rem;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+        @media (max-width: 720px) {
+            .cc-report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         </style>
         """,
         unsafe_allow_html=True,
+    )
+
+
+def _session_events(event_directory: Path) -> tuple[ConceptCheckEvent, ...]:
+    events: list[ConceptCheckEvent] = []
+    for path in sorted(event_directory.glob("*.jsonl")):
+        events.extend(load_concept_check_events(path))
+    return tuple(sorted(events, key=lambda event: (event.profile_id, event.stream_version)))
+
+
+def _starting_levels() -> dict[str, StudentLevel]:
+    value = st.session_state.get("concept_check_demo_starting_levels")
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _register_starting_level(profile: StudentProfile) -> None:
+    levels = _starting_levels()
+    levels[profile.profile_id] = profile.level
+    st.session_state["concept_check_demo_starting_levels"] = levels
+
+
+def _report_signature(events: tuple[ConceptCheckEvent, ...]) -> tuple[str, ...]:
+    return tuple(
+        json.dumps(event.model_dump(mode="json"), sort_keys=True)
+        for event in events
+    )
+
+
+def _display_markdown(report: dict[str, Any]) -> str:
+    lines: list[str] = []
+    for line in render_concept_check_markdown(report).splitlines():
+        if line.startswith("## "):
+            lines.append(f"##### {line[3:]}")
+        elif line.startswith("# "):
+            lines.append(f"#### {line[2:]}")
+        else:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def _render_session_report(event_directory: Path) -> None:
+    st.divider()
+    st.markdown("### Current session report")
+    st.caption(
+        "Automatically generated from submit and skip events recorded in this "
+        "fixture session."
+    )
+
+    events = _session_events(event_directory)
+    if not events:
+        st.info("Submit or skip at least one quiz to generate the session report.")
+        return
+
+    signature = _report_signature(events)
+    report = st.session_state.get("concept_check_demo_report")
+    if (
+        st.session_state.get("concept_check_demo_report_signature") != signature
+        or not isinstance(report, dict)
+    ):
+        report = build_concept_check_report(
+            events,
+            starting_levels=_starting_levels(),
+        )
+        output_directory = event_directory / "report"
+        write_concept_check_report(report, output_directory)
+        st.session_state["concept_check_demo_report"] = report
+        st.session_state["concept_check_demo_report_signature"] = signature
+    else:
+        output_directory = event_directory / "report"
+
+    overall = report["overall"]
+    values = (
+        ("Submitted", str(overall["submitted"])),
+        ("Correct", str(overall["correct"])),
+        ("Skipped", str(overall["skipped"])),
+        ("Revoked", str(overall["revoked"])),
+        (
+            "Accuracy",
+            "n/a" if overall["accuracy"] is None else f"{overall['accuracy']:.3f}",
+        ),
+        (
+            "Skip rate",
+            "n/a" if overall["skip_rate"] is None else f"{overall['skip_rate']:.3f}",
+        ),
+        (
+            "Revocation rate",
+            "n/a"
+            if overall["revocation_rate"] is None
+            else f"{overall['revocation_rate']:.3f}",
+        ),
+    )
+    cards = "".join(
+        '<div class="cc-report-item">'
+        f'<span class="cc-report-label">{label}</span>'
+        f'<span class="cc-report-value">{value}</span>'
+        "</div>"
+        for label, value in values
+    )
+    st.markdown(f'<div class="cc-report-grid">{cards}</div>', unsafe_allow_html=True)
+
+    with st.expander("Detailed event report", expanded=True):
+        st.markdown(_display_markdown(report))
+
+    downloads = st.columns(3)
+    downloads[0].download_button(
+        "Download CSV",
+        data=(output_directory / "concept_check_report.csv").read_bytes(),
+        file_name="concept_check_report.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+    downloads[1].download_button(
+        "Download JSON",
+        data=(output_directory / "concept_check_report.json").read_bytes(),
+        file_name="concept_check_report.json",
+        mime="application/json",
+        use_container_width=True,
+    )
+    downloads[2].download_button(
+        "Download Markdown",
+        data=(output_directory / "concept_check_report.md").read_bytes(),
+        file_name="concept_check_report.md",
+        mime="text/markdown",
+        use_container_width=True,
     )
 
 
@@ -294,8 +455,10 @@ def main() -> None:
         profile_id=f"fixture-demo-{_session_token()}-{level.value}",
         level=level,
     )
+    _register_starting_level(profile)
+    event_directory = _event_directory()
     runtime = build_demo_runtime(
-        event_directory=_event_directory(),
+        event_directory=event_directory,
         profile=profile,
         scenario=scenario,
     )
@@ -337,6 +500,8 @@ def main() -> None:
     if isinstance(trace, dict):
         with st.expander("Demo trace"):
             st.json(trace)
+
+    _render_session_report(event_directory)
 
 
 if __name__ == "__main__":

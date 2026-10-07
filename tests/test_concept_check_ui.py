@@ -70,6 +70,13 @@ def test_demo_page_hides_feedback_until_submit() -> None:
     assert any("Learner state change" in item.value for item in app.markdown)
     assert any("Textbook: College Physics 2e" in item.value for item in app.caption)
     assert any(expander.label == "Attempt record" for expander in app.expander)
+    assert any("Current session report" in item.value for item in app.markdown)
+    assert any(
+        'cc-report-label">Submitted' in item.value
+        and 'cc-report-value">1' in item.value
+        for item in app.markdown
+    )
+    assert len(app.get("download_button")) == 3
 
 
 def test_demo_page_skip_is_recorded_but_not_scored() -> None:
@@ -85,9 +92,10 @@ def test_demo_page_skip_is_recorded_but_not_scored() -> None:
         for item in app.markdown
     )
     assert any(expander.label == "Attempt record" for expander in app.expander)
+    assert all(button.label != "Answer now" for button in app.button)
 
 
-def test_demo_page_wrong_answer_can_retry_without_rewriting_attempt() -> None:
+def test_demo_page_wrong_answer_is_final_after_feedback_is_revealed() -> None:
     app = AppTest.from_file(_page()).run()
     next(button for button in app.button if button.label == "Quiz me").click().run()
     app.radio[0].set_value("D").run()
@@ -95,15 +103,8 @@ def test_demo_page_wrong_answer_can_retry_without_rewriting_attempt() -> None:
 
     assert any("Incorrect" in item.value for item in app.error)
     assert not app.radio
-    next(button for button in app.button if button.label == "Try again").click().run()
-    assert len(app.radio) == 1
-
-    app.radio[0].set_value("A").run()
-    next(button for button in app.button if button.label == "Submit answer").click().run()
-
-    assert not app.exception
-    assert any("Correct" in item.value for item in app.success)
+    assert all(button.label != "Try again" for button in app.button)
     assert any(
-        "Scored attempts</span><span class=\"cc-state-value\">1 → 2" in item.value
+        "Scored attempts</span><span class=\"cc-state-value\">0 → 1" in item.value
         for item in app.markdown
     )

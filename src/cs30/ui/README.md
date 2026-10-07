@@ -45,11 +45,15 @@ one published `ConceptCheckQuestionRelease` plus submit and skip callbacks, so
 the future v2 answer flow can embed it without copying presentation logic.
 Answers, rationale, and evidence stay hidden until submit or skip.
 
-Each submission or skip creates an immutable attempt record. Incorrect and
-skipped results can start a new attempt without changing the earlier event. The
-result view shows the correct answer, rationale, textbook/chapter evidence, and
-the replay-derived LearnerState change. Skips are explicitly marked as not
-counted.
+Each submission or skip creates an immutable attempt record. After feedback is
+revealed, the same question cannot be retried as a new scored attempt. The result
+view shows the correct answer, rationale, textbook/chapter evidence, and the
+replay-derived LearnerState change. Skips are explicitly marked as not counted.
+
+The fixture page also rebuilds a current-session report automatically after each
+submit or skip event. It displays compact overall and grouped metrics and exposes
+the same CSV, JSON, and Markdown outputs as download buttons. The generated files
+remain in the session's temporary directory; they are not repository artifacts.
 
 ## Concept Check event report
 

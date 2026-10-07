@@ -197,9 +197,6 @@ def _render_state_change(release: ConceptCheckQuestionRelease, result: QuizAttem
 def _render_result(
     release: ConceptCheckQuestionRelease,
     result: QuizAttemptView,
-    *,
-    key: str,
-    allow_retry: bool,
 ) -> None:
     grade = result.grade
     question = release.question
@@ -225,13 +222,6 @@ def _render_result(
     with st.expander("Attempt record"):
         st.json(result.event.model_dump(mode="json"))
 
-    if allow_retry and grade.result is not ConceptCheckResult.CORRECT:
-        label = "Try again" if grade.result is ConceptCheckResult.INCORRECT else "Answer now"
-        if st.button(label, key=f"{key}:retry", type="primary", use_container_width=True):
-            st.session_state.pop(f"{key}:result", None)
-            st.session_state.pop(f"{key}:choice", None)
-            st.rerun()
-
 
 def render_quiz(
     release: ConceptCheckQuestionRelease,
@@ -239,7 +229,6 @@ def render_quiz(
     on_submit: SubmitCallback,
     on_skip: SkipCallback,
     key: str = "concept-check-quiz",
-    allow_retry: bool = True,
 ) -> QuizAttemptView | None:
     """Render one reusable A–D quiz and invoke the supplied persistence callbacks.
 
@@ -257,7 +246,7 @@ def render_quiz(
 
     stored = st.session_state.get(f"{key}:result")
     if isinstance(stored, QuizAttemptView):
-        _render_result(release, stored, key=key, allow_retry=allow_retry)
+        _render_result(release, stored)
         return stored
 
     st.markdown('<p class="cc-field-title">Quick check</p>', unsafe_allow_html=True)
