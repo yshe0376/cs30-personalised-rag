@@ -108,8 +108,36 @@ The frozen ruler is the BERT WordPiece tokenizer from
 `86b5e0934494bd15c9632b12f734a8a67f723594`. Both values are recorded in the
 chunk config hash and metadata. Retrieval includes body, example,
 figure-caption, glossary, table, and equation blocks. Assessment-like problem
-and summary blocks remain excluded to avoid evaluation leakage. Exact duplicate
-text is retained at each source location and reported by corpus QA.
+and summary blocks remain excluded to avoid evaluation leakage.
+
+Evidence policy `v2-retrieval-evidence-v2` also applies structural exclusions
+before token grouping. Every block in sections named `Section Summary`,
+`Conceptual Questions`, `Problems & Exercises`, `Problems and Exercises`, or
+`Chapter Review` (and section names beginning with `Test Prep`) is excluded,
+including media blocks whose own `content_type` is otherwise eligible. A
+`check_understanding` block starts a CYU exclusion run. The run ends at a new
+section or chapter, an `example` or `glossary` block, or the next formal
+heading. Short `Strategy`, `Solution`, and `Discussion` headings do not end a
+CYU run; outside one, they remain attached to their worked example as heading
+spans instead of forcing tiny standalone chunks.
+
+The three-book development validation using M2 parser 1.3.2 data produced the
+following distribution. It is diagnostic-only and must be rerun when the
+official source set changes.
+
+| Metric | Structure-aware v2 result |
+| --- | ---: |
+| Chunk count | 5,976 |
+| Chunks below 100 tokens | 875 (14.6%) |
+| Chunks below 30 tokens | 182 |
+| Median token count | 364 |
+| Oversized indivisible chunks | 3 |
+
+Corpus duplicate QA reports exact normalized source-block reuse across
+textbooks. It does not treat ordinary repeated phrases within one book as
+duplicates. Exact duplicate chunk text remains available at each source
+location by default; setting `reject_duplicate_text=true` instead makes a build
+fail closed at the chunk layer.
 
 ## Notes for M2, M4 and M5
 

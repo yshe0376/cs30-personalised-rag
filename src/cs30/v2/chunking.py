@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
@@ -16,7 +17,7 @@ from cs30.v2.tokenization import (
     is_pinned_revision,
 )
 
-V2_EVIDENCE_POLICY_ID = "v2-retrieval-evidence-v1"
+V2_EVIDENCE_POLICY_ID = "v2-retrieval-evidence-v2"
 V2_EVIDENCE_CONTENT_TYPES = (
     ContentType.BODY,
     ContentType.EXAMPLE,
@@ -25,6 +26,17 @@ V2_EVIDENCE_CONTENT_TYPES = (
     ContentType.TABLE,
     ContentType.EQUATION,
 )
+V2_EXCLUDED_SECTION_TITLES = (
+    "section summary",
+    "conceptual questions",
+    "problems & exercises",
+    "problems and exercises",
+    "chapter review",
+)
+V2_EXCLUDED_SECTION_PREFIXES = ("test prep",)
+V2_CYU_STOP_CONTENT_TYPES = (ContentType.GLOSSARY, ContentType.EXAMPLE)
+V2_INLINE_HEADING_PATTERN = r"^(?:strategy|solution|discussion)\b.{0,20}$"
+_INLINE_HEADING_RE = re.compile(V2_INLINE_HEADING_PATTERN, re.IGNORECASE)
 
 
 class V2BlockChunker:
@@ -254,6 +266,13 @@ class V2ChunkingStrategy:
             "enrich_embed_text": self.enrich_embed_text,
             "reject_duplicate_text": self.reject_duplicate_text,
             "include_types": [item.value for item in self.include_types],
+            "excluded_section_titles": list(V2_EXCLUDED_SECTION_TITLES),
+            "excluded_section_prefixes": list(V2_EXCLUDED_SECTION_PREFIXES),
+            "cyu_start_content_type": ContentType.CHECK_UNDERSTANDING.value,
+            "cyu_stop_content_types": [item.value for item in V2_CYU_STOP_CONTENT_TYPES],
+            "cyu_stop_on_formal_heading": True,
+            "cyu_stop_on_scope_change": True,
+            "inline_heading_pattern": V2_INLINE_HEADING_PATTERN,
             "grouping": "whole-block-nearest-target",
         }
         if self.tokenizer_revision is not None:
@@ -264,7 +283,7 @@ class V2ChunkingStrategy:
 class V2ProductionChunker:
     """Group whole parser blocks without crossing chapter or section boundaries."""
 
-    version = "v2-structure-aware-v1"
+    version = "v2-structure-aware-v2"
     is_fixture = False
 
     def __init__(
@@ -298,7 +317,7 @@ class V2ProductionChunker:
     def chunk(self, document: TextbookDocument) -> list[Chunk]:
         chunks: list[Chunk] = []
         ordinal = 1
-        for segment in self._segments(document.blocks):
+        for segment in self._segments(document):
             for block_group in self._partition_segment(document, segment):
                 chunks.append(self._build_chunk(document, block_group, ordinal))
                 ordinal += 1
@@ -308,29 +327,66 @@ class V2ProductionChunker:
         self._validate_output(chunks)
         return chunks
 
-    def _segments(self, blocks: Sequence[TextBlock]) -> list[list[TextBlock]]:
+    def _segments(self, document: TextbookDocument) -> list[list[TextBlock]]:
+        blocks = document.blocks
         included_types = set(self.strategy.include_types)
         segments: list[list[TextBlock]] = []
         current: list[TextBlock] = []
         current_key: tuple[str, str | None] | None = None
+        in_cyu_region = False
+        cyu_scope: tuple[str, str | None] | None = None
+
+        def flush() -> None:
+            nonlocal current, current_key
+            if current:
+                segments.append(current)
+                current = []
+            current_key = None
+
         for block in blocks:
+            # Section titles are the authoritative boundary for assessment
+            # regions. M2 intentionally leaves figures, equations and tables
+            # typed by their media role, so content_type alone cannot keep
+            # those blocks out of retrieval evidence.
+            if self._is_excluded_section(block):
+                flush()
+                in_cyu_region = False
+                cyu_scope = None
+                continue
+
+            inline_heading = self._is_inline_heading(document, block)
+            scope = (block.chapter_id, block.section_id)
+            if in_cyu_region:
+                ends_cyu = (
+                    scope != cyu_scope
+                    or block.content_type in V2_CYU_STOP_CONTENT_TYPES
+                    or (block.content_type is ContentType.HEADING and not inline_heading)
+                )
+                if not ends_cyu:
+                    continue
+                in_cyu_region = False
+                cyu_scope = None
+
+            if block.content_type is ContentType.CHECK_UNDERSTANDING:
+                flush()
+                in_cyu_region = True
+                cyu_scope = scope
+                continue
+
             # An excluded block is a hard boundary. This prevents its text from
             # leaking through the document slice between two eligible blocks.
-            if block.content_type not in included_types:
-                if current:
-                    segments.append(current)
-                    current = []
-                current_key = None
+            # Short Strategy/Solution/Discussion headings are the one exception:
+            # they stay as traceable heading spans inside their worked example.
+            if block.content_type not in included_types and not inline_heading:
+                flush()
                 continue
             section_key = block.section_id if self.strategy.respect_section_boundaries else None
             key = (block.chapter_id, section_key)
             if current and key != current_key:
-                segments.append(current)
-                current = []
+                flush()
             current.append(block)
             current_key = key
-        if current:
-            segments.append(current)
+        flush()
         return segments
 
     def _partition_segment(
@@ -366,7 +422,12 @@ class V2ProductionChunker:
             start = best_end
 
         self._rebalance_short_tail(document, groups)
-        return [group for group in groups if self._group_token_count(document, group) > 0]
+        return [
+            group
+            for group in groups
+            if self._group_token_count(document, group) > 0
+            and not all(self._is_inline_heading(document, block) for block in group)
+        ]
 
     def _rebalance_short_tail(
         self,
@@ -573,6 +634,23 @@ class V2ProductionChunker:
             hashes = [chunk.metadata["text_hash"] for chunk in chunks]
             if len(hashes) != len(set(hashes)):
                 raise ValueError("exact duplicate chunk text detected")
+
+    @staticmethod
+    def _normalise_section_title(value: str | None) -> str:
+        return " ".join((value or "").casefold().split())
+
+    @classmethod
+    def _is_excluded_section(cls, block: TextBlock) -> bool:
+        title = cls._normalise_section_title(block.section_title)
+        return title in V2_EXCLUDED_SECTION_TITLES or any(
+            title.startswith(prefix) for prefix in V2_EXCLUDED_SECTION_PREFIXES
+        )
+
+    @staticmethod
+    def _is_inline_heading(document: TextbookDocument, block: TextBlock) -> bool:
+        return block.content_type is ContentType.HEADING and bool(
+            _INLINE_HEADING_RE.fullmatch(document.document_text(block).strip())
+        )
 
     @staticmethod
     def _ordered_unique(values: Iterable[str]) -> list[str]:
