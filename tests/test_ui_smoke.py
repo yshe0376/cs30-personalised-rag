@@ -45,3 +45,4 @@ def test_streamlit_smoke_path() -> None:
     assert any("Generated answer" in item.value for item in app.markdown)
     assert any("Source:" in item.value for item in app.caption)
     assert "FIXTURE" in app.info[0].value
+    assert not any(button.label == "Quiz me" for button in app.button)
