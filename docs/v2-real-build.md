@@ -31,7 +31,8 @@ python scripts/build_v2_corpus.py --config real-development \
 ```
 
 This reads each file through `cs30.v2.ingest.OpenStaxParsedParser`, chunks with
-M1's block adapter, writes `records.jsonl`, `manifest.json`,
+M4's production structure-aware chunker, and writes `records.jsonl`,
+`manifest.json`,
 `duplicate_blocks.json`, `run_report.json`, and — when a model is given — an
 index under `index/` plus `artifact.json`. Without `--embedding-model` the build
 publishes the corpus and no index; the three books then build in well under a
@@ -52,9 +53,7 @@ stops at:
 
 | Gate | Failure code | Who clears it |
 |---|---|---|
-| M1's block chunker is a fixture | `FIXTURE_NOT_ALLOWED` | M4's production chunker |
 | No CK-12 book in the catalogue | `REQUIRED_PROVIDER_MISSING` | M2 chooses the CK-12 book |
-| No embedding model configured | `INDEX_BUILDER_NOT_CONFIGURED` | M5 picks the v2 model |
 
 An official build also needs every source hash pinned (all three OpenStax books
 already pin both the PDF and the parsed JSON), the parser provider to match the
@@ -95,6 +94,22 @@ re-parse that reproduces M2's output yields the same documents and chunk IDs as
 the parsed route. Parser output depends on the PyMuPDF and pdfplumber versions;
 M2 validated 1.3.2 with PyMuPDF 1.26.6 and pdfplumber 0.11.8, and a re-parse
 records the versions it used in the document metadata.
+
+## M4 production chunking policy
+
+Real builds use `V2ProductionChunker`; synthetic fixture builds retain the
+one-block adapter. The production chunker groups whole parser blocks toward a
+500-token target, keeps chunks within one chapter and (by default) one section,
+and records every source block as a structural span. The accepted range is
+100–600 tokens, except when one indivisible parser block is itself oversized.
+
+The frozen ruler is the BERT WordPiece tokenizer from
+`google-bert/bert-base-uncased`, pinned at revision
+`86b5e0934494bd15c9632b12f734a8a67f723594`. Both values are recorded in the
+chunk config hash and metadata. Retrieval includes body, example,
+figure-caption, glossary, table, and equation blocks. Assessment-like problem
+and summary blocks remain excluded to avoid evaluation leakage. Exact duplicate
+text is retained at each source location and reported by corpus QA.
 
 ## Notes for M2, M4 and M5
 

@@ -52,7 +52,7 @@ def test_cli_builds_a_development_diagnostic_corpus(tmp_path: Path) -> None:
     assert (output_dir / "manifest.json").is_file()
 
 
-def test_cli_official_stops_on_the_fixture_chunker_until_m4_provides_one(
+def test_cli_official_passes_the_m4_gate_and_stops_on_the_missing_provider(
     tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "artifacts" / "v2" / "cli-official"
@@ -73,7 +73,7 @@ def test_cli_official_stops_on_the_fixture_chunker_until_m4_provides_one(
     )
 
     assert result.returncode == 4
-    assert "FIXTURE_NOT_ALLOWED" in result.stderr
+    assert "REQUIRED_PROVIDER_MISSING" in result.stderr
     assert not output_dir.exists()
 
 
@@ -106,6 +106,8 @@ def test_real_build_reads_m2_parsed_json_and_configures_the_index(tmp_path: Path
     )
     assert deps.index_builder is not None
     assert deps.index_builder.batch_size == 8
+    assert deps.chunker.is_fixture is False
+    assert type(deps.chunker).__name__ == "V2ProductionChunker"
     # The model is only named here; it is loaded on the first build.
     assert deps.index_builder._encoder is None
 
