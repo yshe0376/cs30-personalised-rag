@@ -1,7 +1,8 @@
 """Shared synthetic Concept Check fixture pack for M7 and M8 development.
 
 The pack holds five hand-written practice questions, the Topic registry they
-use, their bindings to a small synthetic corpus, and that corpus.  The corpus
+use, their bindings to a small synthetic corpus, that corpus with its manifest
+and chunk-to-Topic map, and named retrieval/citation scenarios.  The corpus
 text paraphrases two College Physics 2e chapters; it is not produced by
 ``run_build_pipeline`` and its hash is a fixture value, so a release from this
 pack never matches a real corpus.  The ``fixture-review:`` IDs stand in for M3
@@ -23,29 +24,44 @@ from cs30.v2.contracts import (
     ConceptCheckQuestionBinding,
     ConceptCheckQuestionRelease,
     EvidenceProvenance,
+    GeneratedAnswer,
     RetrievalMode,
     RetrievalResult,
     RetrievedEvidence,
     TopicRegistry,
+    ValidatedAnswer,
+)
+from cs30.v2.corpus.manifest import (
+    CorpusDocument,
+    CorpusManifest,
+    CorpusManifestDraft,
+    finalize_manifest,
 )
 from cs30.v2.ids import source_locator
+from cs30.v2.topics import ChunkTopicMap, LoadedChunkTopicMap
 
 FIXTURE_CORPUS_VERSION = "2.0.0-dev.1"
 FIXTURE_CORPUS_HASH = "sha256:fixture-concept-check-v1"
 FIXTURE_TOPIC_REGISTRY_VERSION = "fixture-topics-v1"
+FIXTURE_CHUNK_CONFIG_HASH = "fixture-paragraph-chunks-v1"
 
 __all__ = [
+    "FIXTURE_CHUNK_CONFIG_HASH",
     "FIXTURE_CORPUS_HASH",
     "FIXTURE_CORPUS_VERSION",
     "FIXTURE_TOPIC_REGISTRY_VERSION",
     "FixtureChapter",
     "FixtureChunk",
     "FixtureCorpus",
+    "FixtureScenario",
     "fixture_retrieval_result",
     "load_fixture_bindings",
+    "load_fixture_chunk_topic_map",
     "load_fixture_corpus",
+    "load_fixture_manifest",
     "load_fixture_questions",
     "load_fixture_releases",
+    "load_fixture_scenarios",
     "load_fixture_topic_registry",
 ]
 
@@ -112,6 +128,57 @@ def load_fixture_corpus() -> FixtureCorpus:
     )
 
 
+def load_fixture_manifest() -> CorpusManifest:
+    """Finalize a development manifest for the fixture corpus.
+
+    The document hashes are fixture values; only the corpus identity and chunk
+    counts describe real content, which is what topic-map validation checks.
+    """
+
+    corpus = load_fixture_corpus()
+    spec = get_textbook_spec(corpus.textbook_id)
+    document = CorpusDocument(
+        provider=spec.provider,
+        textbook_id=corpus.textbook_id,
+        document_id=corpus.document_id,
+        document_hash="sha256:fixture-concept-check-document-v1",
+        raw_source_sha256="sha256:fixture-concept-check-source-v1",
+        parser_version="fixture-concept-check-v1",
+        source_name=spec.source_name,
+        source_uri=spec.source_uri,
+        source_version=spec.source_version,
+        license=spec.license,
+        selected_chapters=tuple(chapter.chapter_id for chapter in corpus.chapters),
+        chunk_count=len(corpus.chunks),
+    )
+    return finalize_manifest(
+        CorpusManifestDraft(
+            corpus_version=corpus.corpus_version,
+            corpus_hash=corpus.corpus_hash,
+            chunk_config_hash=FIXTURE_CHUNK_CONFIG_HASH,
+            required_textbook_ids=(corpus.textbook_id,),
+            included_textbook_ids=(corpus.textbook_id,),
+            documents=(document,),
+            record_count=len(corpus.chunks),
+            mode="development",
+        )
+    )
+
+
+def load_fixture_chunk_topic_map() -> LoadedChunkTopicMap:
+    """Load the chunk-to-Topic map, validated against the fixture manifest.
+
+    ``fixture-cp2e-ch4-p1`` maps to two Topics and ``fixture-cp2e-ch2-p3`` to
+    none, so resolvers meet a split weight and an unmapped chunk.
+    """
+
+    return LoadedChunkTopicMap.validated(
+        ChunkTopicMap.model_validate(_load_json("chunk_topic_map.json")),
+        manifest=load_fixture_manifest(),
+        corpus_chunk_ids=tuple(chunk.chunk_id for chunk in load_fixture_corpus().chunks),
+    )
+
+
 def load_fixture_topic_registry() -> TopicRegistry:
     return TopicRegistry.model_validate(_load_json("topic_registry.json"))
 
@@ -147,11 +214,13 @@ def fixture_retrieval_result(
 ) -> RetrievalResult:
     """Return a fixture-mode retrieval over the given chunks, in rank order.
 
-    Its provenance carries the fixture corpus identity, so bindings from this
-    pack match it and releases bound to any other corpus do not.
+    Its provenance carries the fixture corpus and manifest identity, so the
+    bindings and Topic map from this pack match it and those of any other
+    corpus do not.
     """
 
     corpus = load_fixture_corpus()
+    manifest = load_fixture_manifest()
     spec = get_textbook_spec(corpus.textbook_id)
     hits = []
     for rank, chunk_id in enumerate(chunk_ids, start=1):
@@ -188,10 +257,60 @@ def fixture_retrieval_result(
         provenance=EvidenceProvenance(
             corpus_version=corpus.corpus_version,
             corpus_hash=corpus.corpus_hash,
-            manifest_hash="sha256:fixture-concept-check-manifest-v1",
-            chunk_config_hash="fixture-paragraph-chunks-v1",
+            manifest_hash=manifest.manifest_hash,
+            chunk_config_hash=manifest.chunk_config_hash,
             index_version="fixture-index-v1",
             retrieval_mode=RetrievalMode.FIXTURE,
             retrieval_config_hash="fixture-retrieval-v1",
         ),
+    )
+
+
+@dataclass(frozen=True)
+class FixtureScenario:
+    """A previous question and answer, with the Topics the resolver should find.
+
+    ``query`` and ``answer`` stand for the turn a Concept Check follows; the
+    answer is written from the cited chunks only, as a validated answer would
+    be.  An ``expected_*_topic`` of ``None`` comes with the resolver error code
+    expected instead.
+    """
+
+    scenario_id: str
+    title: str
+    query: str
+    answer: str
+    retrieved_chunk_ids: tuple[str, ...]
+    cited_chunk_ids: tuple[str, ...]
+    expected_retrieval_topic: str | None
+    expected_retrieval_error: str | None
+    expected_cited_topic: str | None
+    expected_cited_error: str | None
+
+    def retrieval(self) -> RetrievalResult:
+        return fixture_retrieval_result(self.retrieved_chunk_ids, query=self.query)
+
+    def validated_answer(self) -> ValidatedAnswer:
+        """A citation-validated answer with this scenario's text and cited chunks."""
+
+        return ValidatedAnswer(
+            answer=GeneratedAnswer(
+                explanation=self.answer,
+                citations=self.cited_chunk_ids,
+            ),
+            resolved_citations=self.cited_chunk_ids,
+            citation_status="passed",
+        )
+
+
+def load_fixture_scenarios() -> tuple[FixtureScenario, ...]:
+    return tuple(
+        FixtureScenario(
+            **{
+                **item,
+                "retrieved_chunk_ids": tuple(item["retrieved_chunk_ids"]),
+                "cited_chunk_ids": tuple(item["cited_chunk_ids"]),
+            }
+        )
+        for item in _load_json("scenarios.json")
     )

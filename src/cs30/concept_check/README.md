@@ -64,8 +64,42 @@ retrieval = fixture_retrieval_result(("fixture-cp2e-ch4-p1",))
 finds these releases for it and for nothing else. The corpus hash is a fixture
 value rather than a build output, and the `fixture-review:` IDs stand in for
 M3 review records: these questions have not been reviewed by M3 and must never
-be shown as real practice questions. The pack does not include a
-`chunk_topic_map` yet.
+be shown as real practice questions.
+
+For Topic resolution the pack adds `load_fixture_manifest()` (a development
+manifest for the fixture corpus) and `load_fixture_chunk_topic_map()`, which
+returns a `LoadedChunkTopicMap` already validated against that manifest. Pass
+it with `load_fixture_topic_registry()` to `resolve_topic_from_retrieval` and
+`resolve_topic_from_citations` in `cs30.v2.topics`. Two chunks are deliberate
+edge cases: `fixture-cp2e-ch4-p1` maps to both Topics, so its weight splits,
+and `fixture-cp2e-ch2-p3` maps to none.
+
+`load_fixture_scenarios()` returns named previous turns: a `title` for
+selection, the student's `query`, an `answer` written only from the cited
+chunks, the retrieval, and the Topic or resolver error code each resolver
+should produce. `validated_answer()` returns that answer as a passed,
+citation-validated answer, so a demo can display `query` and `answer` as the
+turn the Concept Check follows. Tests check every expectation against the M1
+resolver:
+
+| Scenario | Retrieval Topic | Cited Topic |
+|---|---|---|
+| `newtons-second-law` | `newtons-second-law` | `newtons-second-law` |
+| `acceleration` | `acceleration` | `acceleration` |
+| `cited-topic-differs` | `newtons-second-law` | `acceleration` |
+| `two-block-system` | `newtons-second-law` | `newtons-second-law` |
+| `topic-tie` | none (`TOPIC_TIE`) | none (`TOPIC_TIE`) |
+| `unmapped-chunk` | none (`NO_TOPIC_AVAILABLE`) | none (`NO_TOPIC_AVAILABLE`) |
+
+The scenario sets the Topic; the learner's level sets which question comes
+first, and evidence overlap only breaks ties within a level. With
+`two-block-system`, a beginner gets `cc-fixture-003` and an advanced learner
+gets the two-block question `cc-fixture-005`.
+
+```python
+scenario = next(s for s in load_fixture_scenarios() if s.scenario_id == "acceleration")
+retrieval, validated = scenario.retrieval(), scenario.validated_answer()
+```
 
 The answer generator in `cs30.v2.generation` adapts the selected bundle to the
 existing M7 `PromptBuilder`, reusing its three level guidance texts, seven
