@@ -191,6 +191,17 @@ def test_scenarios_resolve_as_documented_with_the_m1_resolver(scenario) -> None:
         assert (resolution.status is TopicResolutionStatus.RESOLVED) == (topic_id is not None)
 
 
+def test_scenarios_carry_a_displayable_answer_that_the_validated_answer_uses() -> None:
+    scenarios = load_fixture_scenarios()
+
+    assert len({scenario.scenario_id for scenario in scenarios}) == len(scenarios)
+    for scenario in scenarios:
+        assert scenario.query.strip() and scenario.answer.strip()
+        validated = scenario.validated_answer()
+        assert validated.answer.explanation == scenario.answer
+        assert validated.resolved_citations == scenario.cited_chunk_ids
+
+
 class _FixtureTopicResolver:
     """Stand-in for M7's topics.py: the M1 resolver functions over the fixture map."""
 
@@ -205,8 +216,10 @@ class _FixtureTopicResolver:
         return resolve_topic_from_citations(retrieval, validated, self.topic_map, self.registry)
 
 
-def _service(tmp_path) -> tuple[ConceptCheckService, StudentProfile]:
-    profile = StudentProfile(profile_id="fixture-student", level=StudentLevel.BEGINNER)
+def _service(
+    tmp_path, level: StudentLevel = StudentLevel.BEGINNER
+) -> tuple[ConceptCheckService, StudentProfile]:
+    profile = StudentProfile(profile_id="fixture-student", level=level)
     replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION)
     service = ConceptCheckService(
         config=ConceptCheckConfig(enabled=True),
@@ -262,3 +275,18 @@ def test_cited_topic_chooses_the_question_and_a_tie_offers_none(tmp_path) -> Non
     prepared = service.prepare(retrieval, profile)
     assert prepared.snapshot.topic_id is None
     assert service.select(prepared, retrieval, tie.validated_answer()) is None
+
+
+def test_level_not_scenario_decides_which_newton_question_comes_first(tmp_path) -> None:
+    scenario = _scenario("two-block-system")
+    retrieval, validated = scenario.retrieval(), scenario.validated_answer()
+    expected = {
+        StudentLevel.BEGINNER: "cc-fixture-003",
+        StudentLevel.ADVANCED: "cc-fixture-005",
+    }
+
+    for level, question_id in expected.items():
+        service, profile = _service(tmp_path / level.value, level)
+        prepared = service.prepare(retrieval, profile)
+        release = service.select(prepared, retrieval, validated)
+        assert release is not None and release.question.question_id == question_id

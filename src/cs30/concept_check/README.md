@@ -74,9 +74,12 @@ it with `load_fixture_topic_registry()` to `resolve_topic_from_retrieval` and
 edge cases: `fixture-cp2e-ch4-p1` maps to both Topics, so its weight splits,
 and `fixture-cp2e-ch2-p3` maps to none.
 
-`load_fixture_scenarios()` returns named cases with the retrieval, a passed
-answer citing given chunks, and the Topic or resolver error code each
-resolver should produce. Tests check every expectation against the M1
+`load_fixture_scenarios()` returns named previous turns: a `title` for
+selection, the student's `query`, an `answer` written only from the cited
+chunks, the retrieval, and the Topic or resolver error code each resolver
+should produce. `validated_answer()` returns that answer as a passed,
+citation-validated answer, so a demo can display `query` and `answer` as the
+turn the Concept Check follows. Tests check every expectation against the M1
 resolver:
 
 | Scenario | Retrieval Topic | Cited Topic |
@@ -84,8 +87,14 @@ resolver:
 | `newtons-second-law` | `newtons-second-law` | `newtons-second-law` |
 | `acceleration` | `acceleration` | `acceleration` |
 | `cited-topic-differs` | `newtons-second-law` | `acceleration` |
+| `two-block-system` | `newtons-second-law` | `newtons-second-law` |
 | `topic-tie` | none (`TOPIC_TIE`) | none (`TOPIC_TIE`) |
 | `unmapped-chunk` | none (`NO_TOPIC_AVAILABLE`) | none (`NO_TOPIC_AVAILABLE`) |
+
+The scenario sets the Topic; the learner's level sets which question comes
+first, and evidence overlap only breaks ties within a level. With
+`two-block-system`, a beginner gets `cc-fixture-003` and an advanced learner
+gets the two-block question `cc-fixture-005`.
 
 ```python
 scenario = next(s for s in load_fixture_scenarios() if s.scenario_id == "acceleration")

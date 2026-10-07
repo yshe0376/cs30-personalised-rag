@@ -268,15 +268,18 @@ def fixture_retrieval_result(
 
 @dataclass(frozen=True)
 class FixtureScenario:
-    """A retrieval and its cited chunks, with the Topics the resolver should find.
+    """A previous question and answer, with the Topics the resolver should find.
 
-    An ``expected_*_topic`` of ``None`` comes with the resolver error code
+    ``query`` and ``answer`` stand for the turn a Concept Check follows; the
+    answer is written from the cited chunks only, as a validated answer would
+    be.  An ``expected_*_topic`` of ``None`` comes with the resolver error code
     expected instead.
     """
 
     scenario_id: str
     title: str
     query: str
+    answer: str
     retrieved_chunk_ids: tuple[str, ...]
     cited_chunk_ids: tuple[str, ...]
     expected_retrieval_topic: str | None
@@ -288,11 +291,11 @@ class FixtureScenario:
         return fixture_retrieval_result(self.retrieved_chunk_ids, query=self.query)
 
     def validated_answer(self) -> ValidatedAnswer:
-        """A passed answer citing ``cited_chunk_ids``; its text is a placeholder."""
+        """A citation-validated answer with this scenario's text and cited chunks."""
 
         return ValidatedAnswer(
             answer=GeneratedAnswer(
-                explanation=f"Fixture answer for the {self.scenario_id} scenario.",
+                explanation=self.answer,
                 citations=self.cited_chunk_ids,
             ),
             resolved_citations=self.cited_chunk_ids,

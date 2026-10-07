@@ -1,8 +1,9 @@
 [
   {
     "scenario_id": "newtons-second-law",
-    "title": "Answer cites Newton's second law",
-    "query": "How does the net force on an object change its acceleration?",
+    "title": "Answer explains the newton as a unit of force",
+    "query": "What is one newton of force?",
+    "answer": "One newton is the net force that gives a 1 kg mass an acceleration of 1 m/s^2, so 1 N = 1 kg m/s^2.",
     "retrieved_chunk_ids": ["fixture-cp2e-ch4-p2", "fixture-cp2e-ch4-p3", "fixture-cp2e-ch4-p1"],
     "cited_chunk_ids": ["fixture-cp2e-ch4-p2"],
     "expected_retrieval_topic": "newtons-second-law",
@@ -14,6 +15,7 @@
     "scenario_id": "acceleration",
     "title": "Answer cites average acceleration",
     "query": "How is average acceleration calculated?",
+    "answer": "Average acceleration is the change in velocity divided by the time taken: a = (v_final - v_initial) / t. For example, going from 2 m/s to 8 m/s in 3 s gives 2 m/s^2.",
     "retrieved_chunk_ids": ["fixture-cp2e-ch2-p2", "fixture-cp2e-ch2-p1"],
     "cited_chunk_ids": ["fixture-cp2e-ch2-p2"],
     "expected_retrieval_topic": "acceleration",
@@ -24,7 +26,8 @@
   {
     "scenario_id": "cited-topic-differs",
     "title": "Retrieval leans to force, but the answer cites acceleration",
-    "query": "What makes a moving object speed up?",
+    "query": "What is acceleration when a force acts on an object?",
+    "answer": "Acceleration is the rate at which velocity changes with time. It is a vector quantity measured in metres per second squared (m/s^2).",
     "retrieved_chunk_ids": ["fixture-cp2e-ch4-p2", "fixture-cp2e-ch2-p1"],
     "cited_chunk_ids": ["fixture-cp2e-ch2-p1"],
     "expected_retrieval_topic": "newtons-second-law",
@@ -33,9 +36,22 @@
     "expected_cited_error": null
   },
   {
+    "scenario_id": "two-block-system",
+    "title": "Answer cites treating two blocks as one system",
+    "query": "How do we analyse two blocks that move together?",
+    "answer": "Treat the blocks as one system whose mass is the sum of their masses to find the common acceleration, then apply the second law to one block to find the net force on it alone.",
+    "retrieved_chunk_ids": ["fixture-cp2e-ch4-p3", "fixture-cp2e-ch4-p1"],
+    "cited_chunk_ids": ["fixture-cp2e-ch4-p3"],
+    "expected_retrieval_topic": "newtons-second-law",
+    "expected_retrieval_error": null,
+    "expected_cited_topic": "newtons-second-law",
+    "expected_cited_error": null
+  },
+  {
     "scenario_id": "topic-tie",
     "title": "Only a chunk mapped to two Topics is retrieved",
     "query": "How are force and acceleration related?",
+    "answer": "Acceleration is directly proportional to the net external force and inversely proportional to mass: a = F_net / m.",
     "retrieved_chunk_ids": ["fixture-cp2e-ch4-p1"],
     "cited_chunk_ids": ["fixture-cp2e-ch4-p1"],
     "expected_retrieval_topic": null,
@@ -47,6 +63,7 @@
     "scenario_id": "unmapped-chunk",
     "title": "Only a chunk without a Topic is retrieved",
     "query": "Does negative acceleration always mean slowing down?",
+    "answer": "No. A negative acceleration only points in the negative direction of the chosen axis; an object slows down when its acceleration points opposite to its velocity.",
     "retrieved_chunk_ids": ["fixture-cp2e-ch2-p3"],
     "cited_chunk_ids": ["fixture-cp2e-ch2-p3"],
     "expected_retrieval_topic": null,
