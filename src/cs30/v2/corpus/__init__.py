@@ -23,6 +23,7 @@ from cs30.v2.corpus.manifest import (
     load_corpus_manifest,
     write_corpus_manifest,
 )
+from cs30.v2.corpus.records import LoadedCorpus, load_corpus_records
 from cs30.v2.topics import (
     ChunkTopicAssignment,
     ChunkTopicMap,
@@ -42,6 +43,7 @@ __all__ = [
     "ChunkTopicAssignment",
     "ChunkTopicMap",
     "LoadedChunkTopicMap",
+    "LoadedCorpus",
     "DuplicateBlockGroup",
     "DuplicateBlockMember",
     "DuplicateBlockReport",
@@ -55,6 +57,7 @@ __all__ = [
     "corpus_hash",
     "finalize_manifest",
     "load_corpus_manifest",
+    "load_corpus_records",
     "load_chunk_topic_map",
     "load_validated_chunk_topic_map",
     "resolve_topic_from_citations",

@@ -34,6 +34,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", choices=["development", "official"], default=None)
     parser.add_argument("--output-dir", type=Path, default=None)
     parser.add_argument(
+        "--corpus-version",
+        default=None,
+        help=(
+            "corpus_version written to the manifest; set it to reproduce a "
+            "delivered corpus byte for byte (the profile decides by default)"
+        ),
+    )
+    parser.add_argument(
         "--source-format",
         choices=["parsed", "raw"],
         default=None,
@@ -86,6 +94,8 @@ def _config_with_overrides(args: argparse.Namespace) -> V2Config:
         updates["corpus_mode"] = args.mode
     if args.output_dir is not None:
         updates["output_dir"] = args.output_dir
+    if args.corpus_version is not None:
+        updates["corpus_version"] = args.corpus_version
     if args.source_format is not None:
         updates["source_format"] = args.source_format
     if args.sources_dir is not None:
