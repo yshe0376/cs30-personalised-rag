@@ -34,9 +34,10 @@ This reads each file through `cs30.v2.ingest.OpenStaxParsedParser`, chunks with
 M4's production structure-aware chunker, and writes `records.jsonl`,
 `manifest.json`,
 `duplicate_blocks.json`, `run_report.json`, and — when a model is given — an
-index under `index/` plus `artifact.json`. Without `--embedding-model` the build
-publishes the corpus and no index; the three books then build in well under a
-minute.
+index under `index/` plus `artifact.json`. The `real-development` profile names
+`Alibaba-NLP/gte-modernbert-base`, so a build indexes with it unless told
+otherwise; `--embedding-model ""` publishes the corpus and no index, and the
+three books then build in about a minute.
 
 The pipeline checks each file against its pin (`SOURCE_HASH_MISMATCH`) and
 checks that the document names the pinned PDF as its raw source
@@ -72,6 +73,23 @@ loaded.search(query_vectors, top_k=5)   # [(chunk_id, score), ...] per query
 The loader re-hashes `records.jsonl` against the manifest and checks the
 artifact's chunk order, so an index can never be paired with a different corpus.
 FAISS row *i* is always record line *i*.
+
+## Reading the records back
+
+```python
+from cs30.v2.corpus import load_corpus_records
+
+corpus = load_corpus_records(Path("artifacts/v2/textbooks/2.0.0-dev.2"))
+corpus.chunks                     # v2 Chunk objects, in record (= index row) order
+corpus.chunks_by_id[chunk_id]     # one chunk
+corpus.manifest.reportable        # False for every development build
+```
+
+The loader needs no index. It refuses records whose bytes no longer hash to the
+manifest (`CORPUS_HASH_MISMATCH`), any line that is not a v2 chunk — v1 records
+included (`CORPUS_RECORD_INVALID`) — and records whose order, counts, documents,
+or chunk config disagree with the manifest. `cs30.chunking.load_retrieval_corpus`
+remains the v1 reader and cannot read a v2 corpus.
 
 ## Re-parsing from the PDFs
 
