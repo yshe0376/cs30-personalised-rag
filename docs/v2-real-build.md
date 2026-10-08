@@ -39,6 +39,19 @@ index under `index/` plus `artifact.json`. The `real-development` profile names
 otherwise; `--embedding-model ""` publishes the corpus and no index, and the
 three books then build in about a minute.
 
+The profile also names the `corpus_version` written to the manifest.
+`--corpus-version` overrides it, which is how a delivered corpus is reproduced
+byte for byte: the same pinned sources, chunker, and version string give the same
+`records.jsonl`, `manifest.json`, and `duplicate_blocks.json`. For example, M4's
+three-book handoff of 2026-10-07 (built at `3553825`):
+
+```sh
+python scripts/build_v2_corpus.py --config real-development \
+  --output-dir artifacts/v2/textbooks/2.0.0-dev.m4-structure-v2-main-3553825 \
+  --corpus-version 2.0.0-dev.m4-structure-v2-main-3553825 \
+  --embedding-model ""
+```
+
 The pipeline checks each file against its pin (`SOURCE_HASH_MISMATCH`) and
 checks that the document names the pinned PDF as its raw source
 (`HASH_MISMATCH`). The manifest's `raw_source_sha256` is therefore always the

@@ -153,6 +153,51 @@ def test_cli_source_format_overrides_the_profile() -> None:
     assert config.resolved_sources_dir == Path("data/raw/v2")
 
 
+def test_cli_corpus_version_overrides_the_profile() -> None:
+    profile = load_v2_config("real-development")
+    args = build_parser().parse_args(
+        ["--config", "real-development", "--corpus-version", "2.0.0-dev.m4-structure-v2"]
+    )
+
+    config = _config_with_overrides(args)
+
+    assert config.corpus_version == "2.0.0-dev.m4-structure-v2"
+    assert config.model_dump(exclude={"corpus_version"}) == profile.model_dump(
+        exclude={"corpus_version"}
+    )
+
+
+def test_cli_rejects_an_empty_corpus_version() -> None:
+    args = build_parser().parse_args(["--config", "real-development", "--corpus-version", ""])
+
+    with pytest.raises(ValueError, match="corpus_version"):
+        _config_with_overrides(args)
+
+
+def test_cli_writes_the_overridden_corpus_version_to_the_manifest(tmp_path: Path) -> None:
+    output_dir = tmp_path / "artifacts" / "v2" / "cli-versioned"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPT),
+            "--config",
+            "development",
+            "--output-dir",
+            str(output_dir),
+            "--corpus-version",
+            "2.0.0-dev.handoff-1",
+            *sum((["--input", value] for value in write_inputs(tmp_path, 3)), []),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    manifest = json.loads((output_dir / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["corpus_version"] == "2.0.0-dev.handoff-1"
+
+
 def test_real_build_without_an_embedding_model_configures_no_index(tmp_path: Path) -> None:
     config = V2Config.model_validate(
         {
