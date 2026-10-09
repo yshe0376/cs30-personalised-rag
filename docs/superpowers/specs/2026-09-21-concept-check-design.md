@@ -4,6 +4,8 @@
 >
 > Date: drafted 2026-09-21, finalised 2026-09-22
 >
+> Amended 2026-10-09: M1 now builds the Topic registry and the `chunk_topic_map`, offline from the textbook content and with review before release (§3.3, §8, Phase 3); Gold `concept_group` is no longer an input to either
+>
 > Owner: M1 (contracts, integration, versioning, experiment management)
 >
 > Implementers: M7 (authoring, validation, grading, state updates), M3 (question and evidence review), M8 (UI, logging, evaluation)
@@ -27,7 +29,7 @@ The first version supports four-option multiple choice only. Short answers, rich
 - a `practice_only` question pool;
 - three question sources: human-authored, aligned SciQ, and LLM candidates;
 - structural validation, evidence-reference checks, and a human review state;
-- a provider-neutral Topic registry maintained by M3, plus a deterministic Topic resolver;
+- a provider-neutral Topic registry maintained by M1, plus a deterministic Topic resolver;
 - stable evidence anchors, with bindings that resolve to current chunks per corpus version;
 - automatic four-option grading;
 - skipped questions leave state unchanged;
@@ -131,14 +133,22 @@ An LLM judge may serve as a hint for the human reviewer, but its verdict cannot 
 
 ### 3.3 Topic must never be guessed at run time
 
-Nothing at run time infers a Topic freely from question text or from an LLM answer. Starting from Gold's `concept_group`, M3 maintains a provider-neutral, versioned Topic registry:
+Nothing at run time infers a Topic freely from question text or from an LLM answer. M1 maintains a provider-neutral, versioned Topic registry and the `chunk_topic_map`. Both are built offline from the textbook content, in two stages, and reviewed before release:
 
 ```text
-concept_group → topic_id
-textbook/chapter/section/evidence anchor → topic_id
+stage 1  textbook content                → Topic registry (frozen, versioned)
+stage 2  chunk text + the frozen registry → zero, one or several topic_ids per chunk
 ```
 
-A `topic_id` denotes a concept reusable across textbooks and carries no specific textbook ID. A chapter may be an input to a deterministic mapping, but `chapter_id` must never be used directly as a Topic. If one chapter corresponds to several Topics, M3 must supply section- or evidence-anchor-level mappings.
+**Stage 1 — the registry.** Candidates are seeded from the textbooks' section titles: numbering removed, identical titles merged across books, and titles that name no concept (chapter introductions, chapter outlines) dropped. An LLM then reads each section and proposes the concepts it teaches, which catches sections that teach several. M1 merges synonyms to one agreed granularity — a concept a student can be quizzed on by itself, usually no larger than a section — and freezes the registry once M3 has confirmed the Topic definitions. Each Topic has a stable `topic_id`, a title, a definition, what it includes and excludes, and examples.
+
+**Stage 2 — labelling.** An LLM, offline, chooses for each chunk zero, one or several Topics from the frozen registry only, with a supporting quote. M1 reviews ambiguous and disputed labels; M3 spot-checks a sample. Label quality is measured against a human-labelled reference set kept apart from prompt development, against an acceptance threshold fixed before the run. A Topic the LLM proposes during stage 2 is recorded as a suggestion only: it enters the registry solely through a new registry version.
+
+**Labels outlive chunk IDs.** Each label is stored with the parser blocks the labelled text covers (block IDs and text hash), not only with a `chunk_id`. For each corpus version M1 projects the labels onto that corpus's chunks, writes the `chunk_topic_map`, and validates it with `validate_chunk_topic_map()`. A chunk whose text was labelled keeps its labels; after re-chunking, a chunk takes the union of the labels on the blocks it covers, and a chunk whose blocks carry different labels is flagged for review. Re-chunking therefore costs a re-projection, not a re-labelling. Adding a textbook while the chunker and the other sources stay unchanged keeps the existing chunk IDs, so the map header is re-stamped and only the new chunks are labelled — against the existing registry, with any Topic the new book genuinely lacks added through a new registry version.
+
+Gold's `concept_group` is descriptive metadata from M3's Gold annotation; it is not an input to the registry or to the map, and a Gold question needs no `topic_id`. Concept Check selects practice questions, not Gold; the leakage gate in §4.5 compares evidence and provenance, not Topics; and the formal experiments use the static global level.
+
+A `topic_id` denotes a concept reusable across textbooks and carries no specific textbook ID. Section titles may seed the registry, but `chapter_id` must never be used directly as a Topic.
 
 Topic is not an embedded field of the v2 Chunk. The resolver reads only a sidecar `chunk_topic_map` whose `corpus_hash` matches the current retrieval manifest and that carries a `topic_registry_version`. A chunk absent from the map simply has no Topic; it must not be guessed from a chapter title or from question text.
 
@@ -156,9 +166,9 @@ The MVP does not depend on the v3 Conversation Context. Instead the resolver is 
 
 Both operations use the same deterministic scoring rule. They use the rank returned by the initial retrieval — not the reranked position. A chunk at rank `r` contributes `1/r`; if that chunk carries `n` Topics, each Topic receives `1/(r*n)`, so a chunk mapped to several Topics splits its evidence weight evenly. Compute `support(topic) = topic_weight / total_topic_weight`; a Topic is determined only when it is the unique maximum and `support >= min_topic_support`. Ties, a missing Topic, or insufficient support return `no_topic_available`.
 
-When the retrieval stage cannot determine a unique Topic, the v1 main pipeline may still build a snapshot from the static global level for compatibility, but the Concept Check must be off for that round: an unsupported Topic must never update LearnerState. A one-to-one chapter-to-Topic mapping is admissible only as a fixture or as a fallback that M3 has explicitly registered.
+When the retrieval stage cannot determine a unique Topic, the v1 main pipeline may still build a snapshot from the static global level for compatibility, but the Concept Check must be off for that round: an unsupported Topic must never update LearnerState. A one-to-one chapter-to-Topic mapping is admissible only as a fixture.
 
-The Topic registry must carry a `topic_registry_version`, and that version flows into questions, state, and the run trace. Cross-textbook mappings of the same concept are reviewed by M3; they are never created ad hoc by M7 or at run time.
+The Topic registry must carry a `topic_registry_version`, and that version flows into questions, state, and the run trace. The same concept is merged across textbooks only in the registry, which M1 builds and M3 confirms; it is never done ad hoc by M7 or at run time.
 
 ## 4. Question lifecycle and sources
 
@@ -235,6 +245,8 @@ The first version should use the fields below. Multi-textbook identity fields co
 ```
 
 The question and evidence above are a synthetic fixture example and must not be used as Gold or as real practice content. Each item of `evidence_anchors` is the v2 contract's `EvidenceSpan` (`cs30.v2.contracts`), the same type as v2 Gold evidence: the offsets form a **chapter-local** half-open interval, the length of `verbatim_text` must equal the interval length, and `text_hash` is its SHA-256 (computed by the contract when omitted, and required to agree when supplied). The hash in the example is the real value for that example text. A `span_id` must be unique across Gold and Concept Check; prefixes `gold:` and `cc:` are recommended. An anchor stores no `document_id`, global offset, `chunk_id`, or `source_locator` — all of those change when the corpus is rebuilt and appear only in the binding described in §4.4. The example is human-authored and therefore carries no SciQ provenance; a `sciq_aligned` question must additionally carry the SciQ fields defined below. `rationale` is M3-reviewed static feedback; no LLM is called at submission time. It must be reviewed together with the same set of evidence anchors, and must not explain something the question's evidence does not support.
+
+A practice question's `topic_id` comes from the frozen registry (§3.3). By default it is the Topic of the chunk its evidence anchor resolves to in the current `chunk_topic_map`; when that chunk carries several Topics, or the anchors resolve to chunks with different Topics, M1 chooses one during review. A Gold `concept_group` is not a `topic_id` and is never copied into this field.
 
 ### 4.4 Evidence anchors and corpus binding
 
@@ -475,7 +487,10 @@ The event log is append-only; user deletion is a controlled storage operation, n
 - Concept Check implemented as a standalone post-answer component, e.g. `src/cs30/concept_check/service.py`, responsible for post-answer selection, submission, grading and event appending. It receives retrieval/citation/state dependencies through Protocols and is not called from the current build pipeline;
 - integration through a separate adapter once the v2 question-answering pipeline exists — without changing v1's `src/cs30/contracts/`, `src/cs30/ports.py`, `src/cs30/config.py`, `src/cs30/pipeline.py`, or the corpus-build-only `src/cs30/v2/pipeline.py` at this stage;
 - schema/version, practice/Test isolation, anchor binding, manifest and integration tests;
-- failure codes, run traces, and forward compatibility with later v2 identity fields.
+- failure codes, run traces, and forward compatibility with later v2 identity fields;
+- the Topic registry and its versions, the labelling guide, the human reference set, and the offline LLM labelling tool (§3.3);
+- the block-level Topic labels and, for each corpus version, the `chunk_topic_map`: projection, validation with `validate_chunk_topic_map()`, versioning and publication, with the model, prompt and parameter versions and the review records kept for reproduction;
+- the `topic_id` of each practice question (§4.3).
 
 ### 8.2 M7 owns
 
@@ -492,8 +507,9 @@ The event log is append-only; user deletion is a controlled storage operation, n
 
 ### 8.3 M3 owns
 
-- Topic and difficulty annotation rules;
-- the provider-neutral Topic registry, the `concept_group → topic_id` mapping, and its version;
+- difficulty annotation rules and the easy/medium ↔ beginner/intermediate/advanced correspondence;
+- confirming the Topic definitions before each registry version is frozen, and spot-checking the Topic labels;
+- selecting seed passages (their `topic_id` comes from the `chunk_topic_map`);
 - `reviewed` / `rejected` decisions;
 - review of evidence-anchor support, answer uniqueness, and Test/SciQ split leakage;
 - physical isolation between the practice pool and the formal Dev/Test sets.
@@ -502,7 +518,7 @@ The event log is append-only; user deletion is a controlled storage operation, n
 
 - the shared "text interval → chunk" resolver: Gold mapping and Concept Check anchor binding use the same implementation, locating by `textbook_id` + chapter rather than by a `document_id` that changes on re-parsing;
 - generating the Gold mapping and question anchor bindings for each corpus version, recording each entry's resolution method and its `resolved`/`stale`/`ambiguous` status;
-- generating the `chunk_topic_map` for each corpus version according to M3's Topic mapping rules, calling `validate_chunk_topic_map()` before publication;
+- delivering each frozen corpus with stable chunk IDs, and leaving the chunker unchanged while Topic labelling is in progress — a chunker change changes every chunk ID, so it is announced to M1 first;
 - migrating v1 Gold onto the v2 corpus — the precondition for the §4.5 Gold-overlap gate to run at all.
 
 ### 8.5 M8 owns
@@ -613,7 +629,7 @@ Before the official feature flag may be turned on:
 ### Phase 1: M1 contracts and fixtures
 
 - freeze the models, enumerations and Protocols;
-- freeze the **structure, version field and resolver algorithm** of the Topic registry, and supply a synthetic registry fixture for testing only. Production Topic content and cross-textbook mappings are M3's Phase 3 output; Phase 1 must not claim the content is frozen;
+- freeze the **structure, version field and resolver algorithm** of the Topic registry, and supply a synthetic registry fixture for testing only. Production Topic content and cross-textbook merging are M1's Phase 3 output (§3.3); Phase 1 must not claim the content is frozen;
 - reuse the existing typed `GoldSource`, `SourceSplit` and `GoldSample.source`, adding only the Gold provenance registry and the bidirectional leakage gate — no parallel source types, and no rewriting the source split into the project's dev/test;
 - use the `EvidenceSpan` and `EvidenceSpanBinding` already present in the v2 contracts for stable evidence anchors and corpus-version bindings (added to `cs30.v2.contracts` on 2026-09-23). They are also the types used by v2 Gold evidence; the two are not defined separately;
 - represent fixture question anchors with `EvidenceSpan`, and produce any locator that needs displaying only through the v2 `ids.source_locator` builder. Use textbook ID `openstax_college_physics_2e` and a corpus version of the form `2.0.0-dev.1`;
@@ -634,13 +650,13 @@ Before the official feature flag may be turned on:
 - implement JSON parsing and failure isolation for candidate questions;
 - emit attempt/grade traces for M8 to consume.
 
-### Phase 3: M3/M2/M4 data integration
+### Phase 3: M1/M2/M3/M4 data integration
 
-- wait for the chunks, Topics and splits of the v2 textbooks (three OpenStax books plus one CK-12) to be frozen;
+- wait for the chunks and splits of the v2 textbooks (three OpenStax books plus one CK-12) to be frozen. The Topic registry and labels need not wait: M1 can build and pilot them on a development corpus, because they are projected onto each corpus version (§3.3);
 - M4 migrates v1 Gold onto the v2 corpus and provides the shared span resolver. Until this is done, the §4.5 Gold-overlap gate cannot pass and no question may be published;
-- M3 completes the `concept_group → topic_id` mapping, the textbook/chapter/section-to-Topic mapping, and the easy/medium ↔ beginner/intermediate/advanced difficulty correspondence;
-- following M3's mapping, M4 generates a `chunk_topic_map` sidecar bound to `corpus_hash` for each corpus manifest and passes `validate_chunk_topic_map()`. Chunks with no mapping are treated at run time as having no Topic;
-- while producing v2 Gold, M3 also marks seed passages (passages that explain one concept on their own, annotated with `topic_id` and a suggested difficulty). These may only come from content types retained by the evidence policy and must not overlap the core evidence of Test Gold. Seed passages are the input for offline LLM authoring;
+- M1 builds and freezes the Topic registry from the textbook content, labels the chunks offline, and reviews the labels (§3.3); M3 confirms the Topic definitions, spot-checks the labels, and completes the easy/medium ↔ beginner/intermediate/advanced difficulty correspondence;
+- M1 projects the labels onto each corpus manifest's chunks and publishes a `chunk_topic_map` sidecar bound to `corpus_hash` that passes `validate_chunk_topic_map()`. Chunks with no mapping are treated at run time as having no Topic;
+- while producing v2 Gold, M3 also marks seed passages (passages that explain one concept on their own, annotated with a suggested difficulty; their `topic_id` comes from the `chunk_topic_map`). These may only come from content types retained by the evidence policy and must not overlap the core evidence of Test Gold. Seed passages are the input for offline LLM authoring;
 - build the aligned practice pool;
 - M4 generates evidence anchor bindings for each corpus version using the shared resolver;
 - generate candidates from SciQ train/validation and run the bidirectional leakage check against all Gold source IDs; also check back against the published practice pool when freezing new Gold;
