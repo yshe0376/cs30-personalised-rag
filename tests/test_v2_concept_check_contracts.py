@@ -297,6 +297,57 @@ def test_v2_gold_question_uses_the_same_evidence_span_type() -> None:
     assert gold.gold_core_evidence_sets[0][0].span.span_id == "gold:fixture:1"
 
 
+def _open_ended_gold_payload() -> dict[str, object]:
+    return {
+        "question_id": "sciq-test-00024",
+        "question": "Where is energy stored in a chemical substance?",
+        "gold_answer_text": "between atoms",
+        "answerable": True,
+        "gold_core_evidence_sets": (
+            ({"span": _anchor("gold:sciq-test-00024:1"), "sufficiency": "core_sufficient"},),
+        ),
+        "question_difficulty": "easy",
+        "question_type": "identification",
+        "concept_group": "chemical_energy",
+        "personalisation_eligibility": PersonalisationEligibility.PENDING,
+        "eligibility_reason": "fixture",
+        "split": "pending",
+        "corpus_version": CORPUS_VERSION,
+        "parser_version": "1.3.2",
+        "gold_annotation_version": "m3_gold_v0.1.2",
+        "annotation_status": "draft",
+    }
+
+
+def test_v2_gold_question_accepts_open_ended_answers() -> None:
+    gold = GoldQuestion.model_validate(_open_ended_gold_payload())
+
+    assert gold.options == {}
+    assert gold.gold_answer is None
+    assert gold.gold_answer_text == "between atoms"
+
+
+@pytest.mark.parametrize(
+    ("update", "message"),
+    [
+        ({"gold_answer_text": None}, "open-ended Gold questions require gold_answer_text"),
+        ({"gold_answer": "A"}, "requires options"),
+        (
+            {"options": {"A": GoldOption(text="bonds", source_field="fixture")}},
+            "exactly A, B, C, and D",
+        ),
+    ],
+)
+def test_v2_gold_question_rejects_incomplete_answer_shapes(
+    update: dict[str, object], message: str
+) -> None:
+    payload = _open_ended_gold_payload()
+    payload.update(update)
+
+    with pytest.raises(ValueError, match=message):
+        GoldQuestion.model_validate(payload)
+
+
 def test_topic_resolution_splits_multi_topic_chunk_weight_and_records_ties() -> None:
     registry = _topic_registry()
     topic_map = ChunkTopicMap(
