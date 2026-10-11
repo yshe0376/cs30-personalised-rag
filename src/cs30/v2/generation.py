@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from time import perf_counter
 
-from cs30.generation.client import LLMClient
+from pydantic import ValidationError
+
+from cs30.generation.client import LLMClient, TokenUsage
 from cs30.generation.exceptions import LLMOutputValidationError
 from cs30.generation.schema import openai_text_format, parse_answer_payload
 from cs30.v2.contracts import (
     EvidenceBundle,
     GeneratedAnswer,
     LearnerContextSnapshot,
+    StudentLevel,
     StudentProfile,
 )
 from cs30.v2.generation_prompt import V2PromptAdapter
@@ -26,6 +30,9 @@ class V2GenerationAttempt:
     raw_output: str | None
     error: str | None = None
     failure_type: str | None = None
+    usage: TokenUsage = field(default_factory=TokenUsage)
+    latency_ms: float = 0.0
+    response_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,12 @@ class V2GenerationTrace:
     evidence_chunk_ids: tuple[str, ...]
     attempts: tuple[V2GenerationAttempt, ...]
     abstained: bool = False
+    usage: TokenUsage = field(default_factory=TokenUsage)
+    latency_ms: float = 0.0
+    response_id: str | None = None
+    prompt_version: str | None = None
+    prompt_personalised: bool = False
+    effective_level: StudentLevel | None = None
 
 
 @dataclass(frozen=True)
@@ -88,6 +101,9 @@ class V2AnswerGenerator:
             prompt_sha256: str | None = None,
             abstained: bool = False,
         ) -> V2GenerationTrace:
+            usage = TokenUsage()
+            for attempt in attempts:
+                usage += attempt.usage
             return V2GenerationTrace(
                 model=self.client.model,
                 prompt_sha256=prompt_sha256,
@@ -97,6 +113,21 @@ class V2AnswerGenerator:
                 evidence_chunk_ids=chunk_ids,
                 attempts=attempts,
                 abstained=abstained,
+                usage=usage,
+                latency_ms=sum(attempt.latency_ms for attempt in attempts),
+                response_id=next(
+                    (attempt.response_id for attempt in reversed(attempts) if attempt.response_id),
+                    None,
+                ),
+                prompt_version=(
+                    V2PromptAdapter.prompt_version
+                    if personalise_prompt
+                    else V2PromptAdapter.base_prompt_version
+                )
+                if prompt_sha256
+                else None,
+                prompt_personalised=personalise_prompt and prompt_sha256 is not None,
+                effective_level=student.level if personalise_prompt and prompt_sha256 else None,
             )
 
         if not question.strip():
@@ -119,12 +150,18 @@ class V2AnswerGenerator:
         records: list[V2GenerationAttempt] = []
         allowed = set(chunk_ids)
         for number in range(1, self.max_retries + 2):
+            started = perf_counter()
             try:
                 response = self.client.complete(prompt, openai_text_format())
             except Exception as exc:
                 records.append(
                     V2GenerationAttempt(
-                        number, "provider_failure", None, str(exc), type(exc).__name__
+                        number,
+                        "provider_failure",
+                        None,
+                        str(exc),
+                        type(exc).__name__,
+                        latency_ms=(perf_counter() - started) * 1000,
                     )
                 )
                 prompt = original_prompt
@@ -139,15 +176,33 @@ class V2AnswerGenerator:
                 )
                 if not set(answer.citations).issubset(allowed):
                     raise V2CitationFailure("answer cited a chunk outside the input EvidenceBundle")
-                records.append(V2GenerationAttempt(number, "completed", raw))
+                records.append(
+                    V2GenerationAttempt(
+                        number,
+                        "completed",
+                        raw,
+                        usage=response.usage,
+                        latency_ms=response.latency_ms,
+                        response_id=response.response_id,
+                    )
+                )
                 self.last_trace = trace(tuple(records), prompt_sha256=prompt_hash)
                 return answer
-            except (LLMOutputValidationError, V2CitationFailure) as exc:
+            except (LLMOutputValidationError, V2CitationFailure, ValidationError) as exc:
                 status = (
                     "citation_failure" if isinstance(exc, V2CitationFailure) else "invalid_output"
                 )
                 records.append(
-                    V2GenerationAttempt(number, status, raw, str(exc), type(exc).__name__)
+                    V2GenerationAttempt(
+                        number,
+                        status,
+                        raw,
+                        str(exc),
+                        type(exc).__name__,
+                        usage=response.usage,
+                        latency_ms=response.latency_ms,
+                        response_id=response.response_id,
+                    )
                 )
                 if number <= self.max_retries:
                     prompt = adapter.repair_prompt(original_prompt, raw, exc)

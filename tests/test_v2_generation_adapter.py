@@ -12,11 +12,13 @@ from cs30.generation.prompt import _LEVEL_GUIDANCE
 from cs30.v2.contracts import (
     EvidenceBundle,
     EvidenceItem,
+    LearnerContextSnapshot,
     RetrievalMode,
     StudentLevel,
     StudentProfile,
 )
 from cs30.v2.generation import V2AnswerGenerator, V2GenerationFailure
+from cs30.v2.generation_prompt import V2PromptAdapter
 from cs30.v2.ids import source_locator
 
 
@@ -90,6 +92,12 @@ def test_no_evidence_abstains_without_model_call() -> None:
     assert answer.abstained is True
     assert client.calls == 0
     assert generator.last_trace is not None and generator.last_trace.abstained is True
+    assert generator.last_trace.usage == TokenUsage()
+    assert generator.last_trace.latency_ms == 0.0
+    assert generator.last_trace.response_id is None
+    assert generator.last_trace.prompt_version is None
+    assert generator.last_trace.prompt_personalised is False
+    assert generator.last_trace.effective_level is None
 
 
 def test_invalid_citation_is_repaired_with_same_evidence() -> None:
@@ -219,3 +227,116 @@ def test_shared_parser_rejects_invalid_schema_with_failure_trace(raw) -> None:
     attempt = caught.value.trace.attempts[0]
     assert attempt.status == "invalid_output" and attempt.raw_output == raw
     assert attempt.failure_type == "LLMOutputValidationError"
+
+
+class TraceClient(StubClient):
+    def complete(self, prompt, text_format):
+        response = super().complete(prompt, text_format)
+        return LLMResponse(
+            response.text,
+            self.model,
+            TokenUsage(10 * self.calls, 3 * self.calls, 13 * self.calls),
+            f"response-{self.calls}",
+            25.0 * self.calls,
+        )
+
+
+@pytest.mark.parametrize("personalise", [True, False])
+@pytest.mark.parametrize("level", list(StudentLevel))
+def test_generation_trace_records_prompt_switch_actual_level_and_provider_metadata(
+    personalise, level
+):
+    generator = V2AnswerGenerator(TraceClient([_answer("chunk-1")]))
+    generator.generate(
+        "Question",
+        StudentProfile(profile_id="s", level=level),
+        _bundle(),
+        personalise_prompt=personalise,
+    )
+    trace = generator.last_trace
+    assert trace.usage == TokenUsage(10, 3, 13)
+    assert trace.latency_ms == 25.0
+    assert trace.response_id == "response-1"
+    assert trace.prompt_personalised is personalise
+    assert trace.effective_level == (level if personalise else None)
+    assert trace.prompt_version == (
+        V2PromptAdapter.prompt_version if personalise else V2PromptAdapter.base_prompt_version
+    )
+    assert trace.attempts[0].usage == trace.usage
+    assert trace.attempts[0].response_id == trace.response_id
+
+
+@pytest.mark.parametrize("raw", ["not JSON", _answer("unknown-chunk")])
+def test_trace_counts_invalid_responses_and_repair_tokens(raw):
+    generator = V2AnswerGenerator(TraceClient([raw, _answer("chunk-1")]), max_retries=1)
+    generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
+    trace = generator.last_trace
+    assert trace.usage == TokenUsage(30, 9, 39)
+    assert trace.latency_ms == 75.0
+    assert trace.response_id == "response-2"
+    assert [a.usage.total_tokens for a in trace.attempts] == [13, 26]
+    assert [a.response_id for a in trace.attempts] == ["response-1", "response-2"]
+
+
+def test_exhausted_generation_preserves_usage_prompt_level_and_response_metadata():
+    generator = V2AnswerGenerator(TraceClient(["not JSON", "still invalid"]), max_retries=1)
+    with pytest.raises(V2GenerationFailure) as caught:
+        generator.generate("Question", StudentProfile(profile_id="s", level="advanced"), _bundle())
+    trace = caught.value.trace
+    assert trace is generator.last_trace
+    assert trace.usage == TokenUsage(30, 9, 39)
+    assert trace.latency_ms == 75.0
+    assert trace.response_id == "response-2"
+    assert trace.effective_level is StudentLevel.ADVANCED
+    assert (
+        trace.prompt_personalised is True and trace.prompt_version == V2PromptAdapter.prompt_version
+    )
+
+
+def test_provider_failure_records_elapsed_time_without_inventing_tokens(monkeypatch):
+    times = iter((1.0, 1.05, 2.0))
+    monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
+    generator = V2AnswerGenerator(
+        TraceClient([TimeoutError("timeout"), _answer("chunk-1")]), max_retries=1
+    )
+    generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
+    trace = generator.last_trace
+    failed = trace.attempts[0]
+    assert failed.usage == TokenUsage() and failed.response_id is None
+    assert failed.latency_ms == pytest.approx(50.0)
+    assert trace.usage == TokenUsage(20, 6, 26)
+    assert trace.latency_ms == pytest.approx(100.0)
+
+
+def test_batch_resets_generation_usage_between_questions():
+    generator = V2AnswerGenerator(TraceClient([_answer("chunk-1"), _answer("chunk-1")]))
+    profile = StudentProfile(profile_id="s", level="intermediate")
+    first, second = generator.generate_batch(
+        (("First", profile, _bundle()), ("Second", profile, _bundle()))
+    )
+    assert first.trace.usage == TokenUsage(10, 3, 13)
+    assert second.trace.usage == TokenUsage(20, 6, 26)
+    assert first.trace.response_id == "response-1" and second.trace.response_id == "response-2"
+
+
+def test_uncited_structured_answer_is_repaired_and_keeps_response_usage():
+    raw = json.dumps({"final_choice": "A", "explanation": "Ungrounded", "citations": []})
+    generator = V2AnswerGenerator(TraceClient([raw, _answer("chunk-1")]), max_retries=1)
+    answer = generator.generate(
+        "Question", StudentProfile(profile_id="s", level="beginner"), _bundle()
+    )
+    assert answer.citations == ("chunk-1",)
+    assert generator.last_trace.attempts[0].status == "invalid_output"
+    assert generator.last_trace.usage == TokenUsage(30, 9, 39)
+
+
+def test_trace_uses_snapshot_level_and_source():
+    snapshot = LearnerContextSnapshot(
+        profile=StudentProfile(profile_id="s", level="advanced"),
+        profile_source="learner_state_replay",
+        state_version=5,
+    )
+    generator = V2AnswerGenerator(TraceClient([_answer("chunk-1")]))
+    generator.generate("Question", snapshot, _bundle())
+    assert generator.last_trace.profile_source == "learner_state_replay"
+    assert generator.last_trace.effective_level is StudentLevel.ADVANCED

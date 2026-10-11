@@ -17,6 +17,9 @@ from cs30.v2.contracts import EvidenceBundle, StudentProfile
 class V2PromptAdapter(PromptBuilder):
     """Preserve bundle contents while reusing v1 guidance, rules, and repairs."""
 
+    prompt_version = "member7-v2-prompt-v1"
+    base_prompt_version = "member7-v2-base-prompt-v1"
+
     def __init__(self, profile: StudentProfile, evidence: EvidenceBundle) -> None:
         self._sources = {item.evidence_id: item for item in evidence.evidence_items}
         self._profile = PromptProfile(
