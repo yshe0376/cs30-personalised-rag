@@ -36,9 +36,11 @@ python -m streamlit run src/cs30/ui/pages/1_Concept_Check_Demo.py
 ```
 
 The page is visibly labelled test-data-only. It uses the shared fixture scenarios,
-question releases, chunk-to-Topic map, and Topic registry; calls
-`ConceptCheckService.prepare`, `select`, and `submit`; and stores events in one
-temporary JSONL directory per Streamlit session. No LLM is called.
+question releases, `ChunkTopicResolver`, chunk-to-Topic map, and Topic registry;
+calls `ConceptCheckService.prepare`, `select_result`, and `submit`; and stores
+events in one temporary JSONL directory per Streamlit session. No LLM is called.
+Structured selection statuses and error codes explain why a scenario has no
+eligible question.
 
 `cs30.ui.concept_check.render_quiz` is the reusable M8-1 component. It accepts
 one published `ConceptCheckQuestionRelease`, submit and skip callbacks, and an
@@ -52,9 +54,16 @@ view shows the correct answer, rationale, textbook/chapter evidence, and the
 replay-derived LearnerState change. Skips are explicitly marked as not counted.
 
 The fixture page also rebuilds a current-session report automatically after each
-submit or skip event. It displays compact overall and grouped metrics and renders
-the CSV, JSON, and Markdown downloads directly in memory. A report failure is
-shown as a warning and does not interrupt the quiz.
+submit, skip, revoke, or level-override event. It displays compact overall and
+grouped metrics and renders the CSV, JSON, and Markdown downloads directly in
+memory. A report failure is shown as a warning and does not interrupt the quiz.
+
+The student control section consumes the shared service methods rather than
+editing learner state directly. It can revoke the latest surviving scored attempt
+for a Topic, override a Topic level with a required reason, and reveal cited
+scenario evidence. Turning Concept Check off hides all event-writing controls,
+offers no quiz, and displays the static student profile; existing events remain
+available when the feature is turned on again.
 
 ## Concept Check event report
 
@@ -71,9 +80,9 @@ states rebuilt with M7's `EventReplayer`. Accuracy includes submissions that wer
 later revoked; revocations are reported separately. `--starting-level` is required
 so a formal report cannot silently assume a beginner profile.
 
-The student control panel (revoke/override/feature toggle) remains deferred until
-M7's control-event signatures are finalized.
-
 The Concept Check selection trace includes the shared selection status and stable
 error code. Refusals display their specific reason. Event reports validate Topic
 IDs against the supplied registry as well as checking the declared version.
+
+Formal v2-flow embedding and real question-quality rates remain deferred until
+the real practice pool and frozen experiment inputs are available.
