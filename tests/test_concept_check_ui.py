@@ -16,7 +16,6 @@ from cs30.ui.concept_check_demo import (
     record_demo_attempt,
     revoke_demo_attempt,
     select_demo_question,
-    select_demo_question_result,
 )
 from cs30.v2.contracts import (
     ConceptCheckEventType,
@@ -67,7 +66,7 @@ def test_disabled_demo_returns_static_selection_and_writes_no_event(tmp_path) ->
         enabled=False,
     )
 
-    selection = select_demo_question_result(runtime)
+    selection = select_demo_question(runtime)
 
     assert selection.status == "disabled"
     assert selection.question is None
@@ -81,7 +80,8 @@ def test_demo_controls_revoke_and_override_through_shared_service(tmp_path) -> N
         profile=profile,
         scenario=_scenario("acceleration"),
     )
-    release = select_demo_question(runtime)
+    selection = select_demo_question(runtime)
+    release = selection.question
     assert release is not None
     attempt = record_demo_attempt(runtime, release, "C")
 
@@ -199,13 +199,17 @@ def test_demo_page_handles_scenarios_without_an_eligible_topic(scenario_id, code
     assert not app.exception
     assert not app.radio
     assert any(reason in item.value for item in app.info)
-    trace = app.session_state["concept_check_demo_selection_trace"]
-    assert trace["status"] == "no_topic_available"
-    assert trace["error_code"] == code
+    selection = app.session_state["concept_check_demo_selection"]
+    assert selection.status.value == "no_topic_available"
+    assert selection.error_code.value == code
 
 
 def test_demo_page_toggle_disables_quiz_and_event_controls() -> None:
     app = AppTest.from_file(_page()).run()
+    next(button for button in app.button if button.label == "Quiz me").click().run()
+    app.radio[0].set_value("C").run()
+    next(button for button in app.button if button.label == "Submit answer").click().run()
+
     app.toggle[0].set_value(False).run()
 
     assert not app.exception
@@ -216,16 +220,18 @@ def test_demo_page_toggle_disables_quiz_and_event_controls() -> None:
         expander.label != "Adjust current Topic level (optional)" for expander in app.expander
     )
     assert any("static student profile" in item.value for item in app.caption)
+    assert any(
+        "Static values from the selected starting profile" in item.value for item in app.caption
+    )
     assert any("event recording are disabled" in item.value for item in app.info)
+    assert any("| Acceleration | beginner | 0.500 | 0 |" in item.value for item in app.markdown)
 
 
-def test_demo_page_view_evidence_control_reveals_source_chunks() -> None:
+def test_demo_page_offers_cited_evidence_without_a_second_toggle() -> None:
     app = AppTest.from_file(_page()).run()
-    assert all(expander.label != "Cited evidence used by the scenario" for expander in app.expander)
-
-    app.toggle[1].set_value(True).run()
 
     assert not app.exception
+    assert len(app.toggle) == 1
     assert any(expander.label == "Cited evidence used by the scenario" for expander in app.expander)
 
 

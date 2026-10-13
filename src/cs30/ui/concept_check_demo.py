@@ -359,25 +359,16 @@ def _render_session_report(event_directory: Path) -> None:
 
 def _reset_selection() -> None:
     st.session_state.pop("concept_check_demo_release", None)
-    st.session_state.pop("concept_check_demo_selection_trace", None)
     st.session_state.pop("concept_check_demo_no_question", None)
     st.session_state.pop("concept_check_demo_selection", None)
     clear_quiz_component(QUIZ_KEY)
 
 
-def _scenario_summary(
-    runtime: DemoRuntime,
-    scenario: FixtureScenario,
-    *,
-    show_evidence: bool,
-) -> None:
+def _scenario_summary(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
     st.markdown("### Simulated previous Q&A scenario")
     st.write(scenario.query)
     st.caption(f"Fixture answer: {scenario.answer}")
-    if not show_evidence:
-        st.caption("Turn on View cited evidence to inspect the source chunks.")
-        return
-    with st.expander("Cited evidence used by the scenario", expanded=True):
+    with st.expander("Cited evidence used by the scenario"):
         cited = set(scenario.cited_chunk_ids)
         for hit in runtime.retrieval.hits:
             marker = "cited" if hit.chunk_id in cited else "retrieved"
@@ -416,21 +407,11 @@ def selection_message(selection: ConceptCheckSelection) -> str:
     )
 
 
-def _select_and_store_question(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
+def _select_and_store_question(runtime: DemoRuntime) -> None:
     clear_quiz_component(QUIZ_KEY)
     selection = select_demo_question(runtime)
     release = selection.question
     st.session_state["concept_check_demo_selection"] = selection
-    st.session_state["concept_check_demo_selection_trace"] = {
-        "steps": ["prepare", "select"],
-        "profile_id": runtime.profile.profile_id,
-        "scenario_id": scenario.scenario_id,
-        "scenario_title": scenario.title,
-        "retrieval_chunk_ids": [hit.chunk_id for hit in runtime.retrieval.hits],
-        "selected_question_id": release.question.question_id if release else None,
-        "status": selection.status.value,
-        "error_code": selection.error_code.value if selection.error_code else None,
-    }
     if release is None:
         st.session_state["concept_check_demo_no_question"] = True
         st.session_state.pop("concept_check_demo_release", None)
@@ -451,8 +432,11 @@ def _render_control_notice() -> None:
 
 
 def _state_rows(runtime: DemoRuntime) -> list[dict[str, Any]]:
-    events = runtime.event_store.events(runtime.profile.profile_id)
-    state = runtime.replayer.replay(events)
+    state = (
+        runtime.replayer.replay(runtime.event_store.events(runtime.profile.profile_id))
+        if runtime.service.config.enabled
+        else runtime.replayer.replay(())
+    )
     registry = load_fixture_topic_registry()
     rows: list[dict[str, Any]] = []
     for topic in registry.topics:
@@ -547,7 +531,10 @@ def _render_learner_state(runtime: DemoRuntime) -> None:
     """Show the current replay-derived state independently from write controls."""
 
     st.markdown("### Learner state")
-    st.caption("Current values rebuilt from this session's event history.")
+    if runtime.service.config.enabled:
+        st.caption("Current values rebuilt from this session's event history.")
+    else:
+        st.caption("Static values from the selected starting profile while Concept Check is off.")
     rows = _state_rows(runtime)
     st.markdown(
         "| Topic | Level | Mastery | Scored attempts |\n"
@@ -580,11 +567,6 @@ def main() -> None:
         value=True,
         key="concept_check_demo_enabled",
         on_change=_reset_selection,
-    )
-    show_evidence = st.toggle(
-        "View cited evidence",
-        value=False,
-        key="concept_check_demo_show_evidence",
     )
 
     control_left, control_right = st.columns(2)
@@ -625,11 +607,11 @@ def main() -> None:
     )
     _render_control_notice()
     _render_level_settings(runtime)
-    _scenario_summary(runtime, scenario, show_evidence=show_evidence)
+    _scenario_summary(runtime, scenario)
 
     if enabled:
         if st.button("Quiz me", type="primary", use_container_width=True):
-            _select_and_store_question(runtime, scenario)
+            _select_and_store_question(runtime)
             st.rerun()
     else:
         st.info("Concept Check is off. Quiz actions and event recording are disabled.")
@@ -640,18 +622,13 @@ def main() -> None:
             release,
             on_submit=lambda choice: record_demo_attempt(runtime, release, choice),
             on_skip=lambda: record_demo_attempt(runtime, release, None),
-            on_next=lambda: _select_and_store_question(runtime, scenario),
+            on_next=lambda: _select_and_store_question(runtime),
             on_revoke=lambda attempt_id: _revoke_current_attempt(runtime, attempt_id),
             key=QUIZ_KEY,
         )
     elif st.session_state.get("concept_check_demo_no_question"):
         selection = st.session_state["concept_check_demo_selection"]
         st.info(selection_message(selection))
-
-    trace = st.session_state.get("concept_check_demo_selection_trace")
-    if isinstance(trace, dict):
-        with st.expander("Demo trace"):
-            st.json(trace)
 
     _render_learner_state(runtime)
     _render_session_report(event_directory)

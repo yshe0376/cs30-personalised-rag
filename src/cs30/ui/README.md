@@ -67,6 +67,10 @@ shared replayer. Turning Concept Check off hides all event-writing controls,
 offers no quiz, and displays the static student profile; existing events remain
 available when the feature is turned on again.
 
+The simulated previous Q&A always offers its cited source text in one collapsed
+expander. This avoids a second evidence switch while still keeping the page
+compact and satisfying the student-facing evidence-view requirement.
+
 ## Concept Check event report
 
 Generate CSV, JSON, and Markdown summaries from one JSONL event stream:
