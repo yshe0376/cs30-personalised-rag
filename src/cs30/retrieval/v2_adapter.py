@@ -23,6 +23,10 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _normalise_sha256(value: str) -> str:
+    return value.removeprefix("sha256:").casefold()
+
+
 def _required_text(record: Mapping[str, Any], key: str) -> str:
     value = record.get(key)
     if not isinstance(value, str) or not value.strip():
@@ -60,6 +64,13 @@ def materialise_v2_retrieval_view(
     if not index_source.is_file():
         raise ArtifactMismatchError(f"FAISS index is missing: {index_source}")
 
+    metadata = v2_artifact.get("metadata")
+    if not isinstance(metadata, Mapping) or not metadata.get("index_sha256"):
+        raise ArtifactMismatchError("v2 artifact is missing metadata.index_sha256")
+    expected_index_sha256 = _normalise_sha256(str(metadata["index_sha256"]))
+    if _sha256(index_source) != expected_index_sha256:
+        raise ArtifactMismatchError("source FAISS index SHA-256 does not match the v2 artifact")
+
     expected_ids = [str(value) for value in v2_artifact.get("chunk_ids", [])]
     actual_ids = [_required_text(record, "chunk_id") for record in records]
     if not expected_ids or expected_ids != actual_ids:
@@ -71,6 +82,8 @@ def materialise_v2_retrieval_view(
     index_target = output_dir / "index.faiss"
     if index_source.resolve() != index_target.resolve():
         shutil.copyfile(index_source, index_target)
+    if _sha256(index_target) != expected_index_sha256:
+        raise ArtifactMismatchError("copied FAISS index SHA-256 does not match the v2 artifact")
 
     chunk_map = []
     for position, record in enumerate(records):

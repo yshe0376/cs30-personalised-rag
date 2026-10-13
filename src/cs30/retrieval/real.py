@@ -98,7 +98,18 @@ class _VectorIndex(Protocol):
     def search(self, vectors: np.ndarray, top_k: int) -> tuple[Any, Any]: ...
 
 
-ModelLoader = Callable[[str], _EmbeddingModel]
+class ModelLoader(Protocol):
+    """Load an embedding model without dropping its frozen identity settings."""
+
+    def __call__(
+        self,
+        model_name: str,
+        *,
+        revision: str | None = None,
+        trust_remote_code: bool = False,
+    ) -> _EmbeddingModel: ...
+
+
 IndexReader = Callable[[Path], _VectorIndex]
 
 
@@ -331,10 +342,7 @@ class FaissDenseRetriever:
             )
 
         artifact_revision = artifact.metadata.get("embedding_revision")
-        if (
-            self.expected_model_revision
-            and artifact_revision != self.expected_model_revision
-        ):
+        if self.expected_model_revision and artifact_revision != self.expected_model_revision:
             raise ArtifactMismatchError(
                 "configured embedding revision does not match the saved FAISS index: "
                 f"{self.expected_model_revision!r} != {artifact_revision!r}"
@@ -350,16 +358,12 @@ class FaissDenseRetriever:
         )
         try:
             index = self._index_reader(index_path)
-            if self._model_loader is None:
-                model = _default_model_loader(
-                    model_name,
-                    revision=effective_revision,
-                    trust_remote_code=self.trust_remote_code,
-                )
-            else:
-                # Test and dependency-injection loaders retain the original
-                # one-argument interface.
-                model = self._model_loader(model_name)
+            model_loader = self._model_loader or _default_model_loader
+            model = model_loader(
+                model_name,
+                revision=effective_revision,
+                trust_remote_code=self.trust_remote_code,
+            )
         except (IndexUnavailableError, ArtifactMismatchError):
             raise
         except Exception as exc:

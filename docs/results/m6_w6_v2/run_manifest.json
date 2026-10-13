@@ -1,29 +1,49 @@
 {
-  "schema_version": "m6-w6-v2-project-retriever-1",
-  "created_at_utc": "2026-10-12T14:12:28.598164+00:00",
+  "schema_version": "m6-w6-v2-project-retriever-2",
+  "created_at_utc": "2026-10-13T11:27:49.220269+00:00",
   "reportable": false,
-  "evaluation_set_version": "m6-v2-working-dev162-test26-2026-10-12",
-  "split_policy": "team_working_split_from_gold_labels",
+  "evaluation_set_version": "m6-v2-provisional-3book-dev162-test26-2026-10-13",
+  "split_policy": "provisional_three_book_split_from_source_labels",
+  "formal_target_split": {
+    "dev": 60,
+    "test": 180,
+    "textbooks": 6
+  },
   "dev_question_count": 162,
   "test_question_count": 26,
-  "test_configuration_count": 1,
-  "test_policy": "single predeclared BGE-M3 Hybrid; BM25 not rerun on Test",
+  "test_configuration_count": 2,
+  "test_policy": "diagnostic BM25 versus BGE-M3 on previously exposed Test",
+  "test_exposure_status": "previously_exposed_to_64_configurations",
   "test_selection_used": false,
-  "frozen_configuration": {
+  "diagnostic_configuration": {
     "model": "bge_m3",
     "mode": "hybrid_d0.10_b0.90",
     "dense_weight": 0.1,
     "bm25_weight": 0.9,
-    "declared_before_test": true
+    "selection_status": "diagnostic_not_dev_selected"
+  },
+  "baseline_selection": {
+    "baseline_run_name": "bm25_bm25",
+    "candidate_run_name": "bge_base_hybrid_d0.05_b0.95",
+    "question_count": 162,
+    "baseline_complete_hits_at_5": 134,
+    "candidate_complete_hits_at_5": 136,
+    "baseline_mrr": 0.569388105,
+    "candidate_mrr": 0.5686507937,
+    "baseline_only_hits": 0,
+    "candidate_only_hits": 2,
+    "exact_mcnemar_p": 0.5,
+    "selection_decision": "retain_bm25",
+    "selection_reason": "candidate did not pass the preregistered Dev replacement rule"
   },
   "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
   "rrf_input_top_k": 20,
   "rrf_k": 60,
   "bm25_stopwords": true,
   "git": {
-    "commit": "d6abcaeb21ae5a7825b893d51eceb0ed19c760cb",
+    "commit": "7fe1b0d673e60b75314c92999ef8e1220b399096",
     "dirty": true,
-    "snapshot_sha256": "eb9125ed4f2d364cc085f698f4f1d5a441d31ebead2e30225dda7fa7ce09bbcd"
+    "snapshot_sha256": "d3a28a7574fb530910d25a7fb7646b37b87926c1828b56d843e05d20ee8d3fb1"
   },
   "corpus_version": "2.0.0-dev.m4-structure-v2-main-3553825",
   "corpus_hash": "sha256:6b4941ac4ba9ae09b7bcd9fbe4a266600820af89c2dbb2e2ad0dd8568983930f",
@@ -98,12 +118,14 @@
   },
   "result_file_sha256": {
     "dev_summary.csv": "sha256:b22baf305a3ece3446e969f41db88a0d6e90001b463d594c6de690100d6d9c2a",
-    "test_frozen_summary.csv": "sha256:21c1d65600491057753d69560992148edffa20f669b8701962d06f2a155c6312",
+    "dev_baseline_comparison.csv": "sha256:c8c0d79958a0e189d8f7d4682cbc7f84d1ccd1131619cfb7a6f67570b241d281",
+    "test_diagnostic_summary.csv": "sha256:8bdedf4d35850c8d3d92f27212d85a377cb0bee1d5d18ff578eea69179afb897",
     "truncation_diagnostics.csv": "sha256:8c0b5be71be91c12a62a7c674b06c9a12ffea8c623552871e7514178ee35a640"
   },
   "limitations": [
-    "development corpus",
+    "provisional 162/26 split rather than the formal six-textbook 60/180 split",
     "three OpenStax textbooks",
+    "the 26-question Test set was previously exposed to all 64 configurations",
     "Gold annotation status is draft",
     "all current questions are answerable"
   ]

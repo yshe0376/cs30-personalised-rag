@@ -198,7 +198,7 @@ def test_dense_filters_hits_below_similarity_threshold(
 
     retriever = real_retrieval.FaissDenseRetriever(
         min_similarity=0.5,
-        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        model_loader=lambda model_name, **kwargs: _FakeEmbeddingModel(),
         index_reader=lambda path: _FakeIndex(),
     )
     retriever.load_index(_artifact(dense=True))
@@ -222,7 +222,7 @@ def test_dense_passes_query_prompt_name_to_encoder(
     model = _PromptRecordingEmbeddingModel()
     retriever = real_retrieval.FaissDenseRetriever(
         query_prompt_name="query",
-        model_loader=lambda model_name: model,
+        model_loader=lambda model_name, **kwargs: model,
         index_reader=lambda path: _FakeIndex(),
     )
     retriever.load_index(_artifact(dense=True))
@@ -273,6 +273,47 @@ def test_dense_pins_default_model_loader_revision(
     }
 
 
+def test_dense_pins_custom_model_loader_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+    observed: dict[str, object] = {}
+
+    def custom_loader(
+        model_name: str,
+        *,
+        revision: str | None = None,
+        trust_remote_code: bool = False,
+    ) -> _FakeEmbeddingModel:
+        observed.update(
+            model_name=model_name,
+            revision=revision,
+            trust_remote_code=trust_remote_code,
+        )
+        return _FakeEmbeddingModel()
+
+    retriever = real_retrieval.FaissDenseRetriever(
+        expected_model_revision="b" * 40,
+        trust_remote_code=True,
+        model_loader=custom_loader,
+        index_reader=lambda path: _FakeIndex(),
+    )
+    artifact = _artifact(dense=True)
+    artifact.metadata["embedding_revision"] = "b" * 40
+    retriever.load_index(artifact)
+
+    assert observed == {
+        "model_name": "fake-embedding-model",
+        "revision": "b" * 40,
+        "trust_remote_code": True,
+    }
+
+
 def test_dense_skips_negative_faiss_positions(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -288,7 +329,7 @@ def test_dense_skips_negative_faiss_positions(
     )
 
     retriever = real_retrieval.FaissDenseRetriever(
-        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        model_loader=lambda model_name, **kwargs: _FakeEmbeddingModel(),
         index_reader=lambda path: _FakeIndexWithPadding(),
     )
     retriever.load_index(_artifact(dense=True))
@@ -388,7 +429,7 @@ def test_dense_rejects_vector_count_mismatch(
     wrong_count_index.ntotal = 1
 
     retriever = real_retrieval.FaissDenseRetriever(
-        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        model_loader=lambda model_name, **kwargs: _FakeEmbeddingModel(),
         index_reader=lambda path: wrong_count_index,
     )
 
@@ -417,7 +458,7 @@ def test_dense_rejects_dimension_mismatch(
     wrong_dimension_index.d = 3
 
     retriever = real_retrieval.FaissDenseRetriever(
-        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        model_loader=lambda model_name, **kwargs: _FakeEmbeddingModel(),
         index_reader=lambda path: wrong_dimension_index,
     )
 
@@ -711,7 +752,7 @@ def test_dense_cache_key_changes_with_runtime_threshold(
     )
     retriever = real_retrieval.FaissDenseRetriever(
         min_similarity=None,
-        model_loader=lambda model_name: _FakeEmbeddingModel(),
+        model_loader=lambda model_name, **kwargs: _FakeEmbeddingModel(),
         index_reader=lambda path: _FakeIndex(),
     )
     retriever.load_index(_artifact(dense=True))
