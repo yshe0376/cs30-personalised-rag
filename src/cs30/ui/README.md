@@ -43,10 +43,10 @@ Structured selection statuses and error codes explain why a scenario has no
 eligible question.
 
 `cs30.ui.concept_check.render_quiz` is the reusable M8-1 component. It accepts
-one published `ConceptCheckQuestionRelease`, submit and skip callbacks, and an
-optional next-question callback, so the future v2 answer flow can embed it
-without copying presentation logic. Answers, rationale, and evidence stay hidden
-until submit or skip.
+one published `ConceptCheckQuestionRelease`, submit and skip callbacks, plus
+optional next-question and revoke callbacks, so the future v2 answer flow can
+embed it without copying presentation logic. Answers, rationale, and evidence
+stay hidden until submit or skip.
 
 Each submission or skip creates an immutable attempt record. After feedback is
 revealed, the same question cannot be retried as a new scored attempt. The result
@@ -58,10 +58,12 @@ submit, skip, revoke, or level-override event. It displays compact overall and
 grouped metrics and renders the CSV, JSON, and Markdown downloads directly in
 memory. A report failure is shown as a warning and does not interrupt the quiz.
 
-The student control section consumes the shared service methods rather than
-editing learner state directly. It can revoke the latest surviving scored attempt
-for a Topic, override a Topic level with a required reason, and reveal cited
-scenario evidence. Turning Concept Check off hides all event-writing controls,
+The learner setup places the optional Topic-level override beside the starting
+level and requires a reason. After a scored answer, the result view offers an
+**Undo latest scored attempt** action beside that attempt instead of a separate
+control panel. Both actions consume shared service methods rather than editing
+learner state directly, and the read-only learner-state table is rebuilt by the
+shared replayer. Turning Concept Check off hides all event-writing controls,
 offers no quiz, and displays the static student profile; existing events remain
 available when the feature is turned on again.
 
