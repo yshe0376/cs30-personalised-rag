@@ -38,7 +38,6 @@ from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
     ConceptCheckErrorCode,
     ConceptCheckEvent,
-    ConceptCheckEventType,
     ConceptCheckQuestionRelease,
     ConceptCheckSelection,
     LearnerState,
@@ -124,33 +123,6 @@ def record_demo_attempt(
         learner_state=learner_state,
         event=event,
         baseline_level=runtime.profile.level,
-    )
-
-
-def latest_revoke_candidates(
-    events: tuple[ConceptCheckEvent, ...],
-) -> tuple[ConceptCheckEvent, ...]:
-    """Return the latest surviving scored submission for each Topic."""
-
-    revoked_ids = {
-        event.revoked_attempt_id
-        for event in events
-        if event.event_type is ConceptCheckEventType.ATTEMPT_REVOKED
-        and event.revoked_attempt_id is not None
-    }
-    latest_by_topic: dict[str, ConceptCheckEvent] = {}
-    for event in sorted(events, key=lambda item: item.stream_version):
-        if (
-            event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
-            and event.attempt_id not in revoked_ids
-        ):
-            latest_by_topic[event.topic_id] = event
-    return tuple(
-        sorted(
-            latest_by_topic.values(),
-            key=lambda item: item.stream_version,
-            reverse=True,
-        )
     )
 
 
@@ -502,63 +474,38 @@ def _state_rows(runtime: DemoRuntime) -> list[dict[str, Any]]:
     return rows
 
 
-def _render_student_controls(runtime: DemoRuntime) -> None:
-    st.divider()
-    st.markdown("### Student controls")
-    _render_control_notice()
+def _render_level_settings(runtime: DemoRuntime) -> None:
+    """Place the audited Topic-level override beside the initial learner setup."""
+
     if not runtime.service.config.enabled:
-        st.info("Concept Check is off. Controls cannot write events.")
-        st.markdown(
-            f"**Static profile level:** {runtime.profile.level.value}  \n"
-            "**Profile source:** static student profile"
+        st.caption(
+            f"Static profile level: {runtime.profile.level.value}. "
+            "This static student profile is used while Concept Check is off, so no "
+            "level-change event can be recorded."
         )
         return
 
-    events = runtime.event_store.events(runtime.profile.profile_id)
-    candidates = latest_revoke_candidates(events)
-    left, right = st.columns(2)
-    with left:
-        st.markdown("#### Revoke an attempt")
-        if candidates:
-            by_id = {event.attempt_id: event for event in candidates if event.attempt_id}
-            attempt_id = st.selectbox(
-                "Latest scored attempt",
-                options=list(by_id),
-                format_func=lambda value: (
-                    f"{by_id[value].topic_id} · {by_id[value].question_id} · {value}"
-                ),
-                key="concept_check_demo_revoke_attempt",
-            )
-            if st.button("Revoke selected attempt", use_container_width=True):
-                try:
-                    revoke_demo_attempt(runtime, attempt_id)
-                except ValueError as exc:
-                    st.error(str(exc))
-                else:
-                    st.session_state["concept_check_demo_control_notice"] = {
-                        "kind": "success",
-                        "message": "The latest scored attempt for this Topic was revoked.",
-                    }
-                    _reset_selection()
-                    st.rerun()
-        else:
-            st.caption("No scored attempt is currently eligible for revocation.")
-
     registry = load_fixture_topic_registry()
     topics = {topic.topic_id: topic for topic in registry.topics}
-    with right:
-        st.markdown("#### Change a Topic level")
-        topic_id = st.selectbox(
-            "Topic",
-            options=list(topics),
-            format_func=lambda value: topics[value].title,
-            key="concept_check_demo_override_topic",
+    with st.expander("Adjust current Topic level (optional)"):
+        st.caption(
+            "Starting level is the session baseline. This form records an audited "
+            "override for one Topic and requires a reason."
         )
-        new_level = st.selectbox(
-            "New level",
-            options=[level.value for level in StudentLevel],
-            key="concept_check_demo_override_level",
-        )
+        level_left, level_right = st.columns(2)
+        with level_left:
+            topic_id = st.selectbox(
+                "Topic",
+                options=list(topics),
+                format_func=lambda value: topics[value].title,
+                key="concept_check_demo_override_topic",
+            )
+        with level_right:
+            new_level = st.selectbox(
+                "New level",
+                options=[level.value for level in StudentLevel],
+                key="concept_check_demo_override_level",
+            )
         reason = st.text_input(
             "Reason for level change",
             key="concept_check_demo_override_reason",
@@ -584,7 +531,23 @@ def _render_student_controls(runtime: DemoRuntime) -> None:
                     _reset_selection()
                     st.rerun()
 
-    st.markdown("#### Current learner state")
+
+def _revoke_current_attempt(runtime: DemoRuntime, attempt_id: str) -> None:
+    """Revoke the displayed scored attempt through the shared service."""
+
+    revoke_demo_attempt(runtime, attempt_id)
+    st.session_state["concept_check_demo_control_notice"] = {
+        "kind": "success",
+        "message": "The latest scored attempt was undone and the learner state was replayed.",
+    }
+    _reset_selection()
+
+
+def _render_learner_state(runtime: DemoRuntime) -> None:
+    """Show the current replay-derived state independently from write controls."""
+
+    st.markdown("### Learner state")
+    st.caption("Current values rebuilt from this session's event history.")
     rows = _state_rows(runtime)
     st.markdown(
         "| Topic | Level | Mastery | Scored attempts |\n"
@@ -660,6 +623,8 @@ def main() -> None:
         scenario=scenario,
         enabled=enabled,
     )
+    _render_control_notice()
+    _render_level_settings(runtime)
     _scenario_summary(runtime, scenario, show_evidence=show_evidence)
 
     if enabled:
@@ -676,6 +641,7 @@ def main() -> None:
             on_submit=lambda choice: record_demo_attempt(runtime, release, choice),
             on_skip=lambda: record_demo_attempt(runtime, release, None),
             on_next=lambda: _select_and_store_question(runtime, scenario),
+            on_revoke=lambda attempt_id: _revoke_current_attempt(runtime, attempt_id),
             key=QUIZ_KEY,
         )
     elif st.session_state.get("concept_check_demo_no_question"):
@@ -687,7 +653,7 @@ def main() -> None:
         with st.expander("Demo trace"):
             st.json(trace)
 
-    _render_student_controls(runtime)
+    _render_learner_state(runtime)
     _render_session_report(event_directory)
 
 

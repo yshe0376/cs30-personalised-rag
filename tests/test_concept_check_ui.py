@@ -12,7 +12,6 @@ from cs30.concept_check.topics import ChunkTopicResolver
 from cs30.ui.concept_check_demo import (
     _render_session_report,
     build_demo_runtime,
-    latest_revoke_candidates,
     override_demo_level,
     record_demo_attempt,
     revoke_demo_attempt,
@@ -86,8 +85,6 @@ def test_demo_controls_revoke_and_override_through_shared_service(tmp_path) -> N
     assert release is not None
     attempt = record_demo_attempt(runtime, release, "C")
 
-    candidates = latest_revoke_candidates(runtime.event_store.events(profile.profile_id))
-    assert [event.attempt_id for event in candidates] == [attempt.event.attempt_id]
     revoked_state = revoke_demo_attempt(runtime, attempt.event.attempt_id)
     assert revoked_state.topics["acceleration"].total_attempts == 0
     assert runtime.event_store.events(profile.profile_id)[-1].event_type is (
@@ -130,6 +127,7 @@ def test_demo_page_hides_feedback_until_submit() -> None:
     assert any("Learner state change" in item.value for item in app.markdown)
     assert any("Textbook: College Physics 2e" in item.value for item in app.caption)
     assert any(expander.label == "Attempt record" for expander in app.expander)
+    assert any(button.label == "Undo latest scored attempt" for button in app.button)
     assert any("Current session report" in item.value for item in app.markdown)
     assert any(
         'cc-report-label">Submitted' in item.value and 'cc-report-value">1' in item.value
@@ -152,6 +150,7 @@ def test_demo_page_skip_is_recorded_but_not_scored() -> None:
         for item in app.markdown
     )
     assert any(expander.label == "Attempt record" for expander in app.expander)
+    assert all(button.label != "Undo latest scored attempt" for button in app.button)
     assert all(button.label != "Answer now" for button in app.button)
 
 
@@ -211,9 +210,12 @@ def test_demo_page_toggle_disables_quiz_and_event_controls() -> None:
 
     assert not app.exception
     assert all(button.label != "Quiz me" for button in app.button)
-    assert all(button.label != "Revoke selected attempt" for button in app.button)
+    assert all(button.label != "Undo latest scored attempt" for button in app.button)
     assert all(button.label != "Change Topic level" for button in app.button)
-    assert any("static student profile" in item.value for item in app.markdown)
+    assert all(
+        expander.label != "Adjust current Topic level (optional)" for expander in app.expander
+    )
+    assert any("static student profile" in item.value for item in app.caption)
     assert any("event recording are disabled" in item.value for item in app.info)
 
 
@@ -233,10 +235,11 @@ def test_demo_page_revoke_control_updates_the_report() -> None:
     app.radio[0].set_value("C").run()
     next(button for button in app.button if button.label == "Submit answer").click().run()
 
-    next(button for button in app.button if button.label == "Revoke selected attempt").click().run()
+    undo = next(button for button in app.button if button.label == "Undo latest scored attempt")
+    undo.click().run()
 
     assert not app.exception
-    assert any("was revoked" in item.value for item in app.success)
+    assert any("was undone" in item.value for item in app.success)
     assert any(
         'cc-report-label">Revoked' in item.value
         and 'cc-report-value">1' in item.value
@@ -246,6 +249,10 @@ def test_demo_page_revoke_control_updates_the_report() -> None:
 
 def test_demo_page_level_override_requires_reason_and_updates_state() -> None:
     app = AppTest.from_file(_page()).run()
+    assert any(
+        expander.label == "Adjust current Topic level (optional)" for expander in app.expander
+    )
+    assert not any(item.value == "### Student controls" for item in app.markdown)
     next(item for item in app.selectbox if item.label == "New level").set_value("advanced").run()
     next(item for item in app.text_input if item.label == "Reason for level change").set_value(
         "I completed this Topic before."
