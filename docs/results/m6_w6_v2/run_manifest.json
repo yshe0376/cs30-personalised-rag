@@ -1,0 +1,110 @@
+{
+  "schema_version": "m6-w6-v2-project-retriever-1",
+  "created_at_utc": "2026-10-12T14:12:28.598164+00:00",
+  "reportable": false,
+  "evaluation_set_version": "m6-v2-working-dev162-test26-2026-10-12",
+  "split_policy": "team_working_split_from_gold_labels",
+  "dev_question_count": 162,
+  "test_question_count": 26,
+  "test_configuration_count": 1,
+  "test_policy": "single predeclared BGE-M3 Hybrid; BM25 not rerun on Test",
+  "test_selection_used": false,
+  "frozen_configuration": {
+    "model": "bge_m3",
+    "mode": "hybrid_d0.10_b0.90",
+    "dense_weight": 0.1,
+    "bm25_weight": 0.9,
+    "declared_before_test": true
+  },
+  "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
+  "rrf_input_top_k": 20,
+  "rrf_k": 60,
+  "bm25_stopwords": true,
+  "git": {
+    "commit": "d6abcaeb21ae5a7825b893d51eceb0ed19c760cb",
+    "dirty": true,
+    "snapshot_sha256": "eb9125ed4f2d364cc085f698f4f1d5a441d31ebead2e30225dda7fa7ce09bbcd"
+  },
+  "corpus_version": "2.0.0-dev.m4-structure-v2-main-3553825",
+  "corpus_hash": "sha256:6b4941ac4ba9ae09b7bcd9fbe4a266600820af89c2dbb2e2ad0dd8568983930f",
+  "manifest_hash": "sha256:c7d8c926219efe4b7fd9f067a68109417f0fef2a14a37daa4353102241635e76",
+  "chunk_config_hash": "sha256:914659582bf24dd81618d55d18b9717e7e0a1d63ace5ff740966b2b0e924c191",
+  "gold_sha256": "sha256:5875c2edc35195d475ea8d2980d7d9793cdfc8b83c12d12386049f13d1b69e6e",
+  "binding_sha256": "sha256:98f70f3eee137f1ccd7252b14e55ed3bdac76a75ac5b0e0141ecc5b2dd68991f",
+  "models": {
+    "minilm": {
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "mpnet": {
+      "model": "sentence-transformers/all-mpnet-base-v2",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "e5_base": {
+      "model": "intfloat/e5-base-v2",
+      "revision": "f52bf8ec8c7124536f0efb74aca902b2995e5bcd",
+      "trust_remote_code": false,
+      "query_instruction": "query: ",
+      "query_prompt_name": null
+    },
+    "bge_base": {
+      "model": "BAAI/bge-base-en-v1.5",
+      "revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
+      "trust_remote_code": false,
+      "query_instruction": "Represent this sentence for searching relevant passages: ",
+      "query_prompt_name": null
+    },
+    "jina": {
+      "model": "jinaai/jina-embeddings-v2-small-en",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "trust_remote_code": true,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "gte_modernbert": {
+      "model": "Alibaba-NLP/gte-modernbert-base",
+      "revision": "e7f32e3c00f91d699e8c43b53106206bcc72bb22",
+      "trust_remote_code": true,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "nomic": {
+      "model": "nomic-ai/nomic-embed-text-v1.5",
+      "revision": "e9b6763023c676ca8431644204f50c2b100d9aab",
+      "trust_remote_code": true,
+      "query_instruction": "search_query: ",
+      "query_prompt_name": null
+    },
+    "bge_m3": {
+      "model": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "qwen3": {
+      "model": "Qwen/Qwen3-Embedding-0.6B",
+      "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": "query"
+    }
+  },
+  "result_file_sha256": {
+    "dev_summary.csv": "sha256:b22baf305a3ece3446e969f41db88a0d6e90001b463d594c6de690100d6d9c2a",
+    "test_frozen_summary.csv": "sha256:21c1d65600491057753d69560992148edffa20f669b8701962d06f2a155c6312",
+    "truncation_diagnostics.csv": "sha256:8c0b5be71be91c12a62a7c674b06c9a12ffea8c623552871e7514178ee35a640"
+  },
+  "limitations": [
+    "development corpus",
+    "three OpenStax textbooks",
+    "Gold annotation status is draft",
+    "all current questions are answerable"
+  ]
+}

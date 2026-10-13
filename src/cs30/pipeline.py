@@ -146,9 +146,7 @@ def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
 
     if not artifact_path.is_file():
         if not config.fixture_mode:
-            raise IndexUnavailableError(
-                f"IndexArtifact not found at {artifact_path}"
-            )
+            raise IndexUnavailableError(f"IndexArtifact not found at {artifact_path}")
 
         dataset = build_all_dataset_items(StudentLevel.INTERMEDIATE)
         evidence_by_id = {}
@@ -181,6 +179,9 @@ def build_real_retrieval_deps(config: AppConfig) -> RetrievalDeps:
 
         dense_retriever = FaissDenseRetriever(
             expected_model_name=config.retrieval.expected_embedding_model,
+            expected_model_revision=config.retrieval.expected_embedding_revision,
+            trust_remote_code=config.retrieval.embedding_trust_remote_code,
+            query_prompt_name=config.retrieval.query_prompt_name,
             min_similarity=config.retrieval.dense_min_similarity,
         )
         bm25_retriever = BM25Retriever(
@@ -339,9 +340,7 @@ def run_pipeline(
     metadata = {
         "environment": config.environment,
         "top_k": str(config.retrieval.top_k),
-        "index_type": str(
-            getattr(deps.retriever, "index_type", config.retrieval.index_type)
-        ),
+        "index_type": str(getattr(deps.retriever, "index_type", config.retrieval.index_type)),
         "provider": config.generation.provider,
         "retrieval_ms": f"{retrieval_ms:.1f}",
     }
@@ -425,21 +424,13 @@ def main() -> None:
             if args.model is not None:
                 generation_updates["model"] = args.model
             config = config.model_copy(
-                update={
-                    "generation": config.generation.model_copy(
-                        update=generation_updates
-                    )
-                }
+                update={"generation": config.generation.model_copy(update=generation_updates)}
             )
         if args.top_k is not None:
             if args.top_k < 1:
                 raise ConfigError("--top-k must be positive")
             config = config.model_copy(
-                update={
-                    "retrieval": config.retrieval.model_copy(
-                        update={"top_k": args.top_k}
-                    )
-                }
+                update={"retrieval": config.retrieval.model_copy(update={"top_k": args.top_k})}
             )
         if args.retrieval_mode is not None:
             config = config.model_copy(

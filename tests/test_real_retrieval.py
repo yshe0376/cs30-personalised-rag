@@ -44,10 +44,12 @@ def _artifact(*, dense: bool = False) -> IndexArtifact:
         "index_version": "test-index-v1",
     }
     if dense:
-        metadata.update({
-            "embedding_model": "fake-embedding-model",
-            "dimension": "2",
-        })
+        metadata.update(
+            {
+                "embedding_model": "fake-embedding-model",
+                "dimension": "2",
+            }
+        )
 
     return IndexArtifact(
         artifact_id="test-artifact",
@@ -96,6 +98,7 @@ def test_bm25_out_of_scope_question_returns_no_hits(
     assert result.provenance is not None
     assert result.provenance.embedding_model is None
 
+
 def test_bm25_stopword_only_question_returns_no_hits(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -137,6 +140,21 @@ class _FakeEmbeddingModel:
         convert_to_numpy: bool = True,
     ) -> np.ndarray:
         return np.array([[1.0, 0.0]], dtype=np.float32)
+
+
+class _PromptRecordingEmbeddingModel(_FakeEmbeddingModel):
+    def __init__(self) -> None:
+        self.prompt_name: str | None = None
+
+    def encode(
+        self,
+        sentences: list[str],
+        *,
+        convert_to_numpy: bool = True,
+        prompt_name: str | None = None,
+    ) -> np.ndarray:
+        self.prompt_name = prompt_name
+        return super().encode(sentences, convert_to_numpy=convert_to_numpy)
 
 
 class _FakeIndex:
@@ -190,6 +208,69 @@ def test_dense_filters_hits_below_similarity_threshold(
     assert [hit.chunk_id for hit in result.hits] == ["chunk-1"]
     assert result.hits[0].score == pytest.approx(0.8)
     assert result.hits[0].rank == 1
+
+
+def test_dense_passes_query_prompt_name_to_encoder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+    model = _PromptRecordingEmbeddingModel()
+    retriever = real_retrieval.FaissDenseRetriever(
+        query_prompt_name="query",
+        model_loader=lambda model_name: model,
+        index_reader=lambda path: _FakeIndex(),
+    )
+    retriever.load_index(_artifact(dense=True))
+
+    retriever.retrieve("What is acceleration?", top_k=2)
+
+    assert model.prompt_name == "query"
+
+
+def test_dense_pins_default_model_loader_revision(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(real_retrieval, "_load_chunk_map", lambda artifact: _chunks())
+    monkeypatch.setattr(
+        real_retrieval,
+        "_resolve_artifact_file",
+        lambda *args, **kwargs: Path("unused"),
+    )
+    observed: dict[str, object] = {}
+
+    def fake_default_loader(
+        model_name: str,
+        *,
+        revision: str | None = None,
+        trust_remote_code: bool = False,
+    ) -> _FakeEmbeddingModel:
+        observed.update(
+            model_name=model_name,
+            revision=revision,
+            trust_remote_code=trust_remote_code,
+        )
+        return _FakeEmbeddingModel()
+
+    monkeypatch.setattr(real_retrieval, "_default_model_loader", fake_default_loader)
+    retriever = real_retrieval.FaissDenseRetriever(
+        expected_model_revision="a" * 40,
+        trust_remote_code=True,
+        index_reader=lambda path: _FakeIndex(),
+    )
+    artifact = _artifact(dense=True)
+    artifact.metadata["embedding_revision"] = "a" * 40
+    retriever.load_index(artifact)
+
+    assert observed == {
+        "model_name": "fake-embedding-model",
+        "revision": "a" * 40,
+        "trust_remote_code": True,
+    }
 
 
 def test_dense_skips_negative_faiss_positions(
@@ -265,6 +346,15 @@ def test_dense_rejects_model_mismatch_before_loading_files() -> None:
     )
 
     with pytest.raises(ArtifactMismatchError, match="embedding model does not match"):
+        retriever.load_index(_artifact(dense=True))
+
+
+def test_dense_rejects_missing_revision_when_revision_is_expected() -> None:
+    retriever = real_retrieval.FaissDenseRetriever(
+        expected_model_revision="a" * 40,
+    )
+
+    with pytest.raises(ArtifactMismatchError, match="embedding revision"):
         retriever.load_index(_artifact(dense=True))
 
 
@@ -408,15 +498,12 @@ class _SpyRetriever:
             raise AssertionError("no fake retrieval result was configured")
         return self.result
 
+
 def _provenance(mode: RetrievalMode) -> EvidenceProvenance:
     return EvidenceProvenance(
         corpus_hash="test-corpus-hash",
         chunk_config_hash="test-chunk-config-hash",
-        embedding_model=(
-            "fake-embedding-model"
-            if mode is RetrievalMode.DENSE
-            else None
-        ),
+        embedding_model=("fake-embedding-model" if mode is RetrievalMode.DENSE else None),
         index_version="test-index-v1",
     )
 
@@ -486,12 +573,8 @@ def test_rrf_fuses_rankings_and_labels_contributing_modes() -> None:
 
 
 def test_rrf_returns_empty_when_both_backends_abstain() -> None:
-    dense = _SpyRetriever(
-        result=_result(RetrievalMode.DENSE, [])
-    )
-    bm25 = _SpyRetriever(
-        result=_result(RetrievalMode.BM25, [])
-    )
+    dense = _SpyRetriever(result=_result(RetrievalMode.DENSE, []))
+    bm25 = _SpyRetriever(result=_result(RetrievalMode.BM25, []))
 
     retriever = real_retrieval.RRFRetriever(
         dense=dense,
@@ -521,12 +604,8 @@ def test_weighted_rrf_changes_ranking(
     bm25_weight: float,
     expected_first: str,
 ) -> None:
-    dense = _SpyRetriever(
-        result=_result(RetrievalMode.DENSE, ["dense-first", "bm25-first"])
-    )
-    bm25 = _SpyRetriever(
-        result=_result(RetrievalMode.BM25, ["bm25-first", "dense-first"])
-    )
+    dense = _SpyRetriever(result=_result(RetrievalMode.DENSE, ["dense-first", "bm25-first"]))
+    bm25 = _SpyRetriever(result=_result(RetrievalMode.BM25, ["bm25-first", "dense-first"]))
     retriever = real_retrieval.RRFRetriever(
         dense=dense,
         bm25=bm25,
@@ -640,18 +719,12 @@ def test_dense_cache_key_changes_with_runtime_threshold(
     assert len(retriever.retrieve("acceleration", top_k=2).hits) == 2
     retriever.min_similarity = 0.5
 
-    assert [
-        hit.chunk_id for hit in retriever.retrieve("acceleration", top_k=2).hits
-    ] == ["chunk-1"]
+    assert [hit.chunk_id for hit in retriever.retrieve("acceleration", top_k=2).hits] == ["chunk-1"]
 
 
 def test_rrf_cache_key_changes_with_runtime_weights() -> None:
-    dense = _SpyRetriever(
-        result=_result(RetrievalMode.DENSE, ["dense-first", "bm25-first"])
-    )
-    bm25 = _SpyRetriever(
-        result=_result(RetrievalMode.BM25, ["bm25-first", "dense-first"])
-    )
+    dense = _SpyRetriever(result=_result(RetrievalMode.DENSE, ["dense-first", "bm25-first"]))
+    bm25 = _SpyRetriever(result=_result(RetrievalMode.BM25, ["bm25-first", "dense-first"]))
     retriever = real_retrieval.RRFRetriever(dense=dense, bm25=bm25)
     retriever.load_index(_artifact(dense=True))
 
@@ -777,6 +850,9 @@ def test_pipeline_passes_thresholds_to_hybrid_retrievers(
             rrf_dense_weight=0.75,
             rrf_bm25_weight=0.25,
             expected_embedding_model="fake-embedding-model",
+            expected_embedding_revision="a" * 40,
+            embedding_trust_remote_code=True,
+            query_prompt_name="query",
         ),
     )
 
@@ -791,8 +867,11 @@ def test_pipeline_passes_thresholds_to_hybrid_retrievers(
     assert deps.retriever.dense_weight == pytest.approx(0.75)
     assert deps.retriever.bm25_weight == pytest.approx(0.25)
     assert deps.retriever.dense.expected_model_name == "fake-embedding-model"
+    assert deps.retriever.dense.expected_model_revision == "a" * 40
+    assert deps.retriever.dense.trust_remote_code is True
+    assert deps.retriever.dense.query_prompt_name == "query"
 
-    
+
 def test_pipeline_falls_back_to_fixture_when_index_is_missing(
     tmp_path: Path,
 ) -> None:
