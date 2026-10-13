@@ -204,6 +204,10 @@ def test_demo_page_handles_scenarios_without_an_eligible_topic(scenario_id: str)
 
 def test_demo_page_toggle_disables_quiz_and_event_controls() -> None:
     app = AppTest.from_file(_page()).run()
+    next(button for button in app.button if button.label == "Quiz me").click().run()
+    app.radio[0].set_value("C").run()
+    next(button for button in app.button if button.label == "Submit answer").click().run()
+
     app.toggle[0].set_value(False).run()
 
     assert not app.exception
@@ -214,16 +218,18 @@ def test_demo_page_toggle_disables_quiz_and_event_controls() -> None:
         expander.label != "Adjust current Topic level (optional)" for expander in app.expander
     )
     assert any("static student profile" in item.value for item in app.caption)
+    assert any(
+        "Static values from the selected starting profile" in item.value for item in app.caption
+    )
     assert any("event recording are disabled" in item.value for item in app.info)
+    assert any("| Acceleration | beginner | 0.500 | 0 |" in item.value for item in app.markdown)
 
 
-def test_demo_page_view_evidence_control_reveals_source_chunks() -> None:
+def test_demo_page_offers_cited_evidence_without_a_second_toggle() -> None:
     app = AppTest.from_file(_page()).run()
-    assert all(expander.label != "Cited evidence used by the scenario" for expander in app.expander)
-
-    app.toggle[1].set_value(True).run()
 
     assert not app.exception
+    assert len(app.toggle) == 1
     assert any(expander.label == "Cited evidence used by the scenario" for expander in app.expander)
 
 
