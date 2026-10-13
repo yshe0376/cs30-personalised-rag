@@ -25,7 +25,8 @@ from cs30.concept_check.fixtures import (
 )
 from cs30.concept_check.learner_state import EventReplayer
 from cs30.concept_check.provider import FixtureQuestionProvider
-from cs30.concept_check.service import ConceptCheckService
+from cs30.concept_check.service import ConceptCheckSelection, ConceptCheckService
+from cs30.concept_check.topics import ChunkTopicResolver
 from cs30.evaluation.concept_check_reporting import (
     build_concept_check_report,
     load_concept_check_events,
@@ -37,35 +38,33 @@ from cs30.ui.concept_check import Choice, QuizAttemptView, clear_quiz_component,
 from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
     ConceptCheckEvent,
+    ConceptCheckEventType,
     ConceptCheckQuestionRelease,
+    LearnerState,
     RetrievalResult,
     StudentLevel,
     StudentProfile,
-    TopicResolution,
     ValidatedAnswer,
 )
-from cs30.v2.topics import resolve_topic_from_citations, resolve_topic_from_retrieval
 
 QUIZ_KEY = "concept-check-demo-quiz"
 _LOGGER = logging.getLogger(__name__)
 
-
-class _FixtureTopicResolver:
-    """Adapt the shared fixture map to the Concept Check service port."""
-
-    def __init__(self) -> None:
-        self.topic_map = load_fixture_chunk_topic_map()
-        self.registry = load_fixture_topic_registry()
-
-    def resolve_retrieval_topic(self, retrieval: RetrievalResult) -> TopicResolution:
-        return resolve_topic_from_retrieval(retrieval, self.topic_map, self.registry)
-
-    def resolve_cited_topic(
-        self,
-        retrieval: RetrievalResult,
-        validated: ValidatedAnswer,
-    ) -> TopicResolution:
-        return resolve_topic_from_citations(retrieval, validated, self.topic_map, self.registry)
+_SELECTION_MESSAGES = {
+    "ANSWER_ABSTAINED": "The previous answer abstained, so no follow-up question is offered.",
+    "CITATION_VALIDATION_FAILED": (
+        "The previous answer did not pass citation validation, so no follow-up question is offered."
+    ),
+    "NO_CITATIONS": "The previous answer has no validated citations.",
+    "NO_RETRIEVAL_TOPIC": "No retrieval Topic is available for this scenario.",
+    "NO_TOPIC_AVAILABLE": "The retrieved evidence has no mapped Topic.",
+    "TOPIC_TIE": "The evidence maps equally to multiple Topics.",
+    "INSUFFICIENT_TOPIC_SUPPORT": "The evidence does not support one Topic strongly enough.",
+    "TOPIC_MAP_UNAVAILABLE": "The chunk-to-Topic map is unavailable.",
+    "TOPIC_MAP_MISMATCH": "The chunk-to-Topic map does not match this corpus.",
+    "TOPIC_REGISTRY_MISMATCH": "The question and runtime use different Topic registries.",
+    "NO_USABLE_QUESTION": "No unused published question is available for this Topic and level.",
+}
 
 
 @dataclass(frozen=True)
@@ -83,16 +82,22 @@ def build_demo_runtime(
     event_directory: Path,
     profile: StudentProfile,
     scenario: FixtureScenario,
+    enabled: bool = True,
 ) -> DemoRuntime:
     """Compose only the shared deterministic fixture dependencies."""
 
+    config = ConceptCheckConfig(enabled=enabled)
     replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION)
     event_store = JsonlEventStore(event_directory, replayer)
     retrieval = scenario.retrieval()
     validated = scenario.validated_answer()
     service = ConceptCheckService(
-        config=ConceptCheckConfig(enabled=True),
-        resolver=_FixtureTopicResolver(),
+        config=config,
+        resolver=ChunkTopicResolver(
+            load_fixture_chunk_topic_map(),
+            load_fixture_topic_registry(),
+            config,
+        ),
         provider=FixtureQuestionProvider(load_fixture_releases()),
         event_store=event_store,
         replayer=replayer,
@@ -107,11 +112,17 @@ def build_demo_runtime(
     )
 
 
-def select_demo_question(runtime: DemoRuntime) -> ConceptCheckQuestionRelease | None:
-    """Call M7's prepare and select seams in their required order."""
+def select_demo_question_result(runtime: DemoRuntime) -> ConceptCheckSelection:
+    """Call prepare then return the shared explainable selection result."""
 
     prepared = runtime.service.prepare(runtime.retrieval, runtime.profile)
-    return runtime.service.select(prepared, runtime.retrieval, runtime.validated)
+    return runtime.service.select_result(prepared, runtime.retrieval, runtime.validated)
+
+
+def select_demo_question(runtime: DemoRuntime) -> ConceptCheckQuestionRelease | None:
+    """Compatibility helper returning only the selected release."""
+
+    return select_demo_question_result(runtime).question
 
 
 def record_demo_attempt(
@@ -138,6 +149,58 @@ def record_demo_attempt(
         learner_state=learner_state,
         event=event,
         baseline_level=runtime.profile.level,
+    )
+
+
+def latest_revoke_candidates(
+    events: tuple[ConceptCheckEvent, ...],
+) -> tuple[ConceptCheckEvent, ...]:
+    """Return the latest surviving scored submission for each Topic."""
+
+    revoked_ids = {
+        event.revoked_attempt_id
+        for event in events
+        if event.event_type is ConceptCheckEventType.ATTEMPT_REVOKED
+        and event.revoked_attempt_id is not None
+    }
+    latest_by_topic: dict[str, ConceptCheckEvent] = {}
+    for event in sorted(events, key=lambda item: item.stream_version):
+        if (
+            event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
+            and event.attempt_id not in revoked_ids
+        ):
+            latest_by_topic[event.topic_id] = event
+    return tuple(
+        sorted(
+            latest_by_topic.values(),
+            key=lambda item: item.stream_version,
+            reverse=True,
+        )
+    )
+
+
+def revoke_demo_attempt(runtime: DemoRuntime, attempt_id: str) -> LearnerState:
+    """Use the shared service to revoke one eligible fixture attempt."""
+
+    return runtime.service.revoke(
+        attempt_id,
+        event_id=f"revoke-{attempt_id}",
+    )
+
+
+def override_demo_level(
+    runtime: DemoRuntime,
+    topic_id: str,
+    new_level: StudentLevel,
+    reason: str,
+) -> LearnerState:
+    """Use the shared service to record a student-requested Topic level."""
+
+    return runtime.service.override_level(
+        topic_id,
+        new_level,
+        reason=reason,
+        event_id=f"override-{uuid4().hex}",
     )
 
 
@@ -179,6 +242,9 @@ def _inject_demo_styles() -> None:
         > div > div:first-child {
             border-color: #f06f54;
             background: #f06f54;
+        }
+        div[data-testid="stCheckbox"] input {
+            accent-color: #f06f54;
         }
         .cc-report-grid {
             display: grid;
@@ -359,11 +425,19 @@ def _reset_selection() -> None:
     clear_quiz_component(QUIZ_KEY)
 
 
-def _scenario_summary(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
+def _scenario_summary(
+    runtime: DemoRuntime,
+    scenario: FixtureScenario,
+    *,
+    show_evidence: bool,
+) -> None:
     st.markdown("### Simulated previous Q&A scenario")
     st.write(scenario.query)
     st.caption(f"Fixture answer: {scenario.answer}")
-    with st.expander("Cited evidence used by the scenario"):
+    if not show_evidence:
+        st.caption("Turn on View cited evidence to inspect the source chunks.")
+        return
+    with st.expander("Cited evidence used by the scenario", expanded=True):
         cited = set(scenario.cited_chunk_ids)
         for hit in runtime.retrieval.hits:
             marker = "cited" if hit.chunk_id in cited else "retrieved"
@@ -374,21 +448,168 @@ def _scenario_summary(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
 
 def _select_and_store_question(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
     clear_quiz_component(QUIZ_KEY)
-    release = select_demo_question(runtime)
+    selection = select_demo_question_result(runtime)
+    release = selection.question
     st.session_state["concept_check_demo_selection_trace"] = {
-        "steps": ["prepare", "select"],
+        "steps": ["prepare", "select_result"],
         "profile_id": runtime.profile.profile_id,
         "scenario_id": scenario.scenario_id,
         "scenario_title": scenario.title,
         "retrieval_chunk_ids": [hit.chunk_id for hit in runtime.retrieval.hits],
+        "selection_status": selection.status,
+        "selection_error_code": selection.error_code,
         "selected_question_id": release.question.question_id if release else None,
     }
     if release is None:
-        st.session_state["concept_check_demo_no_question"] = True
+        st.session_state["concept_check_demo_no_question"] = {
+            "status": selection.status,
+            "error_code": selection.error_code,
+        }
         st.session_state.pop("concept_check_demo_release", None)
     else:
         st.session_state["concept_check_demo_release"] = release
         st.session_state.pop("concept_check_demo_no_question", None)
+
+
+def _selection_message(value: dict[str, Any]) -> str:
+    status = value.get("status")
+    error_code = value.get("error_code")
+    if status == "disabled":
+        return "Concept Check is off. No question was selected and no event was recorded."
+    if isinstance(error_code, str):
+        detail = _SELECTION_MESSAGES.get(error_code, "No follow-up question is available.")
+        return f"{detail} Reason: {error_code}."
+    return "No eligible published fixture question is available for this scenario."
+
+
+def _render_control_notice() -> None:
+    notice = st.session_state.pop("concept_check_demo_control_notice", None)
+    if not isinstance(notice, dict):
+        return
+    message = str(notice.get("message", ""))
+    if notice.get("kind") == "success":
+        st.success(message)
+    else:
+        st.error(message)
+
+
+def _state_rows(runtime: DemoRuntime) -> list[dict[str, Any]]:
+    events = runtime.event_store.events(runtime.profile.profile_id)
+    state = runtime.replayer.replay(events)
+    registry = load_fixture_topic_registry()
+    rows: list[dict[str, Any]] = []
+    for topic in registry.topics:
+        topic_state = state.topics.get(topic.topic_id)
+        rows.append(
+            {
+                "Topic": topic.title,
+                "Level": (
+                    topic_state.level.value
+                    if topic_state is not None
+                    else runtime.profile.level.value
+                ),
+                "Mastery": (
+                    f"{topic_state.mastery_score:.3f}" if topic_state is not None else "0.500"
+                ),
+                "Scored attempts": topic_state.total_attempts if topic_state is not None else 0,
+            }
+        )
+    return rows
+
+
+def _render_student_controls(runtime: DemoRuntime) -> None:
+    st.divider()
+    st.markdown("### Student controls")
+    _render_control_notice()
+    if not runtime.service.config.enabled:
+        st.info("Concept Check is off. Controls cannot write events.")
+        st.markdown(
+            f"**Static profile level:** {runtime.profile.level.value}  \n"
+            "**Profile source:** static student profile"
+        )
+        return
+
+    events = runtime.event_store.events(runtime.profile.profile_id)
+    candidates = latest_revoke_candidates(events)
+    left, right = st.columns(2)
+    with left:
+        st.markdown("#### Revoke an attempt")
+        if candidates:
+            by_id = {event.attempt_id: event for event in candidates if event.attempt_id}
+            attempt_id = st.selectbox(
+                "Latest scored attempt",
+                options=list(by_id),
+                format_func=lambda value: (
+                    f"{by_id[value].topic_id} · {by_id[value].question_id} · {value}"
+                ),
+                key="concept_check_demo_revoke_attempt",
+            )
+            if st.button("Revoke selected attempt", use_container_width=True):
+                try:
+                    revoke_demo_attempt(runtime, attempt_id)
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.session_state["concept_check_demo_control_notice"] = {
+                        "kind": "success",
+                        "message": "The latest scored attempt for this Topic was revoked.",
+                    }
+                    _reset_selection()
+                    st.rerun()
+        else:
+            st.caption("No scored attempt is currently eligible for revocation.")
+
+    registry = load_fixture_topic_registry()
+    topics = {topic.topic_id: topic for topic in registry.topics}
+    with right:
+        st.markdown("#### Change a Topic level")
+        topic_id = st.selectbox(
+            "Topic",
+            options=list(topics),
+            format_func=lambda value: topics[value].title,
+            key="concept_check_demo_override_topic",
+        )
+        new_level = st.selectbox(
+            "New level",
+            options=[level.value for level in StudentLevel],
+            key="concept_check_demo_override_level",
+        )
+        reason = st.text_input(
+            "Reason for level change",
+            key="concept_check_demo_override_reason",
+        )
+        if st.button("Change Topic level", use_container_width=True):
+            if not reason.strip():
+                st.error("A reason is required before changing the Topic level.")
+            else:
+                try:
+                    override_demo_level(
+                        runtime,
+                        topic_id,
+                        StudentLevel(new_level),
+                        reason,
+                    )
+                except ValueError as exc:
+                    st.error(str(exc))
+                else:
+                    st.session_state["concept_check_demo_control_notice"] = {
+                        "kind": "success",
+                        "message": f"{topics[topic_id].title} was changed to {new_level}.",
+                    }
+                    _reset_selection()
+                    st.rerun()
+
+    st.markdown("#### Current learner state")
+    rows = _state_rows(runtime)
+    st.markdown(
+        "| Topic | Level | Mastery | Scored attempts |\n"
+        "| --- | --- | ---: | ---: |\n"
+        + "\n".join(
+            f"| {row['Topic']} | {row['Level']} | {row['Mastery']} | "
+            f"{row['Scored attempts']} |"
+            for row in rows
+        )
+    )
 
 
 def main() -> None:
@@ -405,6 +626,18 @@ def main() -> None:
 
     scenarios = load_fixture_scenarios()
     scenarios_by_id = {scenario.scenario_id: scenario for scenario in scenarios}
+
+    enabled = st.toggle(
+        "Enable Concept Check",
+        value=True,
+        key="concept_check_demo_enabled",
+        on_change=_reset_selection,
+    )
+    show_evidence = st.toggle(
+        "View cited evidence",
+        value=False,
+        key="concept_check_demo_show_evidence",
+    )
 
     control_left, control_right = st.columns(2)
     with control_left:
@@ -440,12 +673,16 @@ def main() -> None:
         event_directory=event_directory,
         profile=profile,
         scenario=scenario,
+        enabled=enabled,
     )
-    _scenario_summary(runtime, scenario)
+    _scenario_summary(runtime, scenario, show_evidence=show_evidence)
 
-    if st.button("Quiz me", type="primary", use_container_width=True):
-        _select_and_store_question(runtime, scenario)
-        st.rerun()
+    if enabled:
+        if st.button("Quiz me", type="primary", use_container_width=True):
+            _select_and_store_question(runtime, scenario)
+            st.rerun()
+    else:
+        st.info("Concept Check is off. Quiz actions and event recording are disabled.")
 
     release = st.session_state.get("concept_check_demo_release")
     if isinstance(release, ConceptCheckQuestionRelease):
@@ -456,16 +693,15 @@ def main() -> None:
             on_next=lambda: _select_and_store_question(runtime, scenario),
             key=QUIZ_KEY,
         )
-    elif st.session_state.get("concept_check_demo_no_question"):
-        st.info(
-            "No eligible published fixture question is available for this scenario."
-        )
+    elif isinstance(st.session_state.get("concept_check_demo_no_question"), dict):
+        st.info(_selection_message(st.session_state["concept_check_demo_no_question"]))
 
     trace = st.session_state.get("concept_check_demo_selection_trace")
     if isinstance(trace, dict):
         with st.expander("Demo trace"):
             st.json(trace)
 
+    _render_student_controls(runtime)
     _render_session_report(event_directory)
 
 
