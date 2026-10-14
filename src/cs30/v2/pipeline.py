@@ -91,6 +91,33 @@ def _ensure_official_components_are_real(
             )
 
 
+def _ensure_sources_are_approved(
+    inputs: Sequence[TextbookInput], parser_registry: ParserRegistry
+) -> None:
+    pending = [
+        input.textbook_id
+        for input in inputs
+        if not get_textbook_spec(input.textbook_id).source_approved
+        and _parser_requires_source_approval(parser_registry, input.textbook_id)
+    ]
+    if pending:
+        raise BuildGateError(
+            "v2 build is blocked until source-specific licence and parser QA "
+            f"review is complete: {', '.join(pending)}",
+            code="SOURCE_NOT_APPROVED",
+        )
+
+
+def _parser_requires_source_approval(
+    parser_registry: ParserRegistry, textbook_id: str
+) -> bool:
+    try:
+        parser = parser_registry.parser_for(textbook_id)
+    except (KeyError, LookupError):
+        return False
+    return bool(getattr(parser, "requires_source_approval", False))
+
+
 def parse_material_batch(
     inputs: Sequence[TextbookInput],
     parser_registry: ParserRegistry,
@@ -446,6 +473,8 @@ def run_build_pipeline(
             f"inputs contain non-required textbook IDs: {sorted(unknown_ids)}",
             code="UNKNOWN_TEXTBOOK",
         )
+
+    _ensure_sources_are_approved(inputs, deps.parser_registry)
 
     if spec.mode == "official":
         _ensure_official_components_are_real(

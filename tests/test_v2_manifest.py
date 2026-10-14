@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from test_v2_contracts import make_document
 
-from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS
+from cs30.v2.catalog import REQUIRED_TEXTBOOK_IDS, get_textbook_spec
 from cs30.v2.chunking import V2BlockChunker
 from cs30.v2.contracts import TextbookDocument
 from cs30.v2.corpus.canonical import canonical_corpus_bytes
@@ -22,13 +22,13 @@ from cs30.v2.corpus.manifest import (
 from cs30.v2.ids import sha256_text
 
 
-def make_documents(count: int = 3) -> tuple[TextbookDocument, ...]:
+def make_documents(count: int = len(REQUIRED_TEXTBOOK_IDS)) -> tuple[TextbookDocument, ...]:
     return tuple(
         make_document(
-            REQUIRED_TEXTBOOK_IDS[index],
-            provider="openstax" if index == 0 else "ck12",
+            textbook_id,
+            provider=get_textbook_spec(textbook_id).provider,
         )
-        for index in range(count)
+        for textbook_id in REQUIRED_TEXTBOOK_IDS[:count]
     )
 
 

@@ -79,9 +79,9 @@ class V2Config(BaseModel):
     output_dir: Path
     fixture_mode: bool = False
     chunk_config: dict[str, str] = Field(default_factory=dict)
-    # Real builds read M2's parsed delivery ("parsed") or re-parse the pinned
-    # PDFs ("raw"). Unless sources_dir is set, each reads the directory where
-    # `scripts/install_v2_sources.py` installs that format.
+    # Real builds read M2's parsed delivery ("parsed") or re-parse pinned PDFs
+    # ("raw"). The current CK-12 catalogue entry is parsed-only. Unless
+    # sources_dir is set, each format reads the installer's default directory.
     source_format: Literal["raw", "parsed"] = "raw"
     sources_dir: Path | None = None
     # No model configured means no index: an official build then stops with

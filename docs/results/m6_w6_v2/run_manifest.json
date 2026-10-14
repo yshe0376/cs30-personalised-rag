@@ -1,0 +1,132 @@
+{
+  "schema_version": "m6-w6-v2-project-retriever-2",
+  "created_at_utc": "2026-10-13T11:27:49.220269+00:00",
+  "reportable": false,
+  "evaluation_set_version": "m6-v2-provisional-3book-dev162-test26-2026-10-13",
+  "split_policy": "provisional_three_book_split_from_source_labels",
+  "formal_target_split": {
+    "dev": 60,
+    "test": 180,
+    "textbooks": 6
+  },
+  "dev_question_count": 162,
+  "test_question_count": 26,
+  "test_configuration_count": 2,
+  "test_policy": "diagnostic BM25 versus BGE-M3 on previously exposed Test",
+  "test_exposure_status": "previously_exposed_to_64_configurations",
+  "test_selection_used": false,
+  "diagnostic_configuration": {
+    "model": "bge_m3",
+    "mode": "hybrid_d0.10_b0.90",
+    "dense_weight": 0.1,
+    "bm25_weight": 0.9,
+    "selection_status": "diagnostic_not_dev_selected"
+  },
+  "baseline_selection": {
+    "baseline_run_name": "bm25_bm25",
+    "candidate_run_name": "bge_base_hybrid_d0.05_b0.95",
+    "question_count": 162,
+    "baseline_complete_hits_at_5": 134,
+    "candidate_complete_hits_at_5": 136,
+    "baseline_mrr": 0.569388105,
+    "candidate_mrr": 0.5686507937,
+    "baseline_only_hits": 0,
+    "candidate_only_hits": 2,
+    "exact_mcnemar_p": 0.5,
+    "selection_decision": "retain_bm25",
+    "selection_reason": "candidate did not pass the preregistered Dev replacement rule"
+  },
+  "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
+  "rrf_input_top_k": 20,
+  "rrf_k": 60,
+  "bm25_stopwords": true,
+  "git": {
+    "commit": "7fe1b0d673e60b75314c92999ef8e1220b399096",
+    "dirty": true,
+    "snapshot_sha256": "d3a28a7574fb530910d25a7fb7646b37b87926c1828b56d843e05d20ee8d3fb1"
+  },
+  "corpus_version": "2.0.0-dev.m4-structure-v2-main-3553825",
+  "corpus_hash": "sha256:6b4941ac4ba9ae09b7bcd9fbe4a266600820af89c2dbb2e2ad0dd8568983930f",
+  "manifest_hash": "sha256:c7d8c926219efe4b7fd9f067a68109417f0fef2a14a37daa4353102241635e76",
+  "chunk_config_hash": "sha256:914659582bf24dd81618d55d18b9717e7e0a1d63ace5ff740966b2b0e924c191",
+  "gold_sha256": "sha256:5875c2edc35195d475ea8d2980d7d9793cdfc8b83c12d12386049f13d1b69e6e",
+  "binding_sha256": "sha256:98f70f3eee137f1ccd7252b14e55ed3bdac76a75ac5b0e0141ecc5b2dd68991f",
+  "models": {
+    "minilm": {
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "mpnet": {
+      "model": "sentence-transformers/all-mpnet-base-v2",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "e5_base": {
+      "model": "intfloat/e5-base-v2",
+      "revision": "f52bf8ec8c7124536f0efb74aca902b2995e5bcd",
+      "trust_remote_code": false,
+      "query_instruction": "query: ",
+      "query_prompt_name": null
+    },
+    "bge_base": {
+      "model": "BAAI/bge-base-en-v1.5",
+      "revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
+      "trust_remote_code": false,
+      "query_instruction": "Represent this sentence for searching relevant passages: ",
+      "query_prompt_name": null
+    },
+    "jina": {
+      "model": "jinaai/jina-embeddings-v2-small-en",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "trust_remote_code": true,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "gte_modernbert": {
+      "model": "Alibaba-NLP/gte-modernbert-base",
+      "revision": "e7f32e3c00f91d699e8c43b53106206bcc72bb22",
+      "trust_remote_code": true,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "nomic": {
+      "model": "nomic-ai/nomic-embed-text-v1.5",
+      "revision": "e9b6763023c676ca8431644204f50c2b100d9aab",
+      "trust_remote_code": true,
+      "query_instruction": "search_query: ",
+      "query_prompt_name": null
+    },
+    "bge_m3": {
+      "model": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null
+    },
+    "qwen3": {
+      "model": "Qwen/Qwen3-Embedding-0.6B",
+      "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": "query"
+    }
+  },
+  "result_file_sha256": {
+    "dev_summary.csv": "sha256:b22baf305a3ece3446e969f41db88a0d6e90001b463d594c6de690100d6d9c2a",
+    "dev_baseline_comparison.csv": "sha256:c8c0d79958a0e189d8f7d4682cbc7f84d1ccd1131619cfb7a6f67570b241d281",
+    "test_diagnostic_summary.csv": "sha256:8bdedf4d35850c8d3d92f27212d85a377cb0bee1d5d18ff578eea69179afb897",
+    "truncation_diagnostics.csv": "sha256:8c0b5be71be91c12a62a7c674b06c9a12ffea8c623552871e7514178ee35a640"
+  },
+  "limitations": [
+    "provisional 162/26 split rather than the formal six-textbook 60/180 split",
+    "three OpenStax textbooks",
+    "the 26-question Test set was previously exposed to all 64 configurations",
+    "Gold annotation status is draft",
+    "all current questions are answerable"
+  ]
+}
