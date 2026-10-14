@@ -55,6 +55,9 @@ class RetrievalConfig(BaseModel):
     bm25_min_score: float = Field(default=0.0, ge=0.0)
     bm25_stopwords: bool = True
     expected_embedding_model: str = PRIMARY_EMBEDDING_MODEL
+    expected_embedding_revision: str | None = None
+    embedding_trust_remote_code: bool = False
+    query_prompt_name: str | None = None
     dense_min_similarity: float | None = Field(
         default=None,
         ge=-1.0,
@@ -67,6 +70,13 @@ class RetrievalConfig(BaseModel):
             raise ValueError("at least one RRF weight must be positive")
         if not self.expected_embedding_model.strip():
             raise ValueError("expected_embedding_model must not be empty")
+        if (
+            self.expected_embedding_revision is not None
+            and not self.expected_embedding_revision.strip()
+        ):
+            raise ValueError("expected_embedding_revision must not be empty")
+        if self.query_prompt_name is not None and not self.query_prompt_name.strip():
+            raise ValueError("query_prompt_name must not be empty")
         return self
 
 
@@ -142,10 +152,7 @@ def _apply_env_overrides(payload: dict) -> dict:
         elif normalised in {"0", "false", "no", "off"}:
             assign(keys, False)
         else:
-            raise ConfigError(
-                f"{env_name} must be one of: "
-                "1, true, yes, on, 0, false, no, off"
-            )
+            raise ConfigError(f"{env_name} must be one of: 1, true, yes, on, 0, false, no, off")
 
     scalar("CS30_LOG_LEVEL", "log_level")
     scalar("CS30_TOP_K", "retrieval", "top_k")
@@ -161,6 +168,17 @@ def _apply_env_overrides(payload: dict) -> dict:
         "retrieval",
         "expected_embedding_model",
     )
+    scalar(
+        "CS30_EXPECTED_EMBEDDING_REVISION",
+        "retrieval",
+        "expected_embedding_revision",
+    )
+    boolean(
+        "CS30_EMBEDDING_TRUST_REMOTE_CODE",
+        "retrieval",
+        "embedding_trust_remote_code",
+    )
+    scalar("CS30_QUERY_PROMPT_NAME", "retrieval", "query_prompt_name")
     scalar(
         "CS30_DENSE_MIN_SIMILARITY",
         "retrieval",

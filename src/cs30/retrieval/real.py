@@ -38,18 +38,55 @@ from cs30.errors import (
 
 _TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
-_STOPWORDS = frozenset({
-    "a", "an", "and", "are", "as", "at", "be", "by", "can", "do", "does",
-    "for", "from", "how", "in", "is", "it", "of", "on", "or", "that", "the",
-    "to", "was", "were", "what", "when", "where", "which", "who", "why",
-    "will", "with",
-})
+_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "by",
+        "can",
+        "do",
+        "does",
+        "for",
+        "from",
+        "how",
+        "in",
+        "is",
+        "it",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "to",
+        "was",
+        "were",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "why",
+        "will",
+        "with",
+    }
+)
 
 
 class _EmbeddingModel(Protocol):
     """The small part of SentenceTransformer used by this module."""
 
-    def encode(self, sentences: list[str], *, convert_to_numpy: bool = True) -> Any: ...
+    def encode(
+        self,
+        sentences: list[str],
+        *,
+        convert_to_numpy: bool = True,
+        **kwargs: Any,
+    ) -> Any: ...
 
 
 class _VectorIndex(Protocol):
@@ -61,7 +98,18 @@ class _VectorIndex(Protocol):
     def search(self, vectors: np.ndarray, top_k: int) -> tuple[Any, Any]: ...
 
 
-ModelLoader = Callable[[str], _EmbeddingModel]
+class ModelLoader(Protocol):
+    """Load an embedding model without dropping its frozen identity settings."""
+
+    def __call__(
+        self,
+        model_name: str,
+        *,
+        revision: str | None = None,
+        trust_remote_code: bool = False,
+    ) -> _EmbeddingModel: ...
+
+
 IndexReader = Callable[[Path], _VectorIndex]
 
 
@@ -95,14 +143,23 @@ class _ResultCache:
             self._items.popitem(last=False)
 
 
-def _default_model_loader(model_name: str) -> _EmbeddingModel:
+def _default_model_loader(
+    model_name: str,
+    *,
+    revision: str | None = None,
+    trust_remote_code: bool = False,
+) -> _EmbeddingModel:
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:  # pragma: no cover - depends on optional install
         raise IndexUnavailableError(
             'Dense retrieval needs the ML dependencies: pip install -e ".[ml]"'
         ) from exc
-    return SentenceTransformer(model_name)
+    return SentenceTransformer(
+        model_name,
+        revision=revision,
+        trust_remote_code=trust_remote_code,
+    )
 
 
 def _default_index_reader(path: Path) -> _VectorIndex:
@@ -145,9 +202,7 @@ def _verify_optional_sha256(path: Path, expected: str | None, label: str) -> Non
         return
     actual = hashlib.sha256(path.read_bytes()).hexdigest()
     if actual != _normalise_sha256(expected):
-        raise ArtifactMismatchError(
-            f"{label} SHA-256 does not match IndexArtifact metadata"
-        )
+        raise ArtifactMismatchError(f"{label} SHA-256 does not match IndexArtifact metadata")
 
 
 def _load_chunk_map(artifact: IndexArtifact) -> list[dict[str, Any]]:
@@ -165,9 +220,7 @@ def _load_chunk_map(artifact: IndexArtifact) -> list[dict[str, Any]]:
     if not isinstance(payload, list) or not payload:
         raise ArtifactMismatchError("chunk map must be a non-empty JSON list")
     if len(payload) != artifact.chunk_count:
-        raise ArtifactMismatchError(
-            "chunk map count does not match IndexArtifact.chunk_count"
-        )
+        raise ArtifactMismatchError("chunk map count does not match IndexArtifact.chunk_count")
 
     required = {"position", "chunk_id", "text", "chapter_id", "source"}
     seen_ids: set[str] = set()
@@ -187,9 +240,7 @@ def _load_chunk_map(artifact: IndexArtifact) -> list[dict[str, Any]]:
             raise ArtifactMismatchError(f"invalid or duplicate chunk_id: {chunk_id!r}")
         for field in ("text", "chapter_id", "source"):
             if not isinstance(item[field], str) or not item[field].strip():
-                raise ArtifactMismatchError(
-                    f"chunk {chunk_id!r} has invalid {field!r}"
-                )
+                raise ArtifactMismatchError(f"chunk {chunk_id!r} has invalid {field!r}")
         seen_ids.add(chunk_id)
         validated.append(item)
     return validated
@@ -211,9 +262,7 @@ def _provenance(
     if include_embedding_model:
         embedding_model = artifact.metadata.get("embedding_model")
         if not embedding_model:
-            raise ArtifactMismatchError(
-                "IndexArtifact is missing metadata.embedding_model"
-            )
+            raise ArtifactMismatchError("IndexArtifact is missing metadata.embedding_model")
 
     return EvidenceProvenance(
         corpus_hash=artifact.metadata["corpus_hash"],
@@ -245,7 +294,10 @@ class FaissDenseRetriever:
         self,
         *,
         expected_model_name: str | None = None,
+        expected_model_revision: str | None = None,
+        trust_remote_code: bool = False,
         query_instruction: str | None = None,
+        query_prompt_name: str | None = None,
         cache_size: int = 256,
         min_similarity: float | None = None,
         model_loader: ModelLoader | None = None,
@@ -255,9 +307,12 @@ class FaissDenseRetriever:
             raise ValueError("min_similarity must be between -1 and 1")
 
         self.expected_model_name = expected_model_name
+        self.expected_model_revision = expected_model_revision
+        self.trust_remote_code = trust_remote_code
         self.query_instruction = query_instruction
+        self.query_prompt_name = query_prompt_name
         self.min_similarity = min_similarity
-        self._model_loader = model_loader or _default_model_loader
+        self._model_loader = model_loader
         self._index_reader = index_reader or _default_index_reader
         self._cache = _ResultCache(cache_size)
 
@@ -267,6 +322,8 @@ class FaissDenseRetriever:
         self._index: _VectorIndex | None = None
         self._model: _EmbeddingModel | None = None
         self._effective_instruction = ""
+        self._effective_prompt_name: str | None = None
+        self._effective_revision: str | None = None
 
     def load_index(self, artifact: IndexArtifact) -> None:
         if artifact.index_type != self.index_type:
@@ -277,14 +334,20 @@ class FaissDenseRetriever:
 
         model_name = artifact.metadata.get("embedding_model")
         if not model_name:
-            raise ArtifactMismatchError(
-                "IndexArtifact is missing metadata.embedding_model"
-            )
+            raise ArtifactMismatchError("IndexArtifact is missing metadata.embedding_model")
         if self.expected_model_name and model_name != self.expected_model_name:
             raise ArtifactMismatchError(
                 "configured embedding model does not match the saved FAISS index: "
                 f"{self.expected_model_name!r} != {model_name!r}"
             )
+
+        artifact_revision = artifact.metadata.get("embedding_revision")
+        if self.expected_model_revision and artifact_revision != self.expected_model_revision:
+            raise ArtifactMismatchError(
+                "configured embedding revision does not match the saved FAISS index: "
+                f"{self.expected_model_revision!r} != {artifact_revision!r}"
+            )
+        effective_revision = self.expected_model_revision or artifact_revision
 
         chunks = _load_chunk_map(artifact)
         index_path = _resolve_artifact_file(artifact, "index_file", "index.faiss")
@@ -295,16 +358,19 @@ class FaissDenseRetriever:
         )
         try:
             index = self._index_reader(index_path)
-            model = self._model_loader(model_name)
+            model_loader = self._model_loader or _default_model_loader
+            model = model_loader(
+                model_name,
+                revision=effective_revision,
+                trust_remote_code=self.trust_remote_code,
+            )
         except (IndexUnavailableError, ArtifactMismatchError):
             raise
         except Exception as exc:
             raise IndexUnavailableError(f"failed to load dense index: {exc}") from exc
 
         if getattr(index, "ntotal", len(chunks)) != len(chunks):
-            raise ArtifactMismatchError(
-                "FAISS vector count does not match the persisted chunk map"
-            )
+            raise ArtifactMismatchError("FAISS vector count does not match the persisted chunk map")
         saved_dimension = artifact.metadata.get("dimension")
         if saved_dimension and int(saved_dimension) != int(index.d):
             raise ArtifactMismatchError(
@@ -321,6 +387,12 @@ class FaissDenseRetriever:
             if self.query_instruction is not None
             else artifact.metadata.get("query_instruction", "")
         )
+        self._effective_prompt_name = (
+            self.query_prompt_name
+            if self.query_prompt_name is not None
+            else artifact.metadata.get("query_prompt_name")
+        )
+        self._effective_revision = effective_revision
         self._cache.clear()
 
     def _query_input(self, query: str) -> str:
@@ -344,6 +416,8 @@ class FaissDenseRetriever:
         artifact_key = (
             f"{self._artifact.artifact_id}|min_similarity={self.min_similarity!r}"
             f"|query_instruction={self._effective_instruction}"
+            f"|query_prompt_name={self._effective_prompt_name!r}"
+            f"|embedding_revision={self._effective_revision!r}"
         )
         key = _cache_key(artifact_key, cleaned, top_k)
         cached = self._cache.get(key)
@@ -351,9 +425,12 @@ class FaissDenseRetriever:
             return cached
 
         try:
+            encode_kwargs: dict[str, Any] = {"convert_to_numpy": True}
+            if self._effective_prompt_name:
+                encode_kwargs["prompt_name"] = self._effective_prompt_name
             encoded = self._model.encode(
                 [self._query_input(cleaned)],
-                convert_to_numpy=True,
+                **encode_kwargs,
             )
             query_vector = np.asarray(encoded, dtype=np.float32)
             if query_vector.ndim == 1:
@@ -382,10 +459,7 @@ class FaissDenseRetriever:
             if position < 0:
                 continue
             score_value = float(score)
-            if (
-                self.min_similarity is not None
-                and score_value < self.min_similarity
-            ):
+            if self.min_similarity is not None and score_value < self.min_similarity:
                 continue
 
             item = self._chunks[position]
@@ -455,11 +529,7 @@ class BM25Retriever:
         return _TOKEN_PATTERN.findall(text.casefold())
 
     def _query_terms(self, query: str) -> Counter[str]:
-        return Counter(
-            token
-            for token in self._tokenize(query)
-            if token not in self._stopwords
-        )
+        return Counter(token for token in self._tokenize(query) if token not in self._stopwords)
 
     def load_index(self, artifact: IndexArtifact) -> None:
         accepted_index_types = {
@@ -505,9 +575,7 @@ class BM25Retriever:
                 continue
             document_frequency = self._document_frequency[term]
             inverse_document_frequency = math.log(
-                1.0
-                + (document_count - document_frequency + 0.5)
-                / (document_frequency + 0.5)
+                1.0 + (document_count - document_frequency + 0.5) / (document_frequency + 0.5)
             )
             length_ratio = (
                 document_length / self._average_document_length
@@ -749,9 +817,7 @@ class RealRetrievalService:
             return self.bm25
         if mode is RetrievalMode.HYBRID:
             return self.hybrid
-        raise RetrievalModeError(
-            f"unsupported real retrieval mode: {mode}"
-        )
+        raise RetrievalModeError(f"unsupported real retrieval mode: {mode}")
 
     def load_index(
         self,
@@ -773,8 +839,6 @@ class RealRetrievalService:
         result = self.backend(mode).retrieve(query, top_k)
 
         if result.provenance is None:
-            raise ArtifactMismatchError(
-                "real retrieval result must include provenance"
-            )
+            raise ArtifactMismatchError("real retrieval result must include provenance")
 
         return result

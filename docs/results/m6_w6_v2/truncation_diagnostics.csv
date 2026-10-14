@@ -1,0 +1,10 @@
+model,embedding_model,embedding_revision,max_input_tokens,maximum_observed_tokens,chunk_count,truncated_chunk_count,truncated_chunk_rate
+minilm,sentence-transformers/all-MiniLM-L6-v2,1110a243fdf4706b3f48f1d95db1a4f5529b4d41,256,697,5976,3742,0.6261713520749665
+mpnet,sentence-transformers/all-mpnet-base-v2,e8c3b32edf5434bc2275fc9bab85f82640a19130,384,697,5976,2873,0.48075635876840694
+e5_base,intfloat/e5-base-v2,f52bf8ec8c7124536f0efb74aca902b2995e5bcd,512,699,5976,943,0.1577978580990629
+bge_base,BAAI/bge-base-en-v1.5,a5beb1e3e68b9ab74eb54cfd186867f64f240e1a,512,697,5976,885,0.14809236947791166
+jina,jinaai/jina-embeddings-v2-small-en,44e7d1d6caec8c883c2d4b207588504d519788d0,8192,697,5976,0,0.0
+gte_modernbert,Alibaba-NLP/gte-modernbert-base,e7f32e3c00f91d699e8c43b53106206bcc72bb22,8192,806,5976,0,0.0
+nomic,nomic-ai/nomic-embed-text-v1.5,e9b6763023c676ca8431644204f50c2b100d9aab,8192,701,5976,0,0.0
+bge_m3,BAAI/bge-m3,5617a9f61b028005a4858fdac845db406aefb181,8192,828,5976,0,0.0
+qwen3,Qwen/Qwen3-Embedding-0.6B,97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3,32768,992,5976,0,0.0
