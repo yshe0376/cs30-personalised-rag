@@ -19,7 +19,9 @@ DEFAULT_TITLE_CANDIDATES = DEFAULT_OUTPUT_DIR / "topic_title_candidates.json"
 DEFAULT_TITLE_DECISIONS = DEFAULT_OUTPUT_DIR / "topic_title_seed_decisions_v0.json"
 DEFAULT_DEFINITION_DECISIONS = DEFAULT_OUTPUT_DIR / "topic_definition_decisions_v0.json"
 DEFAULT_DEFINITION_RECONCILIATION = DEFAULT_OUTPUT_DIR / "topic_definition_reconciliation_v0.json"
-DEFAULT_DEFINITION_ADJUDICATIONS = DEFAULT_OUTPUT_DIR / "topic_definition_manual_adjudications_v0.json"
+DEFAULT_DEFINITION_ADJUDICATIONS = (
+    DEFAULT_OUTPUT_DIR / "topic_definition_manual_adjudications_v0.json"
+)
 DEFAULT_PROPOSALS = DEFAULT_OUTPUT_DIR / "topic_section_proposals.jsonl"
 DEFAULT_MERGE_MAP = REPO_ROOT / "docs" / "topic-registry" / "topic_merge_map_v1.json"
 DEFAULT_CORPUS_MANIFEST = (
@@ -162,8 +164,8 @@ def build_registry_draft(
     """Create a contract-shaped draft registry plus a provenance-rich review packet."""
 
     from cs30.v2.contracts.models import Topic, TopicRegistry
-    from scripts.run_topic_section_proposals import normalize_concept_title
     from cs30.v2.topic_merge_map import normalize_topic_alias
+    from scripts.run_topic_section_proposals import normalize_concept_title
 
     groups = aggregate["exact_concept_groups"]
     decisions_by_normalized_title: dict[str, dict[str, Any]] = {}
@@ -183,7 +185,10 @@ def build_registry_draft(
             topic_id = str(decision.get("topic_id") or "")
             canonical_definition = str(decision.get("canonical_definition_en") or "")
             if not topic_id or not canonical_definition:
-                raise ValueError("confirmed Topic definition needs topic_id and canonical_definition_en")
+                raise ValueError(
+                    "confirmed Topic definition needs topic_id and "
+                    "canonical_definition_en"
+                )
             if topic_id in confirmed_definitions_by_topic_id:
                 raise ValueError(f"duplicate confirmed Topic definition: {topic_id}")
             confirmed_definitions_by_topic_id[topic_id] = decision
@@ -462,7 +467,10 @@ def build_registry_draft(
         if heading_key in _NON_TOPIC_HEADINGS:
             candidate_row.update(
                 status="excluded_non_topic_heading",
-                reason="Document or teaching-material container title; it is not itself a physics concept.",
+                reason=(
+                    "Document or teaching-material container title; "
+                    "it is not itself a physics concept."
+                ),
             )
             excluded_seeds.append(candidate_row)
             continue
@@ -489,7 +497,8 @@ def build_registry_draft(
                 ]
                 if not target_title or len(targets) != 1:
                     raise ValueError(
-                        f"title-seed decision target is not a unique related Topic for {seed_title!r}"
+                        "title-seed decision target is not a unique related Topic for "
+                        f"{seed_title!r}"
                     )
                 target = targets[0]
                 group_key = group_key_by_id[target["topic_id"]]
@@ -520,14 +529,21 @@ def build_registry_draft(
                     for topic_id in manual_decision.get("map_to_all_source_sections_topic_ids", [])
                 }
                 if not target_ids or len(target_ids) != len(set(target_ids)):
-                    raise ValueError(f"multi-topic mapping must have unique topic_ids: {seed_title!r}")
+                    raise ValueError(
+                        "multi-topic mapping must have unique topic_ids: "
+                        f"{seed_title!r}"
+                    )
                 if not map_all_source_ids.issubset(set(target_ids)):
-                    raise ValueError(f"all-source mapping IDs must be selected targets: {seed_title!r}")
+                    raise ValueError(
+                        "all-source mapping IDs must be selected targets: "
+                        f"{seed_title!r}"
+                    )
                 target_rows: list[dict[str, Any]] = []
                 for target_id in target_ids:
                     if target_id not in group_key_by_id:
                         raise ValueError(
-                            f"title-seed mapping target does not exist in the draft registry: {target_id}"
+                            "title-seed mapping target does not exist in the draft "
+                            f"registry: {target_id}"
                         )
                     group_key = group_key_by_id[target_id]
                     target_group = group_by_id[target_id]
@@ -556,7 +572,8 @@ def build_registry_draft(
                             ref["source_roles"].append("section_title_context")
                     if not mapped_refs:
                         raise ValueError(
-                            f"mapping target has no source-section evidence: {seed_title!r} -> {target_id}"
+                            "mapping target has no source-section evidence: "
+                            f"{seed_title!r} -> {target_id}"
                         )
                     context = {
                         "candidate_title": seed_title,
@@ -616,9 +633,17 @@ def build_registry_draft(
                 if not target_id or target_id in group_by_id or any(
                     row.get("topic_id") == target_id for row in new_standalone_topic_specs
                 ):
-                    raise ValueError(f"new standalone Topic ID is empty or already used: {target_id}")
-                if not manual_decision.get("topic_title") or not manual_decision.get("draft_definition"):
-                    raise ValueError(f"new standalone Topic needs title and draft definition: {seed_title!r}")
+                    raise ValueError(
+                        "new standalone Topic ID is empty or already used: "
+                        f"{target_id}"
+                    )
+                if not manual_decision.get("topic_title") or not manual_decision.get(
+                    "draft_definition"
+                ):
+                    raise ValueError(
+                        "new standalone Topic needs title and draft definition: "
+                        f"{seed_title!r}"
+                    )
                 candidate_row.update(
                     status="added_standalone_topic",
                     topic_id=target_id,
@@ -626,7 +651,11 @@ def build_registry_draft(
                     draft_definition=str(manual_decision["draft_definition"]),
                 )
                 new_standalone_topic_specs.append(
-                    {**manual_decision, "source_sections": source_refs, "candidate_row": candidate_row}
+                    {
+                        **manual_decision,
+                        "source_sections": source_refs,
+                        "candidate_row": candidate_row,
+                    }
                 )
                 added_standalone_title_seed_groups.append(candidate_row)
                 title_decision_counts[disposition] += 1
@@ -694,8 +723,9 @@ def build_registry_draft(
             candidate_row.update(
                 status="excluded_composite_section_title",
                 reason=(
-                    "The heading explicitly lists multiple distinct Topics proposed from its source sections; "
-                    "those concepts remain separate registry entries."
+                    "The heading explicitly lists multiple distinct Topics proposed "
+                    "from its source sections; those concepts remain separate "
+                    "registry entries."
                 ),
                 related_topics=component_topics,
             )
@@ -704,9 +734,14 @@ def build_registry_draft(
         candidate_row.update(
             status="needs_reconciliation",
             review_hint=(
-                "The heading looks composite or instructional; compare it with the separate Topics proposed in its source sections."
+                "The heading looks composite or instructional; compare it with the "
+                "separate Topics proposed in its source sections."
                 if _COMPOSITE_TITLE_RE.search(seed_title)
-                else "No exact or simple grammatical match was found; decide whether this title names an independent Topic or is already covered by the source-section Topics."
+                else (
+                    "No exact or simple grammatical match was found; decide whether "
+                    "this title names an independent Topic or is already covered by "
+                    "the source-section Topics."
+                )
             ),
             related_topics=related_topics,
         )
@@ -771,7 +806,9 @@ def build_registry_draft(
                         "mention_count": 0,
                         "source_section_count": len(standalone_keys),
                         "source_section_keys": standalone_keys,
-                        "definition_source": "assistant_synthesized_from_user_confirmed_source_sections",
+                        "definition_source": (
+                            "assistant_synthesized_from_user_confirmed_source_sections"
+                        ),
                     }
                 )
             draft_definition = standalone_definition
@@ -789,7 +826,10 @@ def build_registry_draft(
                 draft_definition not in {row["definition"] for row in definitions}
                 and not is_source_refinement
             ):
-                raise ValueError(f"assistant-selected definition is not a current candidate: {topic_id}")
+                raise ValueError(
+                    "assistant-selected definition is not a current candidate: "
+                    f"{topic_id}"
+                )
         refs = sorted(
             refs_by_group[group_key].values(),
             key=lambda ref: (
@@ -845,7 +885,9 @@ def build_registry_draft(
                 "rationale_zh": assistant_decision.get("rationale_zh"),
                 "model_review_outcome": assistant_decision.get("model_review_outcome"),
                 "definition_selection_basis": assistant_decision.get("definition_selection_basis"),
-                "supporting_source_citations": assistant_decision.get("supporting_source_citations", []),
+                "supporting_source_citations": assistant_decision.get(
+                    "supporting_source_citations", []
+                ),
             }
         uncertain_decision = uncertain_decisions_by_topic_id.get(topic_id)
         if uncertain_decision is not None:
@@ -937,12 +979,18 @@ def build_registry_draft(
                                 "decision_source", "local_offline_model_high_confidence"
                             ),
                             "model": (definition_reconciliation or {}).get("model"),
-                            "selected_candidate_index": assistant_decision.get("selected_candidate_index"),
+                            "selected_candidate_index": assistant_decision.get(
+                                "selected_candidate_index"
+                            ),
                             "reason_code": assistant_decision.get("reason_code"),
                             "rationale_zh": assistant_decision.get("rationale_zh"),
                             "model_review_outcome": assistant_decision.get("model_review_outcome"),
-                            "definition_selection_basis": assistant_decision.get("definition_selection_basis"),
-                            "supporting_source_citations": assistant_decision.get("supporting_source_citations", []),
+                            "definition_selection_basis": assistant_decision.get(
+                                "definition_selection_basis"
+                            ),
+                            "supporting_source_citations": assistant_decision.get(
+                                "supporting_source_citations", []
+                            ),
                         }
                     }
                     if assistant_decision is not None
@@ -950,7 +998,13 @@ def build_registry_draft(
                 ),
             }
         )
-        contract_topics.append(Topic(topic_id=topic_id, title=topic_title, description=draft_definition))
+        contract_topics.append(
+            Topic(
+                topic_id=topic_id,
+                title=topic_title,
+                description=draft_definition,
+            )
+        )
 
     unapplied_definition_decisions = set(confirmed_definitions_by_topic_id) - {
         row["topic_id"]
@@ -970,7 +1024,9 @@ def build_registry_draft(
             "definition reconciliation referenced missing Topics: "
             + ", ".join(sorted(unmatched_reconciliation_ids))
         )
-    unmatched_adjudications = set(adjudications_by_topic_id) - {row["topic_id"] for row in topic_rows}
+    unmatched_adjudications = set(adjudications_by_topic_id) - {
+        row["topic_id"] for row in topic_rows
+    }
     if unmatched_adjudications:
         raise ValueError(
             "definition adjudications referenced missing Topics: "
@@ -1003,7 +1059,8 @@ def build_registry_draft(
         1 for row in topic_rows if row["definition_review_status"] == "m3_confirmation_required"
     )
     assistant_resolved_definition_count = sum(
-        1 for row in topic_rows if row["definition_review_status"] == "assistant_resolved_high_confidence"
+        row["definition_review_status"] == "assistant_resolved_high_confidence"
+        for row in topic_rows
     )
     resolved_anomalies = []
     if source_anomaly_resolution is not None:
@@ -1036,8 +1093,12 @@ def build_registry_draft(
             "merge_map_version": merge_map.mapping_version,
             "title_seed_decision_file": "artifacts/v2/topics/topic_title_seed_decisions_v0.json",
             "definition_decision_file": "artifacts/v2/topics/topic_definition_decisions_v0.json",
-            "definition_reconciliation_file": "artifacts/v2/topics/topic_definition_reconciliation_v0.json",
-            "definition_adjudications_file": "artifacts/v2/topics/topic_definition_manual_adjudications_v0.json",
+            "definition_reconciliation_file": (
+                "artifacts/v2/topics/topic_definition_reconciliation_v0.json"
+            ),
+            "definition_adjudications_file": (
+                "artifacts/v2/topics/topic_definition_manual_adjudications_v0.json"
+            ),
             "corpus_version": corpus_manifest.get("corpus_version"),
             "corpus_hash": corpus_manifest.get("corpus_hash"),
         },
@@ -1085,7 +1146,11 @@ def build_registry_draft(
                 "review_id": "MC-section-0843",
                 "source_key": "section-0843",
                 "topic_id": "electromagnetic-induction",
-                "note": "The Chapter 20 proposal's Induction definition duplicates its EMF entry; the definition is routed to the EMF candidate Topic, not used as an Electromagnetic Induction definition.",
+                "note": (
+                    "The Chapter 20 proposal's Induction definition duplicates its EMF "
+                    "entry; the definition is routed to the EMF candidate Topic, not "
+                    "used as an Electromagnetic Induction definition."
+                ),
             }
         ],
         "topics": topic_rows,

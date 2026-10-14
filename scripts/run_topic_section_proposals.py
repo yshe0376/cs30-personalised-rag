@@ -410,7 +410,10 @@ def aggregate_proposals(
                 "status": topic_merge_map.status,
                 "registry_frozen": topic_merge_map.registry_frozen,
                 "decision_scope": topic_merge_map.decision_scope,
-                "match_policy": "exact normalized aliases only; contextual aliases require a source-section key; no fuzzy matching",
+                "match_policy": (
+                    "exact normalized aliases only; contextual aliases require a "
+                    "source-section key; no fuzzy matching"
+                ),
             }
             if topic_merge_map is not None
             else None

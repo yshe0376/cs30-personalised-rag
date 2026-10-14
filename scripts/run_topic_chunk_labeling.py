@@ -275,7 +275,6 @@ def main() -> None:
         if record.get("cache_key") and record.get("model_result") is not None:
             cache.setdefault(record["cache_key"], record["model_result"])
 
-    labelable_topic_ids: set[str] = set()
     review_records: list[dict[str, Any]] = []
     attempts = 0
     newly_done = 0
@@ -514,7 +513,11 @@ def main() -> None:
     label_count = sum(len(record.get("labels", [])) for record in selected_records)
     run = {
         "schema_version": "topic-chunk-label-run-v1",
-        "status": "pending_review" if full_corpus else "pilot_only_pending_full_labeling_and_review",
+        "status": (
+            "pending_review"
+            if full_corpus
+            else "pilot_only_pending_full_labeling_and_review"
+        ),
         "topic_registry_version": registry.topic_registry_version,
         "corpus_version": manifest.corpus_version,
         "corpus_hash": manifest.corpus_hash,
@@ -522,8 +525,12 @@ def main() -> None:
         "model": args.model,
         "selected_chunk_count": len(selected),
         "completed_chunk_count": len(selected_records),
-        "candidate_topic_chunk_count": sum(bool(candidates_by_chunk[row["chunk_id"]]) for row in selected_records),
-        "no_candidate_chunk_count": sum(not candidates_by_chunk[row["chunk_id"]] for row in selected_records),
+        "candidate_topic_chunk_count": sum(
+            bool(candidates_by_chunk[row["chunk_id"]]) for row in selected_records
+        ),
+        "no_candidate_chunk_count": sum(
+            not candidates_by_chunk[row["chunk_id"]] for row in selected_records
+        ),
         "assignment_count": len(assignments),
         "label_count": label_count,
         "review_required_count": len(review),

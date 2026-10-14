@@ -10,12 +10,11 @@ import argparse
 import hashlib
 import json
 import re
+import sys
 from datetime import date
 from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-
-import sys
 
 sys.path.insert(0, str(REPOSITORY_ROOT / "src"))
 
@@ -150,11 +149,17 @@ def main() -> None:
             ),
             "corpus_hash": packet.get("generated_from", {}).get("corpus_hash"),
             "reportable": False,
-            "note": "This registry is eligible for development-corpus labeling. Production release requires reviewed labels on the final corpus.",
+            "note": (
+                "This registry is eligible for development-corpus labeling. Production "
+                "release requires reviewed labels on the final corpus."
+            ),
         },
         "source_sha256": source_hashes,
         "registry_sha256": sha256(registry_path),
-        "authorization_basis": "The user authorized proceeding to the next workflow step in this conversation.",
+        "authorization_basis": (
+            "The user authorized proceeding to the next workflow step "
+            "in this conversation."
+        ),
     }
     write_json(manifest_path, freeze_manifest)
 

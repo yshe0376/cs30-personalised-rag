@@ -155,13 +155,24 @@ def parse_batch(
             else:
                 if len(raw) == 3 and raw[2] == -1:
                     reason_code = "uncertain"
-                    review_note = "The local review model marked this candidate set for human review."
+                    review_note = (
+                        "The local review model marked this candidate set for human "
+                        "review."
+                    )
                 elif isinstance(raw[2], int) and len(raw) > 3:
                     reason_code = str(raw[3])
-                    review_note = str(raw[4]) if len(raw) > 4 else "The model marked this candidate set for review."
+                    review_note = (
+                        str(raw[4])
+                        if len(raw) > 4
+                        else "The model marked this candidate set for review."
+                    )
                 else:
                     reason_code = str(raw[2]) if len(raw) > 2 else "uncertain"
-                    review_note = str(raw[3]) if len(raw) > 3 else "The model marked this candidate set for review."
+                    review_note = (
+                        str(raw[3])
+                        if len(raw) > 3
+                        else "The model marked this candidate set for review."
+                    )
                 reason_code = reason_code if reason_code in {
                     "scope", "conflict", "off_topic", "incomplete", "uncertain"
                 } else "uncertain"
@@ -195,7 +206,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--timeout", type=int, default=300)
-    parser.add_argument("--limit", type=int, default=0, help="Process at most this many unreviewed Topics.")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Process at most this many unreviewed Topics.",
+    )
     parser.add_argument(
         "--include-single",
         action="store_true",
@@ -263,7 +279,7 @@ def main() -> int:
             response = {}
 
         parsed_batch = parse_batch(response, batch, topics_by_id)
-        for retry in range(1):
+        for _retry in range(1):
             if not any(
                 row["review_note"] in {
                     "The local review model did not return a usable decision.",
