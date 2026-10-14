@@ -9,6 +9,7 @@ import pytest
 from cs30.evaluation import (
     AnswerCitationScorer,
     EvaluationRunResult,
+    GoldSample,
     load_gold_samples,
     load_mappings,
     load_run_results,
@@ -625,6 +626,45 @@ def test_technical_failure_is_reported_without_entering_accuracy_denominators() 
     assert result["metrics"]["answer_choice_accuracy_all"]["denominator"] == 0
     assert result["metrics"]["abstention_accuracy"]["denominator"] == 0
     assert result["abstention_confusion"]["technical_failure"] == 1
+
+
+def test_open_ended_gold_is_reported_without_entering_choice_accuracy() -> None:
+    gold, runs, mappings = _inputs()
+    run = next(run for run in runs if run.status.value == "answered")
+    payload = next(item for item in gold if item.question_id == run.question_id).model_dump(
+        mode="json"
+    )
+    # Open-ended answers only come from M3, so the record carries M3 provenance.
+    payload.update(
+        options={},
+        gold_answer=None,
+        gold_answer_text="Alpha",
+        source_split="test",
+        source={"dataset": "SciQ standardized", "source_question_id": "q", "support": "s"},
+    )
+    for group in payload["gold_core_evidence_sets"]:
+        for span in group:
+            span.update(
+                chapter_id="1",
+                block_id=f"{span['span_id']}_block",
+                sufficiency="core_sufficient",
+                annotation_note="fixture",
+            )
+    for span in payload["partial_evidence"]:
+        span.update(
+            chapter_id="1",
+            block_id=f"{span['span_id']}_block",
+            sufficiency="partial",
+            annotation_note="fixture",
+        )
+    open_ended = GoldSample.model_validate(payload)
+
+    result = AnswerCitationScorer(mappings).score([open_ended], [run], mode="development")
+
+    assert result["records"][0]["answer_outcome"] == "open_ended"
+    assert result["answer_outcome_counts"]["open_ended"] == 1
+    assert result["metrics"]["answer_choice_accuracy_all"]["denominator"] == 0
+    assert result["metrics"]["abstention_accuracy"]["denominator"] == 1
 
 
 def test_missing_runs_are_reported_only_within_the_expected_split() -> None:

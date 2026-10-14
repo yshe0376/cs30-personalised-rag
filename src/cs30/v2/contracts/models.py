@@ -547,13 +547,19 @@ class GoldQuestion(V2Model):
     enums/models.  This v2 wrapper changes only the evidence representation:
     Gold evidence uses the same chapter-local :class:`EvidenceSpan` as
     Concept Check anchors, so M4 can resolve both with one implementation.
+
+    As in ``cs30.evaluation.GoldSample``, a multiple-choice question carries
+    all four ``options`` and a ``gold_answer`` label, while an open-ended
+    question carries neither and states its reference answer in
+    ``gold_answer_text``.
     """
 
     schema_version: Literal["2.0"] = "2.0"
     question_id: Identifier
     question: NonEmptyText
-    options: dict[ChoiceLabel, GoldOption]
+    options: dict[ChoiceLabel, GoldOption] = Field(default_factory=dict)
     gold_answer: ChoiceLabel | None = None
+    gold_answer_text: NonEmptyText | None = None
     answerable: bool | None
     gold_core_evidence_sets: tuple[tuple[V2GoldEvidence, ...], ...] = ()
     partial_evidence: tuple[V2GoldEvidence, ...] = ()
@@ -576,8 +582,10 @@ class GoldQuestion(V2Model):
 
     @model_validator(mode="after")
     def validate_gold_shape(self) -> GoldQuestion:
-        if set(self.options) != {"A", "B", "C", "D"}:
-            raise ValueError("options must contain exactly A, B, C, and D")
+        if self.options and set(self.options) != {"A", "B", "C", "D"}:
+            raise ValueError("options must be empty or contain exactly A, B, C, and D")
+        if self.gold_answer is not None and not self.options:
+            raise ValueError("gold_answer is a choice label and requires options")
         if any(not evidence_set for evidence_set in self.gold_core_evidence_sets):
             raise ValueError("gold_core_evidence_sets must not contain an empty AND group")
 
@@ -591,8 +599,10 @@ class GoldQuestion(V2Model):
             raise ValueError("Gold evidence span_id values must be unique")
 
         if self.answerable is True:
-            if self.gold_answer is None:
-                raise ValueError("answerable Gold questions require gold_answer")
+            if self.options and self.gold_answer is None:
+                raise ValueError("answerable multiple-choice Gold questions require gold_answer")
+            if not self.options and self.gold_answer_text is None:
+                raise ValueError("answerable open-ended Gold questions require gold_answer_text")
             if not self.gold_core_evidence_sets:
                 raise ValueError("answerable Gold questions require complete evidence")
         elif self.answerable is False and self.gold_core_evidence_sets:

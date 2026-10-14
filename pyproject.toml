@@ -34,6 +34,10 @@ notebook = [
     "ipykernel>=6,<8",
 ]
 
+topic-llm = [
+    "google-genai>=2.0,<3",
+]
+
 parse = [
     "PyMuPDF>=1.24,<2",
     "pdfplumber>=0.11,<1",

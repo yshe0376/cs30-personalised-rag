@@ -37,19 +37,17 @@ def test_development_profile_reaches_all_ten_concept_check_knobs() -> None:
 def test_non_development_profiles_reject_unsafe_concept_check_flags(tmp_path: Path) -> None:
     config_dir = tmp_path / "configs"
     config_dir.mkdir()
+    # The full catalogue set, so the config reaches the Concept Check check.
+    required = ", ".join(f'"{textbook_id}"' for textbook_id in REQUIRED_TEXTBOOK_IDS)
     (config_dir / "staging.toml").write_text(
-        """
+        f"""
 environment = "staging"
 fixture_mode = false
 
 [corpus]
 mode = "official"
 corpus_version = "2.0.0-rc.1"
-required_textbook_ids = [
-  "openstax_college_physics_2e",
-  "openstax_physics",
-  "openstax_college_physics_ap_2e",
-]
+required_textbook_ids = [{required}]
 output_dir = "artifacts/v2/test"
 
 [concept_check]

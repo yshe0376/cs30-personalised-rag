@@ -190,6 +190,9 @@ def _answer_outcome(gold: GoldSample, run: EvaluationRunResult) -> str:
         return "format_failed"
     if run.status is RunStatus.ABSTAINED:
         return "abstained"
+    if not gold.options:
+        # Choice accuracy cannot score an open-ended answer against gold_answer_text.
+        return "open_ended"
     if gold.gold_answer is None:
         return "missing_gold"
     if run.final_answer is None or run.final_answer.final_choice is None:
