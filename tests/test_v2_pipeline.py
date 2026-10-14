@@ -28,8 +28,8 @@ from cs30.v2.pipeline import (
 )
 from cs30.v2.ports import TextbookInput
 
-# The real catalogue also requires a CK-12 book that is not chosen yet, so
-# official-path tests that exercise later gates declare an OpenStax-only build.
+# Official-path tests that exercise later build gates declare an OpenStax-only
+# fixture corpus; CK-12's real source remains gated pending review.
 OPENSTAX_ONLY = ("openstax",)
 
 
@@ -329,7 +329,7 @@ def test_development_build_publishes_diagnostic_manifest_and_run_report(tmp_path
     assert outcome.corpus_path == output_dir / "records.jsonl"
     report = json.loads(outcome.report_path.read_text(encoding="utf-8"))
     assert report["reportable"] is False
-    assert report["included_textbook_ids"] == list(REQUIRED_TEXTBOOK_IDS)
+    assert report["included_textbook_ids"] == list(REQUIRED_TEXTBOOK_IDS[:3])
 
 
 def test_official_build_gate_writes_diagnostics_but_never_publishes_partial_output(
@@ -344,7 +344,7 @@ def test_official_build_gate_writes_diagnostics_but_never_publishes_partial_outp
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -379,7 +379,7 @@ def test_official_build_requires_source_hash_pins_and_an_index_builder(
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -407,7 +407,7 @@ def test_official_build_requires_an_index_builder(tmp_path: Path) -> None:
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -434,7 +434,7 @@ def test_official_build_rejects_an_explicit_fixture_parser(tmp_path: Path) -> No
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -454,7 +454,7 @@ def test_official_build_rejects_an_explicit_fixture_chunker(tmp_path: Path) -> N
             BuildDeps(parser_registry=registry, chunker=V2BlockChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -479,7 +479,7 @@ def test_official_build_binds_index_to_canonical_records_and_hashes(tmp_path: Pa
         ),
         MultiTextbookBuildSpec(
             corpus_version="2.0.0-rc.1",
-            required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+            required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
             mode="official",
             required_providers=OPENSTAX_ONLY,
             environment="staging",
@@ -517,7 +517,7 @@ def test_mismatched_index_is_rejected_before_publish(tmp_path: Path) -> None:
             ),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",

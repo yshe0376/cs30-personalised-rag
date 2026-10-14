@@ -1,8 +1,8 @@
 # v2 build from the real textbooks
 
-Real builds read M2's parsed delivery, not the PDFs: one
-`openstax_document.json` per book from the Release
-[`M2_data_ingestion`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/M2_data_ingestion).
+Real builds read M2's parsed delivery, not the PDFs. The three OpenStax JSON
+files come from [`M2_data_ingestion`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/M2_data_ingestion);
+the CK-12 JSON comes from [`M2_ck12`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/M2_ck12).
 Install with `python -m pip install -e ".[ml]"`; `[ml]` is FAISS and
 sentence-transformers for the dense index. `[parse]` (PyMuPDF and pdfplumber)
 is only needed to re-parse the PDFs (see the last section).
@@ -15,12 +15,15 @@ differs.
 
 ```sh
 python scripts/install_v2_sources.py                          # from M2's Release
-python scripts/install_v2_sources.py --from-archive openstax_parser_v1_3_2_r1.zip
+python scripts/install_v2_sources.py --from-archive openstax_parser_v1_3_2_r1.zip \
+  --from-archive ck12_parser_v1_1_0.2.zip
 ```
 
 The files land in `data/parsed/v2/<textbook_id>.json`, which is git-ignored.
-The first command downloads M2's archive (about 45 MB) once, takes the three
-`openstax_document.json` files out of it, and deletes it.
+The first command downloads each provider archive, verifies the pinned JSON
+files, installs them, and deletes the temporary archives. The CK-12 archive
+contains an `openstax_document.json` for legacy compatibility; v2 routes it
+through the CK-12 adapter.
 
 ## 2. Build a diagnostic corpus
 
@@ -30,14 +33,19 @@ python scripts/build_v2_corpus.py --config real-development \
   --embedding-model sentence-transformers/all-MiniLM-L6-v2
 ```
 
-This reads each file through `cs30.v2.ingest.OpenStaxParsedParser`, chunks with
-M4's production structure-aware chunker, and writes `records.jsonl`,
+The current CK-12 entry has `source_approved=false`, so the v2 pipeline stops
+with `SOURCE_NOT_APPROVED` before parsing any source. Do not run the build until
+the source-specific licence terms and manual parser QA have been cleared.
+
+The three OpenStax files use `cs30.v2.ingest.OpenStaxParsedParser`; CK-12 uses
+`cs30.v2.ingest.CK12ParsedParser`. The build chunks with M4's production
+structure-aware chunker and writes `records.jsonl`,
 `manifest.json`,
 `duplicate_blocks.json`, `run_report.json`, and — when a model is given — an
 index under `index/` plus `artifact.json`. The `real-development` profile names
 `Alibaba-NLP/gte-modernbert-base`, so a build indexes with it unless told
-otherwise; `--embedding-model ""` publishes the corpus and no index, and the
-three books then build in about a minute.
+otherwise; `--embedding-model ""` publishes the development corpus and no
+index.
 
 The profile also names the `corpus_version` written to the manifest.
 `--corpus-version` overrides it, which is how a delivered corpus is reproduced
@@ -62,17 +70,18 @@ to work against, never a formal result.
 
 ## 3. What an official build still needs
 
-`--config staging` runs `corpus_mode=official`, which fails closed. Today it
-stops at:
+`--config staging` runs `corpus_mode=official`, which fails closed. The CK-12
+adapter is wired, but the current source is not approved for any v2 build yet:
 
 | Gate | Failure code | Who clears it |
 |---|---|---|
-| No CK-12 book in the catalogue | `REQUIRED_PROVIDER_MISSING` | M2 chooses the CK-12 book |
+| CK-12 source-specific licence terms and parser QA are pending | `SOURCE_NOT_APPROVED` | M1/M2 confirm the applicable terms and complete manual QA |
 
-An official build also needs every source hash pinned (all three OpenStax books
-already pin both the PDF and the parsed JSON), the parser provider to match the
-catalogue, and the index artifact to match the staged corpus; the pipeline
-checks all of that itself.
+The CK-12 release has ten manually sampled blocks, all still marked `pending`,
+and records 13 parser issues. See [the CK-12 integration note](v2-ck12-integration.md)
+for source pins and the license review gate. The catalogue pins both the PDF
+and parsed JSON hashes for all four books; the pipeline also checks that the
+parser provider and index artifact match the staged corpus.
 
 ## Reading an index back
 
@@ -106,25 +115,11 @@ remains the v1 reader and cannot read a v2 corpus.
 
 ## Re-parsing from the PDFs
 
-`--source-format raw` runs M2's vendored parser 1.3.2 through
-`cs30.v2.ingest.OpenStaxPdfParser` on the pinned PDFs instead. It needs the
-`[parse]` extra, and parsing three full books takes minutes. The PDF Release
-`v2-sources-openstax-v1` has not been published, so install the PDFs from a
-local folder:
-
-```sh
-python scripts/install_v2_sources.py --format raw --from-dir ~/Downloads
-python scripts/install_v2_sources.py --format raw --print-sha256sums  # for a PDF Release
-python scripts/build_v2_corpus.py --config real-development --source-format raw \
-  --output-dir artifacts/v2/textbooks/2.0.0-dev.2-raw
-```
-
-PDFs land in `data/raw/v2/<textbook_id>.pdf`. `--from-dir` matches files by
-hash, not by name, so it also checks a delivery before it is uploaded. A
-re-parse that reproduces M2's output yields the same documents and chunk IDs as
-the parsed route. Parser output depends on the PyMuPDF and pdfplumber versions;
-M2 validated 1.3.2 with PyMuPDF 1.26.6 and pdfplumber 0.11.8, and a re-parse
-records the versions it used in the document metadata.
+The OpenStax adapter can re-parse PDFs through M2's vendored parser 1.3.2.
+That is not a complete v2 source route yet: CK-12 is required, but its raw PDF
+parser is not vendored. The source installer therefore rejects `--format raw`
+for the current four-book catalogue. Use the pinned parsed releases for a full
+development corpus.
 
 ## M4 production chunking policy
 

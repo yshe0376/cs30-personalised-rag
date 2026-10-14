@@ -1,4 +1,4 @@
-"""Draft/finalize/write lifecycle for a v2 three-textbook Manifest."""
+"""Draft/finalize/write lifecycle for a multi-textbook v2 Manifest."""
 
 from __future__ import annotations
 

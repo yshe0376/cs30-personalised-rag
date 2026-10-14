@@ -17,28 +17,30 @@ class TextbookSpec:
     parser_name: str
     selected_chapters: tuple[str, ...] = ()
     expected_source_sha256: str | None = None
-    # SHA-256 of M2's delivered parse of that source (openstax_document.json
-    # for OpenStax), which real builds read instead of re-parsing the PDF.
+    # SHA-256 of M2's delivered parse of that source, which parsed builds read
+    # instead of re-parsing the PDF.
     expected_parsed_sha256: str | None = None
+    # Some providers deliver parsed files in a different Release archive.
+    parsed_release_tag: str | None = None
+    parsed_archive_name: str | None = None
+    parsed_archive_member: str | None = None
+    # Raw CK-12 PDF parsing is not vendored in this repository yet.
+    supports_raw: bool = True
+    # False until source-specific licence and parser QA review permit use.
+    source_approved: bool = True
     enabled: bool = False
 
 
-# M1 freezes the set; the number of books is whatever this tuple holds, not a
-# fixed three.  Every entry is pinned to the exact PDF that M2's OpenStax
-# parser 1.3.2 was validated against, so an official build cannot silently read
-# another printing.  Real builds read M2's parse of that PDF from the Release
-# M2_data_ingestion, pinned by expected_parsed_sha256.  Licences follow
-# OpenStax's CC BY 4.0 and are re-checked against each PDF's licence page before
-# the first official build.
+# M1 freezes the set; the number of books is whatever this tuple holds. Every
+# entry is pinned to the exact source and parsed delivery selected for v2.
 REQUIRED_TEXTBOOK_IDS: tuple[str, ...] = (
     "openstax_college_physics_2e",
     "openstax_physics",
     "openstax_college_physics_ap_2e",
+    "ck12_peoples_physics_concepts",
 )
 
-# An official v2 corpus must contain at least one book from each provider.  The
-# CK-12 book is required but not chosen yet; until M2 adds it to the catalogue,
-# official builds stop with REQUIRED_PROVIDER_MISSING instead of guessing an ID.
+# An official v2 corpus must contain at least one book from each provider.
 REQUIRED_PROVIDERS: tuple[str, ...] = ("openstax", "ck12")
 
 TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
@@ -96,6 +98,32 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         expected_parsed_sha256=(
             "sha256:be096dc24ef5dccad587e7222a522efaf7b98c4dd4f77ef2b6cc989647322746"
         ),
+        enabled=True,
+    ),
+    "ck12_peoples_physics_concepts": TextbookSpec(
+        textbook_id="ck12_peoples_physics_concepts",
+        provider="ck12",
+        title="CK-12 People's Physics Concepts (With Answers)",
+        source_version="2016-09-09",
+        source_name="ck12_peoples_physics_concepts",
+        source_uri="https://www.ck12.org/book/peoples-physics-concepts/",
+        license="CK-12 Curriculum Materials License; source-specific terms pending review",
+        parser_name="ck12",
+        selected_chapters=tuple(str(chapter) for chapter in range(1, 21)),
+        expected_source_sha256=(
+            "sha256:6e8bbab8107fd79e9a8ce1487c938b85cd8101edd756ba61aac9448952daebe2"
+        ),
+        expected_parsed_sha256=(
+            "sha256:1039bc79faf12609203b3d8dcef5d4aeec69b1e5fbe2e85cc1963d7be5ed0e66"
+        ),
+        parsed_release_tag="M2_ck12",
+        parsed_archive_name="ck12_parser_v1_1_0.2.zip",
+        parsed_archive_member=(
+            "ck12_parser_v1_1_0/ck12_output_without_chapter_21/"
+            "openstax_document.json"
+        ),
+        supports_raw=False,
+        source_approved=False,
         enabled=True,
     ),
 }

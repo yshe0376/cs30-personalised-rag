@@ -284,8 +284,8 @@ def build_parser_registry(
     """Register the real parser for each catalogue textbook that has one.
 
     ``source_format="parsed"`` reads M2's delivered output instead of the PDF.
-    A textbook whose ``parser_name`` has no implementation yet (CK-12, for
-    now) is left out, so the pipeline reports ``PARSER_NOT_REGISTERED``.
+    CK-12 uses its own adapter because M2's legacy parser output shares the
+    OpenStax JSON filename but not the OpenStax parser identity.
     """
 
     parsers: dict[str, DocumentParser] = {}
@@ -296,5 +296,13 @@ def build_parser_registry(
                 OpenStaxParsedParser(spec)
                 if source_format == "parsed"
                 else OpenStaxPdfParser(spec)
+            )
+        elif spec.parser_name == "ck12":
+            from cs30.v2.ingest.ck12 import CK12ParsedParser, CK12RawParser
+
+            parsers[textbook_id] = (
+                CK12ParsedParser(spec)
+                if source_format == "parsed"
+                else CK12RawParser(spec)
             )
     return MappingParserRegistry(parsers)
