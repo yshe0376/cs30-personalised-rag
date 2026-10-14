@@ -597,7 +597,8 @@ def test_official_build_stops_until_every_required_provider_has_a_book(
             ),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                # An OpenStax-only set, checked against the default providers.
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 environment="staging",
                 output_dir=output_dir,
