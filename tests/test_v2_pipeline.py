@@ -28,8 +28,8 @@ from cs30.v2.pipeline import (
 )
 from cs30.v2.ports import TextbookInput
 
-# The real catalogue also requires a CK-12 book that is not chosen yet, so
-# official-path tests that exercise later gates declare an OpenStax-only build.
+# Official-path tests that exercise later build gates declare an OpenStax-only
+# fixture corpus.
 OPENSTAX_ONLY = ("openstax",)
 
 
@@ -329,7 +329,7 @@ def test_development_build_publishes_diagnostic_manifest_and_run_report(tmp_path
     assert outcome.corpus_path == output_dir / "records.jsonl"
     report = json.loads(outcome.report_path.read_text(encoding="utf-8"))
     assert report["reportable"] is False
-    assert report["included_textbook_ids"] == list(REQUIRED_TEXTBOOK_IDS)
+    assert report["included_textbook_ids"] == list(REQUIRED_TEXTBOOK_IDS[:3])
 
 
 def test_official_build_gate_writes_diagnostics_but_never_publishes_partial_output(
@@ -344,7 +344,7 @@ def test_official_build_gate_writes_diagnostics_but_never_publishes_partial_outp
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -379,7 +379,7 @@ def test_official_build_requires_source_hash_pins_and_an_index_builder(
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -407,7 +407,7 @@ def test_official_build_requires_an_index_builder(tmp_path: Path) -> None:
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -434,7 +434,7 @@ def test_official_build_rejects_an_explicit_fixture_parser(tmp_path: Path) -> No
             BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -454,7 +454,7 @@ def test_official_build_rejects_an_explicit_fixture_chunker(tmp_path: Path) -> N
             BuildDeps(parser_registry=registry, chunker=V2BlockChunker()),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -479,7 +479,7 @@ def test_official_build_binds_index_to_canonical_records_and_hashes(tmp_path: Pa
         ),
         MultiTextbookBuildSpec(
             corpus_version="2.0.0-rc.1",
-            required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+            required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
             mode="official",
             required_providers=OPENSTAX_ONLY,
             environment="staging",
@@ -517,7 +517,7 @@ def test_mismatched_index_is_rejected_before_publish(tmp_path: Path) -> None:
             ),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 required_providers=OPENSTAX_ONLY,
                 environment="staging",
@@ -597,7 +597,8 @@ def test_official_build_stops_until_every_required_provider_has_a_book(
             ),
             MultiTextbookBuildSpec(
                 corpus_version="2.0.0-rc.1",
-                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                # An OpenStax-only set, checked against the default providers.
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS[:3],
                 mode="official",
                 environment="staging",
                 output_dir=output_dir,
@@ -607,6 +608,75 @@ def test_official_build_stops_until_every_required_provider_has_a_book(
     assert exc_info.value.code == "REQUIRED_PROVIDER_MISSING"
     assert "ck12" in str(exc_info.value)
     assert not output_dir.exists()
+
+
+class ApprovalStaticParser(StaticParser):
+    requires_source_approval = True
+
+
+@pytest.mark.parametrize(
+    ("mode", "environment"), [("development", "development"), ("official", "staging")]
+)
+def test_unapproved_source_stops_every_build_mode_before_parsing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, environment: str
+) -> None:
+    from cs30.v2 import catalog
+
+    ck12 = "ck12_peoples_physics_concepts"
+    monkeypatch.setitem(
+        catalog.TEXTBOOK_CATALOG,
+        ck12,
+        replace(get_textbook_spec(ck12), source_approved=False),
+    )
+    inputs, documents, _ = make_build(tmp_path, count=len(REQUIRED_TEXTBOOK_IDS))
+    registry = StaticRegistry(
+        {
+            textbook_id: ApprovalStaticParser(document)
+            for textbook_id, document in documents.items()
+        }
+    )
+    output_dir = tmp_path / "artifacts" / "v2" / "textbooks" / "unapproved"
+
+    with pytest.raises(BuildGateError) as exc_info:
+        run_build_pipeline(
+            inputs,
+            BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
+            MultiTextbookBuildSpec(
+                corpus_version="2.0.0-dev.1",
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                mode=mode,
+                environment=environment,
+                output_dir=output_dir,
+            ),
+        )
+
+    assert exc_info.value.code == "SOURCE_NOT_APPROVED"
+    assert ck12 in str(exc_info.value)
+    assert not output_dir.exists()
+
+
+def test_approved_ck12_source_passes_the_source_gate(tmp_path: Path) -> None:
+    inputs, documents, _ = make_build(tmp_path, count=len(REQUIRED_TEXTBOOK_IDS))
+    registry = StaticRegistry(
+        {
+            textbook_id: ApprovalStaticParser(document)
+            for textbook_id, document in documents.items()
+        }
+    )
+    outcome = run_build_pipeline(
+        inputs,
+        BuildDeps(parser_registry=registry, chunker=V2BlockChunker()),
+        MultiTextbookBuildSpec(
+            corpus_version="2.0.0-dev.1",
+            required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+            mode="development",
+            environment="development",
+            output_dir=tmp_path / "artifacts" / "v2" / "textbooks" / "approved",
+        ),
+    )
+
+    assert outcome.manifest is not None
+    assert outcome.manifest.included_textbook_ids == REQUIRED_TEXTBOOK_IDS
 
 
 def test_parser_provider_must_match_the_catalogue(tmp_path: Path) -> None:

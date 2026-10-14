@@ -461,6 +461,7 @@ def test_catalog_freezes_the_required_v2_textbooks_and_rejects_unknown_ids() -> 
         "openstax_college_physics_2e",
         "openstax_physics",
         "openstax_college_physics_ap_2e",
+        "ck12_peoples_physics_concepts",
     )
     assert all(get_textbook_spec(book_id).enabled for book_id in REQUIRED_TEXTBOOK_IDS)
     with pytest.raises(ValueError, match="unknown textbook_id"):
@@ -503,10 +504,19 @@ def test_each_openstax_book_is_pinned_to_the_pdf_m2_validated(
     assert spec.source_version == version
 
 
-def test_ck12_is_required_but_not_yet_in_the_catalogue() -> None:
+def test_ck12_is_required_pinned_and_approved_for_pipeline_use() -> None:
     assert "ck12" in REQUIRED_PROVIDERS
-    assert missing_required_providers(REQUIRED_TEXTBOOK_IDS) == ("ck12",)
+    spec = get_textbook_spec("ck12_peoples_physics_concepts")
+
+    assert missing_required_providers(REQUIRED_TEXTBOOK_IDS) == ()
     assert missing_required_providers(REQUIRED_TEXTBOOK_IDS, ("openstax",)) == ()
+    assert spec.provider == "ck12"
+    assert spec.source_version == "2016-09-09"
+    assert spec.expected_source_sha256 is not None
+    assert spec.expected_parsed_sha256 is not None
+    assert spec.selected_chapters == tuple(str(chapter) for chapter in range(1, 21))
+    assert spec.license == "CC BY-NC 3.0"
+    assert spec.source_approved is True
 
 
 @pytest.mark.parametrize(

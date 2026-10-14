@@ -5,8 +5,9 @@ only needed to re-parse from source. The catalogue pins every file's SHA-256,
 so each one is verified while it is read and a local file with different
 content is never overwritten.
 
-    python scripts/install_v2_sources.py                       # M2's parse, from its Release
-    python scripts/install_v2_sources.py --from-archive openstax_parser_v1_3_2_r1.zip
+    python scripts/install_v2_sources.py                       # M2's parses, from Releases
+    python scripts/install_v2_sources.py --from-archive openstax_parser_v1_3_2_r1.zip \
+        --from-archive ck12_parser_v1_1_0.2.zip
     python scripts/install_v2_sources.py --format raw --from-dir ~/Downloads
     python scripts/install_v2_sources.py --format raw --print-sha256sums
 """
@@ -19,7 +20,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from cs30.v2.errors import V2Error  # noqa: E402, I001
+from cs30.v2.catalog import get_textbook_spec  # noqa: E402
+from cs30.v2.errors import V2Error  # noqa: E402
 from cs30.v2.sources import (  # noqa: E402
     DEFAULT_DESTINATION,
     DEFAULT_PARSED_DESTINATION,
@@ -27,7 +29,7 @@ from cs30.v2.sources import (  # noqa: E402
     PARSED_RELEASE_TAG,
     install_from_directory,
     install_from_release,
-    install_parsed_from_archive,
+    install_parsed_from_archives,
     install_parsed_from_release,
     missing_parsed_sources,
     missing_sources,
@@ -67,8 +69,12 @@ def build_argument_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--from-archive",
         type=Path,
+        action="append",
         default=None,
-        help="parsed only: install from a local copy of M2's delivery archive",
+        help=(
+            "parsed only: install from a local M2 archive; repeat for each provider's "
+            "archive"
+        ),
     )
     parser.add_argument(
         "--from-dir",
@@ -100,9 +106,18 @@ def main(argv: list[str] | None = None) -> int:
     pins = pinned_parsed_sources() if parsed else pinned_sources()
     kind = "parsed" if parsed else "PDF"
     print(f"{len(pins)} pinned {kind} source(s): {', '.join(sorted(pins))}")
+    if not parsed:
+        unsupported = [
+            textbook_id for textbook_id in pins if not get_textbook_spec(textbook_id).supports_raw
+        ]
+        if unsupported:
+            argument_parser.error(
+                "raw source installation is unsupported for "
+                f"{', '.join(unsupported)}; use --format parsed"
+            )
     try:
-        if parsed and args.from_archive is not None:
-            installed = install_parsed_from_archive(args.from_archive, destination)
+        if parsed and args.from_archive:
+            installed = install_parsed_from_archives(args.from_archive, destination)
         elif parsed:
             installed = install_parsed_from_release(
                 destination, tag=args.tag or PARSED_RELEASE_TAG

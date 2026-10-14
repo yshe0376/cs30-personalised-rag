@@ -9,6 +9,7 @@ required_textbook_ids = [
   "openstax_college_physics_2e",
   "openstax_physics",
   "openstax_college_physics_ap_2e",
+  "ck12_peoples_physics_concepts",
 ]
 output_dir = "artifacts/v2/textbooks/2.0.0-dev.1"
 chunk_config = { tokenizer_name = "unicode-wordpunct-v1" }
