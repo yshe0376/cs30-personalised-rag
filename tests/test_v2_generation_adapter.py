@@ -244,8 +244,10 @@ class TraceClient(StubClient):
 @pytest.mark.parametrize("personalise", [True, False])
 @pytest.mark.parametrize("level", list(StudentLevel))
 def test_generation_trace_records_prompt_switch_actual_level_and_provider_metadata(
-    personalise, level
+    personalise, level, monkeypatch
 ):
+    times = iter((1.0, 1.04))
+    monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
     generator = V2AnswerGenerator(TraceClient([_answer("chunk-1")]))
     generator.generate(
         "Question",
@@ -255,7 +257,8 @@ def test_generation_trace_records_prompt_switch_actual_level_and_provider_metada
     )
     trace = generator.last_trace
     assert trace.usage == TokenUsage(10, 3, 13)
-    assert trace.latency_ms == 25.0
+    assert trace.latency_ms == pytest.approx(40.0)
+    assert trace.attempts[0].provider_latency_ms == 25.0
     assert trace.response_id == "response-1"
     assert trace.prompt_personalised is personalise
     assert trace.effective_level == (level if personalise else None)
@@ -267,25 +270,31 @@ def test_generation_trace_records_prompt_switch_actual_level_and_provider_metada
 
 
 @pytest.mark.parametrize("raw", ["not JSON", _answer("unknown-chunk")])
-def test_trace_counts_invalid_responses_and_repair_tokens(raw):
+def test_trace_counts_invalid_responses_and_repair_tokens(raw, monkeypatch):
+    times = iter((1.0, 1.04, 2.0, 2.06))
+    monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
     generator = V2AnswerGenerator(TraceClient([raw, _answer("chunk-1")]), max_retries=1)
     generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
     trace = generator.last_trace
     assert trace.usage == TokenUsage(30, 9, 39)
-    assert trace.latency_ms == 75.0
+    assert trace.latency_ms == pytest.approx(100.0)
+    assert [a.provider_latency_ms for a in trace.attempts] == [25.0, 50.0]
     assert trace.response_id == "response-2"
     assert [a.usage.total_tokens for a in trace.attempts] == [13, 26]
     assert [a.response_id for a in trace.attempts] == ["response-1", "response-2"]
 
 
-def test_exhausted_generation_preserves_usage_prompt_level_and_response_metadata():
+def test_exhausted_generation_preserves_usage_prompt_level_and_response_metadata(monkeypatch):
+    times = iter((1.0, 1.04, 2.0, 2.06))
+    monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
     generator = V2AnswerGenerator(TraceClient(["not JSON", "still invalid"]), max_retries=1)
     with pytest.raises(V2GenerationFailure) as caught:
         generator.generate("Question", StudentProfile(profile_id="s", level="advanced"), _bundle())
     trace = caught.value.trace
     assert trace is generator.last_trace
     assert trace.usage == TokenUsage(30, 9, 39)
-    assert trace.latency_ms == 75.0
+    assert trace.latency_ms == pytest.approx(100.0)
+    assert [a.provider_latency_ms for a in trace.attempts] == [25.0, 50.0]
     assert trace.response_id == "response-2"
     assert trace.effective_level is StudentLevel.ADVANCED
     assert (
@@ -294,7 +303,7 @@ def test_exhausted_generation_preserves_usage_prompt_level_and_response_metadata
 
 
 def test_provider_failure_records_elapsed_time_without_inventing_tokens(monkeypatch):
-    times = iter((1.0, 1.05, 2.0))
+    times = iter((1.0, 1.05, 2.0, 2.08))
     monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
     generator = V2AnswerGenerator(
         TraceClient([TimeoutError("timeout"), _answer("chunk-1")]), max_retries=1
@@ -305,7 +314,9 @@ def test_provider_failure_records_elapsed_time_without_inventing_tokens(monkeypa
     assert failed.usage == TokenUsage() and failed.response_id is None
     assert failed.latency_ms == pytest.approx(50.0)
     assert trace.usage == TokenUsage(20, 6, 26)
-    assert trace.latency_ms == pytest.approx(100.0)
+    assert trace.latency_ms == pytest.approx(130.0)
+    assert failed.provider_latency_ms is None
+    assert trace.attempts[1].provider_latency_ms == 50.0
 
 
 def test_batch_resets_generation_usage_between_questions():
@@ -340,3 +351,135 @@ def test_trace_uses_snapshot_level_and_source():
     generator.generate("Question", snapshot, _bundle())
     assert generator.last_trace.profile_source == "learner_state_replay"
     assert generator.last_trace.effective_level is StudentLevel.ADVANCED
+
+
+def _mcq():
+    from cs30.v2.contracts import GenerationQuestion
+
+    return GenerationQuestion(
+        kind="multiple_choice",
+        question="Which acceleration opposes velocity and reduces speed?",
+        options={"D": "deceleration", "B": "progression", "A": "calibration", "C": "extraction"},
+    )
+
+
+@pytest.mark.parametrize("personalise", [False, True])
+@pytest.mark.parametrize("level", list(StudentLevel))
+def test_mcq_prompt_preserves_all_options_and_letter_mapping(personalise, level):
+    client = StubClient(
+        [
+            json.dumps(
+                {"final_choice": "D", "explanation": "Deceleration.", "citations": ["chunk-1"]}
+            )
+        ]
+    )
+    generator = V2AnswerGenerator(client)
+    answer = generator.generate(
+        _mcq(),
+        StudentProfile(profile_id="s", level=level),
+        _bundle(),
+        personalise_prompt=personalise,
+    )
+    assert answer.final_choice == "D"
+    assert "A. calibration\nB. progression\nC. extraction\nD. deceleration" in client.prompts[0]
+    assert "final_choice must be A, B, C, or D" in client.prompts[0]
+    assert generator.last_trace.prompt_version.endswith("-v2")
+
+
+@pytest.mark.parametrize(
+    "options", [{}, {"A": "one"}, {"A": "one", "B": "two", "C": "three", "D": " "}]
+)
+def test_mcq_requires_four_nonblank_options(options):
+    from pydantic import ValidationError
+
+    from cs30.v2.contracts import GenerationQuestion
+
+    with pytest.raises(ValidationError):
+        GenerationQuestion(kind="multiple_choice", question="Question", options=options)
+
+
+def test_mcq_null_prediction_is_repaired_with_all_choices():
+    missing = json.dumps(
+        {"final_choice": None, "explanation": "Deceleration.", "citations": ["chunk-1"]}
+    )
+    client = StubClient([missing, _answer("chunk-1")])
+    generator = V2AnswerGenerator(client, max_retries=1)
+    generator.generate(_mcq(), StudentProfile(profile_id="s", level="beginner"), _bundle())
+    assert [a.status for a in generator.last_trace.attempts] == ["invalid_output", "completed"]
+    assert "D. deceleration" in client.prompts[1]
+    assert "multiple-choice answers require final_choice A-D" in client.prompts[1]
+
+
+def test_mutated_mcq_missing_options_fails_before_model_call_and_batch_continues():
+    question = _mcq()
+    question.options.pop("D")
+    client = StubClient([_answer("chunk-1")])
+    generator = V2AnswerGenerator(client)
+    profile = StudentProfile(profile_id="s", level="beginner")
+    first, second = generator.generate_batch(
+        ((question, profile, _bundle()), ("Open question", profile, _bundle()))
+    )
+    assert first.answer is None
+    assert first.trace.attempts[0].status == "input_failure"
+    assert first.trace.prompt_sha256 is None
+    assert second.answer is not None
+    assert client.calls == 1
+
+
+@pytest.mark.parametrize("multiple_choice", [False, True])
+def test_gold_input_passes_question_and_choices_without_reference_answer_leakage(multiple_choice):
+    from cs30.v2.contracts import GoldQuestion
+
+    gold = GoldQuestion(
+        question_id="gold-private-id",
+        question="What reduces speed?",
+        options={
+            label: {"text": text, "source_field": "PRIVATE_SOURCE_FIELD"}
+            for label, text in _mcq().options.items()
+        }
+        if multiple_choice
+        else {},
+        gold_answer="D" if multiple_choice else None,
+        gold_answer_text="REFERENCE_ANSWER_DO_NOT_LEAK",
+        answerable=None,
+        question_difficulty="medium",
+        question_type="definition",
+        concept_group="motion",
+        personalisation_eligibility="pending",
+        eligibility_reason="PRIVATE_REASON",
+        split="test",
+        corpus_version="PRIVATE_CORPUS",
+        parser_version="fixture",
+        gold_annotation_version="fixture",
+        annotation_status="draft",
+    )
+    client = StubClient(
+        [
+            _answer("chunk-1")
+            if multiple_choice
+            else json.dumps(
+                {"final_choice": None, "explanation": "Deceleration.", "citations": ["chunk-1"]}
+            )
+        ]
+    )
+    generator = V2AnswerGenerator(client)
+    generator.generate(gold, StudentProfile(profile_id="s", level="beginner"), _bundle())
+    prompt = client.prompts[0]
+    assert "What reduces speed?" in prompt
+    assert ("D. deceleration" in prompt) is multiple_choice
+    for private in [
+        "REFERENCE_ANSWER_DO_NOT_LEAK",
+        "PRIVATE_REASON",
+        "gold-private-id",
+        "PRIVATE_CORPUS",
+        "PRIVATE_SOURCE_FIELD",
+        "gold_answer",
+    ]:
+        assert private not in prompt
+
+
+def test_trace_uses_prompt_builders_version_method(monkeypatch):
+    monkeypatch.setattr(V2PromptAdapter, "version", lambda self, *, personalise: "custom-version")
+    generator = V2AnswerGenerator(StubClient([_answer("chunk-1")]))
+    generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
+    assert generator.last_trace.prompt_version == "custom-version"

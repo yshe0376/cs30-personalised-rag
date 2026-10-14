@@ -14,11 +14,13 @@ from cs30.generation.schema import openai_text_format, parse_answer_payload
 from cs30.v2.contracts import (
     EvidenceBundle,
     GeneratedAnswer,
+    GenerationQuestion,
+    GoldQuestion,
     LearnerContextSnapshot,
     StudentLevel,
     StudentProfile,
 )
-from cs30.v2.generation_prompt import V2PromptAdapter
+from cs30.v2.generation_prompt import V2PromptAdapter, generation_question
 
 _NO_EVIDENCE = "The available evidence does not support a grounded answer."
 
@@ -33,6 +35,7 @@ class V2GenerationAttempt:
     usage: TokenUsage = field(default_factory=TokenUsage)
     latency_ms: float = 0.0
     response_id: str | None = None
+    provider_latency_ms: float | None = None
 
 
 @dataclass(frozen=True)
@@ -82,7 +85,7 @@ class V2AnswerGenerator:
 
     def generate(
         self,
-        question: str,
+        question: str | GenerationQuestion | GoldQuestion,
         profile: StudentProfile | LearnerContextSnapshot,
         evidence: EvidenceBundle,
         *,
@@ -94,6 +97,7 @@ class V2AnswerGenerator:
         profile_source = snapshot.profile_source.value if snapshot else "static_profile"
         provenance = evidence.retrieval_provenance
         chunk_ids = tuple(item.chunk_id for item in evidence.evidence_items)
+        adapter = V2PromptAdapter(student, evidence)
 
         def trace(
             attempts: tuple[V2GenerationAttempt, ...],
@@ -119,32 +123,27 @@ class V2AnswerGenerator:
                     (attempt.response_id for attempt in reversed(attempts) if attempt.response_id),
                     None,
                 ),
-                prompt_version=(
-                    V2PromptAdapter.prompt_version
-                    if personalise_prompt
-                    else V2PromptAdapter.base_prompt_version
-                )
+                prompt_version=adapter.version(personalise=personalise_prompt)
                 if prompt_sha256
                 else None,
                 prompt_personalised=personalise_prompt and prompt_sha256 is not None,
                 effective_level=student.level if personalise_prompt and prompt_sha256 else None,
             )
 
-        if not question.strip():
+        try:
+            if isinstance(question, str) and not question.strip():
+                raise ValueError("question must not be empty")
+            request = generation_question(question)
+        except (ValueError, TypeError) as exc:
             self.last_trace = trace(
-                (
-                    V2GenerationAttempt(
-                        0, "input_failure", None, "question must not be empty", "ValueError"
-                    ),
-                )
+                (V2GenerationAttempt(0, "input_failure", None, str(exc), type(exc).__name__),)
             )
-            raise V2GenerationFailure("question must not be empty", self.last_trace)
+            raise V2GenerationFailure(str(exc), self.last_trace) from exc
         if not chunk_ids:
             answer = GeneratedAnswer(explanation=_NO_EVIDENCE, abstained=True)
             self.last_trace = trace((), abstained=True)
             return answer
-        adapter = V2PromptAdapter(student, evidence)
-        original_prompt = adapter.build_prompt(question, personalise=personalise_prompt)
+        original_prompt = adapter.build_prompt(request, personalise=personalise_prompt)
         prompt = original_prompt
         prompt_hash = hashlib.sha256(original_prompt.encode("utf-8")).hexdigest()
         records: list[V2GenerationAttempt] = []
@@ -166,9 +165,14 @@ class V2AnswerGenerator:
                 )
                 prompt = original_prompt
                 continue
+            elapsed_ms = (perf_counter() - started) * 1000
             raw = response.text
             try:
                 payload = parse_answer_payload(raw)
+                if request.kind == "multiple_choice" and payload.final_choice is None:
+                    raise LLMOutputValidationError(
+                        "multiple-choice answers require final_choice A-D"
+                    )
                 answer = GeneratedAnswer(
                     final_choice=payload.final_choice,
                     explanation=payload.explanation,
@@ -182,7 +186,8 @@ class V2AnswerGenerator:
                         "completed",
                         raw,
                         usage=response.usage,
-                        latency_ms=response.latency_ms,
+                        latency_ms=elapsed_ms,
+                        provider_latency_ms=response.latency_ms,
                         response_id=response.response_id,
                     )
                 )
@@ -200,7 +205,8 @@ class V2AnswerGenerator:
                         str(exc),
                         type(exc).__name__,
                         usage=response.usage,
-                        latency_ms=response.latency_ms,
+                        latency_ms=elapsed_ms,
+                        provider_latency_ms=response.latency_ms,
                         response_id=response.response_id,
                     )
                 )
@@ -211,7 +217,14 @@ class V2AnswerGenerator:
 
     def generate_batch(
         self,
-        cases: tuple[tuple[str, StudentProfile | LearnerContextSnapshot, EvidenceBundle], ...],
+        cases: tuple[
+            tuple[
+                str | GenerationQuestion | GoldQuestion,
+                StudentProfile | LearnerContextSnapshot,
+                EvidenceBundle,
+            ],
+            ...,
+        ],
     ) -> tuple[V2BatchResult, ...]:
         results: list[V2BatchResult] = []
         for question, profile, evidence in cases:

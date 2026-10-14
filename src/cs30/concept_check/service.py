@@ -17,6 +17,7 @@ from cs30.v2.contracts import (
     ConceptCheckGrade,
     ConceptCheckQuestionRelease,
     ConceptCheckResult,
+    ConceptCheckSelection,
     LearnerContextSnapshot,
     LearnerState,
     RetrievalResult,
@@ -34,21 +35,6 @@ from cs30.v2.ports import ConceptCheckEventStore, ConceptCheckQuestionProvider, 
 class PreparedRound:
     snapshot: LearnerContextSnapshot
     retrieval_topic: TopicResolution | None
-
-
-@dataclass(frozen=True)
-class ConceptCheckSelection:
-    """Post-answer decision for M8; question is present only when offered."""
-
-    status: Literal["offered", "no_topic_available", "no_question_available", "disabled"]
-    question: ConceptCheckQuestionRelease | None = None
-    error_code: str | None = None
-
-    def __post_init__(self) -> None:
-        if (self.status == "offered") != (self.question is not None):
-            raise ValueError("only offered selections may carry a question")
-        if self.status == "offered" and self.error_code is not None:
-            raise ValueError("offered selections must not carry an error code")
 
 
 class ConceptCheckService:
@@ -91,6 +77,15 @@ class ConceptCheckService:
                 topic_registry_version=resolution.topic_registry_version,
                 error_code="TOPIC_REGISTRY_MISMATCH",
             )
+        if (
+            resolution.status is TopicResolutionStatus.RESOLVED
+            and resolution.topic_id not in self.replayer.topic_ids
+        ):
+            resolution = TopicResolution(
+                status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
+                topic_registry_version=resolution.topic_registry_version,
+                error_code="UNKNOWN_TOPIC",
+            )
         snapshot = build_learner_context_snapshot(
             static_profile,
             enabled=True,
@@ -104,42 +99,46 @@ class ConceptCheckService:
         prepared: PreparedRound,
         retrieval: RetrievalResult,
         validated: ValidatedAnswer,
-    ) -> ConceptCheckQuestionRelease | None:
-        """Compatibility seam for M8's current question-or-None consumer."""
-
-        return self.select_result(prepared, retrieval, validated).question
-
-    def select_result(
-        self,
-        prepared: PreparedRound,
-        retrieval: RetrievalResult,
-        validated: ValidatedAnswer,
     ) -> ConceptCheckSelection:
         """Offer a current question or explain refusal according to spec §5.1/§5.3."""
 
         if not self.config.enabled:
-            return ConceptCheckSelection("disabled")
+            return ConceptCheckSelection(status="disabled")
         if prepared.retrieval_topic is None:
-            return ConceptCheckSelection("no_topic_available", error_code="NO_RETRIEVAL_TOPIC")
+            return ConceptCheckSelection(
+                status="no_topic_available", error_code="NO_RETRIEVAL_TOPIC"
+            )
         if prepared.retrieval_topic.status is not TopicResolutionStatus.RESOLVED:
             return ConceptCheckSelection(
-                "no_topic_available", error_code=prepared.retrieval_topic.error_code
+                status="no_topic_available",
+                error_code=prepared.retrieval_topic.error_code or "NO_TOPIC_AVAILABLE",
             )
         if validated.abstained:
-            return ConceptCheckSelection("no_question_available", error_code="ANSWER_ABSTAINED")
+            return ConceptCheckSelection(
+                status="no_question_available", error_code="ANSWER_ABSTAINED"
+            )
         if validated.citation_status != "passed":
             return ConceptCheckSelection(
-                "no_question_available", error_code="CITATION_VALIDATION_FAILED"
+                status="no_question_available", error_code="CITATION_VALIDATION_FAILED"
             )
         if not validated.resolved_citations:
-            return ConceptCheckSelection("no_question_available", error_code="NO_CITATIONS")
+            return ConceptCheckSelection(status="no_question_available", error_code="NO_CITATIONS")
         if retrieval.provenance is None:
-            return ConceptCheckSelection("no_topic_available", error_code="TOPIC_MAP_UNAVAILABLE")
+            return ConceptCheckSelection(
+                status="no_topic_available", error_code="TOPIC_MAP_UNAVAILABLE"
+            )
         cited_topic = self.resolver.resolve_cited_topic(retrieval, validated)
         if cited_topic.status is not TopicResolutionStatus.RESOLVED:
-            return ConceptCheckSelection("no_topic_available", error_code=cited_topic.error_code)
+            return ConceptCheckSelection(
+                status="no_topic_available",
+                error_code=cited_topic.error_code or "NO_TOPIC_AVAILABLE",
+            )
         if cited_topic.topic_registry_version != self.replayer.topic_registry_version:
-            return ConceptCheckSelection("no_topic_available", error_code="TOPIC_REGISTRY_MISMATCH")
+            return ConceptCheckSelection(
+                status="no_topic_available", error_code="TOPIC_REGISTRY_MISMATCH"
+            )
+        if cited_topic.topic_id not in self.replayer.topic_ids:
+            return ConceptCheckSelection(status="no_topic_available", error_code="UNKNOWN_TOPIC")
         topic_id = cited_topic.topic_id
         assert topic_id is not None  # Enforced by the TopicResolution contract.
         events = self.event_store.events(prepared.snapshot.profile.profile_id)
@@ -172,7 +171,7 @@ class ConceptCheckService:
             )
             if release is None:
                 return ConceptCheckSelection(
-                    "no_question_available", error_code="NO_USABLE_QUESTION"
+                    status="no_question_available", error_code="NO_USABLE_QUESTION"
                 )
             question = release.question
             if question.question_id in used_ids:
@@ -181,7 +180,7 @@ class ConceptCheckService:
                 # Exclude stale candidates before accepting the provider's next ranked choice.
                 used_ids.append(question.question_id)
                 continue
-            return ConceptCheckSelection("offered", question=release)
+            return ConceptCheckSelection(status="offered", question=release)
 
     def submit(
         self,
@@ -204,6 +203,7 @@ class ConceptCheckService:
             raise ValueError("question binding does not match the current corpus")
         if question.topic_registry_version != self.replayer.topic_registry_version:
             raise ValueError("question topic registry version mismatch")
+        self.replayer.validate_topic(question.topic_id)
         grade = self.grader.grade(
             question,
             attempt_id=attempt_id,
@@ -283,6 +283,7 @@ class ConceptCheckService:
 
         if not self.config.enabled:
             raise ValueError("Concept Check is disabled")
+        self.replayer.validate_topic(topic_id)
         event = ConceptCheckEvent(
             event_id=event_id,
             profile_id=self.replayer.static_profile.profile_id,
