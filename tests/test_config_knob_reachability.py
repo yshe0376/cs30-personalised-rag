@@ -74,6 +74,42 @@ WIRING_CASES: tuple[WiringCase, ...] = (
         RetrievalMode.HYBRID,
         "dense.expected_model_name",
     ),
+    WiringCase(
+        "expected_embedding_revision",
+        "a" * 40,
+        RetrievalMode.DENSE,
+        "expected_model_revision",
+    ),
+    WiringCase(
+        "expected_embedding_revision",
+        "a" * 40,
+        RetrievalMode.HYBRID,
+        "dense.expected_model_revision",
+    ),
+    WiringCase(
+        "embedding_trust_remote_code",
+        True,
+        RetrievalMode.DENSE,
+        "trust_remote_code",
+    ),
+    WiringCase(
+        "embedding_trust_remote_code",
+        True,
+        RetrievalMode.HYBRID,
+        "dense.trust_remote_code",
+    ),
+    WiringCase(
+        "query_prompt_name",
+        "query",
+        RetrievalMode.DENSE,
+        "query_prompt_name",
+    ),
+    WiringCase(
+        "query_prompt_name",
+        "query",
+        RetrievalMode.HYBRID,
+        "dense.query_prompt_name",
+    ),
     # ``_stopwords`` is private, but this assertion is about wiring rather than
     # behaviour, and the public surface is the constructor argument. The
     # behavioural half lives in test_bm25_stopword_knob_changes_retrieval.

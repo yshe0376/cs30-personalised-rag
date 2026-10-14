@@ -86,7 +86,7 @@ def _dense(monkeypatch: pytest.MonkeyPatch) -> real_retrieval.FaissDenseRetrieve
     retriever = real_retrieval.FaissDenseRetriever(
         expected_model_name="sentence-transformers/all-MiniLM-L6-v2",
         min_similarity=0.50,
-        model_loader=lambda model_name: _ControlledModel(),
+        model_loader=lambda model_name, **kwargs: _ControlledModel(),
         index_reader=lambda path: _BelowThresholdIndex(),
     )
     retriever.load_index(_artifact())
