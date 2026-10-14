@@ -17,14 +17,21 @@ CK-12 *People's Physics Concepts (With Answers)* source:
 `2.0.0-dev.topic-ck12-2026-10-14` (`sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205`).
 
 The four-book section inventory has 1,045 sections (925 OpenStax and 120
-CK-12), 388 title candidate groups, and 111 sections without a title. CK-12
-adds 79 candidate-title groups not present in the earlier three-book review.
-Its 120 section-level model proposals are being generated as a separate local
-Qwen run so the existing 925 successful proposals are reused. The title groups
-and CK-12 proposals still need human reconciliation against the existing Topics;
-they must not be added to or used to replace the frozen registry until a new
-registry version is reviewed and frozen. M2's ten manual parser-QA samples also
-remain pending, so this corpus is for development review only.
+CK-12), 388 title candidate groups, and 111 sections without a title. Of the
+95 title groups with CK-12 sources, 16 are shared with other textbooks and 79
+are CK-12-only. The separate local Qwen run completed all 120 CK-12 section
+proposals successfully, reusing the existing 925 OpenStax proposals. The
+combined aggregate contains 7,527 concept mentions and 2,751 exact concept
+groups after applying the current merge map; 23 new near-duplicate pairs
+involving CK-12 await human review. The local
+`artifacts/v2/topics-ck12-2026-10-14/topic_ck12_review_packet.json` contains
+the CK-12 title groups, concept groups, and new near-duplicate review queue.
+
+The title groups and CK-12 proposals still need human reconciliation against
+the existing Topics; they must not be added to or used to replace the frozen
+registry until a new registry version is reviewed and frozen. M2's ten manual
+parser-QA samples also remain pending, so this corpus is for development review
+only.
 
 To reproduce the CK-12 addendum from the repository root:
 
