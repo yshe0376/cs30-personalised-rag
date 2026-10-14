@@ -33,10 +33,6 @@ python scripts/build_v2_corpus.py --config real-development \
   --embedding-model sentence-transformers/all-MiniLM-L6-v2
 ```
 
-The current CK-12 entry has `source_approved=false`, so the v2 pipeline stops
-with `SOURCE_NOT_APPROVED` before parsing any source. Do not run the build until
-the source-specific licence terms and manual parser QA have been cleared.
-
 The three OpenStax files use `cs30.v2.ingest.OpenStaxParsedParser`; CK-12 uses
 `cs30.v2.ingest.CK12ParsedParser`. The build chunks with M4's production
 structure-aware chunker and writes `records.jsonl`,
@@ -70,18 +66,16 @@ to work against, never a formal result.
 
 ## 3. What an official build still needs
 
-`--config staging` runs `corpus_mode=official`, which fails closed. The CK-12
-adapter is wired, but the current source is not approved for any v2 build yet:
+`--config staging` runs `corpus_mode=official`, which fails closed. All four
+catalogue books are approved, so the source gate no longer stops it; an
+official build needs every pinned source installed and an embedding model for
+the index. A source whose catalogue entry has `source_approved=false` stops
+every build mode with `SOURCE_NOT_APPROVED` before parsing.
 
-| Gate | Failure code | Who clears it |
-|---|---|---|
-| CK-12 source-specific licence terms and parser QA are pending | `SOURCE_NOT_APPROVED` | M1/M2 confirm the applicable terms and complete manual QA |
-
-The CK-12 release has ten manually sampled blocks, all still marked `pending`,
-and records 13 parser issues. See [the CK-12 integration note](v2-ck12-integration.md)
-for source pins and the license review gate. The catalogue pins both the PDF
-and parsed JSON hashes for all four books; the pipeline also checks that the
-parser provider and index artifact match the staged corpus.
+The catalogue pins both the PDF and parsed JSON hashes for all four books; the
+pipeline also checks that the parser provider and index artifact match the
+staged corpus. See [the CK-12 integration note](v2-ck12-integration.md) for
+CK-12's pins, licence and open parser-QA items.
 
 ## Reading an index back
 

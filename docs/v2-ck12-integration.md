@@ -33,25 +33,30 @@ and writes parsed files under `data/parsed/v2`. Local archives can be supplied
 with repeated `--from-archive` options. The raw CK-12 parser is not vendored, so
 the v2 source installer rejects `--format raw` while this textbook is required.
 
-## QA and official-build gate
+## Licence and approval
+
+The licence page of this PDF (printed 2016-09-09) makes the content available
+under Creative Commons Attribution-Non-Commercial 3.0 Unported (CC BY-NC 3.0),
+points to CK-12's terms of use for the complete terms, and requires any
+reproduction to include the attribution link http://www.ck12.org/saythanks.
+The catalogue records the licence as `CC BY-NC 3.0`; anything that shows CK-12
+text to users must carry that link. CK-12's
+[current Curriculum Materials License](https://help.ck12.org/hc/en-us/articles/50990257420955-CK-12-Curriculum-Materials-License)
+adds restrictions on AI/ML use; this project retrieves and cites the text in a
+non-commercial course setting.
+
+M1 approved the source for development and official builds on 2026-10-14
+(`source_approved=True`). The `SOURCE_NOT_APPROVED` gate stays in the
+pipeline: any catalogue entry with `source_approved=False` stops every build
+mode before parsing.
+
+## Parser QA still open
 
 The release's automatic validation passed for 20 chapters, 4,702 blocks, and
 467,042 characters. Its `qa_report.json` still sets
 `manual_review_required: true`; all ten sample records are `pending`. The
 release also records 13 issues, including image-only content, an untagged PDF,
 formula and table layout, and cross-page text. The adapter carries
-`source_qa_status=manual_review_required` in the document metadata.
-
-The CK-12 licence is recorded as pending source-specific review. CK-12's
-[current Curriculum Materials License](https://help.ck12.org/hc/en-us/articles/50990257420955-CK-12-Curriculum-Materials-License)
-limits use to defined Educational Purposes and restricts AI/ML model training,
-automated derivative creation, and aggregator distribution. CK-12 also says
-usage depends on the license attached to each resource. The exact terms for
-this 2016 PDF need to be confirmed before any RAG processing or application
-use. See its [book page](https://www.ck12.org/book/peoples-physics-concepts/)
-and the CK-12 [license guidance](https://help.ck12.org/hc/en-us/articles/53032403416219-Can-I-Use-CK-12-Content-to-Make-Money).
-
-For those two reasons, `source_approved` is false for this catalogue entry.
-The v2 pipeline fails closed before parsing in both development and official
-modes until an authorized reviewer clears the source-specific terms and the
-manual QA. Adding the adapter does not itself approve the textbook for RAG use.
+`source_qa_status=manual_review_required` in the document metadata. Approval
+did not wait for these samples, so M2 should still review them before a
+reportable corpus is cited.

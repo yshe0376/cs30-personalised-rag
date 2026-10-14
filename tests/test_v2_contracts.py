@@ -504,7 +504,7 @@ def test_each_openstax_book_is_pinned_to_the_pdf_m2_validated(
     assert spec.source_version == version
 
 
-def test_ck12_is_required_and_pinned_but_not_yet_approved_for_pipeline_use() -> None:
+def test_ck12_is_required_pinned_and_approved_for_pipeline_use() -> None:
     assert "ck12" in REQUIRED_PROVIDERS
     spec = get_textbook_spec("ck12_peoples_physics_concepts")
 
@@ -515,7 +515,8 @@ def test_ck12_is_required_and_pinned_but_not_yet_approved_for_pipeline_use() -> 
     assert spec.expected_source_sha256 is not None
     assert spec.expected_parsed_sha256 is not None
     assert spec.selected_chapters == tuple(str(chapter) for chapter in range(1, 21))
-    assert spec.source_approved is False
+    assert spec.license == "CC BY-NC 3.0"
+    assert spec.source_approved is True
 
 
 @pytest.mark.parametrize(

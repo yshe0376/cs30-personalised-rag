@@ -107,7 +107,9 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
         source_version="2016-09-09",
         source_name="ck12_peoples_physics_concepts",
         source_uri="https://www.ck12.org/book/peoples-physics-concepts/",
-        license="CK-12 Curriculum Materials License; source-specific terms pending review",
+        # The licence notice printed in this 2016-09-09 PDF; it also requires
+        # the attribution link http://www.ck12.org/saythanks.
+        license="CC BY-NC 3.0",
         parser_name="ck12",
         selected_chapters=tuple(str(chapter) for chapter in range(1, 21)),
         expected_source_sha256=(
@@ -123,7 +125,8 @@ TEXTBOOK_CATALOG: dict[str, TextbookSpec] = {
             "openstax_document.json"
         ),
         supports_raw=False,
-        source_approved=False,
+        # Approved by M1 on 2026-10-14 for development and official builds.
+        source_approved=True,
         enabled=True,
     ),
 }

@@ -29,7 +29,7 @@ from cs30.v2.pipeline import (
 from cs30.v2.ports import TextbookInput
 
 # Official-path tests that exercise later build gates declare an OpenStax-only
-# fixture corpus; CK-12's real source remains gated pending review.
+# fixture corpus.
 OPENSTAX_ONLY = ("openstax",)
 
 
@@ -608,6 +608,75 @@ def test_official_build_stops_until_every_required_provider_has_a_book(
     assert exc_info.value.code == "REQUIRED_PROVIDER_MISSING"
     assert "ck12" in str(exc_info.value)
     assert not output_dir.exists()
+
+
+class ApprovalStaticParser(StaticParser):
+    requires_source_approval = True
+
+
+@pytest.mark.parametrize(
+    ("mode", "environment"), [("development", "development"), ("official", "staging")]
+)
+def test_unapproved_source_stops_every_build_mode_before_parsing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, mode: str, environment: str
+) -> None:
+    from cs30.v2 import catalog
+
+    ck12 = "ck12_peoples_physics_concepts"
+    monkeypatch.setitem(
+        catalog.TEXTBOOK_CATALOG,
+        ck12,
+        replace(get_textbook_spec(ck12), source_approved=False),
+    )
+    inputs, documents, _ = make_build(tmp_path, count=len(REQUIRED_TEXTBOOK_IDS))
+    registry = StaticRegistry(
+        {
+            textbook_id: ApprovalStaticParser(document)
+            for textbook_id, document in documents.items()
+        }
+    )
+    output_dir = tmp_path / "artifacts" / "v2" / "textbooks" / "unapproved"
+
+    with pytest.raises(BuildGateError) as exc_info:
+        run_build_pipeline(
+            inputs,
+            BuildDeps(parser_registry=registry, chunker=NonFixtureChunker()),
+            MultiTextbookBuildSpec(
+                corpus_version="2.0.0-dev.1",
+                required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+                mode=mode,
+                environment=environment,
+                output_dir=output_dir,
+            ),
+        )
+
+    assert exc_info.value.code == "SOURCE_NOT_APPROVED"
+    assert ck12 in str(exc_info.value)
+    assert not output_dir.exists()
+
+
+def test_approved_ck12_source_passes_the_source_gate(tmp_path: Path) -> None:
+    inputs, documents, _ = make_build(tmp_path, count=len(REQUIRED_TEXTBOOK_IDS))
+    registry = StaticRegistry(
+        {
+            textbook_id: ApprovalStaticParser(document)
+            for textbook_id, document in documents.items()
+        }
+    )
+    outcome = run_build_pipeline(
+        inputs,
+        BuildDeps(parser_registry=registry, chunker=V2BlockChunker()),
+        MultiTextbookBuildSpec(
+            corpus_version="2.0.0-dev.1",
+            required_textbook_ids=REQUIRED_TEXTBOOK_IDS,
+            mode="development",
+            environment="development",
+            output_dir=tmp_path / "artifacts" / "v2" / "textbooks" / "approved",
+        ),
+    )
+
+    assert outcome.manifest is not None
+    assert outcome.manifest.included_textbook_ids == REQUIRED_TEXTBOOK_IDS
 
 
 def test_parser_provider_must_match_the_catalogue(tmp_path: Path) -> None:
