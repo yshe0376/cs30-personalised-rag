@@ -1,0 +1,95 @@
+{
+  "taxonomy_version": "evidence-role-v2",
+  "status": "frozen",
+  "revision_note": "Frozen 2026-10-15 by yshe0376 (M1) from draft.2 with no change to definitions or rules. draft.2 added the four pilot policy rules decided by yshe0376 and the boundaries behind six pilot adjudications, and told the labeller not to pick definition for a single defining sentence.",
+  "instructions": "Pick the single role that best describes what the chunk mainly does for a learner. Judge the dominant teaching function of the whole chunk, not one sentence in it. When two roles fit, choose the one that covers more of the text. If they are still tied, prefer the earlier role in this order: derivation, boundary, comparison, application, example, definition. Headings, figure captions, activity or simulation instructions and short fragments still get the closest role; mark them unsure.",
+  "rules": [
+    "Do not choose definition just because the chunk contains a defining sentence. Choose definition only when stating what something is, is the main job of the chunk.",
+    "Practice questions and multiple-choice questions are example.",
+    "Problem-solving steps and strategy text (Step 1, Step 2, identify the knowns) are example.",
+    "Simulation, video, lab and hands-on activity text gets the role that fits the physics it covers.",
+    "Learning objectives, chapter introductions, chapter outlines, decorative photo captions and history narrative get the closest role by content: introducing a concept is definition; a caption that explains a phenomenon is application.",
+    "One everyday scenario used to build up a concept (pushing a door to show what affects turning, a person eating to show energy conversion) is example, even when the chunk ends by naming the concept.",
+    "A worked calculation with numbers is example, even when the chunk first defines the quantity it calculates.",
+    "An argument that shows why a relationship holds is derivation, even with few equations (summing strips under a force-distance graph to show that work equals the area).",
+    "A table or list that sets many cases, objects or scales side by side is comparison.",
+    "A formula with its symbols explained, followed by a short list of uses, is definition. Application needs the chunk to explain how a device works or why a phenomenon happens.",
+    "Limits mentioned while defining a quantity (low-speed limit, approaching c) keep definition. Boundary needs the limits, assumptions or validity to be the main point."
+  ],
+  "roles": [
+    {
+      "role": "definition",
+      "level": "beginner",
+      "zh": "定义/概念陈述",
+      "definition": "States what a term, quantity, unit or law is, in words or as a named formula, without working through a specific case.",
+      "cues": [
+        "glossary entries",
+        "'X is defined as', 'X is called', 'the SI unit of X is'",
+        "a law or principle stated with its symbols and units",
+        "an introductory description of a concept"
+      ],
+      "not": "If the chunk mainly works a numeric case or builds the idea from one everyday scenario, use example. If it mainly shows why a formula holds, use derivation. If it mainly explains a device or phenomenon, use application."
+    },
+    {
+      "role": "example",
+      "level": "beginner",
+      "zh": "例子/例题",
+      "definition": "Works through one specific, concrete case: a worked Example with given values, a practice question, or one everyday scenario that illustrates or builds up a single idea.",
+      "cues": [
+        "'Example 4.2', 'Strategy', 'Solution', 'Discussion'",
+        "numbers substituted into an equation to reach a result",
+        "practice or multiple-choice questions; problem-solving steps",
+        "'for example, ...' or 'consider ...' when the scenario is most of the chunk"
+      ],
+      "not": "If the case is a real device, technology or natural phenomenon explained to show where the physics is used, use application."
+    },
+    {
+      "role": "comparison",
+      "level": "intermediate",
+      "zh": "比较/对照",
+      "definition": "Relates two or more concepts, quantities, cases or models through their similarities or differences.",
+      "cues": [
+        "'unlike', 'whereas', 'in contrast', 'similarly', 'compared with'",
+        "a table or list that sets many cases or scales side by side",
+        "separating ideas that students confuse (mass vs weight, speed vs velocity)"
+      ],
+      "not": "One concept with a passing contrast keeps its main role."
+    },
+    {
+      "role": "application",
+      "level": "intermediate",
+      "zh": "应用/现实场景",
+      "definition": "Explains how a real device or technology works, or why a natural or everyday phenomenon happens, using the concept.",
+      "cues": [
+        "'Applications of ...', 'Physics in medicine', 'Making Connections'",
+        "how a device works (lenses, motors, MRI, hydraulic brakes)",
+        "why a phenomenon happens (rainbows, iridescence, the Earth's hot interior)"
+      ],
+      "not": "A numeric worked problem is example, even in a realistic setting. A bare list of uses after a formula keeps definition."
+    },
+    {
+      "role": "derivation",
+      "level": "advanced",
+      "zh": "推导",
+      "definition": "Derives or justifies an equation or relationship from principles through connected mathematical or logical steps.",
+      "cues": [
+        "'starting from', 'substituting ... into', 'we obtain', 'it follows that', 'thus'",
+        "several connected equations that lead to a result",
+        "an argument that shows why a relationship holds, even with few equations"
+      ],
+      "not": "Stating a formula is definition. Using a formula on numbers is example."
+    },
+    {
+      "role": "boundary",
+      "level": "advanced",
+      "zh": "适用条件/局限",
+      "definition": "States conditions, assumptions, limits of validity, special or edge cases, or where a model or approximation breaks down.",
+      "cues": [
+        "'only valid when', 'assuming', 'neglecting', 'approximation'",
+        "'breaks down', 'does not apply', 'is not valid', 'limitation'",
+        "what happens at a limiting case (source at the speed of sound, v approaching c)"
+      ],
+      "not": "A passing assumption inside a worked example keeps example. Limits mentioned while defining a quantity keep definition."
+    }
+  ]
+}
