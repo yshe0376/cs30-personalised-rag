@@ -196,6 +196,10 @@ python -m cs30.pipeline --mode real --provider ollama --model gpt-oss:20b \
 
 ### Member 7 smoke delivery
 
+For native V2 four-condition batches, open-ended scoring, Dev-only lambda
+selection and blind calibration materials, use
+[the V2 M7 experiment guide](docs/v2-member7-experiments.md).
+
 The Week 1 profile, prompt, fixed JSON, retry, and citation path can be exercised
 against every available local and packaged dataset without an API key:
 

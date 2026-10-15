@@ -1,5 +1,10 @@
 # Member 7 V2 generation and Concept Check handoff
 
+The native V2 four-condition batch entry, explicit M3 Gold conversion, Dev-only
+lambda selection, offline correctness scoring and blind review-packet workflow
+are documented in [V2 M7 experiments](v2-member7-experiments.md). These produce
+development results and preserve upstream annotation and split limitations.
+
 V2 generation accepts complete multiple-choice inputs, and Concept Check returns
 an explainable selection decision. Topic identities are checked against a pinned
 registry before events can reach the append-only log. This delivery updates the

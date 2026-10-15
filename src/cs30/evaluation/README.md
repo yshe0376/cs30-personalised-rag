@@ -527,3 +527,10 @@ development, in which case their report sections remain explicitly `pending`.
 评分绑定 Gold/量表/原答案哈希，保存完整 judge 观察，未决记录留在预定分母中。
 当前输出为 development，正式用途需要真实人工校准和团队冻结。详见
 `docs/open-answer-scoring.md` 和开放题评分方案草案。
+
+## V2 batch generation and calibration materials
+
+`python -m cs30.v2.experiment_cli` freezes native V2 inputs, runs all four
+conditions and exports saved answers directly into the open-answer scorer.
+It also prepares blind Dev review packets and imports completed rating forms.
+See [V2 experiment instructions](../../../docs/v2-member7-experiments.md).
