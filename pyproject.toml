@@ -51,6 +51,7 @@ cs30-parse-openstax = "cs30.ingest.college_physics_parser:main"
 cs30-list-textbooks = "cs30.ingest.textbooks:main"
 cs30-evaluate = "cs30.evaluation.cli:main"
 cs30-concept-check-report = "cs30.evaluation.concept_check_reporting:main"
+cs30-v2-generation-eval = "cs30.evaluation.v2_generation_cli:main"
 cs30-build-v2 = "cs30.v2.cli:run"
 
 [tool.setuptools.packages.find]

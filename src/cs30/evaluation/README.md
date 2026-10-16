@@ -1,5 +1,8 @@
 # Evaluation contracts and offline scoring
 
+The V2 open-answer generation evaluation extension is documented in
+[`docs/v2-generation-evaluation.md`](../../../docs/v2-generation-evaluation.md).
+
 This package is the M1-owned boundary between M3 Gold data, the M1 batch
 runner, and M8 answer and citation scoring.
 
