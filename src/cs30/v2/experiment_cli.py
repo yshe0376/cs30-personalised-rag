@@ -7,6 +7,7 @@ import csv
 import json
 import math
 import sys
+import uuid
 from datetime import date
 from pathlib import Path
 
@@ -32,6 +33,7 @@ from cs30.v2.experiment import (
     select_dev_lambda,
     write_json,
 )
+from cs30.v2.experiment_checkpoint import atomic_json
 from cs30.v2.experiment_gold import convert_m3_gold
 
 
@@ -95,6 +97,16 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--provider", choices=("ollama", "openai"), required=True)
     run.add_argument("--timeout", type=float, default=120.0)
     run.add_argument("--max-output-tokens", type=int, default=2048)
+    run.add_argument("--context-window", type=int, help="explicit Ollama context token capacity")
+    run.add_argument(
+        "--resume", action="store_true", help="verify and resume saved cell checkpoints"
+    )
+    run.add_argument(
+        "--stop-after-errors",
+        type=int,
+        default=0,
+        help="stop after this many consecutive new technical failures; zero disables",
+    )
     run.add_argument("--judge-provider", choices=("none", "ollama", "openai"), default="none")
     run.add_argument("--judge-model")
     run.add_argument("--judge-cache-dir", type=Path)
@@ -226,7 +238,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
                 print(f"Prepared {packet['item_count']} blind Dev items; no human ratings filled.")
                 return 0
-            if args.output_dir.exists():
+            if args.output_dir.exists() and not args.resume:
                 raise ValueError("output directory already exists")
             if not math.isfinite(args.timeout) or args.timeout <= 0 or args.max_output_tokens < 1:
                 raise ValueError("timeout and token limit must be finite and positive")
@@ -240,16 +252,59 @@ def main(argv: list[str] | None = None) -> int:
             client = _client(
                 args.provider, config.generator_model, args.timeout, args.max_output_tokens
             )
+            if args.context_window is not None:
+                if args.provider != "ollama" or args.context_window <= args.max_output_tokens + 512:
+                    raise ValueError("context-window requires Ollama and room for output/framing")
+                client.context_window = args.context_window
+            if callable(getattr(client, "pin_model", None)):
+                client.pin_model()
+            if args.stop_after_errors < 0:
+                raise ValueError("stop-after-errors must be nonnegative")
+            consecutive_errors = 0
+
+            def progress(done, total, record):
+                nonlocal consecutive_errors
+                print(f"V2 generation {done}/{total}: {record.status}", flush=True)
+                consecutive_errors = (
+                    consecutive_errors + 1 if record.status == "generation_error" else 0
+                )
+                if args.stop_after_errors and consecutive_errors >= args.stop_after_errors:
+                    raise ValueError(
+                        "stopped after consecutive generation errors; inspect and resume"
+                    )
+
             runs = run_experiment(
                 args.prepared_dir,
                 args.output_dir,
                 client,
                 provider=args.provider,
-                progress=lambda done, total, record: print(
-                    f"V2 generation {done}/{total}: {record.status}",
-                    flush=True,
-                ),
+                resume=args.resume,
+                progress=progress,
             )
+            score_output = args.output_dir / "scoring"
+            if args.resume and score_output.exists():
+                summary_path = score_output / "open_answer_summary.json"
+                score_manifest_path = score_output / "run_manifest.json"
+                if summary_path.exists() and score_manifest_path.exists():
+                    previous = json.loads(score_manifest_path.read_bytes())
+                    summary = json.loads(summary_path.read_bytes())
+                    if (
+                        previous.get("input_sha256", {}).get("runs")
+                        == sha256_bytes((args.output_dir / "saved_answers.jsonl").read_bytes())
+                        and previous.get("provider") == args.judge_provider
+                        and previous.get("judge_config", {}).get("model") == args.judge_model
+                        and (score_output / "open_answer_scores.jsonl").exists()
+                        and (score_output / "open_answer_report.md").exists()
+                    ):
+                        print("Generation and matching scoring reports already complete.")
+                        pending = any(
+                            summary["overall"]["score_status_counts"].get(k, 0)
+                            for k in ("needs_review", "judge_error", "missing_run")
+                        )
+                        return (
+                            3 if pending or any(r.status == "generation_error" for r in runs) else 0
+                        )
+                score_output = args.output_dir / ("scoring-recovery-" + uuid.uuid4().hex[:8])
             score_args = [
                 "score",
                 "--gold",
@@ -261,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
                 "--runs",
                 str(args.output_dir / "saved_answers.jsonl"),
                 "--output-dir",
-                str(args.output_dir / "scoring"),
+                str(score_output),
                 "--provider",
                 args.judge_provider,
                 "--timeout",
@@ -276,6 +331,10 @@ def main(argv: list[str] | None = None) -> int:
             if args.allow_self_judge:
                 score_args += ["--allow-self-judge"]
             exit_code = scoring_main(score_args)
+            manifest_path = args.output_dir / "run_manifest.json"
+            state = json.loads(manifest_path.read_bytes())
+            state["scoring_directory"] = score_output.name
+            atomic_json(manifest_path, state)
             print(f"Saved {len(runs)} V2 cells and scoring report to {args.output_dir}")
             return exit_code or (3 if any(r.status == "generation_error" for r in runs) else 0)
         if args.command == "import-ratings":

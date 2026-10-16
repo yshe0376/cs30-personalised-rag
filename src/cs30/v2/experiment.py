@@ -45,6 +45,7 @@ from cs30.v2.contracts import (
 )
 from cs30.v2.corpus import LoadedCorpus, load_corpus_records
 from cs30.v2.evidence import EvidenceBundleAdapter
+from cs30.v2.experiment_checkpoint import atomic_json, load_cells, save_cell, writer_lock
 from cs30.v2.experiment_gold import bind_questions
 from cs30.v2.generation import V2AnswerGenerator, V2BatchResult, V2GenerationFailure
 
@@ -697,6 +698,21 @@ def select_dev_lambda(prepared_dir: Path, candidates: list[float]) -> LambdaSele
     )
 
 
+def _runtime_row(record: OpenAnswerRun, details: dict) -> dict:
+    trace = details.get("generation_trace")
+    usage = trace["usage"] if trace else {}
+    return {
+        "condition_id": record.condition_id,
+        "student_level": record.student_level.value,
+        "status": record.status,
+        "model_calls": len(trace["attempts"]) if trace else 0,
+        "latency_ms": trace["latency_ms"] if trace else None,
+        "input_tokens": usage.get("input_tokens", 0),
+        "output_tokens": usage.get("output_tokens", 0),
+        "citation_count": len(record.answer.citations) if record.answer else 0,
+    }
+
+
 def run_experiment(
     prepared_dir: Path,
     output_dir: Path,
@@ -704,19 +720,60 @@ def run_experiment(
     *,
     provider: str,
     progress: Callable[[int, int, OpenAnswerRun], None] | None = None,
+    resume: bool = False,
+) -> list[OpenAnswerRun]:
+    if output_dir.exists() and not resume:
+        raise ValueError("output directory already exists; use --resume or a new directory")
+    if resume and not output_dir.is_dir():
+        raise ValueError("resume requires an existing experiment directory")
+    _, config, *_ = load_prepared(prepared_dir)
+    if client.model != config.generator_model:
+        raise ValueError("generation client model differs from prepared experiment")
+    output_dir.mkdir(parents=True, exist_ok=resume)
+    with writer_lock(output_dir):
+        manifest_path = output_dir / "run_manifest.json"
+        original_manifest = manifest_path.read_bytes() if manifest_path.exists() else None
+        try:
+            return _run_experiment(
+                prepared_dir,
+                output_dir,
+                client,
+                provider=provider,
+                progress=progress,
+                resume=resume,
+            )
+        except BaseException as exc:
+            if manifest_path.exists() and manifest_path.read_bytes() != original_manifest:
+                state = json.loads(manifest_path.read_bytes())
+                state.update(
+                    status="interrupted",
+                    interruption_type=type(exc).__name__,
+                    interruption_reason=str(exc)[:500],
+                    checkpoint_count=len(list((output_dir / "checkpoints").glob("*.json"))),
+                )
+                atomic_json(manifest_path, state)
+            raise
+
+
+def _run_experiment(
+    prepared_dir: Path,
+    output_dir: Path,
+    client: LLMClient,
+    *,
+    provider: str,
+    progress: Callable[[int, int, OpenAnswerRun], None] | None = None,
+    resume: bool = False,
 ) -> list[OpenAnswerRun]:
     """Checkpoint every cell. Failures remain records in the expected denominator."""
-    if output_dir.exists():
-        raise ValueError("output directory already exists; use a new run directory")
     manifest, config, matrix, gold, _, retrieval, labels = load_prepared(prepared_dir)
     if client.model != config.generator_model:
         raise ValueError("generation client model differs from prepared experiment")
-    output_dir.mkdir(parents=True, exist_ok=False)
     package_root = files("cs30")
     implementation_hashes = {
         relative: sha256_bytes(package_root.joinpath(relative).read_bytes())
         for relative in (
             "v2/experiment.py",
+            "v2/experiment_checkpoint.py",
             "v2/generation.py",
             "v2/generation_prompt.py",
             "v2/evidence.py",
@@ -726,112 +783,129 @@ def run_experiment(
             "retrieval/real.py",
         )
     }
-    write_json(output_dir / "expected_experiment.json", matrix.model_dump(mode="json"))
-    write_json(
-        output_dir / "run_manifest.json",
-        {
-            "schema_version": "0.1",
-            "result_type": "m7_v2_generation_run",
-            "status": "running",
-            "reportable": False,
-            "provider": provider,
-            "prepared_manifest_sha256": canonical_hash(manifest),
-            "prepared_inputs": manifest,
-            "configuration": config.model_dump(mode="json"),
-            "implementation_sha256": implementation_hashes,
-            "client": {
-                "model": client.model,
-                "temperature": client.temperature,
-                "max_output_tokens": getattr(client, "max_output_tokens", None),
-                "endpoint_sha256": sha256_bytes(client.endpoint.encode())
-                if getattr(client, "endpoint", None)
-                else None,
-            },
+    expected_path = output_dir / "expected_experiment.json"
+    requested_manifest = {
+        "schema_version": "0.1",
+        "result_type": "m7_v2_generation_run",
+        "status": "running",
+        "reportable": False,
+        "provider": provider,
+        "prepared_manifest_sha256": canonical_hash(manifest),
+        "prepared_inputs": manifest,
+        "configuration": config.model_dump(mode="json"),
+        "implementation_sha256": implementation_hashes,
+        "client": {
+            "model": client.model,
+            "temperature": client.temperature,
+            "max_output_tokens": getattr(client, "max_output_tokens", None),
+            "endpoint_sha256": sha256_bytes(client.endpoint.encode())
+            if getattr(client, "endpoint", None)
+            else None,
         },
+    }
+    requested_manifest["client"].update(
+        context_window=getattr(client, "context_window", None),
+        model_digest=getattr(client, "model_digest", None),
+        timeout_seconds=getattr(client, "timeout_seconds", None),
     )
+    checkpoint_dir = output_dir / "checkpoints"
+    if resume:
+        existing = json.loads((output_dir / "run_manifest.json").read_bytes())
+        for field in (
+            "prepared_manifest_sha256",
+            "configuration",
+            "implementation_sha256",
+            "provider",
+            "client",
+        ):
+            if existing.get(field) != requested_manifest[field]:
+                raise ValueError(f"resume {field} differs from the original run")
+        if json.loads(expected_path.read_bytes()) != matrix.model_dump(mode="json"):
+            raise ValueError("resume expected matrix differs from the original run")
+        completed = load_cells(checkpoint_dir, matrix.cases)
+        requested_manifest.update(resume_count=existing.get("resume_count", 0) + 1)
+    else:
+        checkpoint_dir.mkdir()
+        atomic_json(expected_path, matrix.model_dump(mode="json"))
+        completed = {}
+        requested_manifest["resume_count"] = 0
+    atomic_json(output_dir / "run_manifest.json", requested_manifest)
     generator = V2AnswerGenerator(client, max_retries=config.max_retries)
     conditions = {item.condition_id: item for item in GenerationCondition}
     records, runtime_rows = [], []
     with (
-        (output_dir / "saved_answers.jsonl").open("x", encoding="utf-8") as answer_file,
-        (output_dir / "generation_records.jsonl").open("x", encoding="utf-8") as trace_file,
+        (output_dir / "saved_answers.jsonl").open("w", encoding="utf-8") as answer_file,
+        (output_dir / "generation_records.jsonl").open("w", encoding="utf-8") as trace_file,
     ):
         for cell in matrix.cases:
-            profile = StudentProfile(
-                profile_id="controlled-" + cell.student_level.value,
-                level=cell.student_level,
-                confidence=config.profile_confidence,
-            )
-            condition = conditions[cell.condition_id]
-            original = retrieval[cell.question_id].retrieval
-            selected, rerank_trace = original, None
-            if condition.reranking:
-                selected, rerank_trace = rerank_retrieval(
-                    original,
-                    profile,
-                    labels,
-                    config.lambda_weight,
-                    parameter_source="dev" if config.lambda_policy == "dev_selected" else "fixture",
-                    taxonomy_version=manifest["role_provenance"]["role_taxonomy_version"]
-                    if manifest["role_provenance"]
-                    else "unavailable-role-taxonomy",
+            if cell.run_id in completed:
+                record, details = completed[cell.run_id]
+            else:
+                profile = StudentProfile(
+                    profile_id="controlled-" + cell.student_level.value,
+                    level=cell.student_level,
+                    confidence=config.profile_confidence,
                 )
-            selected = selected.model_copy(update={"hits": selected.hits[: config.evidence_k]})
-            bundle = EvidenceBundleAdapter().build(selected)
-            try:
-                answer = generator.generate(
-                    gold[cell.question_id],
-                    profile,
-                    bundle,
-                    personalise_prompt=condition.prompt_personalisation,
-                )
-                assert generator.last_trace is not None
-                result = V2BatchResult(answer, generator.last_trace)
-            except V2GenerationFailure as exc:
-                result = V2BatchResult(None, exc.trace, str(exc))
-            except Exception as exc:
-                # Malformed provider response objects must not discard later cells.
-                result = None
-                record = OpenAnswerRun(
-                    **cell.model_dump(),
-                    status="generation_error",
-                    error=f"{type(exc).__name__}: {exc}",
-                )
-            if result is not None:
-                record = OpenAnswerRun.from_v2_result(cell, result)
-            records.append(record)
-            generation_trace = result.trace if result else generator.last_trace
-            details = {
-                **cell.model_dump(mode="json"),
-                "profile": profile.model_dump(mode="json"),
-                "input_candidate_ids": [h.chunk_id for h in original.hits],
-                "selected_candidate_ids": [h.chunk_id for h in selected.hits],
-                "evidence": bundle.model_dump(mode="json"),
-                "rerank_trace": rerank_trace,
-                "generation_trace": asdict(generation_trace) if generation_trace else None,
-                "error": record.error,
-                "answer": record.answer.model_dump(mode="json") if record.answer else None,
-            }
-            runtime_rows.append(
-                {
-                    "condition_id": cell.condition_id,
-                    "student_level": cell.student_level.value,
-                    "status": record.status,
-                    "model_calls": len(generation_trace.attempts) if generation_trace else 0,
-                    "latency_ms": generation_trace.latency_ms if generation_trace else None,
-                    "input_tokens": generation_trace.usage.input_tokens if generation_trace else 0,
-                    "output_tokens": generation_trace.usage.output_tokens
-                    if generation_trace
-                    else 0,
-                    "citation_count": len(record.answer.citations) if record.answer else 0,
+                condition = conditions[cell.condition_id]
+                original = retrieval[cell.question_id].retrieval
+                selected, rerank_trace = original, None
+                if condition.reranking:
+                    selected, rerank_trace = rerank_retrieval(
+                        original,
+                        profile,
+                        labels,
+                        config.lambda_weight,
+                        parameter_source="dev"
+                        if config.lambda_policy == "dev_selected"
+                        else "fixture",
+                        taxonomy_version=manifest["role_provenance"]["role_taxonomy_version"]
+                        if manifest["role_provenance"]
+                        else "unavailable-role-taxonomy",
+                    )
+                selected = selected.model_copy(update={"hits": selected.hits[: config.evidence_k]})
+                bundle = EvidenceBundleAdapter().build(selected)
+                try:
+                    answer = generator.generate(
+                        gold[cell.question_id],
+                        profile,
+                        bundle,
+                        personalise_prompt=condition.prompt_personalisation,
+                    )
+                    assert generator.last_trace is not None
+                    result = V2BatchResult(answer, generator.last_trace)
+                except V2GenerationFailure as exc:
+                    result = V2BatchResult(None, exc.trace, str(exc))
+                except Exception as exc:
+                    # Malformed provider response objects must not discard later cells.
+                    result = None
+                    record = OpenAnswerRun(
+                        **cell.model_dump(),
+                        status="generation_error",
+                        error=f"{type(exc).__name__}: {exc}",
+                    )
+                if result is not None:
+                    record = OpenAnswerRun.from_v2_result(cell, result)
+                generation_trace = result.trace if result else generator.last_trace
+                details = {
+                    **cell.model_dump(mode="json"),
+                    "profile": profile.model_dump(mode="json"),
+                    "input_candidate_ids": [h.chunk_id for h in original.hits],
+                    "selected_candidate_ids": [h.chunk_id for h in selected.hits],
+                    "evidence": bundle.model_dump(mode="json"),
+                    "rerank_trace": rerank_trace,
+                    "generation_trace": asdict(generation_trace) if generation_trace else None,
+                    "error": record.error,
+                    "answer": record.answer.model_dump(mode="json") if record.answer else None,
                 }
-            )
+                save_cell(checkpoint_dir, record, details)
+            records.append(record)
+            runtime_rows.append(_runtime_row(record, details))
             # The durable detail row precedes its lightweight scoring view.
             trace_file.write(json.dumps(details, ensure_ascii=False, allow_nan=False) + "\n")
             trace_file.flush()
             answer_file.write(record.model_dump_json() + "\n")
             answer_file.flush()
-            if progress:
+            if progress and cell.run_id not in completed:
                 progress(len(records), len(matrix.cases), record)
     groups = []
     for condition in GenerationCondition:
@@ -907,5 +981,5 @@ def run_experiment(
             },
         }
     )
-    write_json(run_path, run_manifest)
+    atomic_json(run_path, run_manifest)
     return records

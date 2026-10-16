@@ -182,10 +182,32 @@ python -m cs30.v2.experiment_cli run \
 - `run_manifest.json`：输入来源及摘要、运行配置、实现文件摘要、输出摘要和完成状态。
 - `scoring/`：开放题正确性、覆盖率、未决队列和 Markdown/CSV 报告。
 
-每完成一个单元立即写入详细记录和答案，并显示进度。中断时原目录保留，不会被重写。
-没有自动续跑选项；可用已保存答案与原始预定矩阵独立评分，未保存单元保持 missing。
-重新运行需要新目录。退出码：0 为处理完成且无未决；2 为输入/配置错误；
+每完成一个单元，先原子保存到 `checkpoints/`，再更新详细记录和答案。中断后，
+在原命令后加 `--resume`，只生成尚未保存的单元，并从检查点重建汇总文件。
+正在处理但未保存的一条可能重新调用模型。续跑严格校验输入、代码、模型权重摘要及
+运行参数；不一致时拒绝混用。旧版没有检查点的运行不能使用此功能。
+同一输出目录只允许一个写入进程。退出码：0 为处理完成且无未决；2 为输入/配置错误；
 3 为输出已写出但仍有待评分项目或生成技术失败。
+
+Ollama 长输入运行加 `--context-window 32768`，显式配置上下文容量。客户端按 UTF-8
+字节上界预留输出和消息开销，超出预算时拒绝调用，避免静默截断证据；模型权重摘要
+也写入运行清单并在续跑时核对。
+
+长批次可使用独立后台入口（先提交要运行的代码）：
+
+```bash
+python scripts/run_v2_batch_job.py start \
+  --prepared-dir artifacts/v2-dev-prepared \
+  --job-dir artifacts/v2-dev-full --context-window 32768 --timeout 180
+python scripts/run_v2_batch_job.py status --job-dir artifacts/v2-dev-full
+python scripts/run_v2_batch_job.py resume --job-dir artifacts/v2-dev-full
+```
+
+后台入口冻结已提交代码和输入副本，逐步更新任务目录的 `README.md`、`progress.json`
+及日志，完成后核验全部单元、输出摘要和评分分母，并生成 `verification.json`。
+连续三条生成技术错误时停止，保留失败记录供检查。关闭聊天不会取消独立进程；
+关机或系统休眠仍可能中断，恢复后运行 `resume`。macOS 运行期间抑制空闲休眠，
+仍应保持接电、避免合盖。未配置独立 judge 时，完成生成后正确性依然待评分。
 
 ## 8. 人工校准材料
 

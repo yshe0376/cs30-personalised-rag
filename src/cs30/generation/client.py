@@ -153,23 +153,47 @@ class OllamaChatClient:
         temperature: float | None = 0.0,
         timeout_seconds: float = 120.0,
         max_output_tokens: int = 800,
+        context_window: int | None = None,
     ) -> None:
         self.model = model.strip()
-        resolved_base_url = base_url or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434"
+        resolved_base_url = (
+            base_url or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434"
+        )
         self.endpoint = f"{resolved_base_url.rstrip('/')}/api/chat"
         self.temperature = temperature
         self.timeout_seconds = timeout_seconds
         self.max_output_tokens = max_output_tokens
+        self.context_window = context_window
+        self.model_digest: str | None = None
         if not self.model:
             raise ValueError("model must not be empty")
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         if max_output_tokens <= 0:
             raise ValueError("max_output_tokens must be positive")
+        if context_window is not None and context_window <= max_output_tokens:
+            raise ValueError("context_window must exceed max_output_tokens")
+
+    def pin_model(self) -> None:
+        """Record the installed weights identity before starting/resuming a batch."""
+        url = self.endpoint.removesuffix("/api/chat") + "/api/tags"
+        with urllib.request.urlopen(url, timeout=min(self.timeout_seconds, 15)) as response:
+            payload = json.load(response)
+        names = {self.model, self.model + ":latest"}
+        matches = [m for m in payload.get("models", []) if m.get("name") in names]
+        if len(matches) != 1 or not matches[0].get("digest"):
+            raise ValueError("requested Ollama model has no unique installed weights identity")
+        self.model_digest = matches[0]["digest"]
 
     def complete(self, prompt: str, text_format: dict) -> LLMResponse:
         schema = text_format.get("schema", text_format)
         options: dict[str, float | int] = {"num_predict": self.max_output_tokens}
+        if self.context_window is not None:
+            # UTF-8 bytes bound byte-level token counts conservatively. Reserve
+            # room for the response and chat framing; refuse rather than truncate.
+            if len(prompt.encode("utf-8")) + self.max_output_tokens + 512 > self.context_window:
+                raise LLMProviderError("prompt exceeds the explicitly pinned context budget")
+            options["num_ctx"] = self.context_window
         if self.temperature is not None:
             options["temperature"] = self.temperature
         payload = {
