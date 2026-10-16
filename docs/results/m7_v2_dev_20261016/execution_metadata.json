@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.1",
+  "result_type": "m7_v2_full_dev_delivery",
+  "reportable": false,
+  "source_commit": "55e3f341b8b1a35a330911a2f3bdd7862dbca2e3",
+  "windows_dependency_fix_commit": "a9e756c294b610b454ac428f3587bbe168dc3efd",
+  "started_at": "2026-10-16T11:21:22+11:00",
+  "completed_at": "2026-10-16T15:54:20+11:00",
+  "expected_cells": 1944,
+  "status_counts": {
+    "answered": 1930,
+    "generation_error": 14
+  },
+  "model_calls": 1980,
+  "resume_count": 3,
+  "failure_final_attempt_status_counts": {
+    "citation_failure": 8,
+    "provider_failure": 6
+  },
+  "failure_question_counts": {
+    "sciq-train-00953": 1,
+    "sciq-train-02858": 1,
+    "sciq-train-07169": 2,
+    "sciq-train-10613": 10
+  },
+  "judge_provider": "none",
+  "pending_correctness": 1930,
+  "full_correct_rate": null,
+  "archive_layout": [
+    "inputs/",
+    "output/",
+    "logs/",
+    "verification.json",
+    "execution_metadata.json"
+  ],
+  "log_path_redaction": "Only the local job-directory prefix in copied logs is replaced with ${RUN_DIR}; inputs and outputs are byte-identical."
+}
