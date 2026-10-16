@@ -148,16 +148,39 @@ def _load_jsonl(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in source if line.strip()]
 
 
-def build_section_inputs(chunks: tuple[Any, ...]) -> list[dict[str, Any]]:
+def build_section_inputs(
+    chunks: tuple[Any, ...],
+    *,
+    textbook_ids: set[str] | None = None,
+) -> list[dict[str, Any]]:
     """Join each section's ordered chunk text and retain its corpus provenance."""
 
     grouped: dict[tuple[str, str, str], list[Any]] = defaultdict(list)
     for chunk in chunks:
+        if textbook_ids is not None and chunk.textbook_id not in textbook_ids:
+            continue
         grouped[(chunk.textbook_id, chunk.chapter_id, chunk.section_id or "")].append(chunk)
 
+    if textbook_ids is not None:
+        present_textbooks = {identity[0] for identity in grouped}
+        missing_textbooks = textbook_ids - present_textbooks
+        if missing_textbooks:
+            raise ValueError(
+                "requested textbook IDs are absent from the corpus: "
+                + ", ".join(sorted(missing_textbooks))
+            )
+
     rows: list[dict[str, Any]] = []
+    textbook_section_numbers: dict[str, int] = defaultdict(int)
     for index, (identity, section_chunks) in enumerate(sorted(grouped.items()), start=1):
         textbook_id, chapter_id, section_id = identity
+        if textbook_ids is None:
+            section_key = f"section-{index:04d}"
+        else:
+            textbook_section_numbers[textbook_id] += 1
+            section_key = (
+                f"{textbook_id}-section-{textbook_section_numbers[textbook_id]:04d}"
+            )
         ordered_chunks = sorted(
             section_chunks,
             key=lambda chunk: (chunk.char_start, chunk.char_end, chunk.chunk_id),
@@ -171,7 +194,7 @@ def build_section_inputs(chunks: tuple[Any, ...]) -> list[dict[str, Any]]:
             raise ValueError(f"section has no text: {identity!r}")
         rows.append(
             {
-                "key": f"section-{index:04d}",
+                "key": section_key,
                 "textbook_id": textbook_id,
                 "chapter_id": chapter_id,
                 "section_id": section_id,
@@ -495,7 +518,8 @@ def _prepare(args: argparse.Namespace) -> int:
     from cs30.v2.corpus import load_corpus_records
 
     corpus = load_corpus_records(args.corpus_dir)
-    sections = build_section_inputs(corpus.chunks)
+    textbook_ids = set(args.textbook_id) if args.textbook_id else None
+    sections = build_section_inputs(corpus.chunks, textbook_ids=textbook_ids)
     requests = build_standard_requests(
         sections,
         max_output_tokens=args.max_output_tokens,
@@ -524,6 +548,7 @@ def _prepare(args: argparse.Namespace) -> int:
             "prompt_version": PROMPT_VERSION,
             "corpus_version": corpus.manifest.corpus_version,
             "corpus_hash": corpus.manifest.corpus_hash,
+            "selected_textbook_ids": sorted(textbook_ids) if textbook_ids else None,
             "section_count": len(sections),
             "chunk_count": len(corpus.chunks),
             "bert_token_count_with_chunk_overlap": sum(
@@ -1502,7 +1527,32 @@ def _status(args: argparse.Namespace) -> int:
 
 
 def _aggregate(args: argparse.Namespace) -> int:
-    records = _load_jsonl(args.output_dir / "topic_section_proposals.jsonl")
+    proposal_paths = [args.output_dir / "topic_section_proposals.jsonl"]
+    proposal_paths.extend(args.include_proposals)
+    records: list[dict[str, Any]] = []
+    seen_sections: set[tuple[str, str, str]] = set()
+    for proposal_path in proposal_paths:
+        for record in _load_jsonl(proposal_path):
+            source = record.get("source") or {}
+            identity = (
+                source.get("textbook_id", ""),
+                source.get("chapter_id", ""),
+                source.get("section_id", ""),
+            )
+            if not identity[0] or not identity[1]:
+                raise ValueError(
+                    "proposal record lacks textbook/chapter provenance: "
+                    f"{record.get('key')}"
+                )
+            if identity in seen_sections:
+                raise ValueError(
+                    "proposal inputs contain the same textbook section more than once: "
+                    + "/".join(identity)
+                )
+            seen_sections.add(identity)
+            records.append(record)
+    combined_proposals_path = args.output_dir / "topic_section_proposals_combined.jsonl"
+    _write_jsonl(combined_proposals_path, records)
     source_root = str(REPO_ROOT / "src")
     if source_root not in sys.path:
         sys.path.insert(0, source_root)
@@ -1517,8 +1567,10 @@ def _aggregate(args: argparse.Namespace) -> int:
         key: _load_json(args.output_dir / "topic_section_proposal_manifest.json")[key]
         for key in ("corpus_version", "corpus_hash")
     }
+    aggregate["proposal_inputs"] = [str(path) for path in proposal_paths]
     output_path = args.output_dir / "topic_section_concept_aggregate.json"
     _write_json(output_path, aggregate)
+    print(f"Combined proposals: {combined_proposals_path}")
     print(f"Aggregate review: {output_path}")
     print(json.dumps(aggregate["summary"], ensure_ascii=False, indent=2))
     return 0 if not aggregate["summary"]["failed_section_count"] else 2
@@ -1538,6 +1590,14 @@ def parse_args() -> argparse.Namespace:
 
     prepare = subparsers.add_parser("prepare", help="build local section requests; no API calls")
     prepare.add_argument("--corpus-dir", type=Path, default=DEFAULT_CORPUS_DIR)
+    prepare.add_argument(
+        "--textbook-id",
+        action="append",
+        help=(
+            "prepare proposals for only this textbook; repeat to select more than one. "
+            "Filtered keys are namespaced so they can be aggregated with earlier runs."
+        ),
+    )
     prepare.add_argument(
         "--max-output-tokens",
         type=int,
@@ -1622,6 +1682,16 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_TOPIC_MERGE_MAP_PATH,
         help="versioned human-confirmed alias map (exact matches only)",
+    )
+    aggregate.add_argument(
+        "--include-proposals",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "include another completed proposal JSONL when aggregating an incremental run; "
+            "repeat for additional files"
+        ),
     )
     aggregate.set_defaults(handler=_aggregate)
     return parser.parse_args()
