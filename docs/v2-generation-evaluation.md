@@ -19,8 +19,15 @@ reruns, and lambda-selection orchestration. Shared Gold/manifest formats remain 
 existing maintainers. This extension defines evaluation-only adapters and does not modify those
 public contracts.
 
-The open-answer 0/1/2 correctness scorer in PR #182 is an upstream dependency. It must be reused
-after merge rather than copied into this branch.
+The merged `docs/v2-generation-evaluation-plan.md` is the normative ownership and method plan.
+The open-answer 0/1/2 correctness scorer handed off in PR #191 is now maintained here after M8
+review. Its legacy correctness calibration packet is not the canonical human-audit sampler: the
+M8 audit path de-duplicates by `(question_id, normalized answer text)` as required by the plan.
+
+The adapter in `v2_generation_artifacts.py` consumes the M7 GenerationExperiment schema 0.2 and
+does not modify the M7 contract. It verifies byte-level hashes, exact run coverage, cell identity,
+condition traces, status preservation, and citation-to-evidence binding before producing M8-owned
+evaluation inputs. `output_truncated` remains a distinct technical-failure status.
 
 ## Fail-closed inputs
 
@@ -57,6 +64,30 @@ client implements `JudgeProvider`, while `CachedJudgeRunner` validates structure
 binds the cache to the complete blinded input and judge configuration.
 
 ## Commands
+
+Adapt a complete M7 artifact bundle into hash-bound M8 inputs:
+
+```text
+cs30-v2-generation-eval adapt-m7-artifacts \
+  --expected-experiment artifacts/m7/expected_experiment.json \
+  --generation-records artifacts/m7/generation_records.jsonl \
+  --saved-answers artifacts/m7/saved_answers.jsonl \
+  --run-manifest artifacts/m7/run_manifest.json \
+  --gold artifacts/gold.jsonl \
+  --eligibility artifacts/personalisation_eligibility_v1.jsonl \
+  --output-dir artifacts/evaluation/adapted
+```
+
+Build an explicitly non-reportable development report. Correctness scores are optional; missing
+correctness and judge dimensions remain unresolved rather than being invented:
+
+```text
+cs30-v2-generation-eval development-report \
+  --inputs artifacts/evaluation/adapted/generation_evaluation_inputs.jsonl \
+  --adapter-manifest artifacts/evaluation/adapted/adapter_manifest.json \
+  --correctness-scores artifacts/evaluation/open_answer_scores.jsonl \
+  --output-dir artifacts/evaluation/development_report
+```
 
 Validate frozen input packages:
 
