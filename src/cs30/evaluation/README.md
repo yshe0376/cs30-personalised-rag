@@ -518,3 +518,21 @@ separate. Metric cells retain numerator, denominator, and value; empty valid
 denominators are `not_applicable`, including refusal Recall/F1 when the Gold set
 has no unanswerable samples. Ratings and Role inputs may be omitted during
 development, in which case their report sections remain explicitly `pending`.
+
+
+## V2 开放题正确性
+
+`python -m cs30.evaluation.open_answer_cli` 提供 `score`、`review`、`calibrate` 三个离线命令。
+开放题使用独立的 0/1/2 事实量表；原有 `answer_choice_accuracy_*` 仍只用于选择题。
+评分绑定 Gold/量表/原答案哈希，保存完整 judge 观察，未决记录留在预定分母中。
+当前输出为 development，正式用途需要真实人工校准和团队冻结。详见
+`docs/open-answer-scoring.md` 和开放题评分方案草案。
+
+## V2 batch generation and calibration materials
+
+`python -m cs30.v2.experiment_cli` freezes native V2 generation inputs and
+exports saved answers for independent M8 scoring. Rubric drafting is in
+`open_answer_rubrics.py`; review packets and rating imports are in
+`open_answer_packets.py`. M8 must adapt its scoring manifest to the generation
+0.2 matrix and the distinct output_truncated status before evaluating new runs.
+See [V2 experiment instructions](../../../docs/v2-member7-experiments.md).
