@@ -54,11 +54,11 @@ def answer_text_sha256(answer: str) -> str:
 def _deduplicate_answers(
     items: Iterable[GenerationEvaluationInput],
 ) -> list[GenerationEvaluationInput]:
-    unique: dict[tuple[str, str], GenerationEvaluationInput] = {}
+    unique: dict[str, GenerationEvaluationInput] = {}
     for item in sorted(items, key=lambda candidate: candidate.evaluation_id):
         if item.technical_failure or item.abstained or item.answer is None:
             continue
-        key = (item.question_id, answer_text_sha256(item.answer))
+        key = answer_text_sha256(item.answer)
         unique.setdefault(key, item)
     return list(unique.values())
 
@@ -173,6 +173,8 @@ def prepare_calibration_and_audit(
                     "generation_model_revision": item.generation_model_revision,
                     "answer_text_sha256": answer_text_sha256(item.answer),
                     "source_artifact_sha256": item.source_artifact_sha256,
+                    "source_run_sha256": item.source_run_sha256,
+                    "exact_answer_sha256": item.answer_sha256,
                 }
             )
 
@@ -198,7 +200,7 @@ def prepare_calibration_and_audit(
     manifest = {
         "schema_version": "1.0",
         "seed": seed,
-        "deduplication": "question_id + normalized answer text sha256",
+        "deduplication": "normalized answer text sha256 across all questions and conditions",
         "unique_answer_count": len(unique),
         "calibration_count": len(calibration),
         "audit_count": len(audit),

@@ -38,9 +38,7 @@ def answer_text_diagnostics(
     sentence_count = max(1, len(sentences))
     syllables = sum(_syllable_count(word) for word in words if word[0].isalpha())
     fkgl = (
-        0.39 * (word_count / sentence_count)
-        + 11.8 * (syllables / max(1, word_count))
-        - 15.59
+        0.39 * (word_count / sentence_count) + 11.8 * (syllables / max(1, word_count)) - 15.59
         if word_count
         else None
     )
@@ -101,9 +99,7 @@ def preferred_role_lambda_diagnostic(
         if len(lambdas) != len(set(lambdas)):
             raise ValueError(f"duplicate lambda for {question_id}/{level.value}")
         shares = [value[1] for value in ordered]
-        monotonic = all(
-            right >= left for left, right in zip(shares, shares[1:], strict=False)
-        )
+        monotonic = all(right >= left for left, right in zip(shares, shares[1:], strict=False))
         monotonic_count += int(monotonic)
         details.append(
             {
@@ -135,9 +131,7 @@ def generation_stochasticity_summary(
 
     grouped: dict[str, list[str]] = defaultdict(list)
     for prompt_sha256, answer in rows:
-        grouped[prompt_sha256].append(
-            hashlib.sha256(answer.encode("utf-8")).hexdigest()
-        )
+        grouped[prompt_sha256].append(hashlib.sha256(answer.encode("utf-8")).hexdigest())
     repeated = {key: values for key, values in grouped.items() if len(values) > 1}
     inconsistent_groups = sum(len(set(values)) > 1 for values in repeated.values())
     unequal_pairs = 0
@@ -150,13 +144,79 @@ def generation_stochasticity_summary(
     return {
         "repeated_prompt_group_count": len(repeated),
         "inconsistent_group_count": inconsistent_groups,
-        "inconsistent_group_rate": (
-            inconsistent_groups / len(repeated) if repeated else None
-        ),
+        "inconsistent_group_rate": (inconsistent_groups / len(repeated) if repeated else None),
         "pair_count": total_pairs,
         "unequal_pair_count": unequal_pairs,
         "pairwise_mismatch_rate": unequal_pairs / total_pairs if total_pairs else None,
         "interpretation": "generation noise diagnostic; not removed by paired bootstrap",
+    }
+
+
+def generation_noise_floor(
+    items: Sequence[Any],
+) -> dict[str, Any]:
+    """Measure answer mismatch only where the recorded prompt bytes are identical.
+
+    R0/R1 comparisons are paired within question and level.  The P0 cross-level
+    check follows the frozen plan's two comparisons per question: beginner versus
+    intermediate and beginner versus advanced.
+    """
+
+    indexed = {
+        (item.question_id, item.target_level.value, item.condition.value): item
+        for item in items
+        if item.answer is not None and item.prompt_sha256 is not None
+    }
+
+    def compare(pairs: Iterable[tuple[Any, Any]]) -> dict[str, Any]:
+        eligible = 0
+        mismatched = 0
+        for left, right in pairs:
+            if left is None or right is None or left.prompt_sha256 != right.prompt_sha256:
+                continue
+            eligible += 1
+            mismatched += int(left.answer != right.answer)
+        return {
+            "identical_prompt_pair_count": eligible,
+            "answer_mismatch_count": mismatched,
+            "answer_mismatch_rate": mismatched / eligible if eligible else None,
+        }
+
+    questions = sorted({item.question_id for item in items})
+    levels = [level.value for level in StudentLevel]
+    p0r0_r0r1 = compare(
+        (
+            indexed.get((question, level, "P0R0_plain")),
+            indexed.get((question, level, "P0R1_reranking_only")),
+        )
+        for question in questions
+        for level in levels
+    )
+    p1r0_r0r1 = compare(
+        (
+            indexed.get((question, level, "P1R0_prompt_only")),
+            indexed.get((question, level, "P1R1_combined")),
+        )
+        for question in questions
+        for level in levels
+    )
+    p0_cross_level = compare(
+        (
+            indexed.get((question, StudentLevel.BEGINNER.value, "P0R0_plain")),
+            indexed.get((question, other.value, "P0R0_plain")),
+        )
+        for question in questions
+        for other in (StudentLevel.INTERMEDIATE, StudentLevel.ADVANCED)
+    )
+    return {
+        "method": "exact saved-answer mismatch among byte-identical generation prompts",
+        "P0R0_vs_P0R1": p0r0_r0r1,
+        "P1R0_vs_P1R1": p1r0_r0r1,
+        "P0R0_cross_level": p0_cross_level,
+        "interpretation": (
+            "generation noise floor; condition effects must be interpreted against this "
+            "residual stochasticity"
+        ),
     }
 
 
@@ -195,9 +255,7 @@ def strict_correctness_summary(rows: Iterable[Mapping[str, Any]]) -> dict[str, A
         "technical_failure_count": technical_failures,
         "strict_correct_rate": point,
         "strict_correct_rate_bounds": [lower, upper],
-        "mean_score_over_two": (
-            score_sum / (2 * scored_count) if scored_count else None
-        ),
+        "mean_score_over_two": (score_sum / (2 * scored_count) if scored_count else None),
         "mean_score_label": "mean score/2; not accuracy",
     }
 
@@ -242,6 +300,9 @@ def build_v2_generation_report(
     human_audit: Mapping[str, Any] | None,
     condition_contrasts: Sequence[Mapping[str, Any]],
     lambda_evaluation: Mapping[str, Any] | None,
+    generation_noise: Mapping[str, Any],
+    applicability_summary: Sequence[Mapping[str, Any]],
+    joint_correct_and_adapted: Mapping[str, Any],
     unresolved_items: Sequence[Mapping[str, Any]],
     provenance: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -268,16 +329,20 @@ def build_v2_generation_report(
             "not verified with real learners unless a separate learner study is supplied."
         ),
         "development_blockers": blockers,
+        "decision_config": decision_config.model_dump(mode="json"),
         "provenance": dict(provenance),
         "automatic_full_run": {
             "correctness": dict(correctness),
             "adaptation": list(adaptation),
             "discrimination": dict(discrimination),
             "evidence_support": list(evidence_support),
+            "joint_correct_and_adapted": dict(joint_correct_and_adapted),
+            "applicability_subsets": list(applicability_summary),
         },
         "diagnostics": {
             "mechanism": list(mechanism_diagnostics),
             "text": list(text_diagnostics),
+            "generation_noise_floor": dict(generation_noise),
         },
         "judge_validity": dict(validity),
         "human_audit": dict(human_audit) if human_audit is not None else None,
@@ -288,6 +353,7 @@ def build_v2_generation_report(
             "Automatic, validity, and human-audit results are reported separately.",
             "Text and Role statistics are descriptive and are not adaptation outcomes.",
             "Development data used for tuning cannot provide an untouched Test claim.",
+            "Generation at temperature zero remains stochastic; see the reported noise floor.",
         ],
     }
 
@@ -327,6 +393,7 @@ def write_v2_generation_report(report: Mapping[str, Any], output_dir: Path) -> d
         "json": output_dir / "v2_generation_evaluation.json",
         "markdown": output_dir / "v2_generation_evaluation.md",
         "contrasts_csv": output_dir / "v2_generation_condition_contrasts.csv",
+        "manifest": output_dir / "v2_generation_evaluation_manifest.json",
     }
     paths["json"].write_text(
         json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -358,4 +425,18 @@ def write_v2_generation_report(report: Mapping[str, Any], output_dir: Path) -> d
                     "ci_upper": interval.get("upper"),
                 }
             )
+    manifest = {
+        "schema_version": "1.0",
+        "reportable": report["reportable"],
+        "decision_config": report["decision_config"],
+        "provenance": report["provenance"],
+        "output_sha256": {
+            name: hashlib.sha256(paths[name].read_bytes()).hexdigest()
+            for name in ("json", "markdown", "contrasts_csv")
+        },
+    }
+    paths["manifest"].write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     return paths

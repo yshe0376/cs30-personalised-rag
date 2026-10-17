@@ -84,3 +84,39 @@ def test_cli_rejects_duplicate_metric_cells(tmp_path: Path) -> None:
         assert exc.code == 2
     else:
         raise AssertionError("duplicate metric cells must terminate the CLI")
+
+
+def test_validity_report_cli_keeps_missing_required_checks_fail_closed(
+    tmp_path: Path,
+) -> None:
+    observations = tmp_path / "validity.json"
+    observations.write_text(
+        json.dumps(
+            {
+                "thresholds": {
+                    "schema_version": "1.0",
+                    "threshold_version": "thresholds-v1",
+                    "p0r0_max_chance_deviation": 0.4,
+                    "duplicate_min_consistency": 1.0,
+                    "max_abs_length_correlation": 1.0,
+                    "max_formula_pass_rate_gap": 1.0,
+                    "order_min_consistency": 1.0,
+                    "second_judge_min_consistency": 1.0,
+                    "perturbation_min_detection_rate": 0.8,
+                },
+                "p0r0_guesses": ["beginner", "intermediate", "advanced"],
+                "duplicate_rows": [],
+                "surface_rows": [["beginner", True, 10, False]],
+                "order_pairs": [["case-1", "same", "same"]],
+                "second_judge_pairs": [["case-1", "same", "same"]],
+            }
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "validity-report.json"
+    assert (
+        main(["validity-report", "--observations", str(observations), "--output", str(output)]) == 0
+    )
+    report = json.loads(output.read_text(encoding="utf-8"))
+    assert report["formal_use_allowed"] is False
+    assert "duplicate_consistency" in report["failed_or_missing_required_checks"]

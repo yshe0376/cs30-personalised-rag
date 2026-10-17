@@ -15,6 +15,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from .condition_statistics import verify_dev_lambda_selection
+from .level_profiles import canonical_json_sha256
 from .models import PersonalisationEligibility
 from .open_answer_models import OpenAnswerScore
 from .v2_generation_models import (
@@ -84,12 +86,16 @@ def _validate_manifest_hashes(
     records_path: Path,
     answers_path: Path,
     gold_path: Path,
+    lambda_selection_path: Path,
 ) -> None:
     prepared = manifest.get("prepared_inputs") or {}
     input_hashes = prepared.get("input_sha256") or {}
     declared_gold = input_hashes.get("gold.jsonl")
     if declared_gold != file_sha256(gold_path):
         raise ValueError("run manifest Gold hash does not match the supplied Gold bytes")
+    declared_lambda = input_hashes.get("lambda_selection.json")
+    if declared_lambda != file_sha256(lambda_selection_path):
+        raise ValueError("run manifest lambda-selection hash does not match the supplied bytes")
     output_hashes = manifest.get("output_sha256") or {}
     for filename, path in (
         ("expected_experiment.json", expected_path),
@@ -143,11 +149,13 @@ def adapt_m7_generation_artifacts(
     run_manifest_path: Path,
     gold_path: Path,
     eligibility_path: Path,
+    lambda_selection_path: Path,
 ) -> tuple[list[GenerationEvaluationInput], dict[str, Any]]:
     """Validate one complete M7 bundle and return M8-owned evaluation records."""
 
     expected = _read_json(expected_path)
     manifest = _read_json(run_manifest_path)
+    lambda_selection = _read_json(lambda_selection_path)
     if expected.get("schema_version") != "0.2":
         raise ValueError("expected experiment must use GenerationExperiment schema 0.2")
     gold_hash = file_sha256(gold_path)
@@ -159,6 +167,26 @@ def adapt_m7_generation_artifacts(
         records_path=records_path,
         answers_path=answers_path,
         gold_path=gold_path,
+        lambda_selection_path=lambda_selection_path,
+    )
+    if lambda_selection.get("schema_version") != "0.2":
+        raise ValueError("lambda selection must use schema 0.2")
+    if lambda_selection.get("selected_on_split") != "dev":
+        raise ValueError("lambda selection must be frozen on Dev")
+    if lambda_selection.get("objective") != "largest_positive_lambda_within_1pt_of_baseline":
+        raise ValueError("lambda selection uses an unsupported objective")
+    if float(lambda_selection.get("noninferiority_margin", -1)) != 0.01:
+        raise ValueError("lambda selection must use the frozen one-percentage-point margin")
+    if lambda_selection.get("gold_sha256") != gold_hash:
+        raise ValueError("lambda selection Gold hash does not match supplied Gold bytes")
+    complete_hit_rates = {
+        float(row["lambda_weight"]): float(row["complete_hit_rate"])
+        for row in list(lambda_selection.get("metrics") or [])
+    }
+    lambda_verification = verify_dev_lambda_selection(
+        complete_hit_rates=complete_hit_rates,
+        selected_lambda=float(lambda_selection["lambda_weight"]),
+        margin=0.01,
     )
     cases = _index(list(expected.get("cases") or []), "run_id", "expected experiment")
     records = _index(_read_jsonl(records_path), "run_id", "generation records")
@@ -174,6 +202,7 @@ def adapt_m7_generation_artifacts(
         raise ValueError(f"Gold is missing expected questions: {sorted(missing_gold)}")
 
     source_hash = file_sha256(records_path)
+    source_run_hash = file_sha256(run_manifest_path)
     seed = (manifest.get("client") or {}).get("seed")
     converted: list[GenerationEvaluationInput] = []
     for run_id, case in cases.items():
@@ -202,6 +231,11 @@ def adapt_m7_generation_artifacts(
         answer_payload = saved.get("answer")
         answer_text = (
             answer_payload.get("explanation") if isinstance(answer_payload, dict) else None
+        )
+        answer_hash = (
+            hashlib.sha256(answer_text.encode("utf-8")).hexdigest()
+            if answer_text is not None
+            else None
         )
         citations = (
             list(answer_payload.get("citations") or []) if isinstance(answer_payload, dict) else []
@@ -241,9 +275,20 @@ def adapt_m7_generation_artifacts(
         eligibility = PersonalisationEligibility(
             str(eligibility_rows[str(case["question_id"])]["eligibility"])
         )
+        prompt_sha256 = (record.get("generation_trace") or {}).get("prompt_sha256")
+        if prompt_sha256 is not None:
+            prompt_sha256 = str(prompt_sha256)
+        identity_hash = canonical_json_sha256(
+            {
+                "source_run_sha256": source_run_hash,
+                "run_id": run_id,
+                "answer_sha256": answer_hash,
+                "source_status": status.value,
+            }
+        )
         converted.append(
             GenerationEvaluationInput(
-                evaluation_id=f"evaluation-{run_id}",
+                evaluation_id=f"evaluation-{identity_hash[:24]}",
                 run_id=run_id,
                 question_id=str(case["question_id"]),
                 question=str(gold[str(case["question_id"])]["question"]),
@@ -254,6 +299,7 @@ def adapt_m7_generation_artifacts(
                 generation_model_family=family,
                 generation_model_revision=revision,
                 generation_seed=seed,
+                prompt_sha256=prompt_sha256,
                 eligibility=eligibility,
                 evidence=evidence,
                 citation_ids=citations,
@@ -262,22 +308,35 @@ def adapt_m7_generation_artifacts(
                 technical_failure=technical_failure,
                 failure_reason=failure_reason,
                 source_artifact_sha256=source_hash,
+                source_run_sha256=source_run_hash,
+                answer_sha256=answer_hash,
             )
         )
+    selected_lambda = float(lambda_selection["lambda_weight"])
+    observed_r1 = {
+        item.lambda_weight
+        for item in converted
+        if item.condition in {ExperimentArm.P0R1_RERANKING_ONLY, ExperimentArm.P1R1_COMBINED}
+    }
+    if observed_r1 != {selected_lambda}:
+        raise ValueError("R1 cells do not all use the lambda selected by the frozen Dev artifact")
     adapter_manifest = {
         "schema_version": "1.0",
         "adapter": "m7-generation-0.2-to-m8-evaluation-1.0",
         "matrix_version": expected.get("matrix_version"),
         "gold_sha256": gold_hash,
+        "source_run_sha256": source_run_hash,
         "input_sha256": {
             "expected_experiment": file_sha256(expected_path),
             "generation_records": source_hash,
             "saved_answers": file_sha256(answers_path),
             "run_manifest": file_sha256(run_manifest_path),
             "eligibility": file_sha256(eligibility_path),
+            "lambda_selection": file_sha256(lambda_selection_path),
         },
         "record_count": len(converted),
         "status_counts": dict(Counter(item.source_status.value for item in converted)),
+        "lambda_selection": lambda_verification,
         "reportable": False,
         "claim_boundary": "Validated development adapter output; not a formal evaluation result.",
     }
@@ -296,13 +355,17 @@ def load_open_answer_scores(
         scores = [OpenAnswerScore.model_validate(row) for row in _read_jsonl(score_path)]
     except ValidationError as exc:
         raise ValueError(f"{score_path}: invalid open-answer score: {exc}") from exc
-    by_run = {item.run_id: item for item in inputs}
-    indexed = {item.run_id: item for item in scores}
+    by_identity = {(item.run_id, item.answer_sha256): item for item in inputs}
+    if len(by_identity) != len(inputs):
+        raise ValueError("adapted inputs repeat run_id + answer_sha256 within one scoring bundle")
+    indexed = {(item.run_id, item.answer_sha256): item for item in scores}
     if len(indexed) != len(scores):
-        raise ValueError("open-answer scores contain duplicate run IDs")
-    _assert_exact_coverage(set(by_run), set(indexed), "open-answer scores")
-    for run_id, score in indexed.items():
-        source = by_run[run_id]
+        raise ValueError("open-answer scores contain duplicate run/answer identities")
+    _assert_exact_coverage(set(by_identity), set(indexed), "open-answer scores")
+    result: dict[str, OpenAnswerScore] = {}
+    for identity, score in indexed.items():
+        source = by_identity[identity]
+        run_id = source.run_id
         if score.gold_sha256 != gold_sha256:
             raise ValueError(f"{run_id}: score Gold hash mismatch")
         if (
@@ -313,14 +376,17 @@ def load_open_answer_scores(
             raise ValueError(f"{run_id}: score identity differs from adapted input")
         if score.run_status != source.source_status.value:
             raise ValueError(f"{run_id}: score status differs from adapted input")
-        expected_answer_hash = (
-            hashlib.sha256(source.answer.encode("utf-8")).hexdigest()
-            if source.answer is not None
-            else None
-        )
+        expected_answer_hash = source.answer_sha256
         if score.answer_sha256 != expected_answer_hash:
             raise ValueError(f"{run_id}: score answer hash mismatch")
-    return indexed
+        if (
+            score.score_status == "scored"
+            and not source.technical_failure
+            and score.rubric_sha256 is None
+        ):
+            raise ValueError(f"{run_id}: scored answer is missing a rubric hash")
+        result[source.evaluation_id] = score
+    return result
 
 
 def write_adapter_outputs(
@@ -332,8 +398,12 @@ def write_adapter_outputs(
     with inputs_path.open("w", encoding="utf-8", newline="\n") as stream:
         for item in items:
             stream.write(json.dumps(item.model_dump(mode="json"), ensure_ascii=False) + "\n")
+    written_manifest = dict(manifest)
+    written_manifest["output_sha256"] = {
+        "generation_evaluation_inputs": file_sha256(inputs_path),
+    }
     manifest_path.write_text(
-        json.dumps(dict(manifest), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        json.dumps(written_manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     return {"inputs": inputs_path, "manifest": manifest_path}

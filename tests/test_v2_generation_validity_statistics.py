@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import pytest
+
 from cs30.contracts import StudentLevel
 from cs30.evaluation.condition_statistics import (
     MetricObservation,
     correctness_noninferiority,
-    evaluate_lambda_candidates,
     paired_condition_contrasts,
+    verify_dev_lambda_selection,
 )
 from cs30.evaluation.judge_validity import (
     ValidityThresholds,
@@ -114,29 +116,22 @@ def test_condition_statistics_pair_by_level_and_bootstrap_question_clusters() ->
     assert noninferiority["passed"] is True
 
 
-def test_lambda_evidence_uses_relevance_and_correctness_gates_and_smaller_tie() -> None:
-    result = evaluate_lambda_candidates(
-        complete_hit_rates={0.0: 0.827, 0.1: 0.823, 0.2: 0.821},
-        adaptation_improvements={0.1: 0.05, 0.2: 0.05},
-        correctness_lower_bounds={0.1: -0.01, 0.2: -0.02},
-        predeclared_positive_lambdas=[0.1, 0.2],
-        epsilon=0.02,
-        delta=0.03,
-        sensitivity_lambda=0.2,
+def test_lambda_verification_uses_only_the_frozen_retrieval_rule() -> None:
+    result = verify_dev_lambda_selection(
+        complete_hit_rates={0.0: 0.827, 0.1: 0.823, 0.2: 0.821, 0.25: 0.815},
+        selected_lambda=0.2,
     )
-    assert result["recommended_lambda"] == 0.1
-    assert result["successful_reranking_improvement"] is True
+    assert result["selected_lambda"] == 0.2
+    assert result["judge_scores_used_for_selection"] is False
+    assert (
+        next(row for row in result["candidates"] if row["lambda"] == 0.25)["passes_retrieval_rule"]
+        is False
+    )
 
 
-def test_lambda_evidence_reports_no_success_instead_of_forcing_a_choice() -> None:
-    result = evaluate_lambda_candidates(
-        complete_hit_rates={0.0: 0.827, 0.1: 0.70, 0.2: 0.69},
-        adaptation_improvements={0.1: 0.1, 0.2: 0.2},
-        correctness_lower_bounds={0.1: -0.01, 0.2: -0.01},
-        predeclared_positive_lambdas=[0.1, 0.2],
-        epsilon=0.02,
-        delta=0.03,
-        sensitivity_lambda=0.1,
-    )
-    assert result["recommended_lambda"] is None
-    assert result["successful_reranking_improvement"] is False
+def test_lambda_verification_rejects_no_eligible_positive_candidate() -> None:
+    with pytest.raises(ValueError, match="no positive lambda"):
+        verify_dev_lambda_selection(
+            complete_hit_rates={0.0: 0.827, 0.1: 0.70, 0.2: 0.69},
+            selected_lambda=0.1,
+        )

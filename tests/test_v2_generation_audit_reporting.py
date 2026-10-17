@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -17,6 +18,7 @@ from cs30.evaluation.v2_generation_models import (
 from cs30.evaluation.v2_generation_reporting import (
     answer_text_diagnostics,
     build_v2_generation_report,
+    generation_noise_floor,
     generation_stochasticity_summary,
     joint_correct_and_adapted_summary,
     preferred_role_lambda_diagnostic,
@@ -98,6 +100,22 @@ def test_audit_packets_are_disjoint_deduplicated_and_hide_condition_fields(
     assert manifest["packets_overlap"] is False
 
 
+def test_audit_deduplicates_same_answer_text_across_different_questions(tmp_path: Path) -> None:
+    items = _items()[:3]
+    items[1].question_id = "different-question"
+    items[1].answer = items[0].answer
+    paths = prepare_calibration_and_audit(
+        items,
+        tmp_path,
+        calibration_size=1,
+        audit_size=1,
+        seed=11,
+    )
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    assert manifest["unique_answer_count"] == 2
+    assert manifest["deduplication"].startswith("normalized answer text sha256")
+
+
 def test_correctness_and_joint_results_keep_failures_and_unresolved_bounds() -> None:
     correctness = strict_correctness_summary(
         [
@@ -152,6 +170,19 @@ def test_text_and_role_statistics_are_explicitly_diagnostic() -> None:
     assert stochasticity["pairwise_mismatch_rate"] == 1.0
 
 
+def test_noise_floor_uses_only_byte_identical_prompt_pairs() -> None:
+    items = _items()
+    for item in items:
+        item.prompt_sha256 = (
+            "a" * 64
+            if item.condition in {ExperimentArm.P0R0_PLAIN, ExperimentArm.P0R1_RERANKING_ONLY}
+            else "b" * 64
+        )
+    result = generation_noise_floor(items)
+    assert result["P0R0_vs_P0R1"]["identical_prompt_pair_count"] == 9
+    assert result["P0R0_vs_P0R1"]["answer_mismatch_rate"] == 1.0
+
+
 def test_development_report_separates_sections_and_reportable_mode_fails_closed(
     tmp_path: Path,
 ) -> None:
@@ -168,6 +199,9 @@ def test_development_report_separates_sections_and_reportable_mode_fails_closed(
         "human_audit": None,
         "condition_contrasts": [],
         "lambda_evaluation": None,
+        "generation_noise": {},
+        "applicability_summary": [],
+        "joint_correct_and_adapted": {},
         "unresolved_items": [{"evaluation_id": "eval-1"}],
         "provenance": {"branch": "feat/v2-m8-generation-evaluation"},
     }
@@ -177,5 +211,8 @@ def test_development_report_separates_sections_and_reportable_mode_fails_closed(
     paths = write_v2_generation_report(report, tmp_path / "report")
     assert all(path.is_file() for path in paths.values())
     assert "Reportable: `false`" in paths["markdown"].read_text(encoding="utf-8")
+    output_hashes = json.loads(paths["manifest"].read_text(encoding="utf-8"))["output_sha256"]
+    for name in ("json", "markdown", "contrasts_csv"):
+        assert output_hashes[name] == hashlib.sha256(paths[name].read_bytes()).hexdigest()
     with pytest.raises(ValueError, match="reportable evaluation is blocked"):
         build_v2_generation_report(mode=EvaluationMode.REPORTABLE, **kwargs)

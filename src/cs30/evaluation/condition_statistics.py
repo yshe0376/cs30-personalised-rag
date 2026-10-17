@@ -119,13 +119,9 @@ def paired_condition_contrasts(
                 treatment_key = (question_id, level, treatment)
                 control_key = (question_id, level, control)
                 if treatment_key not in values or control_key not in values:
-                    missing.append(
-                        {"question_id": question_id, "target_level": level.value}
-                    )
+                    missing.append({"question_id": question_id, "target_level": level.value})
                     continue
-                differences[question_id].append(
-                    values[treatment_key] - values[control_key]
-                )
+                differences[question_id].append(values[treatment_key] - values[control_key])
             flattened = [value for rows in differences.values() for value in rows]
             estimate = sum(flattened) / len(flattened) if flattened else None
             interval = (
@@ -193,7 +189,7 @@ def evaluate_lambda_candidates(
     delta: float,
     sensitivity_lambda: float | None = None,
 ) -> dict[str, Any]:
-    """Create M8's deterministic stage-two evidence artifact without running reranking."""
+    """Retain the legacy draft-plan helper for API compatibility only."""
 
     if 0.0 not in complete_hit_rates:
         raise ValueError("lambda stage one requires a lambda=0 relevance baseline")
@@ -260,5 +256,74 @@ def evaluate_lambda_candidates(
             "ties use the smaller lambda"
             if recommended is not None
             else "no positive lambda improved adaptation while passing both gates"
+        ),
+    }
+
+
+def verify_dev_lambda_selection(
+    *,
+    complete_hit_rates: Mapping[float, float],
+    selected_lambda: float,
+    margin: float = 0.01,
+) -> dict[str, Any]:
+    """Verify, but never make, the generation owner's frozen Dev lambda choice.
+
+    The team rule fixed on 2026-10-18 selects the largest positive lambda whose
+    pooled complete-evidence hit rate is no more than one absolute percentage
+    point below the lambda-zero baseline.  Correctness, adaptation and every
+    judge score are deliberately absent from this function.
+    """
+
+    if 0.0 not in complete_hit_rates:
+        raise ValueError("lambda verification requires a lambda=0 relevance baseline")
+    if selected_lambda <= 0:
+        raise ValueError("selected lambda must be positive; lambda=0 is control only")
+    if not 0 <= margin <= 1:
+        raise ValueError("lambda relevance margin must be between zero and one")
+    if any(not 0 <= value <= 1 for value in complete_hit_rates.values()):
+        raise ValueError("complete-evidence hit rates must be between zero and one")
+
+    baseline = complete_hit_rates[0.0]
+    positive = sorted(candidate for candidate in complete_hit_rates if candidate > 0)
+    if not positive:
+        raise ValueError("lambda verification requires at least one positive candidate")
+    eligible = [
+        candidate for candidate in positive if baseline - complete_hit_rates[candidate] <= margin
+    ]
+    if not eligible:
+        raise ValueError("no positive lambda passes the frozen retrieval-hit-rate rule")
+    expected = max(eligible)
+    if selected_lambda not in complete_hit_rates:
+        raise ValueError("selected lambda is absent from the supplied Dev grid")
+    if selected_lambda != expected:
+        raise ValueError(
+            f"selected lambda {selected_lambda} violates the frozen rule; expected {expected}"
+        )
+
+    rows = [
+        {
+            "lambda": candidate,
+            "complete_hit_rate": complete_hit_rates[candidate],
+            "loss_vs_lambda_zero": baseline - complete_hit_rates[candidate],
+            "passes_retrieval_rule": (
+                candidate > 0 and baseline - complete_hit_rates[candidate] <= margin
+            ),
+            "role": "control" if candidate == 0 else "candidate",
+            "selected": candidate == selected_lambda,
+        }
+        for candidate in sorted(complete_hit_rates)
+    ]
+    return {
+        "rule_version": "largest-positive-within-one-percentage-point-2026-10-18",
+        "selection_owner": "generation",
+        "verification_owner": "evaluation",
+        "lambda_zero_complete_hit_rate": baseline,
+        "absolute_margin": margin,
+        "selected_lambda": selected_lambda,
+        "candidates": rows,
+        "judge_scores_used_for_selection": False,
+        "interpretation": (
+            "verified the generation owner's largest eligible positive lambda; "
+            "lambda=0 remains the non-reranked control"
         ),
     }

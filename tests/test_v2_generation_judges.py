@@ -10,7 +10,8 @@ from cs30.evaluation.evidence_support import (
     score_evidence_support,
     validate_evidence_support_output,
 )
-from cs30.evaluation.judge_runtime import CachedJudgeRunner
+from cs30.evaluation.judge_results import assemble_judge_results
+from cs30.evaluation.judge_runtime import CachedJudgeRunner, request_cache_key
 from cs30.evaluation.level_adaptation import (
     adaptation_evaluation_levels,
     apply_adaptation_threshold,
@@ -30,9 +31,11 @@ from cs30.evaluation.v2_generation_models import (
     ExperimentArm,
     GenerationEvaluationInput,
     JudgeConfiguration,
+    JudgeResultEnvelope,
     LevelChecklist,
     LevelGuess,
     LevelProfile,
+    ProfileChecklistPackage,
 )
 
 
@@ -315,3 +318,77 @@ def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresol
     assert bad.unresolved is True
     assert bad.raw_output == {"unexpected": True}
     assert "attempt 2" in (bad.error or "")
+
+
+def test_assemble_judge_results_validates_and_reattaches_hidden_metadata() -> None:
+    item = _item()
+    configuration = _configuration()
+    profiles = [_profile(level) for level in StudentLevel]
+    checklists = [_checklist(level) for level in StudentLevel]
+    package = ProfileChecklistPackage(
+        package_version="profiles-v1",
+        generation_guidance_version="guidance-v1",
+        generation_guidance_consistency="consistent",
+        author_ids=["leader"],
+        physics_reviewer_ids=["reviewer"],
+        profiles=profiles,
+        checklists=checklists,
+        package_sha256="d" * 64,
+    )
+    adaptation_request = build_adaptation_request(item, profiles[0], checklists[0], configuration)
+    discrimination_request = build_discrimination_request(item, profiles, configuration)
+    evidence_request = build_evidence_support_request(item, configuration)
+    adaptation_output = {
+        "schema_version": "1.0",
+        "request_id": adaptation_request.request_id,
+        "criteria": [
+            {
+                "criterion_id": criterion.criterion_id,
+                "verdict": "pass",
+                "exact_quote": "A net force causes acceleration",
+                "reason": "matched",
+            }
+            for criterion in checklists[0].criteria
+        ],
+    }
+    discrimination_output = {
+        "schema_version": "1.0",
+        "request_id": discrimination_request.request_id,
+        "predicted_level": "beginner",
+        "exact_quote": "A net force causes acceleration",
+        "reason": "matched",
+    }
+    evidence_output = {
+        "schema_version": "1.0",
+        "request_id": evidence_request.request_id,
+        "claims": [
+            {
+                "claim_id": "C1",
+                "claim_text": "A net force causes acceleration",
+                "bundle_support": "supported",
+                "citation_support": "supported",
+                "supporting_evidence_ids": ["E1"],
+                "evidence_quotes": {"E1": "A net force produces acceleration"},
+                "reason": "matched",
+            }
+        ],
+    }
+    envelopes = {
+        request.request_id: JudgeResultEnvelope(
+            task=request.task,
+            request_id=request.request_id,
+            cache_key=request_cache_key(request),
+            judge_config_version=configuration.config_version,
+            output=output,
+        )
+        for request, output in (
+            (adaptation_request, adaptation_output),
+            (discrimination_request, discrimination_output),
+            (evidence_request, evidence_output),
+        )
+    }
+    result = assemble_judge_results([item], package, configuration, envelopes)
+    assert result["unresolved"] == []
+    assert result["adaptation"][0]["condition"] == "P1R1_combined"
+    assert result["discrimination"][0]["predicted_level"] == "beginner"
+    assert result["evidence_support"][0]["citation_support"] == 1.0

@@ -7,6 +7,7 @@ into these evaluation-only records and remain hash-bound to their source files.
 
 from __future__ import annotations
 
+import hashlib
 from enum import StrEnum
 from typing import Literal
 
@@ -250,6 +251,7 @@ class GenerationEvaluationInput(ContractModel):
     generation_model_family: Identifier
     generation_model_revision: Identifier
     generation_seed: int | None = None
+    prompt_sha256: str | None = None
     eligibility: PersonalisationEligibility
     evidence: list[EvaluationEvidence] = Field(default_factory=list)
     citation_ids: list[Identifier] = Field(default_factory=list)
@@ -258,6 +260,8 @@ class GenerationEvaluationInput(ContractModel):
     technical_failure: bool = False
     failure_reason: NonEmptyText | None = None
     source_artifact_sha256: str
+    source_run_sha256: str | None = None
+    answer_sha256: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -275,6 +279,12 @@ class GenerationEvaluationInput(ContractModel):
     @model_validator(mode="after")
     def validate_input(self) -> GenerationEvaluationInput:
         _validate_sha256(self.source_artifact_sha256, "source_artifact_sha256")
+        if self.source_run_sha256 is not None:
+            _validate_sha256(self.source_run_sha256, "source_run_sha256")
+        if self.prompt_sha256 is not None:
+            _validate_sha256(self.prompt_sha256, "prompt_sha256")
+        if self.answer_sha256 is not None:
+            _validate_sha256(self.answer_sha256, "answer_sha256")
         if self.technical_failure != self.source_status.is_technical_failure:
             raise ValueError("technical_failure must agree with source_status")
         if self.abstained != (self.source_status is GenerationRunStatus.ABSTAINED):
@@ -286,6 +296,13 @@ class GenerationEvaluationInput(ContractModel):
                 raise ValueError("technical failures require failure_reason")
         elif self.answer is None:
             raise ValueError("non-failure evaluation inputs require an answer")
+        expected_answer_sha256 = (
+            hashlib.sha256(self.answer.encode("utf-8")).hexdigest()
+            if self.answer is not None
+            else None
+        )
+        if self.answer_sha256 is not None and self.answer_sha256 != expected_answer_sha256:
+            raise ValueError("answer_sha256 must match the exact saved answer bytes")
         evidence_ids = [item.evidence_id for item in self.evidence]
         if len(evidence_ids) != len(set(evidence_ids)):
             raise ValueError("evidence IDs must be unique")
@@ -422,7 +439,8 @@ class EvaluationDecisionConfig(ContractModel):
     validity_threshold_version: Identifier | None = None
     correctness_noninferiority_delta: float | None = Field(default=None, ge=0.0, le=1.0)
     adaptation_pass_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
-    lambda_relevance_epsilon: float | None = Field(default=None, ge=0.0, le=1.0)
+    lambda_selection_artifact_sha256: str | None = None
+    selected_lambda: float | None = Field(default=None, gt=0.0, le=1.0)
     primary_metric: Identifier | None = None
     primary_contrast: Identifier | None = None
     multiplicity_policy: NonEmptyText | None = None
@@ -437,7 +455,8 @@ class EvaluationDecisionConfig(ContractModel):
             "validity_threshold_version": self.validity_threshold_version,
             "correctness_noninferiority_delta": self.correctness_noninferiority_delta,
             "adaptation_pass_threshold": self.adaptation_pass_threshold,
-            "lambda_relevance_epsilon": self.lambda_relevance_epsilon,
+            "lambda_selection_artifact_sha256": self.lambda_selection_artifact_sha256,
+            "selected_lambda": self.selected_lambda,
             "primary_metric": self.primary_metric,
             "primary_contrast": self.primary_contrast,
             "multiplicity_policy": self.multiplicity_policy,
@@ -448,4 +467,9 @@ class EvaluationDecisionConfig(ContractModel):
             missing.append("new_test_approved")
         if not self.scoring_plan_approved:
             missing.append("scoring_plan_approved")
+        if self.lambda_selection_artifact_sha256 is not None:
+            _validate_sha256(
+                self.lambda_selection_artifact_sha256,
+                "lambda_selection_artifact_sha256",
+            )
         return missing

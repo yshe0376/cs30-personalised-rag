@@ -28,6 +28,7 @@ def _sha(path: Path) -> str:
 
 
 def _bundle(tmp_path: Path) -> dict[str, Path]:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     paths = {
         name: tmp_path / filename
         for name, filename in {
@@ -37,10 +38,28 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
             "manifest": "run_manifest.json",
             "gold": "gold.jsonl",
             "eligibility": "eligibility.jsonl",
+            "lambda": "lambda_selection.json",
         }.items()
     }
     _write_jsonl(paths["gold"], [{"question_id": "q1", "question": "Why?"}])
     _write_jsonl(paths["eligibility"], [{"question_id": "q1", "eligibility": "full"}])
+    _write_json(
+        paths["lambda"],
+        {
+            "schema_version": "0.2",
+            "selected_on_split": "dev",
+            "lambda_weight": 0.2,
+            "objective": "largest_positive_lambda_within_1pt_of_baseline",
+            "noninferiority_margin": 0.01,
+            "gold_sha256": _sha(paths["gold"]),
+            "metrics": [
+                {"lambda_weight": 0.0, "complete_hit_rate": 0.827},
+                {"lambda_weight": 0.1, "complete_hit_rate": 0.823},
+                {"lambda_weight": 0.2, "complete_hit_rate": 0.821},
+                {"lambda_weight": 0.25, "complete_hit_rate": 0.815},
+            ],
+        },
+    )
     cases = [
         {
             "run_id": "run-plain",
@@ -86,7 +105,11 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
                 **answered,
                 "evidence": evidence,
                 "rerank_trace": None,
-                "generation_trace": {"prompt_personalised": False, "effective_level": None},
+                "generation_trace": {
+                    "prompt_personalised": False,
+                    "effective_level": None,
+                    "prompt_sha256": "a" * 64,
+                },
             },
             {
                 **failed,
@@ -99,6 +122,7 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
                 "generation_trace": {
                     "prompt_personalised": True,
                     "effective_level": "beginner",
+                    "prompt_sha256": "b" * 64,
                 },
             },
         ],
@@ -106,7 +130,12 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
     _write_json(
         paths["manifest"],
         {
-            "prepared_inputs": {"input_sha256": {"gold.jsonl": _sha(paths["gold"])}},
+            "prepared_inputs": {
+                "input_sha256": {
+                    "gold.jsonl": _sha(paths["gold"]),
+                    "lambda_selection.json": _sha(paths["lambda"]),
+                }
+            },
             "output_sha256": {
                 "expected_experiment.json": _sha(paths["expected"]),
                 "generation_records.jsonl": _sha(paths["records"]),
@@ -127,6 +156,7 @@ def test_adapter_preserves_statuses_hashes_and_chunk_citations(tmp_path: Path) -
         run_manifest_path=paths["manifest"],
         gold_path=paths["gold"],
         eligibility_path=paths["eligibility"],
+        lambda_selection_path=paths["lambda"],
     )
     assert [item.source_status.value for item in items] == ["answered", "output_truncated"]
     assert items[0].citation_ids == ["chunk-1"]
@@ -137,6 +167,11 @@ def test_adapter_preserves_statuses_hashes_and_chunk_citations(tmp_path: Path) -
     written = write_adapter_outputs(items, manifest, tmp_path / "out")
     assert written["inputs"].is_file()
     assert written["manifest"].is_file()
+    written_manifest = json.loads(written["manifest"].read_text(encoding="utf-8"))
+    assert (
+        written_manifest["output_sha256"]["generation_evaluation_inputs"]
+        == hashlib.sha256(written["inputs"].read_bytes()).hexdigest()
+    )
 
 
 def test_adapter_rejects_tampered_generation_records(tmp_path: Path) -> None:
@@ -152,6 +187,60 @@ def test_adapter_rejects_tampered_generation_records(tmp_path: Path) -> None:
             run_manifest_path=paths["manifest"],
             gold_path=paths["gold"],
             eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
+        )
+
+
+def test_adapter_identity_binds_source_run_and_exact_answer(tmp_path: Path) -> None:
+    first_paths = _bundle(tmp_path / "first")
+    second_paths = _bundle(tmp_path / "second")
+    second_manifest = json.loads(second_paths["manifest"].read_text(encoding="utf-8"))
+    second_manifest["delivery_id"] = "different-run-directory"
+    _write_json(second_paths["manifest"], second_manifest)
+
+    first, _ = adapt_m7_generation_artifacts(
+        expected_path=first_paths["expected"],
+        records_path=first_paths["records"],
+        answers_path=first_paths["answers"],
+        run_manifest_path=first_paths["manifest"],
+        gold_path=first_paths["gold"],
+        eligibility_path=first_paths["eligibility"],
+        lambda_selection_path=first_paths["lambda"],
+    )
+    second, _ = adapt_m7_generation_artifacts(
+        expected_path=second_paths["expected"],
+        records_path=second_paths["records"],
+        answers_path=second_paths["answers"],
+        run_manifest_path=second_paths["manifest"],
+        gold_path=second_paths["gold"],
+        eligibility_path=second_paths["eligibility"],
+        lambda_selection_path=second_paths["lambda"],
+    )
+    assert first[0].run_id == second[0].run_id
+    assert first[0].evaluation_id != second[0].evaluation_id
+    assert first[0].source_run_sha256 != second[0].source_run_sha256
+    assert first[0].answer_sha256 == hashlib.sha256(b"Because.").hexdigest()
+
+
+def test_adapter_rejects_lambda_selected_with_judge_independent_rule_violation(
+    tmp_path: Path,
+) -> None:
+    paths = _bundle(tmp_path)
+    selection = json.loads(paths["lambda"].read_text(encoding="utf-8"))
+    selection["lambda_weight"] = 0.1
+    _write_json(paths["lambda"], selection)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["prepared_inputs"]["input_sha256"]["lambda_selection.json"] = _sha(paths["lambda"])
+    _write_json(paths["manifest"], manifest)
+    with pytest.raises(ValueError, match="violates the frozen rule"):
+        adapt_m7_generation_artifacts(
+            expected_path=paths["expected"],
+            records_path=paths["records"],
+            answers_path=paths["answers"],
+            run_manifest_path=paths["manifest"],
+            gold_path=paths["gold"],
+            eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
         )
 
 
@@ -164,6 +253,7 @@ def test_score_import_binds_answer_hash_and_output_truncated(tmp_path: Path) -> 
         run_manifest_path=paths["manifest"],
         gold_path=paths["gold"],
         eligibility_path=paths["eligibility"],
+        lambda_selection_path=paths["lambda"],
     )
     scores = [
         {
@@ -174,8 +264,8 @@ def test_score_import_binds_answer_hash_and_output_truncated(tmp_path: Path) -> 
             "generator_model": "gpt-oss:20b",
             "split": "dev",
             "gold_sha256": manifest["gold_sha256"],
-            "rubric_sha256": None,
-            "rubric_version": None,
+            "rubric_sha256": "c" * 64,
+            "rubric_version": "correctness-v1",
             "answer_sha256": hashlib.sha256(b"Because.").hexdigest(),
             "run_status": "answered",
             "score_status": "scored",
@@ -206,7 +296,8 @@ def test_score_import_binds_answer_hash_and_output_truncated(tmp_path: Path) -> 
     score_path = tmp_path / "scores.jsonl"
     _write_jsonl(score_path, scores)
     loaded = load_open_answer_scores(score_path, items, gold_sha256=str(manifest["gold_sha256"]))
-    assert loaded["run-combined"].run_status == "output_truncated"
+    combined = next(item for item in items if item.run_id == "run-combined")
+    assert loaded[combined.evaluation_id].run_status == "output_truncated"
 
 
 def test_cli_runs_adapter_to_nonreportable_development_report(tmp_path: Path) -> None:
@@ -228,6 +319,8 @@ def test_cli_runs_adapter_to_nonreportable_development_report(tmp_path: Path) ->
                 str(paths["gold"]),
                 "--eligibility",
                 str(paths["eligibility"]),
+                "--lambda-selection",
+                str(paths["lambda"]),
                 "--output-dir",
                 str(adapted),
             ]
@@ -249,9 +342,7 @@ def test_cli_runs_adapter_to_nonreportable_development_report(tmp_path: Path) ->
         )
         == 0
     )
-    report = json.loads(
-        (report_dir / "v2_generation_evaluation.json").read_text(encoding="utf-8")
-    )
+    report = json.loads((report_dir / "v2_generation_evaluation.json").read_text(encoding="utf-8"))
     assert report["mode"] == "development"
     assert report["reportable"] is False
     assert report["automatic_full_run"]["correctness"]["denominator"] == 2
