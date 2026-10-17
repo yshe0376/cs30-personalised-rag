@@ -15,6 +15,8 @@ from cs30.v2.contracts import (
     ConceptCheckQuestionRelease,
     EvidenceBundle,
     GeneratedAnswer,
+    GenerationQuestion,
+    GoldQuestion,
     IndexArtifact,
     LearnerContextSnapshot,
     LearnerState,
@@ -138,7 +140,7 @@ class AnswerGenerator(Protocol):
 
     def generate(
         self,
-        question: str,
+        question: str | GenerationQuestion | GoldQuestion,
         profile: StudentProfile | LearnerContextSnapshot,
         evidence: EvidenceBundle,
     ) -> GeneratedAnswer: ...

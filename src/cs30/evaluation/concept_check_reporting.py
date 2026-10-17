@@ -20,6 +20,7 @@ from cs30.v2.contracts import (
     ConceptCheckEventType,
     StudentLevel,
     StudentProfile,
+    TopicRegistry,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -68,12 +69,9 @@ def load_concept_check_events(
 
 def _metrics(events: Iterable[ConceptCheckEvent]) -> AttemptMetrics:
     items = tuple(events)
-    submitted = sum(
-        event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED for event in items
-    )
+    submitted = sum(event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED for event in items)
     correct = sum(
-        event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
-        and event.performance == 1.0
+        event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED and event.performance == 1.0
         for event in items
     )
     skipped = sum(event.event_type is ConceptCheckEventType.ATTEMPT_SKIPPED for event in items)
@@ -151,16 +149,14 @@ def _group_rows(
         key = key_fn(target)
         if key is not None:
             groups[str(key)].append(event)
-    return [
-        {key_name: key, **asdict(_metrics(group))}
-        for key, group in sorted(groups.items())
-    ]
+    return [{key_name: key, **asdict(_metrics(group))} for key, group in sorted(groups.items())]
 
 
 def build_concept_check_report(
     events: Sequence[ConceptCheckEvent],
     *,
     starting_levels: Mapping[str, StudentLevel],
+    topic_registry: TopicRegistry,
     config: ConceptCheckConfig | None = None,
 ) -> dict[str, Any]:
     """Build aggregate metrics and replay-derived states without rewriting M7 rules."""
@@ -172,16 +168,14 @@ def build_concept_check_report(
     if missing:
         raise ValueError(f"missing starting level for profile(s): {', '.join(missing)}")
 
-    transitions: dict[str, dict[str, int]] = defaultdict(
-        lambda: {"promotions": 0, "demotions": 0}
-    )
+    transitions: dict[str, dict[str, int]] = defaultdict(lambda: {"promotions": 0, "demotions": 0})
     final_states: list[dict[str, Any]] = []
     for profile_id, profile_events in sorted(by_profile.items()):
         registry_versions = {event.topic_registry_version for event in profile_events}
         if len(registry_versions) != 1:
             raise ValueError(f"profile {profile_id} spans multiple Topic registry versions")
         profile = StudentProfile(profile_id=profile_id, level=starting_levels[profile_id])
-        replayer = EventReplayer(profile, next(iter(registry_versions)), config=config)
+        replayer = EventReplayer(profile, topic_registry, config=config)
         ordered = tuple(sorted(profile_events, key=lambda item: item.stream_version))
         state = replayer.replay(ordered)
         final_states.append(state.model_dump(mode="json"))
@@ -332,8 +326,7 @@ def _report_rows(report: Mapping[str, Any]) -> list[dict[str, Any]]:
     rows.extend({"group": "topic", **row} for row in report["by_topic"])
     rows.extend({"group": "difficulty", **row} for row in report["by_difficulty"])
     rows.extend(
-        {"group": "topic_and_difficulty", **row}
-        for row in report["by_topic_and_difficulty"]
+        {"group": "topic_and_difficulty", **row} for row in report["by_topic_and_difficulty"]
     )
     return rows
 
@@ -378,6 +371,12 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         required=True,
         help="Static starting level applied to every profile in this event file",
     )
+    parser.add_argument(
+        "--topic-registry",
+        type=Path,
+        required=True,
+        help="Reviewed Topic registry JSON used to validate the event stream",
+    )
     return parser.parse_args(argv)
 
 
@@ -389,6 +388,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = build_concept_check_report(
         events,
         starting_levels={profile_id: starting_level for profile_id in profiles},
+        topic_registry=TopicRegistry.model_validate_json(args.topic_registry.read_text()),
     )
     write_concept_check_report(report, args.output_directory)
     return 0
