@@ -1,0 +1,1429 @@
+{
+  "schema_version": "0.1",
+  "result_type": "open_answer_correctness_report",
+  "reportable": false,
+  "status": "DEVELOPMENT / RUBRIC AND JUDGE REQUIRE HUMAN VALIDATION",
+  "limitations": [
+    "Automatic scores are reference-based assessments, not human ground truth.",
+    "No formal evaluation approval is inferred from a successful run or review record ID.",
+    "Unresolved assessments keep their expected denominator and suppress point estimates.",
+    "Factual correctness, citation support and level adaptation remain separate metrics.",
+    "Human-subset calibration statistics do not establish population-level accuracy."
+  ],
+  "score_regime": "automatic_or_pending",
+  "by_scoring_source": {
+    "none": {
+      "total_expected": 12,
+      "eligible": 12,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 12
+      },
+      "scoring_source_counts": {
+        "none": 12
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 12,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 12
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 12,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 12
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 12,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 12
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 12,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 12,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    }
+  },
+  "provenance": {
+    "command": "score",
+    "matrix_version": "m7-v2-four-condition-0.1",
+    "input_sha256": {
+      "gold": "b1fef6db2c71649c1ff10c85547b2bd0be0460b47dba4f462d62a43e235d86c4",
+      "rubrics": "ff103ba222ce65ced1e6ab447dd1732833a8799d5f2e1b2e0dcd208b00eee62a",
+      "runs": "bbcd3598ae0f5d64556b14489fbc8f33d0d25a8c711b60445e9e7706c10a3239",
+      "expected_manifest": "4bf37b66000c0ec7d3f2bb000755da7909057edcf2fcec395431def1e4c0e4ba"
+    },
+    "provider": "none",
+    "judge_config": {
+      "model": null,
+      "temperature": null,
+      "client_type": null,
+      "endpoint_sha256": null,
+      "prompt_version": "open-answer-facts-0.1",
+      "schema": {
+        "$defs": {
+          "CriterionVerdict": {
+            "additionalProperties": false,
+            "properties": {
+              "criterion_id": {
+                "minLength": 1,
+                "title": "Criterion Id",
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "met",
+                  "missing",
+                  "contradicted",
+                  "uncertain"
+                ],
+                "title": "Verdict",
+                "type": "string"
+              },
+              "answer_quote": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Answer Quote"
+              },
+              "reason": {
+                "minLength": 1,
+                "title": "Reason",
+                "type": "string"
+              }
+            },
+            "required": [
+              "criterion_id",
+              "verdict",
+              "answer_quote",
+              "reason"
+            ],
+            "title": "CriterionVerdict",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "description": "The judge supplies observations; the program computes the numeric score.",
+        "properties": {
+          "criteria": {
+            "items": {
+              "$ref": "#/$defs/CriterionVerdict"
+            },
+            "title": "Criteria",
+            "type": "array"
+          },
+          "critical_error": {
+            "title": "Critical Error",
+            "type": "boolean"
+          },
+          "critical_error_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Error Quote"
+          },
+          "minor_error": {
+            "title": "Minor Error",
+            "type": "boolean"
+          },
+          "minor_error_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minor Error Quote"
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          },
+          "review_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Reason"
+          },
+          "rationale": {
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criteria",
+          "critical_error",
+          "critical_error_quote",
+          "minor_error",
+          "minor_error_quote",
+          "needs_review",
+          "review_reason",
+          "rationale"
+        ],
+        "title": "JudgeAssessment",
+        "type": "object"
+      },
+      "max_retries": 1,
+      "max_output_tokens": null
+    },
+    "judge_config_sha256": "4f40e2b12faf4fa6f3aa49ddbd572e9fd8f23edf3a9685c97bfb254fab85c608",
+    "allow_self_judge": false,
+    "expected_run_ids": [
+      "v2-b6995ba76aac489b14520755",
+      "v2-6a6021e1fdf23c93a07f2e8b",
+      "v2-6a3fd7b360eaf4b4fab2d5d0",
+      "v2-f9df6177ecbd123183cb73b4",
+      "v2-a12e85ca071b5cd732d63316",
+      "v2-e70d0e7b365edd69f30f49d5",
+      "v2-d02b3a2ade827a352fba6284",
+      "v2-36c3d0ff65ea21d9128bebfb",
+      "v2-ec274a09e950a392cab411da",
+      "v2-e9cf2cf3c62ec7629e347270",
+      "v2-19666a0ec971ba3ea4f8a36b",
+      "v2-029e9025fbfb54925b3d6096"
+    ],
+    "rubrics_without_review_record": [
+      "sciq-test-00024",
+      "sciq-test-00080",
+      "sciq-test-00085",
+      "sciq-test-00098",
+      "sciq-test-00116",
+      "sciq-test-00218",
+      "sciq-test-00246",
+      "sciq-test-00328",
+      "sciq-test-00333",
+      "sciq-test-00335",
+      "sciq-test-00396",
+      "sciq-test-00401",
+      "sciq-test-00432",
+      "sciq-test-00465",
+      "sciq-test-00492",
+      "sciq-test-00536",
+      "sciq-test-00540",
+      "sciq-test-00646",
+      "sciq-test-00725",
+      "sciq-test-00729",
+      "sciq-test-00770",
+      "sciq-test-00794",
+      "sciq-test-00913",
+      "sciq-test-00942",
+      "sciq-test-00955",
+      "sciq-test-00974",
+      "sciq-train-00004",
+      "sciq-train-00056",
+      "sciq-train-00058",
+      "sciq-train-00078",
+      "sciq-train-00170",
+      "sciq-train-00231",
+      "sciq-train-00264",
+      "sciq-train-00362",
+      "sciq-train-00382",
+      "sciq-train-00397",
+      "sciq-train-00412",
+      "sciq-train-00580",
+      "sciq-train-00593",
+      "sciq-train-00790",
+      "sciq-train-00797",
+      "sciq-train-00915",
+      "sciq-train-00953",
+      "sciq-train-00963",
+      "sciq-train-00971",
+      "sciq-train-01031",
+      "sciq-train-01097",
+      "sciq-train-01128",
+      "sciq-train-01144",
+      "sciq-train-01215",
+      "sciq-train-01286",
+      "sciq-train-01344",
+      "sciq-train-01435",
+      "sciq-train-01486",
+      "sciq-train-01537",
+      "sciq-train-01662",
+      "sciq-train-01931",
+      "sciq-train-01983",
+      "sciq-train-02140",
+      "sciq-train-02258",
+      "sciq-train-02266",
+      "sciq-train-02354",
+      "sciq-train-02381",
+      "sciq-train-02393",
+      "sciq-train-02484",
+      "sciq-train-02528",
+      "sciq-train-02656",
+      "sciq-train-02657",
+      "sciq-train-02662",
+      "sciq-train-02692",
+      "sciq-train-02705",
+      "sciq-train-02728",
+      "sciq-train-02746",
+      "sciq-train-02858",
+      "sciq-train-02881",
+      "sciq-train-02930",
+      "sciq-train-03125",
+      "sciq-train-03171",
+      "sciq-train-03180",
+      "sciq-train-03277",
+      "sciq-train-03308",
+      "sciq-train-03358",
+      "sciq-train-03406",
+      "sciq-train-03432",
+      "sciq-train-03493",
+      "sciq-train-03625",
+      "sciq-train-03691",
+      "sciq-train-03693",
+      "sciq-train-03743",
+      "sciq-train-03776",
+      "sciq-train-03865",
+      "sciq-train-03941",
+      "sciq-train-04113",
+      "sciq-train-04143",
+      "sciq-train-04256",
+      "sciq-train-04312",
+      "sciq-train-04566",
+      "sciq-train-04590",
+      "sciq-train-04632",
+      "sciq-train-04636",
+      "sciq-train-04691",
+      "sciq-train-04696",
+      "sciq-train-04725",
+      "sciq-train-04748",
+      "sciq-train-04773",
+      "sciq-train-04866",
+      "sciq-train-04946",
+      "sciq-train-04969",
+      "sciq-train-05093",
+      "sciq-train-05101",
+      "sciq-train-05157",
+      "sciq-train-05303",
+      "sciq-train-05355",
+      "sciq-train-05409",
+      "sciq-train-05470",
+      "sciq-train-05492",
+      "sciq-train-05691",
+      "sciq-train-05767",
+      "sciq-train-05930",
+      "sciq-train-05989",
+      "sciq-train-06027",
+      "sciq-train-06125",
+      "sciq-train-06151",
+      "sciq-train-06162",
+      "sciq-train-06336",
+      "sciq-train-06500",
+      "sciq-train-06774",
+      "sciq-train-06970",
+      "sciq-train-07169",
+      "sciq-train-07191",
+      "sciq-train-07227",
+      "sciq-train-07239",
+      "sciq-train-07276",
+      "sciq-train-07280",
+      "sciq-train-07345",
+      "sciq-train-07536",
+      "sciq-train-07578",
+      "sciq-train-07625",
+      "sciq-train-07687",
+      "sciq-train-07714",
+      "sciq-train-07765",
+      "sciq-train-07835",
+      "sciq-train-07874",
+      "sciq-train-07883",
+      "sciq-train-07886",
+      "sciq-train-07974",
+      "sciq-train-07985",
+      "sciq-train-08285",
+      "sciq-train-08318",
+      "sciq-train-08408",
+      "sciq-train-08455",
+      "sciq-train-08506",
+      "sciq-train-09014",
+      "sciq-train-09061",
+      "sciq-train-09086",
+      "sciq-train-09112",
+      "sciq-train-09140",
+      "sciq-train-09147",
+      "sciq-train-09217",
+      "sciq-train-09248",
+      "sciq-train-09311",
+      "sciq-train-09321",
+      "sciq-train-09476",
+      "sciq-train-09585",
+      "sciq-train-09630",
+      "sciq-train-09640",
+      "sciq-train-09676",
+      "sciq-train-09931",
+      "sciq-train-10006",
+      "sciq-train-10176",
+      "sciq-train-10180",
+      "sciq-train-10243",
+      "sciq-train-10262",
+      "sciq-train-10386",
+      "sciq-train-10421",
+      "sciq-train-10505",
+      "sciq-train-10613",
+      "sciq-train-10778",
+      "sciq-train-10810",
+      "sciq-train-10811",
+      "sciq-train-10899",
+      "sciq-train-10924",
+      "sciq-train-10950",
+      "sciq-train-10989",
+      "sciq-train-11044",
+      "sciq-train-11077",
+      "sciq-train-11078",
+      "sciq-train-11172"
+    ],
+    "gold_not_reviewed": [
+      "sciq-test-00024",
+      "sciq-test-00080",
+      "sciq-test-00085",
+      "sciq-test-00098",
+      "sciq-test-00116",
+      "sciq-test-00218",
+      "sciq-test-00246",
+      "sciq-test-00328",
+      "sciq-test-00333",
+      "sciq-test-00335",
+      "sciq-test-00396",
+      "sciq-test-00401",
+      "sciq-test-00432",
+      "sciq-test-00465",
+      "sciq-test-00492",
+      "sciq-test-00536",
+      "sciq-test-00540",
+      "sciq-test-00646",
+      "sciq-test-00725",
+      "sciq-test-00729",
+      "sciq-test-00770",
+      "sciq-test-00794",
+      "sciq-test-00913",
+      "sciq-test-00942",
+      "sciq-test-00955",
+      "sciq-test-00974",
+      "sciq-train-00004",
+      "sciq-train-00056",
+      "sciq-train-00058",
+      "sciq-train-00078",
+      "sciq-train-00170",
+      "sciq-train-00231",
+      "sciq-train-00264",
+      "sciq-train-00362",
+      "sciq-train-00382",
+      "sciq-train-00397",
+      "sciq-train-00412",
+      "sciq-train-00580",
+      "sciq-train-00593",
+      "sciq-train-00790",
+      "sciq-train-00797",
+      "sciq-train-00915",
+      "sciq-train-00953",
+      "sciq-train-00963",
+      "sciq-train-00971",
+      "sciq-train-01031",
+      "sciq-train-01097",
+      "sciq-train-01128",
+      "sciq-train-01144",
+      "sciq-train-01215",
+      "sciq-train-01286",
+      "sciq-train-01344",
+      "sciq-train-01435",
+      "sciq-train-01486",
+      "sciq-train-01537",
+      "sciq-train-01662",
+      "sciq-train-01931",
+      "sciq-train-01983",
+      "sciq-train-02140",
+      "sciq-train-02258",
+      "sciq-train-02266",
+      "sciq-train-02354",
+      "sciq-train-02381",
+      "sciq-train-02393",
+      "sciq-train-02484",
+      "sciq-train-02528",
+      "sciq-train-02656",
+      "sciq-train-02657",
+      "sciq-train-02662",
+      "sciq-train-02692",
+      "sciq-train-02705",
+      "sciq-train-02728",
+      "sciq-train-02746",
+      "sciq-train-02858",
+      "sciq-train-02881",
+      "sciq-train-02930",
+      "sciq-train-03125",
+      "sciq-train-03171",
+      "sciq-train-03180",
+      "sciq-train-03277",
+      "sciq-train-03308",
+      "sciq-train-03358",
+      "sciq-train-03406",
+      "sciq-train-03432",
+      "sciq-train-03493",
+      "sciq-train-03625",
+      "sciq-train-03691",
+      "sciq-train-03693",
+      "sciq-train-03743",
+      "sciq-train-03776",
+      "sciq-train-03865",
+      "sciq-train-03941",
+      "sciq-train-04113",
+      "sciq-train-04143",
+      "sciq-train-04256",
+      "sciq-train-04312",
+      "sciq-train-04566",
+      "sciq-train-04590",
+      "sciq-train-04632",
+      "sciq-train-04636",
+      "sciq-train-04691",
+      "sciq-train-04696",
+      "sciq-train-04725",
+      "sciq-train-04748",
+      "sciq-train-04773",
+      "sciq-train-04866",
+      "sciq-train-04946",
+      "sciq-train-04969",
+      "sciq-train-05093",
+      "sciq-train-05101",
+      "sciq-train-05157",
+      "sciq-train-05303",
+      "sciq-train-05355",
+      "sciq-train-05409",
+      "sciq-train-05470",
+      "sciq-train-05492",
+      "sciq-train-05691",
+      "sciq-train-05767",
+      "sciq-train-05930",
+      "sciq-train-05989",
+      "sciq-train-06027",
+      "sciq-train-06125",
+      "sciq-train-06151",
+      "sciq-train-06162",
+      "sciq-train-06336",
+      "sciq-train-06500",
+      "sciq-train-06774",
+      "sciq-train-06970",
+      "sciq-train-07169",
+      "sciq-train-07191",
+      "sciq-train-07227",
+      "sciq-train-07239",
+      "sciq-train-07276",
+      "sciq-train-07280",
+      "sciq-train-07345",
+      "sciq-train-07536",
+      "sciq-train-07578",
+      "sciq-train-07625",
+      "sciq-train-07687",
+      "sciq-train-07714",
+      "sciq-train-07765",
+      "sciq-train-07835",
+      "sciq-train-07874",
+      "sciq-train-07883",
+      "sciq-train-07886",
+      "sciq-train-07974",
+      "sciq-train-07985",
+      "sciq-train-08285",
+      "sciq-train-08318",
+      "sciq-train-08408",
+      "sciq-train-08455",
+      "sciq-train-08506",
+      "sciq-train-09014",
+      "sciq-train-09061",
+      "sciq-train-09086",
+      "sciq-train-09112",
+      "sciq-train-09140",
+      "sciq-train-09147",
+      "sciq-train-09217",
+      "sciq-train-09248",
+      "sciq-train-09311",
+      "sciq-train-09321",
+      "sciq-train-09476",
+      "sciq-train-09585",
+      "sciq-train-09630",
+      "sciq-train-09640",
+      "sciq-train-09676",
+      "sciq-train-09931",
+      "sciq-train-10006",
+      "sciq-train-10176",
+      "sciq-train-10180",
+      "sciq-train-10243",
+      "sciq-train-10262",
+      "sciq-train-10386",
+      "sciq-train-10421",
+      "sciq-train-10505",
+      "sciq-train-10613",
+      "sciq-train-10778",
+      "sciq-train-10810",
+      "sciq-train-10811",
+      "sciq-train-10899",
+      "sciq-train-10924",
+      "sciq-train-10950",
+      "sciq-train-10989",
+      "sciq-train-11044",
+      "sciq-train-11077",
+      "sciq-train-11078",
+      "sciq-train-11172"
+    ]
+  },
+  "overall": {
+    "total_expected": 12,
+    "eligible": 12,
+    "excluded_reasons": {},
+    "score_status_counts": {
+      "needs_review": 12
+    },
+    "scoring_source_counts": {
+      "none": 12
+    },
+    "score_counts": {
+      "0": 0,
+      "1": 0,
+      "2": 0
+    },
+    "open_answer_full_correct_rate_e2e": {
+      "numerator": 0,
+      "denominator": 12,
+      "value": null,
+      "lower_bound": 0.0,
+      "upper_bound": 1.0,
+      "unresolved": 12
+    },
+    "open_answer_mean_credit_e2e": {
+      "numerator": 0,
+      "denominator": 12,
+      "value": null,
+      "lower_bound": 0.0,
+      "upper_bound": 1.0,
+      "unresolved": 12
+    },
+    "open_answer_full_correct_rate_answered": {
+      "numerator": 0,
+      "denominator": 12,
+      "value": null,
+      "lower_bound": 0.0,
+      "upper_bound": 1.0,
+      "unresolved": 12
+    },
+    "scoring_coverage": {
+      "numerator": 0,
+      "denominator": 12,
+      "value": 0.0,
+      "lower_bound": 0.0,
+      "upper_bound": 0.0,
+      "unresolved": 0
+    },
+    "technical_failure_rate": {
+      "numerator": 0,
+      "denominator": 12,
+      "value": 0.0,
+      "lower_bound": 0.0,
+      "upper_bound": 0.0,
+      "unresolved": 0
+    },
+    "missing_run_count": 0,
+    "cache_hit_count": 0,
+    "judge_calls_this_run": 0
+  },
+  "groups": [
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R0_plain",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R1_reranking_only",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P1R1_combined",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R0_plain",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R1_reranking_only",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R1_combined",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R0_plain",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R1_reranking_only",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P1R1_combined",
+      "generator_model": "gpt-oss:20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "needs_review": 1
+      },
+      "scoring_source_counts": {
+        "none": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 1.0,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 0
+    }
+  ]
+}
