@@ -238,7 +238,9 @@ class OllamaChatClient:
         message = body.get("message") or {}
         text = message.get("content")
         if (not isinstance(text, str) or not text.strip()) and body.get("done_reason") != "length":
-            raise LLMEmptyResponseError("Ollama response contained no message content")
+            error = LLMEmptyResponseError("Ollama response contained no message content")
+            error.done_reason = body.get("done_reason")
+            raise error
         input_tokens = int(body.get("prompt_eval_count", 0) or 0)
         output_tokens = int(body.get("eval_count", 0) or 0)
         return LLMResponse(

@@ -467,3 +467,25 @@ def test_resume_preserves_a_mixed_parse_and_provider_failure(tmp_path):
     final = run_experiment(prepared, output, recovered, provider="synthetic", resume=True)
     assert final[0] == first[0] and not recovered.prompts
     assert not (output / "checkpoints/superseded").exists()
+
+
+def test_nontruncated_empty_ollama_response_retains_done_reason_in_trace(monkeypatch):
+    import io
+
+    from test_v2_generation_adapter import _bundle
+
+    from cs30.v2.contracts import StudentProfile
+    from cs30.v2.generation import V2AnswerGenerator, V2GenerationFailure
+
+    monkeypatch.setattr(
+        urllib.request,
+        "urlopen",
+        lambda *a, **k: io.BytesIO(b'{"message":{"content":""},"done_reason":"stop"}'),
+    )
+    generator = V2AnswerGenerator(OllamaChatClient("model"), max_retries=0)
+    with pytest.raises(V2GenerationFailure) as caught:
+        generator.generate(
+            "What is motion?", StudentProfile(profile_id="s", level="beginner"), _bundle()
+        )
+    attempt = caught.value.trace.attempts[0]
+    assert attempt.status == "provider_failure" and attempt.done_reason == "stop"

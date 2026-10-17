@@ -168,6 +168,7 @@ class V2AnswerGenerator:
                         str(exc),
                         type(exc).__name__,
                         latency_ms=(perf_counter() - started) * 1000,
+                        done_reason=getattr(exc, "done_reason", None),
                     )
                 )
                 prompt = original_prompt

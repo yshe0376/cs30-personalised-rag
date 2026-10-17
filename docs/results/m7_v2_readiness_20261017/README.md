@@ -2,7 +2,7 @@
 
 本目录记录生成与评分解耦后的开发验收，`reportable=false`。
 
-- 隔离完整测试：916 项通过，2 项可选依赖检查跳过；排除了工作区原有的 v1 contract 本地修改。
+- 隔离完整测试：917 项通过，2 项可选依赖检查跳过；排除了工作区原有的 v1 contract 本地修改。
 - M8 独立评分代码：65 项测试通过，代码另交 M8 review。
 - Ruff、差异空白检查、生成专用 wheel 构建及 wheel 内 CLI 导入通过。
 - Dev 结果目录的 Markdown 在 `core.autocrlf=true` 下保持原始字节，SHA256SUMS 全部通过。
