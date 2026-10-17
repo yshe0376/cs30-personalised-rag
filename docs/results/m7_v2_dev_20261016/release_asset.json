@@ -1,0 +1,8 @@
+{
+  "release": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-dev-20261016",
+  "asset": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-dev-20261016/m7_v2_dev_20261016.tar.gz",
+  "sha256": "284df57dbfb77f9fc44ee5df10c13c413a4c831831505d02261b52d892045974",
+  "size": 13609885,
+  "digest": "sha256:284df57dbfb77f9fc44ee5df10c13c413a4c831831505d02261b52d892045974",
+  "prerelease": true
+}

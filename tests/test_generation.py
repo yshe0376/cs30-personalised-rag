@@ -570,7 +570,7 @@ def test_ollama_client_sends_local_schema_and_reads_usage(monkeypatch) -> None:
     assert captured["url"] == "http://127.0.0.1:11434/api/chat"
     assert captured["body"]["stream"] is False
     assert captured["body"]["format"] == schema
-    assert captured["body"]["options"] == {"num_predict": 500, "temperature": 0.0}
+    assert captured["body"]["options"] == {"num_predict": 500, "temperature": 0.0, "seed": 0}
     assert captured["timeout"] == 12
     assert response.text == valid_output()
     assert response.usage == TokenUsage(input_tokens=15, output_tokens=9, total_tokens=24)

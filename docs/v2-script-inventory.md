@@ -28,7 +28,16 @@
 
 ## M1 acceptance
 
-- v2 calls only `cs30.v2.pipeline.run_build_pipeline` through `scripts/build_v2_corpus.py`.
+M7 now provides a separate generation entry:
+`cs30-experiment-v2` (`cs30.v2.experiment_cli`). It loads a published V2 corpus,
+converts M3 Gold only on explicit request, freezes native candidates and the
+four-condition matrix, reuses M7 reranking/generation, and exports saved answers
+for M8 to score independently. `scripts/fetch_v2_experiment_inputs.py` fetches pinned
+development release assets. See [M7 V2 experiments](v2-member7-experiments.md).
+This does not change M1's corpus build entry or promote development outputs.
+
+- v2 corpus builds call `cs30.v2.pipeline.run_build_pipeline` through
+  `scripts/build_v2_corpus.py`.
 - v1 `data/index`, legacy `manifest.json`, and v1 fixture loaders are not default v2 inputs.
 - Every failure has a machine-readable code and is represented in `run_report.json`; official partial builds do not publish a formal output directory.
 - The three required IDs are explicit in `cs30.v2.catalog` and both v2 config profiles; they are not selected by “take the first three” logic.
