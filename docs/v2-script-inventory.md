@@ -28,11 +28,11 @@
 
 ## M1 acceptance
 
-M7 now provides a separate generation/evaluation entry:
+M7 now provides a separate generation entry:
 `cs30-experiment-v2` (`cs30.v2.experiment_cli`). It loads a published V2 corpus,
 converts M3 Gold only on explicit request, freezes native candidates and the
-four-condition matrix, reuses M7 reranking/generation, and exports answers to
-the open-answer scorer. `scripts/fetch_v2_experiment_inputs.py` fetches pinned
+four-condition matrix, reuses M7 reranking/generation, and exports saved answers
+for M8 to score independently. `scripts/fetch_v2_experiment_inputs.py` fetches pinned
 development release assets. See [M7 V2 experiments](v2-member7-experiments.md).
 This does not change M1's corpus build entry or promote development outputs.
 

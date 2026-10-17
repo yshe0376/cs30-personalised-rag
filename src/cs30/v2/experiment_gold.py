@@ -6,10 +6,9 @@ import json
 from pathlib import Path
 
 from cs30.evaluation.models import GoldSample
-from cs30.evaluation.open_answer_cli import read_jsonl
-from cs30.evaluation.open_answer_scoring import sha256_bytes
 from cs30.v2.contracts import EvidenceSpan, EvidenceSpanBinding, GoldQuestion
 from cs30.v2.corpus import LoadedCorpus, load_corpus_records
+from cs30.v2.io import read_jsonl, sha256_bytes
 
 
 def bind_span(span: EvidenceSpan, corpus: LoadedCorpus) -> EvidenceSpanBinding:

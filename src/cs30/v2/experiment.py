@@ -1,4 +1,4 @@
-"""Frozen V2 four-condition experiments, with native evidence and offline scores.
+"""Frozen V2 four-condition generation experiments with native evidence.
 
 These are development experiments. A successful batch never promotes draft
 Gold, incomplete Role annotations, or machine assessments to formal results.
@@ -21,14 +21,7 @@ from cs30.contracts import EvidenceBundle as LegacyBundle
 from cs30.contracts import EvidenceItem as LegacyItem
 from cs30.contracts import IndexArtifact as LegacyArtifact
 from cs30.contracts import StudentProfile as LegacyProfile
-from cs30.evaluation.open_answer_cli import read_jsonl, unique_models
-from cs30.evaluation.open_answer_models import (
-    ExpectedAnswer,
-    OpenAnswerExperiment,
-    OpenAnswerRubric,
-    OpenAnswerRun,
-)
-from cs30.evaluation.open_answer_scoring import OpenAnswerScorer, canonical_hash, sha256_bytes
+from cs30.evaluation.open_answer_models import ExpectedAnswer
 from cs30.generation.client import LLMClient
 from cs30.generation.conditions import GenerationCondition
 from cs30.generation.lambda_search import load_role_label_package
@@ -47,7 +40,9 @@ from cs30.v2.corpus import LoadedCorpus, load_corpus_records
 from cs30.v2.evidence import EvidenceBundleAdapter
 from cs30.v2.experiment_checkpoint import atomic_json, load_cells, save_cell, writer_lock
 from cs30.v2.experiment_gold import bind_questions
+from cs30.v2.experiment_models import GenerationExperiment, GenerationRun
 from cs30.v2.generation import V2AnswerGenerator, V2BatchResult, V2GenerationFailure
+from cs30.v2.io import canonical_hash, read_jsonl, sha256_bytes, unique_models
 
 
 class ExperimentModel(BaseModel):
@@ -84,7 +79,7 @@ class FrozenRetrieval(ExperimentModel):
 
 
 class LambdaSelection(ExperimentModel):
-    schema_version: Literal["0.1"] = "0.1"
+    schema_version: Literal["0.2"] = "0.2"
     reportable: Literal[False] = False
     selected_on_split: Literal["dev"] = "dev"
     lambda_weight: float = Field(ge=0, le=1, allow_inf_nan=False)
@@ -97,7 +92,8 @@ class LambdaSelection(ExperimentModel):
     candidate_k: int = Field(ge=1)
     evidence_k: int = Field(ge=1)
     source_prepared_sha256: str
-    objective: Literal["complete_evidence_hit_rate_then_span_coverage_then_smaller_lambda"]
+    objective: Literal["largest_positive_lambda_within_1pt_of_baseline"]
+    noninferiority_margin: Literal[0.01] = 0.01
     metrics: list[dict]
 
     @model_validator(mode="after")
@@ -105,11 +101,12 @@ class LambdaSelection(ExperimentModel):
         if (
             not self.candidate_lambdas
             or 0 not in self.candidate_lambdas
+            or self.lambda_weight <= 0
             or self.lambda_weight not in self.candidate_lambdas
             or any(not math.isfinite(v) or not 0 <= v <= 1 for v in self.candidate_lambdas)
         ):
             raise ValueError(
-                "Dev selection requires a finite grid, zero baseline and selected member"
+                "Dev selection requires a finite grid, zero baseline and positive selected member"
             )
         return self
 
@@ -130,47 +127,6 @@ def load_v2_gold(path: Path, data: bytes | None = None) -> dict[str, GoldQuestio
     if not rows or any(row.get("schema_version") != "2.0" for row in rows):
         raise ValueError("V2 experiments require nonempty native schema_version=2.0 Gold")
     return unique_models(rows, GoldQuestion, "question_id")
-
-
-def draft_rubrics(gold: Mapping[str, GoldQuestion], gold_hash: str) -> list[OpenAnswerRubric]:
-    """Reference-bound starting points, without invented aliases or human review."""
-    result = []
-    for question in gold.values():
-        if question.options or question.answerable is not True:
-            continue
-        references = [e.span.span_id for group in question.gold_core_evidence_sets for e in group]
-        result.append(
-            OpenAnswerRubric(
-                question_id=question.question_id,
-                gold_sha256=gold_hash,
-                rubric_version="reference-draft-0.1",
-                criteria=[
-                    {
-                        "criterion_id": "main_answer",
-                        "description": (
-                            "States the central answer correctly, allowing equivalent "
-                            "wording. Do not mark a merely related fact as meeting this criterion. "
-                            f"Question: {question.question}\nReference: {question.gold_answer_text}"
-                        ),
-                        "core": True,
-                        "reference_span_ids": references,
-                    },
-                    {
-                        "criterion_id": "required_completeness",
-                        "description": (
-                            "Includes every explanation, condition, reasoning step or result that "
-                            "the question explicitly asks for and the reference evidence supports. "
-                            "Do not demand extra details: if the question only asks for a term, "
-                            "the correct term also satisfies completeness. If the main answer is "
-                            "absent, mark missing. This draft needs question-specific human review."
-                        ),
-                        "reference_span_ids": references,
-                    },
-                ],
-                required_paths=[["main_answer", "required_completeness"]],
-            )
-        )
-    return result
 
 
 def retrieve_bm25(
@@ -305,7 +261,6 @@ def prepare_experiment(
     *,
     corpus_dir: Path,
     gold_path: Path,
-    rubrics_path: Path,
     output_dir: Path,
     config: ExperimentConfig,
     role_manifest: Path | None = None,
@@ -319,7 +274,7 @@ def prepare_experiment(
     if question_limit is not None and (question_limit < 1 or config.split != "dev"):
         raise ValueError("question_limit is positive and Dev-only")
     corpus = load_corpus_records(corpus_dir)
-    gold_bytes, rubric_bytes = gold_path.read_bytes(), rubrics_path.read_bytes()
+    gold_bytes = gold_path.read_bytes()
     conversion = None
     if conversion_manifest_path:
         conversion = json.loads(conversion_manifest_path.read_bytes())
@@ -342,7 +297,6 @@ def prepare_experiment(
         for span in spans:
             if span.textbook_id not in corpus.manifest.included_textbook_ids:
                 raise ValueError("Gold evidence refers to a textbook absent from corpus")
-    rubrics = unique_models(read_jsonl(rubrics_path, rubric_bytes), OpenAnswerRubric, "question_id")
     bindings = bind_questions(gold, corpus)
     if retrieval_path:
         retrieval_bytes = retrieval_path.read_bytes()
@@ -395,10 +349,9 @@ def prepare_experiment(
             raise ValueError("selected Dev lambda differs from corpus, Gold, Roles or run settings")
     elif config.lambda_policy == "dev_selected":
         raise ValueError("dev_selected policy requires the saved Dev selection artifact")
-    matrix = OpenAnswerExperiment(
-        matrix_version="m7-v2-four-condition-0.1",
+    matrix = GenerationExperiment(
+        matrix_version="m7-v2-four-condition-0.2",
         gold_sha256=sha256_bytes(gold_bytes),
-        rubrics_sha256=sha256_bytes(rubric_bytes),
         cases=[
             ExpectedAnswer(
                 run_id="v2-"
@@ -415,8 +368,6 @@ def prepare_experiment(
             for condition in GenerationCondition
         ],
     )
-    # Full matrix preflight, without any model calls. Missing records here are intentional.
-    OpenAnswerScorer().score(matrix, all_gold, rubrics, {})
     label_rows = [
         {"chunk_id": key, "roles": [r.value for r in value.roles], "source": value.source}
         for key, value in sorted(labels.items())
@@ -424,7 +375,6 @@ def prepare_experiment(
     ]
     payloads = {
         "gold.jsonl": gold_bytes,
-        "rubrics.jsonl": rubric_bytes,
         "retrieval.jsonl": jsonl_bytes(results),
         "config.json": (config.model_dump_json(indent=2) + "\n").encode(),
         "expected_experiment.json": (matrix.model_dump_json(indent=2) + "\n").encode(),
@@ -437,7 +387,7 @@ def prepare_experiment(
         "gold_conversion.json": (json.dumps(conversion) + "\n").encode(),
     }
     manifest = {
-        "schema_version": "0.1",
+        "schema_version": "0.2",
         "result_type": "m7_v2_prepared_experiment",
         "reportable": False,
         "split": config.split,
@@ -453,7 +403,7 @@ def prepare_experiment(
         "lambda_source": config.lambda_policy,
         "profile_policy": "controlled_static_levels_with_explicit_confidence",
         "limitations": [
-            "Development result; no formal Gold, rubric, or Test approval inferred.",
+            "Development result; no formal Gold or Test approval inferred.",
             "Only a saved Dev selection artifact establishes Dev-selected lambda; "
             "no selection or tuning occurs on Test.",
             "Role gaps fall back to retrieval scores and prevent interpreting reranking effects.",
@@ -470,17 +420,16 @@ def prepare_experiment(
 
 def load_prepared(
     directory: Path,
-) -> tuple[dict, ExperimentConfig, OpenAnswerExperiment, dict, dict, dict, dict]:
+) -> tuple[dict, ExperimentConfig, GenerationExperiment, dict, dict, dict]:
     manifest = json.loads((directory / "input_manifest.json").read_text(encoding="utf-8"))
     if (
         manifest.get("result_type") != "m7_v2_prepared_experiment"
-        or manifest.get("schema_version") != "0.1"
+        or manifest.get("schema_version") != "0.2"
         or manifest.get("reportable") is not False
     ):
         raise ValueError("unsupported prepared experiment manifest")
     required = {
         "gold.jsonl",
-        "rubrics.jsonl",
         "retrieval.jsonl",
         "config.json",
         "expected_experiment.json",
@@ -504,18 +453,10 @@ def load_prepared(
         selection = LambdaSelection.model_validate(selection_data)
         if selection.lambda_weight != config.lambda_weight:
             raise ValueError("prepared lambda weight differs from the saved Dev selection")
-    matrix = OpenAnswerExperiment.model_validate_json(snapshots["expected_experiment.json"])
-    if (
-        matrix.gold_sha256 != hashes["gold.jsonl"]
-        or matrix.rubrics_sha256 != hashes["rubrics.jsonl"]
-    ):
-        raise ValueError("matrix Gold/rubric hashes differ from prepared inputs")
+    matrix = GenerationExperiment.model_validate_json(snapshots["expected_experiment.json"])
+    if matrix.gold_sha256 != hashes["gold.jsonl"]:
+        raise ValueError("matrix Gold hash differs from prepared inputs")
     gold = load_v2_gold(directory / "gold.jsonl", snapshots["gold.jsonl"])
-    rubrics = unique_models(
-        read_jsonl(directory / "rubrics.jsonl", snapshots["rubrics.jsonl"]),
-        OpenAnswerRubric,
-        "question_id",
-    )
     retrieval = unique_models(
         read_jsonl(directory / "retrieval.jsonl", snapshots["retrieval.jsonl"]),
         FrozenRetrieval,
@@ -556,8 +497,7 @@ def load_prepared(
     for qid, item in retrieval.items():
         if gold[qid].split.value != config.split or item.retrieval.query != gold[qid].question:
             raise ValueError("prepared split or query differs from Gold")
-    OpenAnswerScorer().score(matrix, gold, rubrics, {})
-    return manifest, config, matrix, gold, rubrics, retrieval, labels
+    return manifest, config, matrix, gold, retrieval, labels
 
 
 def rerank_retrieval(
@@ -614,7 +554,7 @@ def rerank_retrieval(
 
 def select_dev_lambda(prepared_dir: Path, candidates: list[float]) -> LambdaSelection:
     """Use complete OR-of-AND Gold evidence hits, never a union of partial spans."""
-    manifest, config, matrix, gold, _, retrieval, labels = load_prepared(prepared_dir)
+    manifest, config, matrix, gold, retrieval, labels = load_prepared(prepared_dir)
     if config.split != "dev":
         raise ValueError("lambda selection is Dev-only; Test tuning is forbidden")
     if not manifest["role_coverage_complete"] or manifest["role_provenance"] is None:
@@ -677,10 +617,17 @@ def select_dev_lambda(prepared_dir: Path, candidates: list[float]) -> LambdaSele
                 "cases": rows,
             }
         )
-    best = min(
-        metrics,
-        key=lambda m: (-m["complete_hit_rate"], -m["mean_span_coverage"], m["lambda_weight"]),
-    )
+    baseline = next(m for m in metrics if m["lambda_weight"] == 0)
+    eligible = [
+        m
+        for m in metrics
+        if m["lambda_weight"] > 0 and m["complete_hit_rate"] >= baseline["complete_hit_rate"] - 0.01
+    ]
+    if not eligible:
+        raise ValueError(
+            "no positive lambda satisfies the 1 percentage point noninferiority margin"
+        )
+    best = max(eligible, key=lambda m: m["lambda_weight"])
     corpus = json.loads((prepared_dir / "corpus_manifest.json").read_text(encoding="utf-8"))
     return LambdaSelection(
         lambda_weight=best["lambda_weight"],
@@ -693,12 +640,22 @@ def select_dev_lambda(prepared_dir: Path, candidates: list[float]) -> LambdaSele
         candidate_k=config.candidate_k,
         evidence_k=config.evidence_k,
         source_prepared_sha256=canonical_hash(manifest),
-        objective="complete_evidence_hit_rate_then_span_coverage_then_smaller_lambda",
+        objective="largest_positive_lambda_within_1pt_of_baseline",
         metrics=metrics,
     )
 
 
-def _runtime_row(record: OpenAnswerRun, details: dict) -> dict:
+def retryable_provider_failure(record: GenerationRun, details: dict) -> bool:
+    """A citation/parse failure mixed with an outage is not a pure provider outage."""
+    attempts = (details.get("generation_trace") or {}).get("attempts", [])
+    return (
+        record.status == "generation_error"
+        and bool(attempts)
+        and all(a.get("status") == "provider_failure" for a in attempts)
+    )
+
+
+def _runtime_row(record: GenerationRun, details: dict) -> dict:
     trace = details.get("generation_trace")
     usage = trace["usage"] if trace else {}
     return {
@@ -719,14 +676,16 @@ def run_experiment(
     client: LLMClient,
     *,
     provider: str,
-    progress: Callable[[int, int, OpenAnswerRun], None] | None = None,
+    progress: Callable[[int, int, GenerationRun, dict], None] | None = None,
     resume: bool = False,
-) -> list[OpenAnswerRun]:
+) -> list[GenerationRun]:
     if output_dir.exists() and not resume:
         raise ValueError("output directory already exists; use --resume or a new directory")
     if resume and not output_dir.is_dir():
         raise ValueError("resume requires an existing experiment directory")
-    _, config, *_ = load_prepared(prepared_dir)
+    _, config, matrix, *_ = load_prepared(prepared_dir)
+    if config.lambda_weight == 0 and any("R1" in c.condition_id for c in matrix.cases):
+        raise ValueError("lambda_weight == 0 cannot run an R1 matrix; select a positive Dev lambda")
     if client.model != config.generator_model:
         raise ValueError("generation client model differs from prepared experiment")
     output_dir.mkdir(parents=True, exist_ok=resume)
@@ -761,11 +720,11 @@ def _run_experiment(
     client: LLMClient,
     *,
     provider: str,
-    progress: Callable[[int, int, OpenAnswerRun], None] | None = None,
+    progress: Callable[[int, int, GenerationRun, dict], None] | None = None,
     resume: bool = False,
-) -> list[OpenAnswerRun]:
+) -> list[GenerationRun]:
     """Checkpoint every cell. Failures remain records in the expected denominator."""
-    manifest, config, matrix, gold, _, retrieval, labels = load_prepared(prepared_dir)
+    manifest, config, matrix, gold, retrieval, labels = load_prepared(prepared_dir)
     if client.model != config.generator_model:
         raise ValueError("generation client model differs from prepared experiment")
     package_root = files("cs30")
@@ -774,6 +733,8 @@ def _run_experiment(
         for relative in (
             "v2/experiment.py",
             "v2/experiment_checkpoint.py",
+            "v2/experiment_models.py",
+            "v2/io.py",
             "v2/generation.py",
             "v2/generation_prompt.py",
             "v2/evidence.py",
@@ -807,6 +768,7 @@ def _run_experiment(
         context_window=getattr(client, "context_window", None),
         model_digest=getattr(client, "model_digest", None),
         timeout_seconds=getattr(client, "timeout_seconds", None),
+        seed=getattr(client, "seed", None),
     )
     checkpoint_dir = output_dir / "checkpoints"
     if resume:
@@ -823,6 +785,12 @@ def _run_experiment(
         if json.loads(expected_path.read_bytes()) != matrix.model_dump(mode="json"):
             raise ValueError("resume expected matrix differs from the original run")
         completed = load_cells(checkpoint_dir, matrix.cases)
+        for run_id, (record, details) in list(completed.items()):
+            if retryable_provider_failure(record, details):
+                from cs30.v2.experiment_checkpoint import supersede_cell
+
+                supersede_cell(checkpoint_dir, run_id)
+                del completed[run_id]
         requested_manifest.update(resume_count=existing.get("resume_count", 0) + 1)
     else:
         checkpoint_dir.mkdir()
@@ -878,13 +846,13 @@ def _run_experiment(
                 except Exception as exc:
                     # Malformed provider response objects must not discard later cells.
                     result = None
-                    record = OpenAnswerRun(
+                    record = GenerationRun(
                         **cell.model_dump(),
                         status="generation_error",
                         error=f"{type(exc).__name__}: {exc}",
                     )
                 if result is not None:
-                    record = OpenAnswerRun.from_v2_result(cell, result)
+                    record = GenerationRun.from_v2_result(cell, result)
                 generation_trace = result.trace if result else generator.last_trace
                 details = {
                     **cell.model_dump(mode="json"),
@@ -894,6 +862,7 @@ def _run_experiment(
                     "evidence": bundle.model_dump(mode="json"),
                     "rerank_trace": rerank_trace,
                     "generation_trace": asdict(generation_trace) if generation_trace else None,
+                    "status": record.status,
                     "error": record.error,
                     "answer": record.answer.model_dump(mode="json") if record.answer else None,
                 }
@@ -906,7 +875,7 @@ def _run_experiment(
             answer_file.write(record.model_dump_json() + "\n")
             answer_file.flush()
             if progress and cell.run_id not in completed:
-                progress(len(records), len(matrix.cases), record)
+                progress(len(records), len(matrix.cases), record, details)
     groups = []
     for condition in GenerationCondition:
         for level in config.levels:
@@ -925,6 +894,7 @@ def _run_experiment(
                     "answered": sum(row["status"] == "answered" for row in rows),
                     "abstained": sum(row["status"] == "abstained" for row in rows),
                     "technical_failures": sum(row["status"] == "generation_error" for row in rows),
+                    "output_truncated": sum(row["status"] == "output_truncated" for row in rows),
                     "model_calls": sum(row["model_calls"] for row in rows),
                     "mean_cell_call_latency_ms": sum(times) / len(times) if times else None,
                     "input_tokens": sum(row["input_tokens"] for row in rows),
@@ -946,15 +916,15 @@ def _run_experiment(
     )
     (output_dir / "generation_report.md").write_text(
         "# V2 批量生成运行报告\n\n"
-        "开发实验，reportable=false。正确性报告在 scoring/open_answer_report.md。\n\n"
+        "开发实验，reportable=false。生成产物交给 M8 独立评分。\n\n"
         f"预定 {len(matrix.cases)} 个实验单元，保存 {len(records)} 个。"
         f"Role 候选覆盖完整：{manifest['role_coverage_complete']}。\n\n"
-        "| 条件 | 等级 | 预定 | 回答 | 拒答 | 技术失败 | 模型调用 |\n"
-        "|---|---|---:|---:|---:|---:|---:|\n"
+        "| 条件 | 等级 | 预定 | 回答 | 拒答 | 技术失败 | 输出截断 | 模型调用 |\n"
+        "|---|---|---:|---:|---:|---:|---:|---:|\n"
         + "".join(
             f"| {g['condition_id']} | {g['student_level']} | {g['expected']} | "
             f"{g['answered']} | {g['abstained']} | {g['technical_failures']} | "
-            f"{g['model_calls']} |\n"
+            f"{g['output_truncated']} | {g['model_calls']} |\n"
             for g in groups
         )
         + "\n耗时、用量及引用数量见 generation_summary.json；完整证据和原始模型输出见 "
@@ -969,6 +939,7 @@ def _run_experiment(
             "status": "completed",
             "completed_cells": len(records),
             "technical_failures": sum(r.status == "generation_error" for r in records),
+            "output_truncated": sum(r.status == "output_truncated" for r in records),
             "output_sha256": {
                 name: sha256_bytes((output_dir / name).read_bytes())
                 for name in (

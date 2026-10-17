@@ -36,6 +36,7 @@ class V2GenerationAttempt:
     latency_ms: float = 0.0
     response_id: str | None = None
     provider_latency_ms: float | None = None
+    done_reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,7 @@ class V2GenerationTrace:
     prompt_version: str | None = None
     prompt_personalised: bool = False
     effective_level: StudentLevel | None = None
+    citation_id_map: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -67,6 +69,10 @@ class V2GenerationFailure(Exception):
     def __init__(self, message: str, trace: V2GenerationTrace) -> None:
         super().__init__(message)
         self.trace = trace
+
+
+class V2OutputTruncated(ValueError):
+    """The provider ran out of output tokens; this is not a service outage."""
 
 
 class V2CitationFailure(ValueError):
@@ -110,6 +116,7 @@ class V2AnswerGenerator:
                 usage += attempt.usage
             return V2GenerationTrace(
                 model=self.client.model,
+                citation_id_map=dict(adapter.citation_ids),
                 prompt_sha256=prompt_sha256,
                 profile_source=profile_source,
                 corpus_version=provenance.corpus_version if provenance else None,
@@ -147,7 +154,7 @@ class V2AnswerGenerator:
         prompt = original_prompt
         prompt_hash = hashlib.sha256(original_prompt.encode("utf-8")).hexdigest()
         records: list[V2GenerationAttempt] = []
-        allowed = set(chunk_ids)
+        allowed = set(adapter.citation_ids)
         for number in range(1, self.max_retries + 2):
             started = perf_counter()
             try:
@@ -168,7 +175,11 @@ class V2AnswerGenerator:
             elapsed_ms = (perf_counter() - started) * 1000
             raw = response.text
             try:
+                if getattr(response, "done_reason", None) == "length":
+                    raise V2OutputTruncated("provider exhausted the output token budget")
                 payload = parse_answer_payload(raw)
+                if not set(payload.citations).issubset(allowed):
+                    raise V2CitationFailure("answer cited an ID outside the input evidence E1-En")
                 if request.kind == "multiple_choice" and payload.final_choice is None:
                     raise LLMOutputValidationError(
                         "multiple-choice answers require final_choice A-D"
@@ -176,10 +187,8 @@ class V2AnswerGenerator:
                 answer = GeneratedAnswer(
                     final_choice=payload.final_choice,
                     explanation=payload.explanation,
-                    citations=tuple(payload.citations),
+                    citations=tuple(adapter.citation_ids[c] for c in payload.citations),
                 )
-                if not set(answer.citations).issubset(allowed):
-                    raise V2CitationFailure("answer cited a chunk outside the input EvidenceBundle")
                 records.append(
                     V2GenerationAttempt(
                         number,
@@ -189,13 +198,23 @@ class V2AnswerGenerator:
                         latency_ms=elapsed_ms,
                         provider_latency_ms=response.latency_ms,
                         response_id=response.response_id,
+                        done_reason=getattr(response, "done_reason", None),
                     )
                 )
                 self.last_trace = trace(tuple(records), prompt_sha256=prompt_hash)
                 return answer
-            except (LLMOutputValidationError, V2CitationFailure, ValidationError) as exc:
+            except (
+                LLMOutputValidationError,
+                V2CitationFailure,
+                V2OutputTruncated,
+                ValidationError,
+            ) as exc:
                 status = (
-                    "citation_failure" if isinstance(exc, V2CitationFailure) else "invalid_output"
+                    "output_truncated"
+                    if isinstance(exc, V2OutputTruncated)
+                    else "citation_failure"
+                    if isinstance(exc, V2CitationFailure)
+                    else "invalid_output"
                 )
                 records.append(
                     V2GenerationAttempt(
@@ -208,6 +227,7 @@ class V2AnswerGenerator:
                         latency_ms=elapsed_ms,
                         provider_latency_ms=response.latency_ms,
                         response_id=response.response_id,
+                        done_reason=getattr(response, "done_reason", None),
                     )
                 )
                 if number <= self.max_retries:

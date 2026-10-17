@@ -8,9 +8,10 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from cs30.evaluation.open_answer_models import ExpectedAnswer, OpenAnswerRun
-from cs30.evaluation.open_answer_scoring import canonical_hash
+from cs30.evaluation.open_answer_models import ExpectedAnswer
 from cs30.v2.contracts import EvidenceBundle
+from cs30.v2.experiment_models import GenerationRun
+from cs30.v2.io import canonical_hash
 
 
 @contextmanager
@@ -72,7 +73,7 @@ def checkpoint_name(run_id: str) -> str:
     return canonical_hash(run_id) + ".json"
 
 
-def save_cell(directory: Path, record: OpenAnswerRun, details: dict) -> None:
+def save_cell(directory: Path, record: GenerationRun, details: dict) -> None:
     path = directory / checkpoint_name(record.run_id)
     if path.exists():
         raise ValueError("refusing to replace a completed experiment cell")
@@ -84,7 +85,7 @@ def save_cell(directory: Path, record: OpenAnswerRun, details: dict) -> None:
 
 def load_cells(
     directory: Path, expected: list[ExpectedAnswer]
-) -> dict[str, tuple[OpenAnswerRun, dict]]:
+) -> dict[str, tuple[GenerationRun, dict]]:
     if not directory.is_dir():
         raise ValueError("this older run has no resumable per-cell checkpoints")
     by_name = {checkpoint_name(cell.run_id): cell for cell in expected}
@@ -98,7 +99,7 @@ def load_cells(
             "payload_sha256"
         ):
             raise ValueError("checkpoint content hash mismatch")
-        record = OpenAnswerRun.model_validate(value["record"])
+        record = GenerationRun.model_validate(value["record"])
         details = value["details"]
         expected_cell = by_name[path.name]
         for field in ExpectedAnswer.model_fields:
@@ -116,3 +117,20 @@ def load_cells(
             raise ValueError("checkpoint citations differ from saved evidence")
         result[record.run_id] = (record, details)
     return result
+
+
+def supersede_cell(directory: Path, run_id: str) -> None:
+    """Atomically retain the failed attempt before making the cell runnable again."""
+    import uuid
+
+    source = directory / checkpoint_name(run_id)
+    archive = directory / "superseded"
+    archive.mkdir(exist_ok=True)
+    os.replace(source, archive / (source.stem + "-" + uuid.uuid4().hex + ".json"))
+    if os.name != "nt":
+        for parent in (directory, archive):
+            descriptor = os.open(parent, os.O_RDONLY)
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)

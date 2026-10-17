@@ -37,8 +37,7 @@ lambda=0.35 为固定探索参数；confidence=1 为控制实验输入，不是�
   重排轨迹、提示词摘要、调用耗时与用量。
 - `generation_summary.json` / `generation_report.md`：运行汇总。
 - `run_manifest.json`：输入/实现/输出摘要和完成状态。
-- `scoring/`：未决状态、覆盖率和评分报告；未伪造语义或人工判断。
-  提交的 CSV 仅将换行统一为 LF，记录内容保持一致。
+- 历史 `scoring/` 未决报告已随评分工作拆到 M8 的独立 review PR；生成文件字节不变。
 
 另一次先行接线运行也完成了 12/12 个真实单元，耗时合计约 89.17 秒；
 其原始输出在本地 `artifacts/v2-experiment-real-smoke/`。

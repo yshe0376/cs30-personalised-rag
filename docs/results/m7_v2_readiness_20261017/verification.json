@@ -1,0 +1,34 @@
+{
+  "m7_isolated_tests": {
+    "passed": 916,
+    "skipped": 2
+  },
+  "m8_handoff_tests": {
+    "passed": 65
+  },
+  "real_smoke": {
+    "cells": 12,
+    "answered": 12,
+    "technical_failures": 0,
+    "output_truncated": 0,
+    "model_calls": 12,
+    "lambda_weight": 0.2,
+    "seed": 0,
+    "citation_mapping_verified": true
+  },
+  "legacy_prompt_audit": {
+    "P0_identical_R0_R1": 486,
+    "P1_identical_R0_R1": 486,
+    "pairs_per_P": 486,
+    "failed_cells_first_attempt_citation_failure": 14
+  },
+  "full_dev_preparation": {
+    "questions": 162,
+    "cells": 1944,
+    "lambda_weight": 0.2,
+    "role_coverage_complete": true,
+    "model_run_completed": false
+  },
+  "wheel_and_windows_result_bytes": "passed",
+  "reportable": false
+}

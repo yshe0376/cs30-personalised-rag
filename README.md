@@ -196,8 +196,8 @@ python -m cs30.pipeline --mode real --provider ollama --model gpt-oss:20b \
 
 ### Member 7 smoke delivery
 
-For native V2 four-condition batches, open-ended scoring, Dev-only lambda
-selection and blind calibration materials, use
+For native V2 four-condition generation, positive Dev-only lambda selection
+and the independent M8 scoring handoff, use
 [the V2 M7 experiment guide](docs/v2-member7-experiments.md).
 
 The [complete 2026-10-16 Dev run](docs/results/m7_v2_dev_20261016/README.md)

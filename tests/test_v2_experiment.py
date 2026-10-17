@@ -4,17 +4,13 @@ import csv
 import json
 
 import pytest
-from test_open_answer_scoring import gold as example_gold
 from test_v2_corpus_records import build_corpus
 
-from cs30.evaluation.open_answer_models import HumanRating, OpenAnswerRun
-from cs30.evaluation.open_answer_packets import import_rating_form, write_review_packet
-from cs30.evaluation.open_answer_scoring import sha256_bytes
 from cs30.generation.client import LLMResponse, TokenUsage
+from cs30.v2.contracts import GoldQuestion
 from cs30.v2.corpus import load_corpus_records
 from cs30.v2.experiment import (
     ExperimentConfig,
-    draft_rubrics,
     jsonl_bytes,
     load_prepared,
     load_v2_gold,
@@ -24,6 +20,44 @@ from cs30.v2.experiment import (
 )
 from cs30.v2.experiment_cli import main
 from cs30.v2.experiment_gold import bind_span, convert_m3_gold
+from cs30.v2.io import sha256_bytes
+
+
+def example_gold():
+    text = "Deceleration is acceleration opposite to velocity and reduces speed."
+    return GoldQuestion(
+        question_id="q1",
+        question="What term describes acceleration that reduces speed?",
+        gold_answer_text="deceleration",
+        answerable=True,
+        gold_core_evidence_sets=[
+            [
+                {
+                    "span": {
+                        "span_id": "s1",
+                        "textbook_id": "book",
+                        "chapter_id": "2",
+                        "chapter_char_start": 0,
+                        "chapter_char_end": len(text),
+                        "verbatim_text": text,
+                        "origin_corpus_version": "v2-test",
+                    },
+                    "sufficiency": "core_sufficient",
+                }
+            ]
+        ],
+        question_difficulty="easy",
+        question_type="definition",
+        concept_group="motion",
+        personalisation_eligibility="pending",
+        eligibility_reason="fixture",
+        split="dev",
+        corpus_version="v2-test",
+        parser_version="fixture",
+        gold_annotation_version="fixture",
+        annotation_status="reviewed",
+        review_record_id="fixture-review",
+    )
 
 
 class Client:
@@ -80,9 +114,8 @@ def inputs(tmp_path):
     gold_path = tmp_path / "gold.jsonl"
     data = jsonl_bytes([question])
     gold_path.write_bytes(data)
-    rubrics = draft_rubrics({question.question_id: question}, sha256_bytes(data))
     rubric_path = tmp_path / "rubrics.jsonl"
-    rubric_path.write_bytes(jsonl_bytes(rubrics))
+    rubric_path.write_text("unused rubric; scoring is separate", encoding="utf-8")
     return corpus_dir, gold_path, rubric_path
 
 
@@ -95,7 +128,6 @@ def prepare(tmp_path, **updates):
     prepare_experiment(
         corpus_dir=corpus_dir,
         gold_path=gold_path,
-        rubrics_path=rubric_path,
         output_dir=destination,
         config=config,
     )
@@ -104,7 +136,7 @@ def prepare(tmp_path, **updates):
 
 def test_native_batch_preserves_conditions_inputs_traces_and_gold_isolation(tmp_path):
     prepared = prepare(tmp_path)
-    manifest, _, matrix, _, _, retrieval, _ = load_prepared(prepared)
+    manifest, _, matrix, _, retrieval, _ = load_prepared(prepared)
     assert len(matrix.cases) == 12
     assert manifest["role_coverage_complete"] is False
     assert retrieval["q1"].retrieval.provenance.corpus_hash
@@ -116,7 +148,8 @@ def test_native_batch_preserves_conditions_inputs_traces_and_gold_isolation(tmp_
     assert all(r.status == "answered" for r in runs[1:])
     assert all("GOLD_SENTINEL" not in prompt for prompt in client.prompts)
     details = [
-        json.loads(line) for line in (output / "generation_records.jsonl").read_text().splitlines()
+        json.loads(line)
+        for line in (output / "generation_records.jsonl").read_text(encoding="utf-8").splitlines()
     ]
     assert {tuple(row["input_candidate_ids"]) for row in details} == {
         tuple(h.chunk_id for h in retrieval["q1"].retrieval.hits)
@@ -126,11 +159,11 @@ def test_native_batch_preserves_conditions_inputs_traces_and_gold_isolation(tmp_
         assert row["generation_trace"]["prompt_personalised"] == personalised
         assert (row["rerank_trace"] is not None) == ("R1" in row["condition_id"])
         assert row["evidence"]["retrieval_provenance"]["corpus_hash"]
-    summary = json.loads((output / "generation_summary.json").read_text())
+    summary = json.loads((output / "generation_summary.json").read_text(encoding="utf-8"))
     assert sum(g["expected"] for g in summary["groups"]) == 12
     assert sum(g["technical_failures"] for g in summary["groups"]) == 1
     assert sum(g["input_tokens"] for g in summary["groups"]) == 110
-    run_manifest = json.loads((output / "run_manifest.json").read_text())
+    run_manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
     assert run_manifest["status"] == "completed" and run_manifest["reportable"] is False
     assert all(
         sha256_bytes((output / name).read_bytes()) == digest
@@ -138,7 +171,7 @@ def test_native_batch_preserves_conditions_inputs_traces_and_gold_isolation(tmp_
     )
 
 
-def test_cli_run_writes_pending_report_without_silent_semantic_scores(tmp_path, monkeypatch):
+def test_cli_run_hands_off_without_scoring(tmp_path, monkeypatch):
     prepared = prepare(tmp_path)
     monkeypatch.setattr("cs30.v2.experiment_cli._client", lambda *args: Client())
     output = tmp_path / "run"
@@ -154,12 +187,13 @@ def test_cli_run_writes_pending_report_without_silent_semantic_scores(tmp_path, 
                 "ollama",
             ]
         )
-        == 3
+        == 0
     )
-    report = json.loads((output / "scoring/open_answer_summary.json").read_text())
-    assert report["overall"]["total_expected"] == 12
-    assert report["overall"]["open_answer_full_correct_rate_e2e"]["value"] is None
-    assert report["overall"]["score_status_counts"] == {"needs_review": 12}
+    assert not (output / "scoring").exists()
+    matrix = json.loads((output / "expected_experiment.json").read_bytes())
+    assert "rubrics_sha256" not in matrix
+    assert (output / "saved_answers.jsonl").exists()
+    assert (output / "generation_records.jsonl").exists()
 
 
 @pytest.mark.parametrize(
@@ -202,7 +236,6 @@ def test_missing_roles_need_explicit_diagnostic_opt_in(tmp_path):
         prepare_experiment(
             corpus_dir=corpus,
             gold_path=gold,
-            rubrics_path=rubric,
             output_dir=output,
             config=ExperimentConfig(generator_model=Client.model),
         )
@@ -225,9 +258,9 @@ def test_invalid_configuration_rejected(update):
         ExperimentConfig(generator_model=Client.model, **update)
 
 
-def test_stale_gold_and_wrong_rubric_hash_rejected(tmp_path):
+def test_stale_gold_rejected(tmp_path):
     corpus, gold, rubric = inputs(tmp_path)
-    raw = json.loads(gold.read_text())
+    raw = json.loads(gold.read_text(encoding="utf-8"))
     raw["corpus_version"] = "old-version"
     gold.write_text(json.dumps(raw) + "\n")
     config = ExperimentConfig(generator_model=Client.model, allow_missing_roles=True)
@@ -235,20 +268,11 @@ def test_stale_gold_and_wrong_rubric_hash_rejected(tmp_path):
         prepare_experiment(
             corpus_dir=corpus,
             gold_path=gold,
-            rubrics_path=rubric,
             output_dir=tmp_path / "prepared",
             config=config,
         )
     raw["corpus_version"] = load_corpus_records(corpus).manifest.corpus_version
     gold.write_text(json.dumps(raw) + "\n")
-    with pytest.raises(ValueError, match="rubric Gold hash"):
-        prepare_experiment(
-            corpus_dir=corpus,
-            gold_path=gold,
-            rubrics_path=rubric,
-            output_dir=tmp_path / "prepared",
-            config=config,
-        )
 
 
 def test_old_gold_is_not_implicitly_converted(tmp_path):
@@ -264,7 +288,6 @@ def test_test_sampling_limit_is_forbidden(tmp_path):
         prepare_experiment(
             corpus_dir=corpus,
             gold_path=gold,
-            rubrics_path=rubric,
             output_dir=tmp_path / "prepared",
             question_limit=1,
             config=ExperimentConfig(generator_model=Client.model, split="test"),
@@ -274,7 +297,10 @@ def test_test_sampling_limit_is_forbidden(tmp_path):
 def test_supplied_v2_retrieval_cannot_change_chunk_text(tmp_path):
     prepared = prepare(tmp_path)
     corpus = next(tmp_path.glob("artifacts/v2/textbooks/records"))
-    records = [json.loads(line) for line in (prepared / "retrieval.jsonl").read_text().splitlines()]
+    records = [
+        json.loads(line)
+        for line in (prepared / "retrieval.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
     records[0]["retrieval"]["hits"][0]["text"] = "A malicious replacement"
     path = tmp_path / "supplied.jsonl"
     path.write_text("".join(json.dumps(row) + "\n" for row in records))
@@ -282,7 +308,6 @@ def test_supplied_v2_retrieval_cannot_change_chunk_text(tmp_path):
         prepare_experiment(
             corpus_dir=corpus,
             gold_path=prepared / "gold.jsonl",
-            rubrics_path=prepared / "rubrics.jsonl",
             output_dir=tmp_path / "again",
             config=ExperimentConfig(generator_model=Client.model, allow_missing_roles=True),
             retrieval_path=path,
@@ -351,7 +376,6 @@ def test_role_annotation_roundtrip_binds_matching_corpus_and_candidates(tmp_path
     result = prepare_experiment(
         corpus_dir=corpus,
         gold_path=gold,
-        rubrics_path=rubric,
         output_dir=tmp_path / "prepared",
         role_manifest=role_dir / "role_manifest.json",
         config=ExperimentConfig(generator_model=Client.model),
@@ -361,104 +385,6 @@ def test_role_annotation_roundtrip_binds_matching_corpus_and_candidates(tmp_path
         result["role_provenance"]["corpus_version"]
         == load_corpus_records(corpus).manifest.corpus_version
     )
-
-
-def test_blind_packet_and_completed_rating_import(tmp_path):
-    prepared = prepare(tmp_path)
-    _, _, _, gold, rubrics, _, _ = load_prepared(prepared)
-    runs = run_experiment(prepared, tmp_path / "run", Client(), provider="synthetic")
-    packet_dir = tmp_path / "packet"
-    admin = write_review_packet(gold, rubrics, runs, packet_dir, question_count=1)
-    assert admin["item_count"] == 12
-    items = (packet_dir / "rater_items.jsonl").read_text()
-    assert all(
-        word not in items
-        for word in [
-            Client.model,
-            "P0R0",
-            "P1R1",
-            "beginner",
-            "intermediate",
-            "advanced",
-            "scoring_source",
-        ]
-    )
-    form = packet_dir / "rating_form.csv"
-    ratings_path = tmp_path / "actual_ratings.jsonl"
-    with pytest.raises(ValueError, match="actual"):
-        import_rating_form(packet_dir, form, ratings_path, rater_id="rater-A")
-    assert not ratings_path.exists()
-    with form.open(newline="") as stream:
-        rows = list(csv.DictReader(stream))
-    for row in rows:
-        row.update(score="2", note="Synthetic test rating, not a real human assessment.")
-    with form.open("w", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=["item_id", "score", "note"])
-        writer.writeheader()
-        writer.writerows(rows)
-    result = import_rating_form(packet_dir, form, ratings_path, rater_id="synthetic-rater-A")
-    assert len(result) == 12
-    assert all(isinstance(r, HumanRating) and r.score == 2 for r in result)
-    assert {r.run_id for r in result} == {r.run_id for r in runs}
-
-
-def test_review_sampling_is_question_clustered_and_excludes_test(tmp_path):
-    prepared = prepare(tmp_path)
-    _, _, _, gold, rubrics, _, _ = load_prepared(prepared)
-    runs = run_experiment(prepared, tmp_path / "run", Client(), provider="synthetic")
-    # Validate updates directly so enum fields match production input.
-    from cs30.v2.contracts import GoldQuestion
-
-    test_question = GoldQuestion.model_validate(
-        gold["q1"].model_dump(mode="json") | {"question_id": "test-q", "split": "test"}
-    )
-    gold["test-q"] = test_question
-    test_run = OpenAnswerRun(
-        **(runs[0].model_dump() | {"run_id": "test-run", "question_id": "test-q"})
-    )
-    a = write_review_packet(gold, rubrics, runs + [test_run], tmp_path / "a", question_count=1)
-    b = write_review_packet(gold, rubrics, runs, tmp_path / "b", question_count=1)
-    assert a == b
-    assert (tmp_path / "a/rater_items.jsonl").read_bytes() == (
-        tmp_path / "b/rater_items.jsonl"
-    ).read_bytes()
-
-
-def test_draft_rubrics_never_invent_human_approval_or_fast_match_answers(tmp_path):
-    _, gold, _ = inputs(tmp_path)
-    output = tmp_path / "draft.jsonl"
-    assert main(["rubrics", "--gold", str(gold), "--output", str(output)]) == 0
-    draft = json.loads(output.read_text())
-    assert draft["review_record_id"] is None
-    assert draft["full_credit_answers"] == [] and draft["numeric_target"] is None
-    assert len(draft["criteria"]) == 2
-    assert main(["rubrics", "--gold", str(gold), "--output", str(output)]) == 2
-
-
-def test_judge_identity_fails_before_any_generation(tmp_path, monkeypatch):
-    prepared = prepare(tmp_path)
-    client = Client()
-    monkeypatch.setattr("cs30.v2.experiment_cli._client", lambda *args: client)
-    output = tmp_path / "run"
-    assert (
-        main(
-            [
-                "run",
-                "--prepared-dir",
-                str(prepared),
-                "--output-dir",
-                str(output),
-                "--provider",
-                "ollama",
-                "--judge-provider",
-                "ollama",
-                "--judge-model",
-                client.model,
-            ]
-        )
-        == 2
-    )
-    assert not client.prompts and not output.exists()
 
 
 def raw_m3(native):
@@ -503,7 +429,7 @@ def raw_m3(native):
 
 def test_explicit_m3_conversion_preserves_original_coordinates_and_audits_split_mapping(tmp_path):
     corpus, gold, _ = inputs(tmp_path)
-    native = json.loads(gold.read_text())
+    native = json.loads(gold.read_text(encoding="utf-8"))
     raw = raw_m3(native)
     raw.update(split="pending", corpus_version="original-m3-corpus")
     source = tmp_path / "raw.jsonl"
@@ -511,7 +437,7 @@ def test_explicit_m3_conversion_preserves_original_coordinates_and_audits_split_
     before = source.read_bytes()
     output = tmp_path / "converted"
     audit = convert_m3_gold(source, corpus, output, split_mapping={"pending": "dev"})
-    result = json.loads((output / "gold.jsonl").read_text())
+    result = json.loads((output / "gold.jsonl").read_text(encoding="utf-8"))
     assert result["split"] == "dev" and audit["original_evaluation_splits"] == {"q1": "pending"}
     assert result["source_corpus_version"] == "original-m3-corpus"
     assert result["gold_answer_text"] == raw["gold_answer_text"]
@@ -527,12 +453,15 @@ def test_explicit_m3_conversion_preserves_original_coordinates_and_audits_split_
 
 def test_conversion_rejects_unknown_block_and_preserves_split_by_default(tmp_path):
     corpus, gold, _ = inputs(tmp_path)
-    raw = raw_m3(json.loads(gold.read_text()))
+    raw = raw_m3(json.loads(gold.read_text(encoding="utf-8")))
     raw["split"] = "pending"
     source = tmp_path / "raw.jsonl"
     source.write_text(json.dumps(raw) + "\n")
     convert_m3_gold(source, corpus, tmp_path / "converted")
-    assert json.loads((tmp_path / "converted/gold.jsonl").read_text())["split"] == "pending"
+    assert (
+        json.loads((tmp_path / "converted/gold.jsonl").read_text(encoding="utf-8"))["split"]
+        == "pending"
+    )
     raw["gold_core_evidence_sets"][0][0]["block_id"] = "unknown-block"
     source.write_text(json.dumps(raw) + "\n")
     with pytest.raises(ValueError, match="unique target"):
@@ -607,21 +536,17 @@ def test_dev_lambda_is_reusable_on_test_without_tuning_or_crossing_input_version
     )
     data = jsonl_bytes([first, second])
     gold_path.write_bytes(data)
-    rubric_path.write_bytes(
-        jsonl_bytes(draft_rubrics({"q1": first, "q2": second}, sha256_bytes(data)))
-    )
     role_manifest = annotate_roles(corpus, gold_path, tmp_path)
     destination = tmp_path / "dev"
     prepare_experiment(
         corpus_dir=corpus,
         gold_path=gold_path,
-        rubrics_path=rubric_path,
         output_dir=destination,
         role_manifest=role_manifest,
         config=ExperimentConfig(generator_model=Client.model),
     )
     selection = select_dev_lambda(destination, [0.5, 0, 0.2])
-    assert selection.lambda_weight == 0  # all candidates are in top-5; ties choose smaller lambda
+    assert selection.lambda_weight == 0.5  # largest positive candidate within the margin
     assert selection.selected_on_split == "dev" and selection.reportable is False
     path = tmp_path / "selected.json"
     path.write_text(selection.model_dump_json())
@@ -634,7 +559,6 @@ def test_dev_lambda_is_reusable_on_test_without_tuning_or_crossing_input_version
     prepare_experiment(
         corpus_dir=corpus,
         gold_path=gold_path,
-        rubrics_path=rubric_path,
         output_dir=tmp_path / "test",
         role_manifest=role_manifest,
         config=test_config,
@@ -646,7 +570,6 @@ def test_dev_lambda_is_reusable_on_test_without_tuning_or_crossing_input_version
         prepare_experiment(
             corpus_dir=corpus,
             gold_path=gold_path,
-            rubrics_path=rubric_path,
             output_dir=tmp_path / "changed",
             role_manifest=role_manifest,
             config=test_config.model_copy(update={"profile_confidence": 0.5}),
@@ -659,7 +582,7 @@ def test_lambda_requires_zero_baseline_and_complete_roles(tmp_path):
     with pytest.raises(ValueError, match="complete candidate"):
         select_dev_lambda(prepared, [0, 0.5])
     # Use real fixture annotations only for this synthetic test.
-    corpus, gold, rubric = (
+    corpus, gold, _rubric = (
         next(tmp_path.glob("artifacts/v2/textbooks/records")),
         tmp_path / "gold.jsonl",
         tmp_path / "rubrics.jsonl",
@@ -668,7 +591,6 @@ def test_lambda_requires_zero_baseline_and_complete_roles(tmp_path):
     prepare_experiment(
         corpus_dir=corpus,
         gold_path=gold,
-        rubrics_path=rubric,
         output_dir=tmp_path / "complete",
         role_manifest=roles,
         config=ExperimentConfig(generator_model=Client.model),
@@ -678,71 +600,12 @@ def test_lambda_requires_zero_baseline_and_complete_roles(tmp_path):
             select_dev_lambda(tmp_path / "complete", values)
 
 
-def test_full_cli_pipeline_with_independent_judge_and_real_report_shapes(tmp_path, monkeypatch):
-    prepared = prepare(tmp_path)
-    generator = Client()
-
-    class Judge:
-        model = "independent-synthetic-judge"
-        temperature = 0.0
-
-        def complete(self, prompt, text_format):
-            data = {
-                "criteria": [
-                    {
-                        "criterion_id": name,
-                        "verdict": "met",
-                        "answer_quote": "Force and motion.",
-                        "reason": "Synthetic observation",
-                    }
-                    for name in ("main_answer", "required_completeness")
-                ],
-                "critical_error": False,
-                "critical_error_quote": None,
-                "minor_error": False,
-                "minor_error_quote": None,
-                "needs_review": False,
-                "review_reason": None,
-                "rationale": "Synthetic test only",
-            }
-            return LLMResponse(json.dumps(data), self.model, TokenUsage(), None, 0)
-
-    monkeypatch.setattr(
-        "cs30.v2.experiment_cli._client",
-        lambda provider, model, *args: generator if model == Client.model else Judge(),
-    )
-    monkeypatch.setattr(
-        "cs30.evaluation.open_answer_cli.OllamaChatClient", lambda *a, **kw: Judge()
-    )
-    output = tmp_path / "run"
-    assert (
-        main(
-            [
-                "run",
-                "--prepared-dir",
-                str(prepared),
-                "--output-dir",
-                str(output),
-                "--provider",
-                "ollama",
-                "--judge-provider",
-                "ollama",
-                "--judge-model",
-                Judge.model,
-            ]
-        )
-        == 0
-    )
-    report = json.loads((output / "scoring/open_answer_summary.json").read_text())
-    assert report["reportable"] is False
-    assert report["overall"]["score_counts"]["2"] == 12
-    assert report["overall"]["open_answer_full_correct_rate_e2e"]["value"] == 1
-    assert len(generator.prompts) == 12
-
-
 def test_empty_real_retrieval_abstains_without_model_calls_and_keeps_all_cells(tmp_path):
     prepared = prepare(tmp_path)
-    rows = [json.loads(line) for line in (prepared / "retrieval.jsonl").read_text().splitlines()]
+    rows = [
+        json.loads(line)
+        for line in (prepared / "retrieval.jsonl").read_text(encoding="utf-8").splitlines()
+    ]
     rows[0]["retrieval"]["hits"] = []
     frozen = tmp_path / "empty.jsonl"
     frozen.write_text("".join(json.dumps(row) + "\n" for row in rows))
@@ -750,7 +613,6 @@ def test_empty_real_retrieval_abstains_without_model_calls_and_keeps_all_cells(t
     prepare_experiment(
         corpus_dir=next(tmp_path.glob("artifacts/v2/textbooks/records")),
         gold_path=prepared / "gold.jsonl",
-        rubrics_path=prepared / "rubrics.jsonl",
         output_dir=destination,
         retrieval_path=frozen,
         config=ExperimentConfig(generator_model=Client.model),
@@ -779,12 +641,59 @@ def test_malformed_provider_response_is_recorded_and_next_cells_continue(tmp_pat
 def test_incomplete_matrix_and_wrong_role_coverage_metadata_are_rejected(tmp_path):
     prepared = prepare(tmp_path)
     path = prepared / "expected_experiment.json"
-    matrix = json.loads(path.read_text())
+    matrix = json.loads(path.read_text(encoding="utf-8"))
     matrix["cases"].pop()
     path.write_text(json.dumps(matrix))
     manifest_path = prepared / "input_manifest.json"
-    manifest = json.loads(manifest_path.read_text())
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["input_sha256"][path.name] = sha256_bytes(path.read_bytes())
     manifest_path.write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match="cross product"):
         load_prepared(prepared)
+
+
+def test_zero_lambda_r1_matrix_is_rejected_before_calls(tmp_path):
+    prepared = prepare(tmp_path, lambda_weight=0)
+    client = Client()
+    with pytest.raises(ValueError, match="lambda_weight == 0"):
+        run_experiment(prepared, tmp_path / "run", client, provider="synthetic")
+    assert not client.prompts and not (tmp_path / "run").exists()
+
+
+def test_generation_cli_does_not_import_offline_evaluator(tmp_path):
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import sys
+for name in ("open_answer_scoring", "open_answer_cli",
+             "open_answer_packets", "open_answer_reporting"):
+    sys.modules["cs30.evaluation." + name] = None
+from cs30.v2.experiment_cli import parser
+assert {"rubrics", "review-packet", "import-ratings"}.isdisjoint(
+    parser()._subparsers._group_actions[0].choices)
+""",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_lambda_selection_refuses_a_zero_only_grid(tmp_path):
+    corpus, gold, _ = inputs(tmp_path)
+    roles = annotate_roles(corpus, gold, tmp_path)
+    prepared = tmp_path / "complete"
+    prepare_experiment(
+        corpus_dir=corpus,
+        gold_path=gold,
+        output_dir=prepared,
+        role_manifest=roles,
+        config=ExperimentConfig(generator_model=Client.model),
+    )
+    with pytest.raises(ValueError, match="no positive lambda"):
+        select_dev_lambda(prepared, [0])

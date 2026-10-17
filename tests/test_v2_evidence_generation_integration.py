@@ -84,7 +84,7 @@ def test_builder_generation_and_validator_share_one_evidence_set() -> None:
             {
                 "final_choice": "A",
                 "explanation": "The supplied evidence links force and acceleration.",
-                "citations": ["chunk-force", "chunk-acceleration"],
+                "citations": ["E1", "E2"],
             }
         )
     )
@@ -107,7 +107,7 @@ def test_builder_generation_and_validator_share_one_evidence_set() -> None:
     assert generator.last_trace.corpus_hash == provenance.corpus_hash
     assert generator.last_trace.prompt_sha256 == hashlib.sha256(prompt.encode("utf-8")).hexdigest()
     for item in bundle.evidence_items:
-        assert item.chunk_id in prompt
+        assert item.chunk_id not in prompt
         assert item.text in prompt
         assert item.source_locator in prompt
     assert validated.citation_status == "passed"
@@ -138,7 +138,7 @@ def test_cached_prompt_context_cannot_add_model_evidence() -> None:
             {
                 "final_choice": "A",
                 "explanation": "Force changes motion.",
-                "citations": ["chunk-force"],
+                "citations": ["E1"],
             }
         )
     )
@@ -150,6 +150,7 @@ def test_cached_prompt_context_cannot_add_model_evidence() -> None:
     )
 
     assert answer.citations == ("chunk-force",)
-    assert "chunk-force" in client.prompts[0]
+    assert "chunk-force" not in client.prompts[0]
+    assert "E1" in client.prompts[0]
     assert "hidden-chunk" not in client.prompts[0]
     assert "Hidden evidence" not in client.prompts[0]

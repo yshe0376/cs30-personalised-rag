@@ -41,7 +41,9 @@ def test_download_extract_and_verified_reuse(tmp_path, monkeypatch):
     module, calls = downloader(monkeypatch)
     manifest = module.fetch(tmp_path)
     assert len(calls) == 3 and manifest["reportable"] is False
-    assert (tmp_path / "corpus-release/records.jsonl").read_text() == "synthetic records"
+    assert (tmp_path / "corpus-release/records.jsonl").read_text(
+        encoding="utf-8"
+    ) == "synthetic records"
     assert module.fetch(tmp_path) == manifest
     assert len(calls) == 3
 
@@ -53,7 +55,7 @@ def test_changed_download_and_extracted_corpus_are_not_overwritten(tmp_path, mon
     records.write_text("changed")
     with pytest.raises(ValueError, match="differs from pinned"):
         module.fetch(tmp_path)
-    assert records.read_text() == "changed"
+    assert records.read_text(encoding="utf-8") == "changed"
     (tmp_path / "gold_v0_1_1_integrated.jsonl").write_text("changed gold")
     with pytest.raises(ValueError, match="SHA-256 mismatch"):
         module.fetch(tmp_path)

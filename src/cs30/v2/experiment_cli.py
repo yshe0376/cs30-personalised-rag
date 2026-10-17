@@ -1,4 +1,4 @@
-"""Prepare, check, run and score native V2 four-condition development batches."""
+"""Prepare, check and run native V2 four-condition generation batches."""
 
 from __future__ import annotations
 
@@ -7,15 +7,9 @@ import csv
 import json
 import math
 import sys
-import uuid
 from datetime import date
 from pathlib import Path
 
-from cs30.evaluation.open_answer_cli import main as scoring_main
-from cs30.evaluation.open_answer_cli import read_jsonl, unique_models
-from cs30.evaluation.open_answer_models import OpenAnswerRun
-from cs30.evaluation.open_answer_packets import import_rating_form, write_review_packet
-from cs30.evaluation.open_answer_scoring import OpenAnswerScorer, sha256_bytes
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 from cs30.generation.reranking import EvidenceRole
 from cs30.v2.corpus import load_corpus_records
@@ -23,26 +17,22 @@ from cs30.v2.errors import V2Error
 from cs30.v2.experiment import (
     ExperimentConfig,
     LambdaSelection,
-    draft_rubrics,
-    jsonl_bytes,
     load_prepared,
     load_v2_gold,
     prepare_experiment,
     retrieve_bm25,
+    retryable_provider_failure,
     run_experiment,
     select_dev_lambda,
     write_json,
 )
-from cs30.v2.experiment_checkpoint import atomic_json
 from cs30.v2.experiment_gold import convert_m3_gold
+from cs30.v2.io import sha256_bytes
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
     commands = result.add_subparsers(dest="command", required=True)
-    rubrics = commands.add_parser("rubrics", help="draft reference-bound rubrics for review")
-    rubrics.add_argument("--gold", type=Path, required=True)
-    rubrics.add_argument("--output", type=Path, required=True)
     convert = commands.add_parser("convert-gold", help="explicit, verified M3-to-V2 conversion")
     convert.add_argument("--gold", type=Path, required=True)
     convert.add_argument("--corpus-dir", type=Path, required=True)
@@ -54,7 +44,7 @@ def parser() -> argparse.ArgumentParser:
         help="explicit JSON provisional-label to Dev/Test mapping, recorded in audit",
     )
     prepare = commands.add_parser("prepare", help="freeze and validate the complete experiment")
-    for name in ("corpus-dir", "gold", "rubrics", "output-dir"):
+    for name in ("corpus-dir", "gold", "output-dir"):
         prepare.add_argument(f"--{name}", type=Path, required=True)
     prepare.add_argument("--model", required=True)
     prepare.add_argument("--split", choices=("dev", "test"), default="dev")
@@ -91,7 +81,7 @@ def parser() -> argparse.ArgumentParser:
     select.add_argument("--prepared-dir", type=Path, required=True)
     select.add_argument("--lambdas", type=float, nargs="+", default=[0, 0.1, 0.2, 0.35, 0.5])
     select.add_argument("--output", type=Path, required=True)
-    run = commands.add_parser("run", help="run the model and write offline correctness reports")
+    run = commands.add_parser("run", help="generate answers and traces for independent M8 scoring")
     run.add_argument("--prepared-dir", type=Path, required=True)
     run.add_argument("--output-dir", type=Path, required=True)
     run.add_argument("--provider", choices=("ollama", "openai"), required=True)
@@ -107,21 +97,7 @@ def parser() -> argparse.ArgumentParser:
         default=0,
         help="stop after this many consecutive new technical failures; zero disables",
     )
-    run.add_argument("--judge-provider", choices=("none", "ollama", "openai"), default="none")
-    run.add_argument("--judge-model")
-    run.add_argument("--judge-cache-dir", type=Path)
-    run.add_argument("--allow-self-judge", action="store_true")
-    packet = commands.add_parser("review-packet", help="export blind Dev question clusters")
-    packet.add_argument("--prepared-dir", type=Path, required=True)
-    packet.add_argument("--runs", type=Path, required=True)
-    packet.add_argument("--output-dir", type=Path, required=True)
-    packet.add_argument("--question-count", type=int, default=10)
-    packet.add_argument("--seed", type=int, default=0)
-    ratings = commands.add_parser("import-ratings", help="import a completed human CSV")
-    ratings.add_argument("--packet-dir", type=Path, required=True)
-    ratings.add_argument("--form", type=Path, required=True)
-    ratings.add_argument("--rater-id", required=True)
-    ratings.add_argument("--output", type=Path, required=True)
+    run.add_argument("--seed", type=int, default=0, help="pinned Ollama random seed")
     roles = commands.add_parser("role-template", help="export candidate chunks with blank Roles")
     roles.add_argument("--corpus-dir", type=Path, required=True)
     roles.add_argument("--gold", type=Path, required=True)
@@ -165,14 +141,6 @@ def main(argv: list[str] | None = None) -> int:
             _new_file(args.output, (selection.model_dump_json(indent=2) + "\n").encode())
             print(f"Dev-selected lambda: {selection.lambda_weight}; development result only.")
             return 0
-        if args.command == "rubrics":
-            data = args.gold.read_bytes()
-            rubrics = draft_rubrics(load_v2_gold(args.gold, data), sha256_bytes(data))
-            if not rubrics:
-                raise ValueError("Gold has no answerable open-ended questions")
-            _new_file(args.output, jsonl_bytes(rubrics))
-            print(f"Wrote {len(rubrics)} DRAFT rubrics; human review has not occurred.")
-            return 0
         if args.command == "prepare":
             selection = (
                 LambdaSelection.model_validate_json(args.selected_lambda.read_bytes())
@@ -193,7 +161,6 @@ def main(argv: list[str] | None = None) -> int:
             summary = prepare_experiment(
                 corpus_dir=args.corpus_dir,
                 gold_path=args.gold,
-                rubrics_path=args.rubrics,
                 output_dir=args.output_dir,
                 config=config,
                 role_manifest=args.role_manifest,
@@ -204,8 +171,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             print(json.dumps(summary, ensure_ascii=False))
             return 0
-        if args.command in {"check", "run", "review-packet"}:
-            manifest, config, matrix, gold, rubrics, _, _ = load_prepared(args.prepared_dir)
+        if args.command in {"check", "run"}:
+            manifest, config, matrix, gold, _, _ = load_prepared(args.prepared_dir)
             if args.command == "check":
                 print(
                     json.dumps(
@@ -216,39 +183,18 @@ def main(argv: list[str] | None = None) -> int:
                             "expected_runs": len(matrix.cases),
                             "role_coverage_complete": manifest["role_coverage_complete"],
                             "model": config.generator_model,
-                            "rubrics_without_review": sum(
-                                r.review_record_id is None for r in rubrics.values()
-                            ),
                             "model_connection_checked": False,
                         },
                         ensure_ascii=False,
                     )
                 )
                 return 0
-            if args.command == "review-packet":
-                runs = unique_models(read_jsonl(args.runs), OpenAnswerRun, "run_id")
-                OpenAnswerScorer().score(matrix, gold, rubrics, runs)
-                packet = write_review_packet(
-                    gold,
-                    rubrics,
-                    list(runs.values()),
-                    args.output_dir,
-                    question_count=args.question_count,
-                    seed=args.seed,
-                )
-                print(f"Prepared {packet['item_count']} blind Dev items; no human ratings filled.")
-                return 0
             if args.output_dir.exists() and not args.resume:
                 raise ValueError("output directory already exists")
             if not math.isfinite(args.timeout) or args.timeout <= 0 or args.max_output_tokens < 1:
                 raise ValueError("timeout and token limit must be finite and positive")
-            if (args.judge_provider != "none") != bool(args.judge_model):
-                raise ValueError("judge provider and model must be supplied together")
-            if args.judge_model == config.generator_model and not args.allow_self_judge:
-                raise ValueError("same-model judging needs explicit exploratory opt-in")
-            # Fail missing credentials and invalid judge configuration before generation.
-            if args.judge_provider != "none":
-                _client(args.judge_provider, args.judge_model, args.timeout, args.max_output_tokens)
+            if config.lambda_weight == 0:
+                raise ValueError("lambda_weight == 0 cannot run an R1 matrix")
             client = _client(
                 args.provider, config.generator_model, args.timeout, args.max_output_tokens
             )
@@ -256,21 +202,23 @@ def main(argv: list[str] | None = None) -> int:
                 if args.provider != "ollama" or args.context_window <= args.max_output_tokens + 512:
                     raise ValueError("context-window requires Ollama and room for output/framing")
                 client.context_window = args.context_window
+            if args.provider == "ollama":
+                client.seed = args.seed
             if callable(getattr(client, "pin_model", None)):
                 client.pin_model()
             if args.stop_after_errors < 0:
                 raise ValueError("stop-after-errors must be nonnegative")
             consecutive_errors = 0
 
-            def progress(done, total, record):
+            def progress(done, total, record, details):
                 nonlocal consecutive_errors
                 print(f"V2 generation {done}/{total}: {record.status}", flush=True)
                 consecutive_errors = (
-                    consecutive_errors + 1 if record.status == "generation_error" else 0
+                    consecutive_errors + 1 if retryable_provider_failure(record, details) else 0
                 )
                 if args.stop_after_errors and consecutive_errors >= args.stop_after_errors:
                     raise ValueError(
-                        "stopped after consecutive generation errors; inspect and resume"
+                        "stopped after consecutive provider failures; inspect and resume"
                     )
 
             runs = run_experiment(
@@ -281,68 +229,8 @@ def main(argv: list[str] | None = None) -> int:
                 resume=args.resume,
                 progress=progress,
             )
-            score_output = args.output_dir / "scoring"
-            if args.resume and score_output.exists():
-                summary_path = score_output / "open_answer_summary.json"
-                score_manifest_path = score_output / "run_manifest.json"
-                if summary_path.exists() and score_manifest_path.exists():
-                    previous = json.loads(score_manifest_path.read_bytes())
-                    summary = json.loads(summary_path.read_bytes())
-                    if (
-                        previous.get("input_sha256", {}).get("runs")
-                        == sha256_bytes((args.output_dir / "saved_answers.jsonl").read_bytes())
-                        and previous.get("provider") == args.judge_provider
-                        and previous.get("judge_config", {}).get("model") == args.judge_model
-                        and (score_output / "open_answer_scores.jsonl").exists()
-                        and (score_output / "open_answer_report.md").exists()
-                    ):
-                        print("Generation and matching scoring reports already complete.")
-                        pending = any(
-                            summary["overall"]["score_status_counts"].get(k, 0)
-                            for k in ("needs_review", "judge_error", "missing_run")
-                        )
-                        return (
-                            3 if pending or any(r.status == "generation_error" for r in runs) else 0
-                        )
-                score_output = args.output_dir / ("scoring-recovery-" + uuid.uuid4().hex[:8])
-            score_args = [
-                "score",
-                "--gold",
-                str(args.prepared_dir / "gold.jsonl"),
-                "--rubrics",
-                str(args.prepared_dir / "rubrics.jsonl"),
-                "--expected-manifest",
-                str(args.prepared_dir / "expected_experiment.json"),
-                "--runs",
-                str(args.output_dir / "saved_answers.jsonl"),
-                "--output-dir",
-                str(score_output),
-                "--provider",
-                args.judge_provider,
-                "--timeout",
-                str(args.timeout),
-                "--max-output-tokens",
-                str(args.max_output_tokens),
-            ]
-            if args.judge_model:
-                score_args += ["--model", args.judge_model]
-            if args.judge_cache_dir:
-                score_args += ["--cache-dir", str(args.judge_cache_dir)]
-            if args.allow_self_judge:
-                score_args += ["--allow-self-judge"]
-            exit_code = scoring_main(score_args)
-            manifest_path = args.output_dir / "run_manifest.json"
-            state = json.loads(manifest_path.read_bytes())
-            state["scoring_directory"] = score_output.name
-            atomic_json(manifest_path, state)
-            print(f"Saved {len(runs)} V2 cells and scoring report to {args.output_dir}")
-            return exit_code or (3 if any(r.status == "generation_error" for r in runs) else 0)
-        if args.command == "import-ratings":
-            imported = import_rating_form(
-                args.packet_dir, args.form, args.output, rater_id=args.rater_id
-            )
-            print(f"Imported {len(imported)} supplied human ratings.")
-            return 0
+            print(f"Saved {len(runs)} V2 cells to {args.output_dir}; hand off to M8 for scoring.")
+            return 3 if any(r.status not in {"answered", "abstained"} for r in runs) else 0
         corpus = load_corpus_records(args.corpus_dir)
         if args.command == "role-template":
             if args.output.exists() or args.candidate_k < 1:

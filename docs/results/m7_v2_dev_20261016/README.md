@@ -10,10 +10,10 @@
 - [生成运行报告](generation_report.md)：按条件、等级汇总回答、失败和调用次数。
 - [全部保存答案](saved_answers.jsonl)：1,944 条，包括 14 条技术失败。
 - [失败详情](generation_failures.jsonl)：14 条失败的原始响应、每次尝试和允许引用的编号。
-- [评分状态报告](scoring/open_answer_report.md) / [汇总 CSV](scoring/open_answer_summary.csv)。
+- 历史评分状态保存在下述完整归档的 `output/scoring/`；评分代码和单独报告已拆给 M8 review。
 - [运行清单](run_manifest.json) / [执行摘要](execution_metadata.json)：代码、输入、模型和输出指纹。
 - [运行结束核查](verification.json) / [交付包核查](delivery_verification.json)。
-- [完整压缩包](m7_v2_dev_20261016.tar.gz)：约 13 MiB，解压后包含冻结输入、完整原始
+- [完整压缩包（GitHub pre-release）](https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-dev-20261016/m7_v2_dev_20261016.tar.gz)：约 13 MiB，解压后包含冻结输入、完整原始
   生成记录、1,944 个断点文件、全部评分状态文件和四轮执行日志。
 - [压缩包内文件清单](archive_inventory.json) / [交付文件 SHA-256](SHA256SUMS)。
 
@@ -36,12 +36,12 @@
 | lambda / confidence | Dev 选择的 lambda=0 / 控制输入 confidence=1 |
 | 模型调用 | 1,980 次，包括失败与修复尝试 |
 | 开始 / 完成 | 2026-10-16 11:21:22 / 15:54:20，Australia/Sydney（UTC+11） |
-| 断点恢复 | 3 次；已保存单元保留原值，未完成单元继续执行 |
+| 续跑 | 3 次；三次都是停机阈值被触发后继续，已保存单元保留原值 |
 
 四个条件分别为 `P0R0_plain`、`P1R0_prompt_only`、`P0R1_reranking_only`、
 `P1R1_combined`，三个等级为 beginner / intermediate / advanced。
 Dev 的证据命中目标选择了 lambda=0，因此 R0/R1 使用相同的检索顺序；
-本结果不能支持重排带来改善的结论。Role 包主要由模型标注，未完成独立人工验证。
+在每个 P 设置下，R0 与 R1 的 prompt 摘要均完全相同（486/486），本结果不能支持重排带来改善的结论。Role 包主要由模型标注，未完成独立人工验证。
 Rubric 仍为参考答案生成的草稿，尚未通过真人校准或团队冻结。
 
 ## 14 条失败
@@ -53,9 +53,9 @@ Rubric 仍为参考答案生成的草稿，尚未通过真人校准或团队冻�
 | `sciq-train-07169` | 2 |
 | `sciq-train-10613` | 10 |
 
-按最后一次尝试分类，8 条是引用不属于输入证据，6 条是 provider 返回空内容。
+14 个失败单元的第一次尝试全部是模型抄错 chunk ID。按最后一次尝试分类，8 条是引用不属于输入证据，6 条是 provider 返回空内容。
 其中 `sciq-train-10613` 多次将长 chunk ID 缩短为不存在的 ID。
-连续三条生成失败触发暂停后，检查原始响应，再使用相同代码、输入和模型参数续跑。
+旧实现连续三条生成失败就触发停机阈值，三次停机都是同题连续引用失败导致。检查原始响应后使用相同代码、输入和模型参数续跑。新实现只计纯服务失败，旧结果不改写。
 未改写或手动修补答案来使其通过。每次尝试的原文和错误均在完整记录与断点中。
 
 ## 获取与验证
@@ -70,11 +70,15 @@ shasum -a 256 -c SHA256SUMS
 
 ```bash
 mkdir -p artifacts/m7-v2-dev-20261016-delivery
-tar -xzf docs/results/m7_v2_dev_20261016/m7_v2_dev_20261016.tar.gz \
+curl -fL -o artifacts/m7_v2_dev_20261016.tar.gz \
+  https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-dev-20261016/m7_v2_dev_20261016.tar.gz
+shasum -a 256 artifacts/m7_v2_dev_20261016.tar.gz
+tar -xzf artifacts/m7_v2_dev_20261016.tar.gz \
   -C artifacts/m7-v2-dev-20261016-delivery
-python -m cs30.v2.experiment_cli check \
-  --prepared-dir artifacts/m7-v2-dev-20261016-delivery/inputs
 ```
+
+归档 SHA-256 为 `284df57dbfb77f9fc44ee5df10c13c413a4c831831505d02261b52d892045974`，也见 `release_asset.json`。
+旧输入复查需要使用原始代码快照 `55e3f34`，新运行器不读取旧 rubric 绑定矩阵。
 
 压缩包结构为 `inputs/`、`output/`、`logs/`、`verification.json`、
 `execution_metadata.json`。`archive_inventory.json` 逐文件记录解压字节数与 SHA-256。
@@ -109,5 +113,6 @@ M4 Release 的声明（CC BY 4.0）。教材来自 OpenStax：
 [Physics](https://openstax.org/details/books/physics)。
 本次保留的教材引文未改写，原作者和出版方的署名及其他许可条件仍适用。
 
-后续评分和复核操作见 [M7 V2 实验说明](../../v2-member7-experiments.md) 与
-[开放题评分说明](../../open-answer-scoring.md)。本次交付没有新增评分。
+后续生成和交接见 [M7 V2 实验说明](../../v2-member7-experiments.md)，评分流程由 M8 的独立 PR 接手。本次修订没有新增生成或评分。
+
+归档已移出 Git 当前树；因旧提交仍含该大文件，本 PR 合并时必须选择 squash merge，避免大文件进入主线历史。

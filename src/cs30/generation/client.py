@@ -35,6 +35,7 @@ class LLMResponse:
     usage: TokenUsage
     response_id: str | None
     latency_ms: float
+    done_reason: str | None = None
 
 
 class LLMClient(Protocol):
@@ -154,6 +155,7 @@ class OllamaChatClient:
         timeout_seconds: float = 120.0,
         max_output_tokens: int = 800,
         context_window: int | None = None,
+        seed: int = 0,
     ) -> None:
         self.model = model.strip()
         resolved_base_url = (
@@ -163,6 +165,7 @@ class OllamaChatClient:
         self.temperature = temperature
         self.timeout_seconds = timeout_seconds
         self.max_output_tokens = max_output_tokens
+        self.seed = seed
         self.context_window = context_window
         self.model_digest: str | None = None
         if not self.model:
@@ -187,7 +190,7 @@ class OllamaChatClient:
 
     def complete(self, prompt: str, text_format: dict) -> LLMResponse:
         schema = text_format.get("schema", text_format)
-        options: dict[str, float | int] = {"num_predict": self.max_output_tokens}
+        options: dict[str, float | int] = {"num_predict": self.max_output_tokens, "seed": self.seed}
         if self.context_window is not None:
             # UTF-8 bytes bound byte-level token counts conservatively. Reserve
             # room for the response and chat framing; refuse rather than truncate.
@@ -234,13 +237,14 @@ class OllamaChatClient:
 
         message = body.get("message") or {}
         text = message.get("content")
-        if not isinstance(text, str) or not text.strip():
+        if (not isinstance(text, str) or not text.strip()) and body.get("done_reason") != "length":
             raise LLMEmptyResponseError("Ollama response contained no message content")
         input_tokens = int(body.get("prompt_eval_count", 0) or 0)
         output_tokens = int(body.get("eval_count", 0) or 0)
         return LLMResponse(
-            text=text,
+            text=text if isinstance(text, str) else "",
             model=str(body.get("model") or self.model),
+            done_reason=body.get("done_reason"),
             usage=TokenUsage(
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,

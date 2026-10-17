@@ -71,10 +71,10 @@ def launch(job_dir: Path, *, resume: bool) -> dict:
 
 
 def worker(job_dir: Path, *, resume: bool) -> None:
-    from cs30.evaluation.open_answer_cli import read_jsonl, unique_models
-    from cs30.evaluation.open_answer_models import OpenAnswerRun
     from cs30.v2.experiment import load_prepared
     from cs30.v2.experiment_checkpoint import atomic_json, load_cells, writer_lock
+    from cs30.v2.experiment_models import GenerationRun
+    from cs30.v2.io import read_jsonl, unique_models
 
     job = json.loads((job_dir / "job.json").read_bytes())
     _, _, matrix, *_ = load_prepared(Path(job["prepared_dir"]))
@@ -107,7 +107,7 @@ def worker(job_dir: Path, *, resume: bool) -> None:
         log_path = job_dir / f"attempt-{attempt:03d}.log"
         env = {**os.environ, "PYTHONPATH": str(Path(job["code_dir"]) / "src")}
         started = time.monotonic()
-        records, seen = {}, set()
+        records = {}
         with log_path.open("xb") as stream:
             child = subprocess.Popen(
                 command,
@@ -128,10 +128,8 @@ def worker(job_dir: Path, *, resume: bool) -> None:
 
             def publish(status: str, **extra) -> None:
                 for path in (output / "checkpoints").glob("*.json"):
-                    if path.name not in seen:
-                        value = json.loads(path.read_bytes())
-                        records[value["record"]["run_id"]] = value["record"]
-                        seen.add(path.name)
+                    value = json.loads(path.read_bytes())
+                    records[value["record"]["run_id"]] = value["record"]
                 counts = Counter(row["status"] for row in records.values())
                 elapsed = time.monotonic() - started
                 state = {
@@ -161,8 +159,8 @@ def worker(job_dir: Path, *, resume: bool) -> None:
                     f"更新时间：{state['updated_at']}。分状态计数：{dict(counts)}。\n\n"
                     f"[详细进度]({job_dir}/progress.json) · [本轮日志]({log_path}) · "
                     f"[保存答案]({output}/saved_answers.jsonl)\n\n"
-                    "采用已冻结的完整 Role 包及 Dev 选定 lambda=0。未配置独立 judge，"
-                    "完成后正确性仍会待评分；运行报告不等于正式准确率。\n\n"
+                    "采用冻结输入中的 Role 包及正 lambda；生成产物交给 M8 独立评分。"
+                    "运行报告不等于正式准确率。\n\n"
                     "关闭聊天不会取消这个独立进程；关机、系统休眠或手动结束进程会中断。"
                     "已完成单元有原子检查点，正在处理但未保存的一条可能重试。\n\n"
                     "续跑（原代码、输入、模型版本和参数均校验一致）：\n\n"
@@ -181,21 +179,17 @@ def worker(job_dir: Path, *, resume: bool) -> None:
         if exit_code in {0, 3}:
             cells = load_cells(output / "checkpoints", matrix.cases)
             saved = unique_models(
-                read_jsonl(output / "saved_answers.jsonl"), OpenAnswerRun, "run_id"
+                read_jsonl(output / "saved_answers.jsonl"), GenerationRun, "run_id"
             )
             expected = {cell.run_id for cell in matrix.cases}
             if set(cells) != expected or set(saved) != expected:
                 raise ValueError("completed batch does not match every expected cell")
             manifest = json.loads((output / "run_manifest.json").read_bytes())
-            from cs30.evaluation.open_answer_scoring import sha256_bytes
+            from cs30.v2.io import sha256_bytes
 
             for relative, digest in manifest["output_sha256"].items():
                 if sha256_bytes((output / relative).read_bytes()) != digest:
                     raise ValueError("completed batch output hash mismatch")
-            scoring = output / manifest.get("scoring_directory", "scoring")
-            summary = json.loads((scoring / "open_answer_summary.json").read_bytes())
-            if summary["overall"]["total_expected"] != len(expected):
-                raise ValueError("scoring denominator differs from the expected matrix")
             atomic_json(
                 job_dir / "verification.json",
                 {
@@ -205,12 +199,13 @@ def worker(job_dir: Path, *, resume: bool) -> None:
                     "checkpoint_count": len(cells),
                     "saved_answers": len(saved),
                     "output_hashes": "passed",
-                    "score_status_counts": summary["overall"]["score_status_counts"],
+                    "status_counts": dict(Counter(row.status for row in saved.values())),
                     "reportable": False,
                 },
             )
             publish(
-                "completed_pending_scoring" if exit_code == 3 else "completed", exit_code=exit_code
+                "completed_with_generation_failures" if exit_code == 3 else "completed",
+                exit_code=exit_code,
             )
         else:
             publish("interrupted_resume_available", exit_code=exit_code)
@@ -225,6 +220,12 @@ def main(argv=None) -> int:
     parser.add_argument("--context-window", type=int, default=32768)
     parser.add_argument("--timeout", type=float, default=180)
     args = parser.parse_args(argv)
+    if sys.platform == "win32":
+        print(
+            "V2 batch supervisor supports macOS/Linux only; use experiment_cli run on Windows.",
+            file=sys.stderr,
+        )
+        return 2
     directory = args.job_dir.resolve()
     try:
         if args.command == "start":
@@ -261,7 +262,7 @@ def main(argv=None) -> int:
         elif args.command == "resume":
             print(json.dumps(launch(directory, resume=True)))
         elif args.command == "status":
-            print((directory / "progress.json").read_text())
+            print((directory / "progress.json").read_text(encoding="utf-8"))
         else:
             worker(directory, resume=args.resume)
         return 0

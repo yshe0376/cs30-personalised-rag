@@ -101,7 +101,7 @@ def test_no_evidence_abstains_without_model_call() -> None:
 
 
 def test_invalid_citation_is_repaired_with_same_evidence() -> None:
-    client = StubClient([_answer("made-up"), _answer("chunk-1")])
+    client = StubClient([_answer("made-up"), _answer("E1")])
     generator = V2AnswerGenerator(client, max_retries=1)
     answer = generator.generate(
         "What is motion?",
@@ -114,11 +114,12 @@ def test_invalid_citation_is_repaired_with_same_evidence() -> None:
         "completed",
     ]
     assert "book-1" in client.prompts[0]
-    assert "chunk-1" in client.prompts[1]
+    assert "chunk-1" not in client.prompts[1]
+    assert "E1" in client.prompts[1]
 
 
 def test_batch_keeps_failure_separate_from_success() -> None:
-    client = StubClient([RuntimeError("provider down"), _answer("chunk-1")])
+    client = StubClient([RuntimeError("provider down"), _answer("E1")])
     generator = V2AnswerGenerator(client, max_retries=0)
     profile = StudentProfile(profile_id="s", level=StudentLevel.BEGINNER)
     cases = (("First", profile, _bundle()), ("Second", profile, _bundle()))
@@ -130,7 +131,7 @@ def test_batch_keeps_failure_separate_from_success() -> None:
 
 
 def test_repairs_do_not_accumulate_and_keep_the_original_evidence() -> None:
-    client = StubClient(["not JSON", _answer("made-up"), _answer("chunk-1")])
+    client = StubClient(["not JSON", _answer("made-up"), _answer("E1")])
     generator = V2AnswerGenerator(client, max_retries=2)
     generator.generate(
         "What is motion?", StudentProfile(profile_id="s", level="beginner"), _bundle()
@@ -147,8 +148,8 @@ def test_repairs_do_not_accumulate_and_keep_the_original_evidence() -> None:
 @pytest.mark.parametrize(
     "responses",
     [
-        [TimeoutError("provider timeout"), _answer("chunk-1")],
-        ["not JSON", TimeoutError("provider timeout"), _answer("chunk-1")],
+        [TimeoutError("provider timeout"), _answer("E1")],
+        ["not JSON", TimeoutError("provider timeout"), _answer("E1")],
     ],
 )
 def test_provider_failure_retries_original_prompt_without_repair(responses) -> None:
@@ -167,7 +168,7 @@ def test_provider_failure_retries_original_prompt_without_repair(responses) -> N
 
 @pytest.mark.parametrize("level", list(StudentLevel))
 def test_prompt_reuses_level_guidance_and_all_grounding_rules(level) -> None:
-    client = StubClient([_answer("chunk-1")])
+    client = StubClient([_answer("E1")])
     generator = V2AnswerGenerator(client)
     generator.generate("What is motion?", StudentProfile(profile_id="s", level=level), _bundle())
     prompt = client.prompts[0]
@@ -182,8 +183,8 @@ def test_prompt_reuses_level_guidance_and_all_grounding_rules(level) -> None:
 
 def test_v2_prompt_personalisation_can_be_disabled_for_p0_conditions() -> None:
     profile = StudentProfile(profile_id="s", level=StudentLevel.ADVANCED)
-    plain_client = StubClient([_answer("chunk-1")])
-    personalised_client = StubClient([_answer("chunk-1")])
+    plain_client = StubClient([_answer("E1")])
+    personalised_client = StubClient([_answer("E1")])
     V2AnswerGenerator(plain_client).generate(
         "What is motion?", profile, _bundle(), personalise_prompt=False
     )
@@ -197,7 +198,7 @@ def test_v2_prompt_personalisation_can_be_disabled_for_p0_conditions() -> None:
 
 
 def test_empty_question_failure_has_trace_and_does_not_abort_batch() -> None:
-    client = StubClient([_answer("chunk-1")])
+    client = StubClient([_answer("E1")])
     generator = V2AnswerGenerator(client)
     profile = StudentProfile(profile_id="s", level="beginner")
     with pytest.raises(V2GenerationFailure, match="question must not be empty") as caught:
@@ -216,8 +217,8 @@ def test_empty_question_failure_has_trace_and_does_not_abort_batch() -> None:
     [
         "not JSON",
         '{"explanation":"Missing fields"}',
-        '{"final_choice":"A","explanation":"Extra field","citations":["chunk-1"],"extra":1}',
-        '{"final_choice":"A","explanation":"Duplicate","citations":["chunk-1","chunk-1"]}',
+        '{"final_choice":"A","explanation":"Extra field","citations":["E1"],"extra":1}',
+        '{"final_choice":"A","explanation":"Duplicate","citations":["E1","E1"]}',
     ],
 )
 def test_shared_parser_rejects_invalid_schema_with_failure_trace(raw) -> None:
@@ -248,7 +249,7 @@ def test_generation_trace_records_prompt_switch_actual_level_and_provider_metada
 ):
     times = iter((1.0, 1.04))
     monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
-    generator = V2AnswerGenerator(TraceClient([_answer("chunk-1")]))
+    generator = V2AnswerGenerator(TraceClient([_answer("E1")]))
     generator.generate(
         "Question",
         StudentProfile(profile_id="s", level=level),
@@ -273,7 +274,7 @@ def test_generation_trace_records_prompt_switch_actual_level_and_provider_metada
 def test_trace_counts_invalid_responses_and_repair_tokens(raw, monkeypatch):
     times = iter((1.0, 1.04, 2.0, 2.06))
     monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
-    generator = V2AnswerGenerator(TraceClient([raw, _answer("chunk-1")]), max_retries=1)
+    generator = V2AnswerGenerator(TraceClient([raw, _answer("E1")]), max_retries=1)
     generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
     trace = generator.last_trace
     assert trace.usage == TokenUsage(30, 9, 39)
@@ -306,7 +307,7 @@ def test_provider_failure_records_elapsed_time_without_inventing_tokens(monkeypa
     times = iter((1.0, 1.05, 2.0, 2.08))
     monkeypatch.setattr("cs30.v2.generation.perf_counter", lambda: next(times))
     generator = V2AnswerGenerator(
-        TraceClient([TimeoutError("timeout"), _answer("chunk-1")]), max_retries=1
+        TraceClient([TimeoutError("timeout"), _answer("E1")]), max_retries=1
     )
     generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
     trace = generator.last_trace
@@ -320,7 +321,7 @@ def test_provider_failure_records_elapsed_time_without_inventing_tokens(monkeypa
 
 
 def test_batch_resets_generation_usage_between_questions():
-    generator = V2AnswerGenerator(TraceClient([_answer("chunk-1"), _answer("chunk-1")]))
+    generator = V2AnswerGenerator(TraceClient([_answer("E1"), _answer("E1")]))
     profile = StudentProfile(profile_id="s", level="intermediate")
     first, second = generator.generate_batch(
         (("First", profile, _bundle()), ("Second", profile, _bundle()))
@@ -332,7 +333,7 @@ def test_batch_resets_generation_usage_between_questions():
 
 def test_uncited_structured_answer_is_repaired_and_keeps_response_usage():
     raw = json.dumps({"final_choice": "A", "explanation": "Ungrounded", "citations": []})
-    generator = V2AnswerGenerator(TraceClient([raw, _answer("chunk-1")]), max_retries=1)
+    generator = V2AnswerGenerator(TraceClient([raw, _answer("E1")]), max_retries=1)
     answer = generator.generate(
         "Question", StudentProfile(profile_id="s", level="beginner"), _bundle()
     )
@@ -347,7 +348,7 @@ def test_trace_uses_snapshot_level_and_source():
         profile_source="learner_state_replay",
         state_version=5,
     )
-    generator = V2AnswerGenerator(TraceClient([_answer("chunk-1")]))
+    generator = V2AnswerGenerator(TraceClient([_answer("E1")]))
     generator.generate("Question", snapshot, _bundle())
     assert generator.last_trace.profile_source == "learner_state_replay"
     assert generator.last_trace.effective_level is StudentLevel.ADVANCED
@@ -367,11 +368,7 @@ def _mcq():
 @pytest.mark.parametrize("level", list(StudentLevel))
 def test_mcq_prompt_preserves_all_options_and_letter_mapping(personalise, level):
     client = StubClient(
-        [
-            json.dumps(
-                {"final_choice": "D", "explanation": "Deceleration.", "citations": ["chunk-1"]}
-            )
-        ]
+        [json.dumps({"final_choice": "D", "explanation": "Deceleration.", "citations": ["E1"]})]
     )
     generator = V2AnswerGenerator(client)
     answer = generator.generate(
@@ -383,7 +380,7 @@ def test_mcq_prompt_preserves_all_options_and_letter_mapping(personalise, level)
     assert answer.final_choice == "D"
     assert "A. calibration\nB. progression\nC. extraction\nD. deceleration" in client.prompts[0]
     assert "final_choice must be A, B, C, or D" in client.prompts[0]
-    assert generator.last_trace.prompt_version.endswith("-v2")
+    assert generator.last_trace.prompt_version.endswith("-v3")
 
 
 @pytest.mark.parametrize(
@@ -400,9 +397,9 @@ def test_mcq_requires_four_nonblank_options(options):
 
 def test_mcq_null_prediction_is_repaired_with_all_choices():
     missing = json.dumps(
-        {"final_choice": None, "explanation": "Deceleration.", "citations": ["chunk-1"]}
+        {"final_choice": None, "explanation": "Deceleration.", "citations": ["E1"]}
     )
-    client = StubClient([missing, _answer("chunk-1")])
+    client = StubClient([missing, _answer("E1")])
     generator = V2AnswerGenerator(client, max_retries=1)
     generator.generate(_mcq(), StudentProfile(profile_id="s", level="beginner"), _bundle())
     assert [a.status for a in generator.last_trace.attempts] == ["invalid_output", "completed"]
@@ -413,7 +410,7 @@ def test_mcq_null_prediction_is_repaired_with_all_choices():
 def test_mutated_mcq_missing_options_fails_before_model_call_and_batch_continues():
     question = _mcq()
     question.options.pop("D")
-    client = StubClient([_answer("chunk-1")])
+    client = StubClient([_answer("E1")])
     generator = V2AnswerGenerator(client)
     profile = StudentProfile(profile_id="s", level="beginner")
     first, second = generator.generate_batch(
@@ -455,10 +452,10 @@ def test_gold_input_passes_question_and_choices_without_reference_answer_leakage
     )
     client = StubClient(
         [
-            _answer("chunk-1")
+            _answer("E1")
             if multiple_choice
             else json.dumps(
-                {"final_choice": None, "explanation": "Deceleration.", "citations": ["chunk-1"]}
+                {"final_choice": None, "explanation": "Deceleration.", "citations": ["E1"]}
             )
         ]
     )
@@ -480,6 +477,6 @@ def test_gold_input_passes_question_and_choices_without_reference_answer_leakage
 
 def test_trace_uses_prompt_builders_version_method(monkeypatch):
     monkeypatch.setattr(V2PromptAdapter, "version", lambda self, *, personalise: "custom-version")
-    generator = V2AnswerGenerator(StubClient([_answer("chunk-1")]))
+    generator = V2AnswerGenerator(StubClient([_answer("E1")]))
     generator.generate("Question", StudentProfile(profile_id="s", level="beginner"), _bundle())
     assert generator.last_trace.prompt_version == "custom-version"

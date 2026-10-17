@@ -28,11 +28,15 @@ def generation_question(question: str | GenerationQuestion | GoldQuestion) -> Ge
 class V2PromptAdapter(PromptBuilder):
     """Preserve bundle contents while reusing v1 guidance, rules, and repairs."""
 
-    prompt_version = "member7-v2-prompt-v2"
-    base_prompt_version = "member7-v2-base-prompt-v2"
+    prompt_version = "member7-v2-prompt-v3"
+    base_prompt_version = "member7-v2-base-prompt-v3"
 
     def __init__(self, profile: StudentProfile, evidence: EvidenceBundle) -> None:
+        self.citation_ids = {
+            f"E{index}": item.chunk_id for index, item in enumerate(evidence.evidence_items, 1)
+        }
         self._sources = {item.evidence_id: item for item in evidence.evidence_items}
+        self._short_ids = {chunk_id: key for key, chunk_id in self.citation_ids.items()}
         self._profile = PromptProfile(
             profile_id=profile.profile_id,
             level=PromptLevel(profile.level.value),
@@ -47,7 +51,7 @@ class V2PromptAdapter(PromptBuilder):
             evidence_items=[
                 PromptItem(
                     evidence_id=item.evidence_id,
-                    chunk_id=item.chunk_id,
+                    chunk_id=self._short_ids[item.chunk_id],
                     text=item.text,
                     chapter_id=item.chapter_id,
                     source=item.source_name,
@@ -58,7 +62,9 @@ class V2PromptAdapter(PromptBuilder):
                 )
                 for item in evidence.evidence_items
             ],
-            citation_map=dict(evidence.citation_map),
+            citation_map={
+                item.evidence_id: self._short_ids[item.chunk_id] for item in evidence.evidence_items
+            },
             token_count=evidence.token_count,
         )
 
@@ -86,15 +92,11 @@ class V2PromptAdapter(PromptBuilder):
             raise TypeError("v2 prompting requires selected bundle evidence")
         source = self._sources[item.evidence_id]
         attributes = {
-            "chunk_id": source.chunk_id,
+            "chunk_id": self._short_ids[source.chunk_id],
             "provider": source.provider,
             "textbook_id": source.textbook_id,
-            "document_id": source.document_id,
-            "chapter_id": source.chapter_id,
             "source": source.source_name,
             "source_locator": source.source_locator,
-            "rank": source.rank,
-            "score": source.score,
         }
         return (
             f"<evidence metadata={json.dumps(attributes, sort_keys=True)}>\n"
