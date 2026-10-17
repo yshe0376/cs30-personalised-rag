@@ -56,7 +56,7 @@ def _deduplicate_answers(
 ) -> list[GenerationEvaluationInput]:
     unique: dict[tuple[str, str], GenerationEvaluationInput] = {}
     for item in sorted(items, key=lambda candidate: candidate.evaluation_id):
-        if item.technical_failure or item.answer is None:
+        if item.technical_failure or item.abstained or item.answer is None:
             continue
         key = (item.question_id, answer_text_sha256(item.answer))
         unique.setdefault(key, item)
@@ -192,10 +192,7 @@ def prepare_calibration_and_audit(
             encoding="utf-8",
         )
     paths["private_key"].write_text(
-        "".join(
-            json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n"
-            for row in private_rows
-        ),
+        "".join(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in private_rows),
         encoding="utf-8",
     )
     manifest = {

@@ -36,6 +36,26 @@ class ExperimentArm(StrEnum):
     P1R1_COMBINED = "P1R1_combined"
 
 
+class GenerationRunStatus(StrEnum):
+    """Statuses preserved exactly from the M7 GenerationRun contract."""
+
+    ANSWERED = "answered"
+    ABSTAINED = "abstained"
+    RETRIEVAL_ERROR = "retrieval_error"
+    GENERATION_ERROR = "generation_error"
+    PARSE_ERROR = "parse_error"
+    OUTPUT_TRUNCATED = "output_truncated"
+
+    @property
+    def is_technical_failure(self) -> bool:
+        return self in {
+            self.RETRIEVAL_ERROR,
+            self.GENERATION_ERROR,
+            self.PARSE_ERROR,
+            self.OUTPUT_TRUNCATED,
+        }
+
+
 class JudgeTask(StrEnum):
     ADAPTATION = "adaptation"
     DISCRIMINATION = "discrimination"
@@ -233,13 +253,32 @@ class GenerationEvaluationInput(ContractModel):
     eligibility: PersonalisationEligibility
     evidence: list[EvaluationEvidence] = Field(default_factory=list)
     citation_ids: list[Identifier] = Field(default_factory=list)
+    source_status: GenerationRunStatus = GenerationRunStatus.ANSWERED
+    abstained: bool = False
     technical_failure: bool = False
     failure_reason: NonEmptyText | None = None
     source_artifact_sha256: str
 
+    @model_validator(mode="before")
+    @classmethod
+    def preserve_legacy_failure_inputs(cls, value: object) -> object:
+        """Map pre-status M8 failure rows to a generic generation error."""
+
+        if (
+            isinstance(value, dict)
+            and value.get("technical_failure")
+            and "source_status" not in value
+        ):
+            return {**value, "source_status": GenerationRunStatus.GENERATION_ERROR}
+        return value
+
     @model_validator(mode="after")
     def validate_input(self) -> GenerationEvaluationInput:
         _validate_sha256(self.source_artifact_sha256, "source_artifact_sha256")
+        if self.technical_failure != self.source_status.is_technical_failure:
+            raise ValueError("technical_failure must agree with source_status")
+        if self.abstained != (self.source_status is GenerationRunStatus.ABSTAINED):
+            raise ValueError("abstained must agree with source_status")
         if self.technical_failure:
             if self.answer is not None:
                 raise ValueError("technical failures must not contain an answer")

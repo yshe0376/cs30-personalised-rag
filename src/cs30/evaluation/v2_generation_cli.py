@@ -18,11 +18,24 @@ from .judge_runtime import write_judge_requests
 from .level_adaptation import adaptation_evaluation_levels, build_adaptation_request
 from .level_discrimination import build_discrimination_request
 from .level_profiles import load_eligibility_package, load_profile_checklist_package
+from .v2_generation_artifacts import (
+    adapt_m7_generation_artifacts,
+    load_open_answer_scores,
+    write_adapter_outputs,
+)
 from .v2_generation_models import (
+    EvaluationDecisionConfig,
     EvaluationMode,
     GenerationEvaluationInput,
     JudgeConfiguration,
     JudgeTask,
+)
+from .v2_generation_reporting import (
+    answer_text_diagnostics,
+    build_v2_generation_report,
+    preferred_role_share,
+    strict_correctness_summary,
+    write_v2_generation_report,
 )
 
 
@@ -115,6 +128,23 @@ def _parser() -> argparse.ArgumentParser:
     audit.add_argument("--calibration-size", type=int, default=10)
     audit.add_argument("--audit-size", type=int, default=20)
     audit.add_argument("--seed", type=int, default=5703)
+
+    adapt = commands.add_parser("adapt-m7-artifacts")
+    adapt.add_argument("--expected-experiment", required=True, type=Path)
+    adapt.add_argument("--generation-records", required=True, type=Path)
+    adapt.add_argument("--saved-answers", required=True, type=Path)
+    adapt.add_argument("--run-manifest", required=True, type=Path)
+    adapt.add_argument("--gold", required=True, type=Path)
+    adapt.add_argument("--eligibility", required=True, type=Path)
+    adapt.add_argument("--output-dir", required=True, type=Path)
+
+    development = commands.add_parser("development-report")
+    development.add_argument("--inputs", required=True, type=Path)
+    development.add_argument("--adapter-manifest", required=True, type=Path)
+    development.add_argument("--correctness-scores", type=Path)
+    development.add_argument("--output-dir", required=True, type=Path)
+    development.add_argument("--bootstrap-draws", type=int, default=2000)
+    development.add_argument("--bootstrap-seed", type=int, default=5703)
     return parser
 
 
@@ -179,7 +209,7 @@ def _prepare_requests(args: argparse.Namespace) -> int:
             raise ValueError(f"cross-level file references unknown evaluation IDs: {unknown_ids}")
     requests = {}
     for item in items:
-        if item.technical_failure:
+        if item.technical_failure or item.abstained:
             continue
         if task is JudgeTask.ADAPTATION:
             evaluated_levels = adaptation_evaluation_levels(
@@ -238,6 +268,114 @@ def _prepare_audit(args: argparse.Namespace) -> int:
     return 0
 
 
+def _adapt_m7_artifacts(args: argparse.Namespace) -> int:
+    items, manifest = adapt_m7_generation_artifacts(
+        expected_path=args.expected_experiment,
+        records_path=args.generation_records,
+        answers_path=args.saved_answers,
+        run_manifest_path=args.run_manifest,
+        gold_path=args.gold,
+        eligibility_path=args.eligibility,
+    )
+    write_adapter_outputs(items, manifest, args.output_dir)
+    return 0
+
+
+def _development_report(args: argparse.Namespace) -> int:
+    items = _load_inputs(args.inputs)
+    manifest = json.loads(args.adapter_manifest.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise ValueError("adapter manifest must contain one JSON object")
+    scores = {}
+    if args.correctness_scores is not None:
+        scores = load_open_answer_scores(
+            args.correctness_scores,
+            items,
+            gold_sha256=str(manifest["gold_sha256"]),
+        )
+    correctness_rows = []
+    observations = []
+    unresolved = []
+    for item in items:
+        score = scores.get(item.run_id)
+        numeric = score.score if score and score.score_status == "scored" else None
+        correctness_rows.append(
+            {
+                "technical_failure": item.technical_failure,
+                "correctness_score": numeric,
+            }
+        )
+        if numeric is not None:
+            observations.append(
+                MetricObservation(
+                    question_id=item.question_id,
+                    target_level=item.target_level,
+                    condition=item.condition,
+                    metric="strict_correct",
+                    value=float(numeric == 2),
+                )
+            )
+        if score is None or score.score_status != "scored":
+            unresolved.append(
+                {
+                    "evaluation_id": item.evaluation_id,
+                    "dimension": "correctness",
+                    "reason": "score not supplied" if score is None else score.score_status,
+                }
+            )
+    unresolved.extend(
+        {
+            "evaluation_id": item.evaluation_id,
+            "dimension": dimension,
+            "reason": "judge output not supplied",
+        }
+        for item in items
+        if not item.technical_failure and not item.abstained
+        for dimension in ("adaptation", "discrimination", "evidence_support")
+    )
+    contrasts = []
+    if observations:
+        contrasts = paired_condition_contrasts(
+            observations,
+            bootstrap_draws=args.bootstrap_draws,
+            bootstrap_seed=args.bootstrap_seed,
+        )
+    report = build_v2_generation_report(
+        mode=EvaluationMode.DEVELOPMENT,
+        decision_config=EvaluationDecisionConfig(decision_version="development-unfrozen"),
+        correctness=strict_correctness_summary(correctness_rows),
+        adaptation=[],
+        discrimination={},
+        evidence_support=[],
+        mechanism_diagnostics=[
+            preferred_role_share(item.evidence, item.target_level)
+            | {"evaluation_id": item.evaluation_id}
+            for item in items
+        ],
+        text_diagnostics=[
+            answer_text_diagnostics(item.answer) | {"evaluation_id": item.evaluation_id}
+            for item in items
+            if item.answer is not None
+        ],
+        validity={"formal_use_allowed": False, "reason": "judge validation not supplied"},
+        human_audit=None,
+        condition_contrasts=contrasts,
+        lambda_evaluation=None,
+        unresolved_items=unresolved,
+        provenance={
+            "adapter_manifest": manifest,
+            "evaluation_inputs_sha256": hashlib.sha256(args.inputs.read_bytes()).hexdigest(),
+            "correctness_scores_sha256": (
+                hashlib.sha256(args.correctness_scores.read_bytes()).hexdigest()
+                if args.correctness_scores is not None
+                else None
+            ),
+        },
+    )
+    write_v2_generation_report(report, args.output_dir)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
@@ -250,6 +388,10 @@ def main(argv: list[str] | None = None) -> int:
             return _condition_stats(args)
         if args.command == "prepare-audit":
             return _prepare_audit(args)
+        if args.command == "adapt-m7-artifacts":
+            return _adapt_m7_artifacts(args)
+        if args.command == "development-report":
+            return _development_report(args)
     except (FileNotFoundError, OSError, ValueError) as exc:
         parser.exit(2, f"error: {exc}\n")
     raise AssertionError(f"unhandled command: {args.command}")
