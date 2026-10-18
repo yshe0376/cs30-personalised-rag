@@ -3,9 +3,21 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from cs30.contracts import StudentLevel
 from cs30.evaluation.v2_generation_cli import main
 from cs30.evaluation.v2_generation_models import ExperimentArm
+
+
+def test_cli_help_keeps_legacy_report_extension_v1_only(capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--help"])
+
+    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+    assert "cs30-evaluate report-" in output
+    assert "extension command remains V1-only" in output
 
 
 def test_condition_stats_cli_writes_all_four_predeclared_contrasts(tmp_path: Path) -> None:

@@ -101,7 +101,13 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 def _parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="cs30-v2-generation-eval")
+    parser = argparse.ArgumentParser(
+        prog="cs30-v2-generation-eval",
+        description=(
+            "Evaluate saved V2 generation artifacts. The legacy "
+            "cs30-evaluate report-extension command remains V1-only."
+        ),
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
     validate = commands.add_parser("validate-inputs")
