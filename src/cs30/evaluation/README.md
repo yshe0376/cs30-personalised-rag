@@ -1,8 +1,5 @@
 # Evaluation contracts and offline scoring
 
-The V2 open-answer generation evaluation extension is documented in
-[`docs/v2-generation-evaluation.md`](../../../docs/v2-generation-evaluation.md).
-
 This package is the M1-owned boundary between M3 Gold data, the M1 batch
 runner, and M8 answer and citation scoring.
 
@@ -32,9 +29,13 @@ mapping keyed by `(document_id, chapter_id)`:
 ```python
 from cs30.evaluation import load_gold_samples, load_openstax_document
 
-document = load_openstax_document("data/processed/openstax-w5-v2/openstax_document.json")
+document = load_openstax_document(
+    "data/processed/openstax-w5-v2/openstax_document.json"
+)
 chapter_documents = {
-    (document.document_id, chapter.chapter_id): document.text[chapter.char_start : chapter.char_end]
+    (document.document_id, chapter.chapter_id): document.text[
+        chapter.char_start : chapter.char_end
+    ]
     for chapter in document.chapters
 }
 gold = load_gold_samples(
@@ -442,14 +443,6 @@ non-applicable run, and every keyed answer must receive exactly one score.
 Missing key entries, missing ratings, duplicate ratings, level/question
 mismatches, unknown blind IDs, and scores outside the frozen range fail before
 aggregation.
-
-### V2 generation handoff
-
-`v2_generation_artifacts.py` is the M8-owned seam for M7 GenerationExperiment schema 0.2.
-It validates the exact Gold and output hashes, requires complete run coverage, preserves
-`output_truncated`, and binds saved citation chunk IDs to the evidence actually sent to generation.
-`open_answer_scoring.py` is the correctness scorer reviewed from PR #191. The separate
-`evaluation_audit.py` path is authoritative for unique-answer calibration and human audit.
 
 After the single rater completes the sheet, seal the final files:
 
