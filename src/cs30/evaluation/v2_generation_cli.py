@@ -29,7 +29,12 @@ from .judge_results import (
     write_judge_evaluation_outputs,
 )
 from .judge_runtime import write_judge_requests
-from .judge_validity import ValidityThresholds, build_validity_report
+from .judge_validity import (
+    ValidityThresholds,
+    build_validity_report,
+    semantic_judge_agreement,
+    semantic_judge_signature,
+)
 from .level_adaptation import (
     adaptation_evaluation_levels,
     aggregate_adaptation,
@@ -165,6 +170,11 @@ def _parser() -> argparse.ArgumentParser:
         choices=[mode.value for mode in EvaluationMode],
         default=EvaluationMode.DEVELOPMENT.value,
     )
+    prepare.add_argument(
+        "--reverse-adaptation-criteria",
+        action="store_true",
+        help="prepare the registered checklist-order perturbation for adaptation only",
+    )
     prepare.add_argument("--output", required=True, type=Path)
 
     stats = commands.add_parser("condition-stats")
@@ -204,11 +214,21 @@ def _parser() -> argparse.ArgumentParser:
     assemble.add_argument("--profiles", required=True, type=Path)
     assemble.add_argument("--judge-config", required=True, type=Path)
     assemble.add_argument("--judge-results", required=True, type=Path)
+    assemble.add_argument(
+        "--judge-execution-id",
+        required=True,
+        help="unique audited execution ID; repeat/order/second runs must use new IDs",
+    )
     assemble.add_argument("--cross-level-evaluation-ids", type=Path)
     assemble.add_argument(
         "--mode",
         choices=[mode.value for mode in EvaluationMode],
         default=EvaluationMode.DEVELOPMENT.value,
+    )
+    assemble.add_argument(
+        "--reverse-adaptation-criteria",
+        action="store_true",
+        help="assemble the registered reversed-checklist adaptation run",
     )
     assemble.add_argument("--output-dir", required=True, type=Path)
 
@@ -216,6 +236,24 @@ def _parser() -> argparse.ArgumentParser:
     validity.add_argument("--observations", required=True, type=Path)
     validity.add_argument("--inputs", type=Path)
     validity.add_argument("--judge-evaluation-dir", type=Path)
+    validity.add_argument("--repeat-judge-evaluation-dir", type=Path)
+    validity.add_argument("--order-judge-evaluation-dir", type=Path)
+    validity.add_argument("--second-judge-evaluation-dir", type=Path)
+    validity.add_argument(
+        "--repeat-comparison-ids",
+        type=Path,
+        help="optional preregistered evaluation_id subset for the repeat run",
+    )
+    validity.add_argument(
+        "--order-comparison-ids",
+        type=Path,
+        help="optional preregistered evaluation_id subset for the order run",
+    )
+    validity.add_argument(
+        "--second-comparison-ids",
+        type=Path,
+        help="optional preregistered evaluation_id subset for the second-family run",
+    )
     validity.add_argument("--output", required=True, type=Path)
 
     development = commands.add_parser("development-report")
@@ -310,12 +348,20 @@ def _prepare_requests(args: argparse.Namespace) -> int:
                 cross_level_evaluation_ids=frozenset(cross_level_ids),
             )
             for evaluated_level in evaluated_levels:
+                checklist = checklists[evaluated_level]
+                criterion_order = None
+                if args.reverse_adaptation_criteria:
+                    criterion_order = [
+                        criterion.criterion_id
+                        for criterion in reversed(checklist.criteria)
+                    ]
                 request = build_adaptation_request(
                     item,
                     profiles[evaluated_level],
-                    checklists[evaluated_level],
+                    checklist,
                     configuration,
                     evaluated_level=evaluated_level,
+                    criterion_order=criterion_order,
                     mode=mode,
                 )
                 requests.setdefault(request.request_id, request)
@@ -425,6 +471,7 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
         load_judge_envelopes(args.judge_results),
         cross_level_evaluation_ids=cross_level_ids,
         mode=EvaluationMode(args.mode),
+        reverse_adaptation_criteria=args.reverse_adaptation_criteria,
     )
     write_judge_evaluation_outputs(
         result,
@@ -437,13 +484,18 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
                 args.judge_config.read_bytes()
             ).hexdigest(),
             "judge_config_version": configuration.config_version,
+            "judge_provider": configuration.provider,
+            "judge_model_family": configuration.model_family,
+            "judge_model_revision": configuration.model_revision,
             "judge_results_sha256": hashlib.sha256(args.judge_results.read_bytes()).hexdigest(),
+            "judge_execution_id": args.judge_execution_id,
             "cross_level_ids_sha256": (
                 hashlib.sha256(args.cross_level_evaluation_ids.read_bytes()).hexdigest()
                 if args.cross_level_evaluation_ids is not None
                 else None
             ),
             "mode": args.mode,
+            "reverse_adaptation_criteria": args.reverse_adaptation_criteria,
         },
     )
     return 0
@@ -456,14 +508,215 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     return value
 
 
+def _judge_result_key(dimension: str, row: dict[str, Any]) -> str:
+    evaluation_id = row.get("evaluation_id")
+    if not isinstance(evaluation_id, str) or not evaluation_id:
+        raise ValueError(f"{dimension} result is missing evaluation_id")
+    suffix = ""
+    if dimension == "adaptation":
+        evaluated_level = row.get("evaluated_level")
+        if not isinstance(evaluated_level, str) or not evaluated_level:
+            raise ValueError("adaptation result is missing evaluated_level")
+        suffix = f":{evaluated_level}"
+    return f"{dimension}:{evaluation_id}{suffix}"
+
+
+def _indexed_judge_rows(
+    judge_data: dict[str, Any],
+    dimension: str,
+) -> dict[str, dict[str, Any]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    for raw in judge_data[dimension]:
+        if not isinstance(raw, dict):
+            raise ValueError(f"{dimension} output contains a non-object row")
+        key = _judge_result_key(dimension, raw)
+        if key in indexed:
+            raise ValueError(f"{dimension} output contains duplicate comparison key {key}")
+        indexed[key] = raw
+    return indexed
+
+
+def _assert_comparable_judge_runs(
+    primary: dict[str, Any],
+    comparison: dict[str, Any],
+    *,
+    purpose: str,
+) -> None:
+    primary_provenance = primary["manifest"].get("provenance", {})
+    comparison_provenance = comparison["manifest"].get("provenance", {})
+    for field in (
+        "evaluation_inputs_sha256",
+        "source_run_sha256",
+        "profile_package_sha256",
+    ):
+        if (
+            not primary_provenance.get(field)
+            or primary_provenance.get(field) != comparison_provenance.get(field)
+        ):
+            raise ValueError(f"{purpose} judge run has different {field}")
+    primary_execution = primary_provenance.get("judge_execution_id")
+    comparison_execution = comparison_provenance.get("judge_execution_id")
+    if not isinstance(primary_execution, str) or not isinstance(comparison_execution, str):
+        raise ValueError(f"{purpose} comparison requires audited judge execution IDs")
+    if primary_execution == comparison_execution:
+        raise ValueError(f"{purpose} comparison must come from a separate judge execution")
+    if purpose in {"repeat", "order"}:
+        if primary_provenance.get("judge_configuration_sha256") != comparison_provenance.get(
+            "judge_configuration_sha256"
+        ):
+            raise ValueError(f"{purpose} judge run must use the primary judge configuration")
+    if purpose == "repeat" and (
+        primary_provenance.get("reverse_adaptation_criteria") is True
+        or comparison_provenance.get("reverse_adaptation_criteria") is True
+    ):
+        raise ValueError("repeat judge runs must use the registered checklist order")
+    if purpose == "order":
+        if primary_provenance.get("reverse_adaptation_criteria") is True:
+            raise ValueError("primary judge run must use the registered checklist order")
+        if comparison_provenance.get("reverse_adaptation_criteria") is not True:
+            raise ValueError("order judge run must use reversed adaptation criteria")
+    if purpose == "second":
+        primary_family = primary_provenance.get("judge_model_family")
+        second_family = comparison_provenance.get("judge_model_family")
+        if not isinstance(primary_family, str) or not isinstance(second_family, str):
+            raise ValueError("second-judge comparison requires recorded model families")
+        if primary_family.casefold() == second_family.casefold():
+            raise ValueError("second judge must use a different model family")
+
+
+def _semantic_pairs(
+    primary: dict[str, Any],
+    comparison: dict[str, Any],
+    *,
+    dimensions: tuple[str, ...],
+    evidence_rate_tolerance: float,
+    allowed_evaluation_ids: set[str] | None = None,
+) -> list[tuple[str, str, str]]:
+    pairs: list[tuple[str, str, str]] = []
+    for dimension in dimensions:
+        first = _indexed_judge_rows(primary, dimension)
+        second = _indexed_judge_rows(comparison, dimension)
+        if allowed_evaluation_ids is not None:
+            first = {
+                key: row
+                for key, row in first.items()
+                if row.get("evaluation_id") in allowed_evaluation_ids
+            }
+            second = {
+                key: row
+                for key, row in second.items()
+                if row.get("evaluation_id") in allowed_evaluation_ids
+            }
+        if set(first) != set(second):
+            missing = sorted(set(first) - set(second))
+            extra = sorted(set(second) - set(first))
+            raise ValueError(
+                f"{dimension} comparison coverage mismatch; missing={missing}, extra={extra}"
+            )
+        for key in sorted(first):
+            left = semantic_judge_signature(dimension, first[key])
+            right = semantic_judge_signature(dimension, second[key])
+            if semantic_judge_agreement(
+                dimension,
+                first[key],
+                second[key],
+                evidence_rate_tolerance=evidence_rate_tolerance,
+            ):
+                right = left
+            pairs.append((key, left, right))
+    return pairs
+
+
+def _case_evaluation_id(case_id: str) -> str:
+    dimension, remainder = case_id.split(":", 1)
+    if dimension == "adaptation":
+        evaluation_id, _ = remainder.rsplit(":", 1)
+        return evaluation_id
+    return remainder
+
+
+def _comparison_coverage(
+    pairs: list[tuple[str, str, str]],
+    inputs_by_id: dict[str, GenerationEvaluationInput],
+    *,
+    require_conditions: bool,
+) -> tuple[bool, int]:
+    evaluation_ids = {_case_evaluation_id(pair[0]) for pair in pairs}
+    rows = [inputs_by_id[evaluation_id] for evaluation_id in evaluation_ids]
+    levels = {row.target_level for row in rows}
+    conditions = {row.condition for row in rows}
+    complete = levels == set(StudentLevel) and (
+        not require_conditions or conditions == set(ExperimentArm)
+    )
+    return complete, len(evaluation_ids)
+
+
+def _load_comparison_ids(
+    path: Path,
+    *,
+    purpose: str,
+    inputs_by_id: dict[str, GenerationEvaluationInput],
+) -> set[str]:
+    raw_ids = [line.strip() for line in path.read_text(encoding="utf-8").splitlines()]
+    evaluation_ids = [evaluation_id for evaluation_id in raw_ids if evaluation_id]
+    if not evaluation_ids:
+        raise ValueError(f"{purpose} comparison ID file is empty")
+    if len(evaluation_ids) != len(set(evaluation_ids)):
+        raise ValueError(f"{purpose} comparison ID file contains duplicates")
+    unknown = sorted(set(evaluation_ids) - set(inputs_by_id))
+    if unknown:
+        raise ValueError(f"{purpose} comparison ID file contains unknown IDs: {unknown}")
+    ineligible = sorted(
+        evaluation_id
+        for evaluation_id in evaluation_ids
+        if (
+            inputs_by_id[evaluation_id].technical_failure
+            or inputs_by_id[evaluation_id].abstained
+            or inputs_by_id[evaluation_id].answer is None
+        )
+    )
+    if ineligible:
+        raise ValueError(
+            f"{purpose} comparison IDs must reference answered evaluations: {ineligible}"
+        )
+    return set(evaluation_ids)
+
+
 def _validity_report(args: argparse.Namespace) -> int:
     payload = _load_json_object(args.observations)
     if (args.inputs is None) != (args.judge_evaluation_dir is None):
         raise ValueError("validity binding requires --inputs and --judge-evaluation-dir together")
+    comparison_dirs = {
+        "repeat": args.repeat_judge_evaluation_dir,
+        "order": args.order_judge_evaluation_dir,
+        "second": args.second_judge_evaluation_dir,
+    }
+    comparison_id_paths = {
+        "repeat": args.repeat_comparison_ids,
+        "order": args.order_comparison_ids,
+        "second": args.second_comparison_ids,
+    }
+    selectors_without_runs = sorted(
+        purpose
+        for purpose, path in comparison_id_paths.items()
+        if path is not None and comparison_dirs[purpose] is None
+    )
+    if selectors_without_runs:
+        raise ValueError(
+            "comparison ID files require matching judge evaluation directories: "
+            + ", ".join(selectors_without_runs)
+        )
+    if any(path is not None for path in comparison_dirs.values()) and args.inputs is None:
+        raise ValueError("automatic validity comparisons require bound inputs and primary results")
     inputs_sha256 = None
     source_run_hash = None
     judge_manifest_sha256 = None
-    derived_p0r0_guesses: list[LevelGuess] | None = None
+    comparison_manifest_sha256: dict[str, str] = {}
+    comparison_ids_sha256: dict[str, str] = {}
+    judge_data: dict[str, Any] | None = None
+    comparison_data: dict[str, dict[str, Any]] = {}
+    inputs_by_id: dict[str, GenerationEvaluationInput] = {}
+    derived_p0r0_rows: list[tuple[StudentLevel, LevelGuess]] | None = None
     derived_surface_rows: list[tuple[StudentLevel, bool, int, bool]] | None = None
     if args.inputs is not None:
         items = _load_inputs(args.inputs)
@@ -489,8 +742,11 @@ def _validity_report(args: argparse.Namespace) -> int:
             for name, value in expected_provenance.items()
         ):
             raise ValueError("validity observations are not bound to the current judge run")
-        derived_p0r0_guesses = [
-            LevelGuess(str(row["predicted_level"]))
+        derived_p0r0_rows = [
+            (
+                StudentLevel(str(row["target_level"])),
+                LevelGuess(str(row["predicted_level"])),
+            )
             for row in judge_data["discrimination"]
             if row.get("condition") == ExperimentArm.P0R0_PLAIN.value
         ]
@@ -501,6 +757,11 @@ def _validity_report(args: argparse.Namespace) -> int:
         if not 0.0 <= threshold <= 1.0:
             raise ValueError("adaptation_pass_threshold must be between zero and one")
         inputs_by_id = {item.evaluation_id: item for item in items}
+        answered_evaluation_ids = {
+            item.evaluation_id
+            for item in items
+            if not item.technical_failure and not item.abstained and item.answer is not None
+        }
         derived_surface_rows = []
         for row in judge_data["adaptation"]:
             if not row.get("is_target_level_evaluation"):
@@ -518,6 +779,28 @@ def _validity_report(args: argparse.Namespace) -> int:
                     bool(diagnostics["formula_present"]),
                 )
             )
+        for purpose, path in comparison_dirs.items():
+            if path is None:
+                continue
+            data = load_judge_evaluation_outputs(path)
+            _assert_comparable_judge_runs(judge_data, data, purpose=purpose)
+            comparison_data[purpose] = data
+            comparison_manifest_sha256[purpose] = hashlib.sha256(
+                (path / "judge_evaluation_manifest.json").read_bytes()
+            ).hexdigest()
+            selection_path = comparison_id_paths[purpose]
+            if selection_path is not None:
+                selected_ids = _load_comparison_ids(
+                    selection_path,
+                    purpose=purpose,
+                    inputs_by_id=inputs_by_id,
+                )
+                comparison_ids_sha256[purpose] = hashlib.sha256(
+                    selection_path.read_bytes()
+                ).hexdigest()
+            else:
+                selected_ids = answered_evaluation_ids
+            comparison_data[purpose]["selected_evaluation_ids"] = selected_ids
 
     def triples(name: str) -> list[tuple[str, str, str]]:
         raw_rows = payload.get(name, [])
@@ -542,16 +825,34 @@ def _validity_report(args: argparse.Namespace) -> int:
             raise ValueError(f"{name} must contain only JSON booleans")
         return list(raw_values)
 
+    def boolean_field(name: str, *, default: bool = False) -> bool:
+        value = payload.get(name, default)
+        if not isinstance(value, bool):
+            raise ValueError(f"{name} must be a JSON boolean")
+        return value
+
+    def non_negative_integer(name: str, *, default: int = 0) -> int:
+        value = payload.get(name, default)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError(f"{name} must be a non-negative integer")
+        return value
+
     try:
         thresholds = ValidityThresholds.model_validate(payload["thresholds"])
-        raw_p0r0 = payload.get("p0r0_guesses", [])
+        raw_p0r0 = payload.get("p0r0_rows", [])
         if not isinstance(raw_p0r0, list):
-            raise ValueError("p0r0_guesses must be a list")
-        p0r0_guesses = (
-            derived_p0r0_guesses
-            if derived_p0r0_guesses is not None
-            else [LevelGuess(value) for value in raw_p0r0]
+            raise ValueError("p0r0_rows must be a list")
+        p0r0_rows = (
+            derived_p0r0_rows
+            if derived_p0r0_rows is not None
+            else [
+                (StudentLevel(row[0]), LevelGuess(row[1]))
+                for row in raw_p0r0
+                if isinstance(row, list) and len(row) == 2
+            ]
         )
+        if derived_p0r0_rows is None and len(p0r0_rows) != len(raw_p0r0):
+            raise ValueError("p0r0_rows must contain [target_level, predicted_level] pairs")
         raw_surface_rows = payload.get("surface_rows", [])
         if not isinstance(raw_surface_rows, list):
             raise ValueError("surface_rows must be a list")
@@ -575,15 +876,79 @@ def _validity_report(args: argparse.Namespace) -> int:
         require_perturbation = payload.get("require_perturbation", False)
         if not isinstance(require_perturbation, bool):
             raise ValueError("require_perturbation must be a JSON boolean")
+        duplicate_rows = triples("duplicate_rows")
+        order_pairs = triples("order_pairs")
+        second_judge_pairs = triples("second_judge_pairs")
+        order_coverage_complete = boolean_field("order_coverage_complete")
+        second_judge_coverage_complete = boolean_field(
+            "second_judge_coverage_complete"
+        )
+        order_case_count = non_negative_integer("order_case_count")
+        second_judge_case_count = non_negative_integer("second_judge_case_count")
+        if judge_data is not None and "repeat" in comparison_data:
+            repeat_ids = comparison_data["repeat"]["selected_evaluation_ids"]
+            repeat_pairs = _semantic_pairs(
+                judge_data,
+                comparison_data["repeat"],
+                dimensions=("adaptation", "discrimination", "evidence_support"),
+                evidence_rate_tolerance=0.0,
+                allowed_evaluation_ids=repeat_ids,
+            )
+            duplicate_rows = []
+            for case_id, first, second in repeat_pairs:
+                evaluation_id = _case_evaluation_id(case_id)
+                answer_sha256 = inputs_by_id[evaluation_id].answer_sha256
+                if answer_sha256 is None:
+                    raise ValueError("repeat comparison includes an answer without a hash")
+                duplicate_rows.extend(
+                    [
+                        (case_id, answer_sha256, first),
+                        (case_id, answer_sha256, second),
+                    ]
+                )
+        if judge_data is not None and "order" in comparison_data:
+            order_pairs = _semantic_pairs(
+                judge_data,
+                comparison_data["order"],
+                dimensions=("adaptation",),
+                evidence_rate_tolerance=thresholds.second_judge_max_evidence_rate_gap,
+                allowed_evaluation_ids=comparison_data["order"][
+                    "selected_evaluation_ids"
+                ],
+            )
+            order_coverage_complete, order_case_count = _comparison_coverage(
+                order_pairs,
+                inputs_by_id,
+                require_conditions=False,
+            )
+        if judge_data is not None and "second" in comparison_data:
+            second_judge_pairs = _semantic_pairs(
+                judge_data,
+                comparison_data["second"],
+                dimensions=("adaptation", "discrimination", "evidence_support"),
+                evidence_rate_tolerance=thresholds.second_judge_max_evidence_rate_gap,
+                allowed_evaluation_ids=comparison_data["second"][
+                    "selected_evaluation_ids"
+                ],
+            )
+            second_judge_coverage_complete, second_judge_case_count = _comparison_coverage(
+                second_judge_pairs,
+                inputs_by_id,
+                require_conditions=True,
+            )
         report = build_validity_report(
             thresholds,
-            p0r0_guesses=p0r0_guesses,
-            duplicate_rows=triples("duplicate_rows"),
+            p0r0_rows=p0r0_rows,
+            duplicate_rows=duplicate_rows,
             surface_rows=surface_rows,
-            order_pairs=triples("order_pairs"),
-            second_judge_pairs=triples("second_judge_pairs"),
+            order_pairs=order_pairs,
+            second_judge_pairs=second_judge_pairs,
             perturbation_detections=booleans("perturbation_detections"),
             require_perturbation=require_perturbation,
+            order_coverage_complete=order_coverage_complete,
+            second_judge_coverage_complete=second_judge_coverage_complete,
+            order_case_count=order_case_count,
+            second_judge_case_count=second_judge_case_count,
         )
     except (KeyError, TypeError, ValidationError, ValueError) as exc:
         raise ValueError(f"{args.observations}: invalid validity observations: {exc}") from exc
@@ -592,6 +957,8 @@ def _validity_report(args: argparse.Namespace) -> int:
         "evaluation_inputs_sha256": inputs_sha256,
         "source_run_sha256": source_run_hash,
         "judge_evaluation_manifest_sha256": judge_manifest_sha256,
+        "comparison_judge_manifest_sha256": comparison_manifest_sha256,
+        "comparison_evaluation_ids_sha256": comparison_ids_sha256,
         "binding_verified": inputs_sha256 is not None,
     }
     if inputs_sha256 is None:

@@ -87,6 +87,7 @@ def assemble_judge_results(
     *,
     cross_level_evaluation_ids: frozenset[str] = frozenset(),
     mode: EvaluationMode = EvaluationMode.DEVELOPMENT,
+    reverse_adaptation_criteria: bool = False,
 ) -> dict[str, Any]:
     """Validate all supplied outputs and build experiment-aware result rows."""
 
@@ -106,12 +107,19 @@ def assemble_judge_results(
             item,
             cross_level_evaluation_ids=cross_level_evaluation_ids,
         ):
+            checklist = checklists[evaluated_level]
+            criterion_order = None
+            if reverse_adaptation_criteria:
+                criterion_order = [
+                    criterion.criterion_id for criterion in reversed(checklist.criteria)
+                ]
             request = build_adaptation_request(
                 item,
                 profiles[evaluated_level],
-                checklists[evaluated_level],
+                checklist,
                 configuration,
                 evaluated_level=evaluated_level,
+                criterion_order=criterion_order,
                 mode=mode,
             )
             expected_request_ids.add(request.request_id)
@@ -134,7 +142,7 @@ def assemble_judge_results(
                     raw,
                     request=request,
                     answer=item.answer,
-                    checklist=checklists[evaluated_level],
+                    checklist=checklist,
                 )
                 record = adaptation_evaluation_record(item, evaluated_level, output)
                 record["output_sha256"] = canonical_json_sha256(raw)
