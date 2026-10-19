@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
+  "source_revision": "a1fe99e",
+  "corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+  "chunk_config_hash": "sha256:914659582bf24dd81618d55d18b9717e7e0a1d63ace5ff740966b2b0e924c191",
+  "loader_validation": "passed",
+  "record_count": 6184,
+  "unique_chunk_id_count": 6184,
+  "reportable": false,
+  "cross_chapter_chunk_count": 0,
+  "forbidden_content_chunk_count": 0,
+  "short_chunk_count": 904,
+  "oversized_chunk_count": 3,
+  "exact_duplicate_text_group_count": 1920,
+  "exact_duplicate_text_extra_instance_count": 1950,
+  "documents": {
+    "openstax_college_physics_2e": {
+      "chapter_count": 34,
+      "chunk_count": 2369,
+      "minimum_tokens": 4,
+      "median_tokens": 392,
+      "maximum_tokens": 688,
+      "short_chunk_count": 285,
+      "oversized_chunk_count": 1
+    },
+    "openstax_physics": {
+      "chapter_count": 23,
+      "chunk_count": 1272,
+      "minimum_tokens": 1,
+      "median_tokens": 259,
+      "maximum_tokens": 592,
+      "short_chunk_count": 300,
+      "oversized_chunk_count": 0
+    },
+    "openstax_college_physics_ap_2e": {
+      "chapter_count": 34,
+      "chunk_count": 2335,
+      "minimum_tokens": 4,
+      "median_tokens": 397,
+      "maximum_tokens": 695,
+      "short_chunk_count": 290,
+      "oversized_chunk_count": 2
+    },
+    "ck12_peoples_physics_concepts": {
+      "chapter_count": 20,
+      "chunk_count": 208,
+      "minimum_tokens": 7,
+      "median_tokens": 321,
+      "maximum_tokens": 600,
+      "short_chunk_count": 29,
+      "oversized_chunk_count": 0,
+      "source_block_count": 4702,
+      "referenced_source_block_count": 3244,
+      "missing_referenced_source_block_count": 0,
+      "referenced_problem_block_count": 0,
+      "referenced_summary_block_count": 0,
+      "referenced_conceptual_question_block_count": 0,
+      "referenced_check_understanding_block_count": 0
+    }
+  },
+  "notes": [
+    "Engineering validation only; no retrieval-effectiveness claim is made.",
+    "Development mode is diagnostic-only.",
+    "Exact duplicate text is retained at each source location by policy."
+  ]
+}
