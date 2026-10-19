@@ -1,0 +1,25 @@
+{
+  "status": "passed",
+  "checked_at": "2026-10-17T18:05:07+11:00",
+  "source_commit": "78d73902ba8cce82dc29d34eb12a46ac69fc0cca",
+  "reportable": false,
+  "expected_cells": 1944,
+  "checkpoint_count": 1944,
+  "saved_answers": 1944,
+  "generation_records": 1944,
+  "status_counts": {
+    "answered": 1944
+  },
+  "checks": [
+    "frozen input hashes and prepared-manifest binding",
+    "all output manifest hashes",
+    "implementation hashes against frozen checkout and committed source",
+    "matrix IDs, checkpoint payload hashes, identity and citation validation",
+    "saved answers and generation records equal checkpoint contents",
+    "12 condition/level groups each contain exactly 162 cells",
+    "archive member inventory, decompressed sizes and SHA-256 for every file"
+  ],
+  "archive_members": 1963,
+  "archive_sha256": "2302abaa1452050e576c8aa368e66874c25cc9535b08a55096069dc003800ef2",
+  "scoring_status": "pending_independent_M8_evaluation"
+}

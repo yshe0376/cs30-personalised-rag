@@ -1,0 +1,49 @@
+{
+  "schema_version": "0.1",
+  "reportable": false,
+  "source_commit": "78d73902ba8cce82dc29d34eb12a46ac69fc0cca",
+  "started_at": "2026-10-17T13:47:12+11:00",
+  "completed_at": "2026-10-17T17:06:19+11:00",
+  "timezone": "Australia/Sydney",
+  "elapsed_seconds": 11946.9,
+  "attempts": 1,
+  "resume_count": 0,
+  "configuration": {
+    "schema_version": "0.1",
+    "generator_model": "gpt-oss:20b",
+    "split": "dev",
+    "levels": [
+      "beginner",
+      "intermediate",
+      "advanced"
+    ],
+    "candidate_k": 20,
+    "evidence_k": 5,
+    "lambda_weight": 0.2,
+    "profile_confidence": 1.0,
+    "max_retries": 1,
+    "allow_missing_roles": false,
+    "lambda_policy": "dev_selected"
+  },
+  "client": {
+    "model": "gpt-oss:20b",
+    "temperature": 0.0,
+    "max_output_tokens": 2048,
+    "endpoint_sha256": "65dc2471edc1b6ec37d1cf63a22372cf681f08dc57cb58a2fbdc51daf47fd3ec",
+    "context_window": 32768,
+    "model_digest": "17052f91a42e97930aa6e28a6c6c06a983e6a58dbb00434885a0cf5313e376f7",
+    "timeout_seconds": 180.0,
+    "seed": 0
+  },
+  "expected_cells": 1944,
+  "answered": 1944,
+  "technical_failures": 0,
+  "output_truncated": 0,
+  "model_calls": 1948,
+  "model_attempt_status_counts": {
+    "completed": 1944,
+    "output_truncated": 4
+  },
+  "scoring_status": "pending_independent_M8_evaluation",
+  "archive_policy": "Original input/output bytes; logs replace local job-directory prefix with ${RUN_DIR}. Code checkout, .git, model weights and process state excluded."
+}

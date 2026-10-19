@@ -35,6 +35,7 @@ class LLMResponse:
     usage: TokenUsage
     response_id: str | None
     latency_ms: float
+    done_reason: str | None = None
 
 
 class LLMClient(Protocol):
@@ -153,23 +154,49 @@ class OllamaChatClient:
         temperature: float | None = 0.0,
         timeout_seconds: float = 120.0,
         max_output_tokens: int = 800,
+        context_window: int | None = None,
+        seed: int = 0,
     ) -> None:
         self.model = model.strip()
-        resolved_base_url = base_url or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434"
+        resolved_base_url = (
+            base_url or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434"
+        )
         self.endpoint = f"{resolved_base_url.rstrip('/')}/api/chat"
         self.temperature = temperature
         self.timeout_seconds = timeout_seconds
         self.max_output_tokens = max_output_tokens
+        self.seed = seed
+        self.context_window = context_window
+        self.model_digest: str | None = None
         if not self.model:
             raise ValueError("model must not be empty")
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         if max_output_tokens <= 0:
             raise ValueError("max_output_tokens must be positive")
+        if context_window is not None and context_window <= max_output_tokens:
+            raise ValueError("context_window must exceed max_output_tokens")
+
+    def pin_model(self) -> None:
+        """Record the installed weights identity before starting/resuming a batch."""
+        url = self.endpoint.removesuffix("/api/chat") + "/api/tags"
+        with urllib.request.urlopen(url, timeout=min(self.timeout_seconds, 15)) as response:
+            payload = json.load(response)
+        names = {self.model, self.model + ":latest"}
+        matches = [m for m in payload.get("models", []) if m.get("name") in names]
+        if len(matches) != 1 or not matches[0].get("digest"):
+            raise ValueError("requested Ollama model has no unique installed weights identity")
+        self.model_digest = matches[0]["digest"]
 
     def complete(self, prompt: str, text_format: dict) -> LLMResponse:
         schema = text_format.get("schema", text_format)
-        options: dict[str, float | int] = {"num_predict": self.max_output_tokens}
+        options: dict[str, float | int] = {"num_predict": self.max_output_tokens, "seed": self.seed}
+        if self.context_window is not None:
+            # UTF-8 bytes bound byte-level token counts conservatively. Reserve
+            # room for the response and chat framing; refuse rather than truncate.
+            if len(prompt.encode("utf-8")) + self.max_output_tokens + 512 > self.context_window:
+                raise LLMProviderError("prompt exceeds the explicitly pinned context budget")
+            options["num_ctx"] = self.context_window
         if self.temperature is not None:
             options["temperature"] = self.temperature
         payload = {
@@ -210,13 +237,16 @@ class OllamaChatClient:
 
         message = body.get("message") or {}
         text = message.get("content")
-        if not isinstance(text, str) or not text.strip():
-            raise LLMEmptyResponseError("Ollama response contained no message content")
+        if (not isinstance(text, str) or not text.strip()) and body.get("done_reason") != "length":
+            error = LLMEmptyResponseError("Ollama response contained no message content")
+            error.done_reason = body.get("done_reason")
+            raise error
         input_tokens = int(body.get("prompt_eval_count", 0) or 0)
         output_tokens = int(body.get("eval_count", 0) or 0)
         return LLMResponse(
-            text=text,
+            text=text if isinstance(text, str) else "",
             model=str(body.get("model") or self.model),
+            done_reason=body.get("done_reason"),
             usage=TokenUsage(
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
