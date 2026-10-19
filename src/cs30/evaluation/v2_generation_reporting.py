@@ -13,8 +13,14 @@ from typing import Any
 
 from cs30.contracts import StudentLevel
 
+from .condition_statistics import CONTRASTS, correctness_noninferiority
 from .level_profiles import PREFERRED_ROLES
-from .v2_generation_models import EvaluationDecisionConfig, EvaluationEvidence, EvaluationMode
+from .v2_generation_models import (
+    EvaluationDecisionConfig,
+    EvaluationEvidence,
+    EvaluationMode,
+    ExperimentArm,
+)
 
 
 def _syllable_count(word: str) -> int:
@@ -162,21 +168,40 @@ def generation_noise_floor(
     intermediate and beginner versus advanced.
     """
 
-    indexed = {
-        (item.question_id, item.target_level.value, item.condition.value): item
-        for item in items
-        if item.answer is not None and item.prompt_sha256 is not None
-    }
+    indexed: dict[tuple[str, str, str], Any] = {}
+    for item in items:
+        if item.answer is None:
+            continue
+        key = (item.question_id, item.target_level.value, item.condition.value)
+        if key in indexed:
+            raise ValueError(f"duplicate generation-noise cell: {key}")
+        indexed[key] = item
 
     def compare(pairs: Iterable[tuple[Any, Any]]) -> dict[str, Any]:
+        candidate_pairs = 0
+        missing_pairs = 0
+        nonidentical_prompts = 0
         eligible = 0
         mismatched = 0
         for left, right in pairs:
-            if left is None or right is None or left.prompt_sha256 != right.prompt_sha256:
+            candidate_pairs += 1
+            if (
+                left is None
+                or right is None
+                or left.prompt_sha256 is None
+                or right.prompt_sha256 is None
+            ):
+                missing_pairs += 1
+                continue
+            if left.prompt_sha256 != right.prompt_sha256:
+                nonidentical_prompts += 1
                 continue
             eligible += 1
             mismatched += int(left.answer != right.answer)
         return {
+            "candidate_pair_count": candidate_pairs,
+            "missing_pair_count": missing_pairs,
+            "nonidentical_prompt_pair_count": nonidentical_prompts,
             "identical_prompt_pair_count": eligible,
             "answer_mismatch_count": mismatched,
             "answer_mismatch_rate": mismatched / eligible if eligible else None,
@@ -227,6 +252,7 @@ def strict_correctness_summary(rows: Iterable[Mapping[str, Any]]) -> dict[str, A
     correct = 0
     unresolved = 0
     technical_failures = 0
+    abstentions = 0
     score_sum = 0.0
     scored_count = 0
     for row in records:
@@ -234,6 +260,8 @@ def strict_correctness_summary(rows: Iterable[Mapping[str, Any]]) -> dict[str, A
             technical_failures += 1
             scored_count += 1
             continue
+        if bool(row.get("abstained")):
+            abstentions += 1
         score = row.get("correctness_score")
         if score is None:
             unresolved += 1
@@ -253,6 +281,7 @@ def strict_correctness_summary(rows: Iterable[Mapping[str, Any]]) -> dict[str, A
         "strict_correct_count": correct,
         "unresolved_count": unresolved,
         "technical_failure_count": technical_failures,
+        "abstention_count": abstentions,
         "strict_correct_rate": point,
         "strict_correct_rate_bounds": [lower, upper],
         "mean_score_over_two": (score_sum / (2 * scored_count) if scored_count else None),
@@ -267,6 +296,8 @@ def joint_correct_and_adapted_summary(
     successes = 0
     unresolved = 0
     for row in records:
+        if bool(row.get("end_to_end_zero")) or bool(row.get("technical_failure")):
+            continue
         correctness = row.get("correctness_score")
         adapted = row.get("adaptation_passed")
         if correctness is None or adapted is None:
@@ -314,8 +345,105 @@ def build_v2_generation_report(
         blockers.append("judge validity checks did not all pass")
     if human_audit is None or not human_audit.get("rating_count"):
         blockers.append("completed independent human audit is missing")
+    elif not human_audit.get("binding_verified"):
+        blockers.append("human audit is not bound to its prepared packet and source run")
+    elif human_audit.get("rating_count") != human_audit.get("expected_rating_count"):
+        blockers.append("human audit does not cover the prepared packet exactly")
+    elif int(human_audit.get("rating_count", 0)) < 12:
+        blockers.append("human audit is too small to cover all level-condition cells")
+    elif (
+        set(human_audit.get("audit_level_coverage", [])) != {level.value for level in StudentLevel}
+        or set(human_audit.get("audit_condition_coverage", []))
+        != {condition.value for condition in ExperimentArm}
+    ):
+        blockers.append("human audit does not cover all levels and conditions")
     if unresolved_items:
         blockers.append("unresolved evaluation items remain")
+    denominator = int(correctness.get("denominator", 0) or 0)
+    if denominator < 1:
+        blockers.append("correctness denominator is empty")
+    if int(correctness.get("unresolved_count", 0) or 0):
+        blockers.append("correctness scores remain unresolved")
+    adapter_record_count = (
+        provenance.get("adapter_manifest", {}).get("record_count")
+        if isinstance(provenance.get("adapter_manifest"), Mapping)
+        else None
+    )
+    if adapter_record_count is None:
+        blockers.append("adapter record count is missing from provenance")
+    elif denominator != int(adapter_record_count):
+        blockers.append("correctness denominator differs from the adapted run size")
+
+    by_metric_contrast: dict[tuple[str, str], Mapping[str, Any]] = {}
+    duplicate_contrasts: set[tuple[str, str]] = set()
+    for row in condition_contrasts:
+        key = (str(row.get("metric")), str(row.get("contrast")))
+        if key in by_metric_contrast:
+            duplicate_contrasts.add(key)
+        by_metric_contrast[key] = row
+    if duplicate_contrasts:
+        blockers.append("condition contrasts contain duplicate metric/contrast rows")
+    primary_row = None
+    if decision_config.primary_metric is not None and decision_config.primary_contrast is not None:
+        primary_row = by_metric_contrast.get(
+            (decision_config.primary_metric, decision_config.primary_contrast)
+        )
+        if primary_row is None:
+            blockers.append("registered primary metric/contrast is missing")
+        elif int(primary_row.get("missing_pair_count", 0) or 0):
+            blockers.append("registered primary contrast has missing pairs")
+        elif not primary_row.get("cluster_bootstrap"):
+            blockers.append("registered primary contrast has no clustered interval")
+
+    correctness_noninferiority_result: dict[str, Any] | None = None
+    if (
+        decision_config.primary_contrast is not None
+        and decision_config.correctness_noninferiority_delta is not None
+    ):
+        correctness_row = by_metric_contrast.get(
+            ("strict_correct", decision_config.primary_contrast)
+        )
+        if correctness_row is None:
+            blockers.append("correctness non-inferiority contrast is missing")
+        elif int(correctness_row.get("missing_pair_count", 0) or 0):
+            blockers.append("correctness non-inferiority contrast has missing pairs")
+        else:
+            correctness_noninferiority_result = correctness_noninferiority(
+                correctness_row,
+                delta=decision_config.correctness_noninferiority_delta,
+            )
+            if correctness_noninferiority_result["status"] != "complete":
+                blockers.append("correctness non-inferiority interval is unavailable")
+
+    required_contrasts = set(CONTRASTS)
+    for metric in {
+        value
+        for value in (decision_config.primary_metric, "strict_correct")
+        if value is not None
+    }:
+        present = {
+            contrast
+            for observed_metric, contrast in by_metric_contrast
+            if observed_metric == metric
+        }
+        if condition_contrasts and present != required_contrasts:
+            blockers.append(f"{metric} does not contain all four registered contrasts")
+        for contrast in present:
+            row = by_metric_contrast[(metric, contrast)]
+            if int(row.get("missing_pair_count", 0) or 0):
+                blockers.append(f"{metric}/{contrast} has missing pairs")
+            if int(row.get("paired_question_level_count", 0) or 0) < 1:
+                blockers.append(f"{metric}/{contrast} has no paired observations")
+            if not row.get("cluster_bootstrap"):
+                blockers.append(f"{metric}/{contrast} has no clustered interval")
+
+    if lambda_evaluation is None:
+        blockers.append("lambda verification is missing")
+    elif (
+        decision_config.selected_lambda is not None
+        and lambda_evaluation.get("selected_lambda") != decision_config.selected_lambda
+    ):
+        blockers.append("lambda verification differs from the frozen selected lambda")
     blockers.extend(f"missing decision: {decision}" for decision in missing_decisions)
     reportable = mode is EvaluationMode.REPORTABLE and not blockers
     if mode is EvaluationMode.REPORTABLE and blockers:
@@ -330,6 +458,13 @@ def build_v2_generation_report(
         ),
         "development_blockers": blockers,
         "decision_config": decision_config.model_dump(mode="json"),
+        "registered_analysis": {
+            "primary_metric": decision_config.primary_metric,
+            "primary_contrast": decision_config.primary_contrast,
+            "multiplicity_policy": decision_config.multiplicity_policy,
+            "primary_result": dict(primary_row) if primary_row is not None else None,
+            "correctness_noninferiority": correctness_noninferiority_result,
+        },
         "provenance": dict(provenance),
         "automatic_full_run": {
             "correctness": dict(correctness),
@@ -374,6 +509,7 @@ def _markdown(report: Mapping[str, Any]) -> str:
     if not blockers:
         lines.append("- None")
     for heading, key in (
+        ("Registered analysis", "registered_analysis"),
         ("Automatic full-run results", "automatic_full_run"),
         ("Judge validity", "judge_validity"),
         ("Human audit", "human_audit"),

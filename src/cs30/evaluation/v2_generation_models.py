@@ -250,6 +250,7 @@ class GenerationEvaluationInput(ContractModel):
     lambda_weight: float = Field(ge=0.0, le=1.0)
     generation_model_family: Identifier
     generation_model_revision: Identifier
+    source_split: Identifier = "dev"
     generation_seed: int | None = None
     prompt_sha256: str | None = None
     eligibility: PersonalisationEligibility
@@ -445,6 +446,7 @@ class EvaluationDecisionConfig(ContractModel):
     primary_contrast: Identifier | None = None
     multiplicity_policy: NonEmptyText | None = None
     new_test_id: Identifier | None = None
+    human_audit_rubric_sha256: str | None = None
     new_test_approved: bool = False
     scoring_plan_approved: bool = False
 
@@ -461,6 +463,7 @@ class EvaluationDecisionConfig(ContractModel):
             "primary_contrast": self.primary_contrast,
             "multiplicity_policy": self.multiplicity_policy,
             "new_test_id": self.new_test_id,
+            "human_audit_rubric_sha256": self.human_audit_rubric_sha256,
         }
         missing = [name for name, value in required.items() if value is None]
         if not self.new_test_approved:
@@ -472,4 +475,39 @@ class EvaluationDecisionConfig(ContractModel):
                 self.lambda_selection_artifact_sha256,
                 "lambda_selection_artifact_sha256",
             )
+        if self.human_audit_rubric_sha256 is not None:
+            _validate_sha256(
+                self.human_audit_rubric_sha256,
+                "human_audit_rubric_sha256",
+            )
         return missing
+
+
+class CorrectnessScoreBinding(ContractModel):
+    """M8-owned provenance sidecar for one imported correctness-score file."""
+
+    schema_version: Literal["1.0"] = "1.0"
+    score_sha256: str
+    evaluation_inputs_sha256: str
+    source_run_sha256: str
+    gold_sha256: str
+    record_count: int = Field(ge=1)
+    identity_set_sha256: str
+    generator_models: list[Identifier] = Field(min_length=1)
+    source_splits: list[Identifier] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_hashes(self) -> CorrectnessScoreBinding:
+        for name in (
+            "score_sha256",
+            "evaluation_inputs_sha256",
+            "source_run_sha256",
+            "gold_sha256",
+            "identity_set_sha256",
+        ):
+            _validate_sha256(str(getattr(self, name)), name)
+        if len(self.generator_models) != len(set(self.generator_models)):
+            raise ValueError("generator_models must be unique")
+        if len(self.source_splits) != len(set(self.source_splits)):
+            raise ValueError("source_splits must be unique")
+        return self

@@ -132,3 +132,4 @@ def test_validity_report_cli_keeps_missing_required_checks_fail_closed(
     report = json.loads(output.read_text(encoding="utf-8"))
     assert report["formal_use_allowed"] is False
     assert "duplicate_consistency" in report["failed_or_missing_required_checks"]
+    assert "source_binding" in report["failed_or_missing_required_checks"]

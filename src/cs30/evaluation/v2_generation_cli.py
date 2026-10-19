@@ -16,9 +16,8 @@ from cs30.contracts import StudentLevel
 
 from .condition_statistics import MetricObservation, paired_condition_contrasts
 from .evaluation_audit import (
-    HumanAuditRating,
+    load_bound_human_audit,
     prepare_calibration_and_audit,
-    summarize_human_audit,
 )
 from .evidence_support import build_evidence_support_request
 from .judge_results import (
@@ -41,13 +40,16 @@ from .level_discrimination import build_discrimination_request
 from .level_profiles import load_eligibility_package, load_profile_checklist_package
 from .v2_generation_artifacts import (
     adapt_m7_generation_artifacts,
+    build_correctness_score_binding,
     load_open_answer_scores,
     write_adapter_outputs,
+    write_correctness_score_binding,
 )
 from .v2_generation_models import (
     EvaluationDecisionConfig,
     EvaluationMode,
     GenerationEvaluationInput,
+    GenerationRunStatus,
     JudgeConfiguration,
     JudgeTask,
     LevelGuess,
@@ -90,6 +92,18 @@ def _load_inputs(path: Path) -> list[GenerationEvaluationInput]:
     if len(evaluation_ids) != len(set(evaluation_ids)):
         raise ValueError(f"{path}: duplicate evaluation_id values")
     return rows
+
+
+def _source_run_sha256(items: list[GenerationEvaluationInput]) -> str:
+    source_runs = {item.source_run_sha256 for item in items}
+    if None in source_runs or len(source_runs) != 1:
+        raise ValueError("evaluation inputs must belong to exactly one hash-bound source run")
+    return str(next(iter(source_runs)))
+
+
+def _require_exact_answer_hashes(items: list[GenerationEvaluationInput]) -> None:
+    if any(item.answer is not None and item.answer_sha256 is None for item in items):
+        raise ValueError("evaluation inputs with answers require exact answer hashes")
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -169,6 +183,15 @@ def _parser() -> argparse.ArgumentParser:
     adapt.add_argument("--lambda-selection", required=True, type=Path)
     adapt.add_argument("--output-dir", required=True, type=Path)
 
+    bind_scores = commands.add_parser(
+        "bind-correctness-scores",
+        help="bind one validated correctness-score file to one adapted source run",
+    )
+    bind_scores.add_argument("--inputs", required=True, type=Path)
+    bind_scores.add_argument("--adapter-manifest", required=True, type=Path)
+    bind_scores.add_argument("--scores", required=True, type=Path)
+    bind_scores.add_argument("--output", required=True, type=Path)
+
     assemble = commands.add_parser("assemble-judge-results")
     assemble.add_argument("--inputs", required=True, type=Path)
     assemble.add_argument("--profiles", required=True, type=Path)
@@ -184,15 +207,21 @@ def _parser() -> argparse.ArgumentParser:
 
     validity = commands.add_parser("validity-report")
     validity.add_argument("--observations", required=True, type=Path)
+    validity.add_argument("--inputs", type=Path)
+    validity.add_argument("--judge-evaluation-dir", type=Path)
     validity.add_argument("--output", required=True, type=Path)
 
     development = commands.add_parser("development-report")
     development.add_argument("--inputs", required=True, type=Path)
     development.add_argument("--adapter-manifest", required=True, type=Path)
     development.add_argument("--correctness-scores", type=Path)
+    development.add_argument("--correctness-score-binding", type=Path)
     development.add_argument("--judge-evaluation-dir", type=Path)
     development.add_argument("--validity-report", type=Path)
     development.add_argument("--human-audit-ratings", type=Path)
+    development.add_argument("--human-audit-packet", type=Path)
+    development.add_argument("--human-audit-manifest", type=Path)
+    development.add_argument("--human-audit-private-key", type=Path)
     development.add_argument("--decision-config", type=Path)
     development.add_argument("--output-dir", required=True, type=Path)
     development.add_argument("--bootstrap-draws", type=int, default=2000)
@@ -237,6 +266,9 @@ def _validate_inputs(args: argparse.Namespace) -> int:
 
 def _prepare_requests(args: argparse.Namespace) -> int:
     items = _load_inputs(args.inputs)
+    if args.mode == EvaluationMode.REPORTABLE.value:
+        _source_run_sha256(items)
+        _require_exact_answer_hashes(items)
     package = load_profile_checklist_package(args.profiles)
     try:
         configuration = JudgeConfiguration.model_validate_json(
@@ -310,9 +342,13 @@ def _condition_stats(args: argparse.Namespace) -> int:
 
 
 def _prepare_audit(args: argparse.Namespace) -> int:
+    items = _load_inputs(args.inputs)
+    _source_run_sha256(items)
+    _require_exact_answer_hashes(items)
     prepare_calibration_and_audit(
-        _load_inputs(args.inputs),
+        items,
         args.output_dir,
+        evaluation_inputs_sha256=hashlib.sha256(args.inputs.read_bytes()).hexdigest(),
         calibration_size=args.calibration_size,
         audit_size=args.audit_size,
         seed=args.seed,
@@ -334,8 +370,28 @@ def _adapt_m7_artifacts(args: argparse.Namespace) -> int:
     return 0
 
 
+def _bind_correctness_scores(args: argparse.Namespace) -> int:
+    items = _load_inputs(args.inputs)
+    manifest = _load_json_object(args.adapter_manifest)
+    inputs_sha256 = hashlib.sha256(args.inputs.read_bytes()).hexdigest()
+    if manifest.get("output_sha256", {}).get("generation_evaluation_inputs") != inputs_sha256:
+        raise ValueError("evaluation inputs do not match the adapter manifest hash")
+    if manifest.get("source_run_sha256") != _source_run_sha256(items):
+        raise ValueError("evaluation inputs do not match the adapter source run")
+    binding = build_correctness_score_binding(
+        args.scores,
+        items,
+        evaluation_inputs_sha256=inputs_sha256,
+        gold_sha256=str(manifest["gold_sha256"]),
+    )
+    write_correctness_score_binding(binding, args.output)
+    return 0
+
+
 def _assemble_judge_results(args: argparse.Namespace) -> int:
     items = _load_inputs(args.inputs)
+    source_run_hash = _source_run_sha256(items)
+    _require_exact_answer_hashes(items)
     package = load_profile_checklist_package(args.profiles)
     try:
         configuration = JudgeConfiguration.model_validate_json(
@@ -366,6 +422,7 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
         args.output_dir,
         provenance={
             "evaluation_inputs_sha256": hashlib.sha256(args.inputs.read_bytes()).hexdigest(),
+            "source_run_sha256": source_run_hash,
             "profile_package_sha256": package.package_sha256,
             "judge_configuration_sha256": hashlib.sha256(
                 args.judge_config.read_bytes()
@@ -392,6 +449,24 @@ def _load_json_object(path: Path) -> dict[str, Any]:
 
 def _validity_report(args: argparse.Namespace) -> int:
     payload = _load_json_object(args.observations)
+    if (args.inputs is None) != (args.judge_evaluation_dir is None):
+        raise ValueError("validity binding requires --inputs and --judge-evaluation-dir together")
+    inputs_sha256 = None
+    source_run_hash = None
+    judge_manifest_sha256 = None
+    if args.inputs is not None:
+        items = _load_inputs(args.inputs)
+        source_run_hash = _source_run_sha256(items)
+        judge_data = load_judge_evaluation_outputs(args.judge_evaluation_dir)
+        inputs_sha256 = hashlib.sha256(args.inputs.read_bytes()).hexdigest()
+        judge_provenance = judge_data["manifest"].get("provenance", {})
+        if judge_provenance.get("evaluation_inputs_sha256") != inputs_sha256:
+            raise ValueError("judge evaluation is bound to different evaluation inputs")
+        if judge_provenance.get("source_run_sha256") != source_run_hash:
+            raise ValueError("judge evaluation is bound to a different source run")
+        judge_manifest_sha256 = hashlib.sha256(
+            (args.judge_evaluation_dir / "judge_evaluation_manifest.json").read_bytes()
+        ).hexdigest()
     try:
         thresholds = ValidityThresholds.model_validate(payload["thresholds"])
         report = build_validity_report(
@@ -411,6 +486,18 @@ def _validity_report(args: argparse.Namespace) -> int:
         )
     except (KeyError, TypeError, ValidationError) as exc:
         raise ValueError(f"{args.observations}: invalid validity observations: {exc}") from exc
+    report["provenance"] = {
+        "observations_sha256": hashlib.sha256(args.observations.read_bytes()).hexdigest(),
+        "evaluation_inputs_sha256": inputs_sha256,
+        "source_run_sha256": source_run_hash,
+        "judge_evaluation_manifest_sha256": judge_manifest_sha256,
+        "binding_verified": inputs_sha256 is not None,
+    }
+    if inputs_sha256 is None:
+        report["formal_use_allowed"] = False
+        missing = list(report["failed_or_missing_required_checks"])
+        missing.append("source_binding")
+        report["failed_or_missing_required_checks"] = missing
     _write_json(args.output, report)
     return 0
 
@@ -501,12 +588,18 @@ def _development_report(args: argparse.Namespace) -> int:
             raise ValueError("decision config selected_lambda differs from adapter manifest")
         if decision_config.lambda_selection_artifact_sha256 != lambda_artifact_hash:
             raise ValueError("decision config lambda-selection hash differs from adapter manifest")
+    if (args.correctness_scores is None) != (args.correctness_score_binding is None):
+        raise ValueError(
+            "--correctness-scores and --correctness-score-binding must be supplied together"
+        )
     scores = {}
     if args.correctness_scores is not None:
         scores = load_open_answer_scores(
             args.correctness_scores,
             items,
             gold_sha256=str(manifest["gold_sha256"]),
+            binding_path=args.correctness_score_binding,
+            evaluation_inputs_sha256=actual_inputs_hash,
         )
     correctness_rows = []
     correctness_by_id: dict[str, int | None] = {}
@@ -514,11 +607,16 @@ def _development_report(args: argparse.Namespace) -> int:
     unresolved = []
     for item in items:
         score = scores.get(item.evaluation_id)
-        numeric = score.score if score and score.score_status == "scored" else None
+        numeric = (
+            0
+            if item.source_status is not GenerationRunStatus.ANSWERED
+            else (score.score if score and score.score_status == "scored" else None)
+        )
         correctness_by_id[item.evaluation_id] = numeric
         correctness_rows.append(
             {
                 "technical_failure": item.technical_failure,
+                "abstained": item.abstained,
                 "correctness_score": numeric,
             }
         )
@@ -532,7 +630,9 @@ def _development_report(args: argparse.Namespace) -> int:
                     value=float(numeric == 2),
                 )
             )
-        if score is None or score.score_status != "scored":
+        if item.source_status is GenerationRunStatus.ANSWERED and (
+            score is None or score.score_status != "scored"
+        ):
             unresolved.append(
                 {
                     "evaluation_id": item.evaluation_id,
@@ -543,6 +643,11 @@ def _development_report(args: argparse.Namespace) -> int:
     judge_data: dict[str, Any] | None = None
     if args.judge_evaluation_dir is not None:
         judge_data = load_judge_evaluation_outputs(args.judge_evaluation_dir)
+        judge_provenance = judge_data["manifest"].get("provenance", {})
+        if judge_provenance.get("evaluation_inputs_sha256") != actual_inputs_hash:
+            raise ValueError("judge evaluation is bound to different evaluation inputs")
+        if judge_provenance.get("source_run_sha256") != source_run_hash:
+            raise ValueError("judge evaluation is bound to a different source run")
         unresolved.extend(judge_data["unresolved"])
     else:
         unresolved.extend(
@@ -614,6 +719,22 @@ def _development_report(args: argparse.Namespace) -> int:
         if args.validity_report is not None
         else {"formal_use_allowed": False, "reason": "judge validation not supplied"}
     )
+    if args.validity_report is not None:
+        if judge_data is None:
+            raise ValueError("a validity report requires the bound judge evaluation directory")
+        validity_provenance = validity.get("provenance", {})
+        expected_judge_manifest_hash = hashlib.sha256(
+            (args.judge_evaluation_dir / "judge_evaluation_manifest.json").read_bytes()
+        ).hexdigest()
+        if validity_provenance.get("evaluation_inputs_sha256") != actual_inputs_hash:
+            raise ValueError("validity report is bound to different evaluation inputs")
+        if validity_provenance.get("source_run_sha256") != source_run_hash:
+            raise ValueError("validity report is bound to a different source run")
+        if (
+            validity_provenance.get("judge_evaluation_manifest_sha256")
+            != expected_judge_manifest_hash
+        ):
+            raise ValueError("validity report is bound to a different judge evaluation")
     if args.decision_config is not None and args.validity_report is not None:
         if validity.get("threshold_version") != decision_config.validity_threshold_version:
             raise ValueError("validity threshold version differs from decision config")
@@ -621,22 +742,44 @@ def _development_report(args: argparse.Namespace) -> int:
         judge_version = judge_data["manifest"].get("provenance", {}).get("judge_config_version")
         if judge_version != decision_config.judge_config_version:
             raise ValueError("judge configuration version differs from decision config")
+    audit_paths = (
+        args.human_audit_ratings,
+        args.human_audit_packet,
+        args.human_audit_manifest,
+        args.human_audit_private_key,
+    )
+    if any(path is not None for path in audit_paths) and not all(
+        path is not None for path in audit_paths
+    ):
+        raise ValueError(
+            "human audit requires ratings, packet, manifest, and private key together"
+        )
     human_audit = None
     if args.human_audit_ratings is not None:
-        try:
-            ratings = [
-                HumanAuditRating.model_validate(row)
-                for row in _read_jsonl(args.human_audit_ratings)
-            ]
-        except ValidationError as exc:
-            raise ValueError(f"{args.human_audit_ratings}: invalid audit rating: {exc}") from exc
-        human_audit = summarize_human_audit(ratings)
+        expected_profile_hash = None
+        if judge_data is not None:
+            expected_profile_hash = judge_data["manifest"].get("provenance", {}).get(
+                "profile_package_sha256"
+            )
+        human_audit = load_bound_human_audit(
+            ratings_path=args.human_audit_ratings,
+            audit_packet_path=args.human_audit_packet,
+            manifest_path=args.human_audit_manifest,
+            private_key_path=args.human_audit_private_key,
+            expected_evaluation_inputs_sha256=actual_inputs_hash,
+            expected_source_run_sha256=str(source_run_hash),
+            expected_inputs=items,
+            expected_profile_package_sha256=expected_profile_hash,
+            expected_rubric_sha256=decision_config.human_audit_rubric_sha256,
+        )
     joint_rows = [
         {
             "correctness_score": correctness_by_id.get(item.evaluation_id),
             "adaptation_passed": target_adaptation.get(item.evaluation_id, {}).get(
                 "adaptation_passed"
             ),
+            "technical_failure": item.technical_failure,
+            "end_to_end_zero": item.source_status is not GenerationRunStatus.ANSWERED,
         }
         for item in items
     ]
@@ -653,7 +796,12 @@ def _development_report(args: argparse.Namespace) -> int:
         evidence_support=_evidence_support_summary(evidence_rows),
         mechanism_diagnostics=[
             preferred_role_share(item.evidence, item.target_level)
-            | {"evaluation_id": item.evaluation_id}
+            | {
+                "evaluation_id": item.evaluation_id,
+                "question_id": item.question_id,
+                "condition": item.condition.value,
+                "lambda_weight": item.lambda_weight,
+            }
             for item in items
         ],
         text_diagnostics=[
@@ -675,6 +823,11 @@ def _development_report(args: argparse.Namespace) -> int:
             "correctness_scores_sha256": (
                 hashlib.sha256(args.correctness_scores.read_bytes()).hexdigest()
                 if args.correctness_scores is not None
+                else None
+            ),
+            "correctness_score_binding_sha256": (
+                hashlib.sha256(args.correctness_score_binding.read_bytes()).hexdigest()
+                if args.correctness_score_binding is not None
                 else None
             ),
             "correctness_rubric_sha256_values": sorted(
@@ -704,6 +857,11 @@ def _development_report(args: argparse.Namespace) -> int:
                 if args.human_audit_ratings is not None
                 else None
             ),
+            "human_audit_manifest_sha256": (
+                hashlib.sha256(args.human_audit_manifest.read_bytes()).hexdigest()
+                if args.human_audit_manifest is not None
+                else None
+            ),
             "decision_config_sha256": (
                 hashlib.sha256(args.decision_config.read_bytes()).hexdigest()
                 if args.decision_config is not None
@@ -729,6 +887,8 @@ def main(argv: list[str] | None = None) -> int:
             return _prepare_audit(args)
         if args.command == "adapt-m7-artifacts":
             return _adapt_m7_artifacts(args)
+        if args.command == "bind-correctness-scores":
+            return _bind_correctness_scores(args)
         if args.command == "assemble-judge-results":
             return _assemble_judge_results(args)
         if args.command == "validity-report":

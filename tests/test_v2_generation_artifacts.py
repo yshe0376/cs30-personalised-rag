@@ -6,8 +6,10 @@ import pytest
 
 from cs30.evaluation.v2_generation_artifacts import (
     adapt_m7_generation_artifacts,
+    build_correctness_score_binding,
     load_open_answer_scores,
     write_adapter_outputs,
+    write_correctness_score_binding,
 )
 from cs30.evaluation.v2_generation_cli import main
 
@@ -52,11 +54,38 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
             "objective": "largest_positive_lambda_within_1pt_of_baseline",
             "noninferiority_margin": 0.01,
             "gold_sha256": _sha(paths["gold"]),
+            "candidate_lambdas": [0.0, 0.1, 0.2, 0.35, 0.5],
             "metrics": [
-                {"lambda_weight": 0.0, "complete_hit_rate": 0.827},
-                {"lambda_weight": 0.1, "complete_hit_rate": 0.823},
-                {"lambda_weight": 0.2, "complete_hit_rate": 0.821},
-                {"lambda_weight": 0.25, "complete_hit_rate": 0.815},
+                {
+                    "lambda_weight": 0.0,
+                    "complete_hit_rate": 0.827,
+                    "mean_span_coverage": 0.84,
+                    "case_count": 3,
+                },
+                {
+                    "lambda_weight": 0.1,
+                    "complete_hit_rate": 0.823,
+                    "mean_span_coverage": 0.83,
+                    "case_count": 3,
+                },
+                {
+                    "lambda_weight": 0.2,
+                    "complete_hit_rate": 0.821,
+                    "mean_span_coverage": 0.82,
+                    "case_count": 3,
+                },
+                {
+                    "lambda_weight": 0.35,
+                    "complete_hit_rate": 0.796,
+                    "mean_span_coverage": 0.80,
+                    "case_count": 3,
+                },
+                {
+                    "lambda_weight": 0.5,
+                    "complete_hit_rate": 0.636,
+                    "mean_span_coverage": 0.65,
+                    "case_count": 3,
+                },
             ],
         },
     )
@@ -244,6 +273,37 @@ def test_adapter_rejects_lambda_selected_with_judge_independent_rule_violation(
         )
 
 
+@pytest.mark.parametrize("failure", ["incomplete-grid", "duplicate-metric"])
+def test_adapter_rejects_incomplete_or_duplicate_lambda_evidence(
+    tmp_path: Path,
+    failure: str,
+) -> None:
+    paths = _bundle(tmp_path)
+    selection = json.loads(paths["lambda"].read_text(encoding="utf-8"))
+    if failure == "incomplete-grid":
+        selection["candidate_lambdas"] = [0.0, 0.1, 0.2, 0.35]
+        expected_error = "candidate grid differs"
+    else:
+        selection["metrics"].append(dict(selection["metrics"][0]))
+        expected_error = "repeats metric row"
+    _write_json(paths["lambda"], selection)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["prepared_inputs"]["input_sha256"]["lambda_selection.json"] = _sha(
+        paths["lambda"]
+    )
+    _write_json(paths["manifest"], manifest)
+    with pytest.raises(ValueError, match=expected_error):
+        adapt_m7_generation_artifacts(
+            expected_path=paths["expected"],
+            records_path=paths["records"],
+            answers_path=paths["answers"],
+            run_manifest_path=paths["manifest"],
+            gold_path=paths["gold"],
+            eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
+        )
+
+
 def test_score_import_binds_answer_hash_and_output_truncated(tmp_path: Path) -> None:
     paths = _bundle(tmp_path)
     items, manifest = adapt_m7_generation_artifacts(
@@ -295,9 +355,191 @@ def test_score_import_binds_answer_hash_and_output_truncated(tmp_path: Path) -> 
     ]
     score_path = tmp_path / "scores.jsonl"
     _write_jsonl(score_path, scores)
-    loaded = load_open_answer_scores(score_path, items, gold_sha256=str(manifest["gold_sha256"]))
+    written = write_adapter_outputs(items, manifest, tmp_path / "adapted")
+    inputs_sha256 = _sha(written["inputs"])
+    binding_path = tmp_path / "score-binding.json"
+    assert (
+        main(
+            [
+                "bind-correctness-scores",
+                "--inputs",
+                str(written["inputs"]),
+                "--adapter-manifest",
+                str(written["manifest"]),
+                "--scores",
+                str(score_path),
+                "--output",
+                str(binding_path),
+            ]
+        )
+        == 0
+    )
+    loaded = load_open_answer_scores(
+        score_path,
+        items,
+        gold_sha256=str(manifest["gold_sha256"]),
+        binding_path=binding_path,
+        evaluation_inputs_sha256=inputs_sha256,
+    )
     combined = next(item for item in items if item.run_id == "run-combined")
     assert loaded[combined.evaluation_id].run_status == "output_truncated"
+
+
+def test_score_binding_rejects_same_run_ids_from_a_different_source_run(
+    tmp_path: Path,
+) -> None:
+    first_paths = _bundle(tmp_path / "first")
+    second_paths = _bundle(tmp_path / "second")
+    second_source_manifest = json.loads(second_paths["manifest"].read_text(encoding="utf-8"))
+    second_source_manifest["delivery_id"] = "different-run-directory"
+    _write_json(second_paths["manifest"], second_source_manifest)
+    first, first_manifest = adapt_m7_generation_artifacts(
+        expected_path=first_paths["expected"],
+        records_path=first_paths["records"],
+        answers_path=first_paths["answers"],
+        run_manifest_path=first_paths["manifest"],
+        gold_path=first_paths["gold"],
+        eligibility_path=first_paths["eligibility"],
+        lambda_selection_path=first_paths["lambda"],
+    )
+    second, second_manifest = adapt_m7_generation_artifacts(
+        expected_path=second_paths["expected"],
+        records_path=second_paths["records"],
+        answers_path=second_paths["answers"],
+        run_manifest_path=second_paths["manifest"],
+        gold_path=second_paths["gold"],
+        eligibility_path=second_paths["eligibility"],
+        lambda_selection_path=second_paths["lambda"],
+    )
+    score_path = tmp_path / "scores.jsonl"
+    _write_jsonl(
+        score_path,
+        [
+            {
+                "run_id": "run-plain",
+                "question_id": "q1",
+                "condition_id": "P0R0_plain",
+                "student_level": "beginner",
+                "generator_model": "gpt-oss:20b",
+                "split": "dev",
+                "gold_sha256": first_manifest["gold_sha256"],
+                "rubric_sha256": "c" * 64,
+                "rubric_version": "correctness-v1",
+                "answer_sha256": hashlib.sha256(b"Because.").hexdigest(),
+                "run_status": "answered",
+                "score_status": "scored",
+                "score": 2,
+                "scoring_source": "human",
+                "reason": "reviewed",
+                "review_record_id": "review-1",
+                "human_rater_id": "rater-1",
+            },
+            {
+                "run_id": "run-combined",
+                "question_id": "q1",
+                "condition_id": "P1R1_combined",
+                "student_level": "beginner",
+                "generator_model": "gpt-oss:20b",
+                "split": "dev",
+                "gold_sha256": first_manifest["gold_sha256"],
+                "rubric_sha256": None,
+                "rubric_version": None,
+                "answer_sha256": None,
+                "run_status": "output_truncated",
+                "score_status": "scored",
+                "score": 0,
+                "scoring_source": "system",
+                "reason": "output_truncated",
+            },
+        ],
+    )
+    first_written = write_adapter_outputs(first, first_manifest, tmp_path / "first-adapted")
+    second_written = write_adapter_outputs(second, second_manifest, tmp_path / "second-adapted")
+    first_inputs_sha256 = _sha(first_written["inputs"])
+    binding = build_correctness_score_binding(
+        score_path,
+        first,
+        evaluation_inputs_sha256=first_inputs_sha256,
+        gold_sha256=str(first_manifest["gold_sha256"]),
+    )
+    binding_path = write_correctness_score_binding(binding, tmp_path / "binding.json")
+    with pytest.raises(ValueError, match="current source run"):
+        load_open_answer_scores(
+            score_path,
+            second,
+            gold_sha256=str(second_manifest["gold_sha256"]),
+            binding_path=binding_path,
+            evaluation_inputs_sha256=_sha(second_written["inputs"]),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "wrong_value"),
+    [("generator_model", "different-model:1"), ("split", "test")],
+)
+def test_score_binding_rejects_wrong_model_or_split(
+    tmp_path: Path,
+    field: str,
+    wrong_value: str,
+) -> None:
+    paths = _bundle(tmp_path)
+    items, manifest = adapt_m7_generation_artifacts(
+        expected_path=paths["expected"],
+        records_path=paths["records"],
+        answers_path=paths["answers"],
+        run_manifest_path=paths["manifest"],
+        gold_path=paths["gold"],
+        eligibility_path=paths["eligibility"],
+        lambda_selection_path=paths["lambda"],
+    )
+    rows = [
+        {
+            "run_id": "run-plain",
+            "question_id": "q1",
+            "condition_id": "P0R0_plain",
+            "student_level": "beginner",
+            "generator_model": "gpt-oss:20b",
+            "split": "dev",
+            "gold_sha256": manifest["gold_sha256"],
+            "rubric_sha256": "c" * 64,
+            "rubric_version": "correctness-v1",
+            "answer_sha256": hashlib.sha256(b"Because.").hexdigest(),
+            "run_status": "answered",
+            "score_status": "scored",
+            "score": 2,
+            "scoring_source": "human",
+            "reason": "reviewed",
+            "review_record_id": "review-1",
+            "human_rater_id": "rater-1",
+        },
+        {
+            "run_id": "run-combined",
+            "question_id": "q1",
+            "condition_id": "P1R1_combined",
+            "student_level": "beginner",
+            "generator_model": "gpt-oss:20b",
+            "split": "dev",
+            "gold_sha256": manifest["gold_sha256"],
+            "rubric_sha256": None,
+            "rubric_version": None,
+            "answer_sha256": None,
+            "run_status": "output_truncated",
+            "score_status": "scored",
+            "score": 0,
+            "scoring_source": "system",
+            "reason": "output_truncated",
+        },
+    ]
+    rows[0][field] = wrong_value
+    score_path = tmp_path / "wrong-scores.jsonl"
+    _write_jsonl(score_path, rows)
+    with pytest.raises(ValueError, match="score identity differs"):
+        build_correctness_score_binding(
+            score_path,
+            items,
+            evaluation_inputs_sha256="d" * 64,
+            gold_sha256=str(manifest["gold_sha256"]),
+        )
 
 
 def test_cli_runs_adapter_to_nonreportable_development_report(tmp_path: Path) -> None:

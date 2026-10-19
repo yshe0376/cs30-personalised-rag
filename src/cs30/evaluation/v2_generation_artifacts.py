@@ -20,11 +20,14 @@ from .level_profiles import canonical_json_sha256
 from .models import PersonalisationEligibility
 from .open_answer_models import OpenAnswerScore
 from .v2_generation_models import (
+    CorrectnessScoreBinding,
     EvaluationEvidence,
     ExperimentArm,
     GenerationEvaluationInput,
     GenerationRunStatus,
 )
+
+FROZEN_DEV_LAMBDA_GRID = (0.0, 0.1, 0.2, 0.35, 0.5)
 
 
 def file_sha256(path: Path) -> str:
@@ -179,21 +182,66 @@ def adapt_m7_generation_artifacts(
         raise ValueError("lambda selection must use the frozen one-percentage-point margin")
     if lambda_selection.get("gold_sha256") != gold_hash:
         raise ValueError("lambda selection Gold hash does not match supplied Gold bytes")
+    gold_rows = _read_jsonl(gold_path)
+    expected_lambda_case_count = len(gold_rows) * 3
+    candidate_lambdas = tuple(
+        float(value) for value in lambda_selection.get("candidate_lambdas") or []
+    )
+    if candidate_lambdas != FROZEN_DEV_LAMBDA_GRID:
+        raise ValueError(
+            "lambda selection candidate grid differs from the frozen Dev grid "
+            f"{list(FROZEN_DEV_LAMBDA_GRID)}"
+        )
+    metric_rows = list(lambda_selection.get("metrics") or [])
+    metrics_by_lambda: dict[float, dict[str, Any]] = {}
+    for row in metric_rows:
+        candidate = float(row["lambda_weight"])
+        if candidate in metrics_by_lambda:
+            raise ValueError(f"lambda selection repeats metric row for lambda={candidate}")
+        case_count = int(row.get("case_count", 0))
+        if case_count < 1:
+            raise ValueError(f"lambda={candidate} must report a positive case_count")
+        if "mean_span_coverage" not in row:
+            raise ValueError(f"lambda={candidate} is missing mean_span_coverage")
+        cases_for_candidate = list(row.get("cases") or [])
+        if cases_for_candidate:
+            identities = [
+                (str(case.get("question_id", "")), str(case.get("level", "")))
+                for case in cases_for_candidate
+            ]
+            if len(cases_for_candidate) != case_count or len(identities) != len(set(identities)):
+                raise ValueError(
+                    f"lambda={candidate} case rows must be unique and match case_count"
+                )
+        metrics_by_lambda[candidate] = row
+    if set(metrics_by_lambda) != set(candidate_lambdas):
+        raise ValueError("lambda metric coverage must exactly match candidate_lambdas")
+    case_counts = {int(row["case_count"]) for row in metrics_by_lambda.values()}
+    if len(case_counts) != 1:
+        raise ValueError("every lambda candidate must use the same case_count")
+    if case_counts != {expected_lambda_case_count}:
+        raise ValueError(
+            "lambda candidate case_count must equal three levels for every Gold question"
+        )
     complete_hit_rates = {
-        float(row["lambda_weight"]): float(row["complete_hit_rate"])
-        for row in list(lambda_selection.get("metrics") or [])
+        candidate: float(row["complete_hit_rate"])
+        for candidate, row in metrics_by_lambda.items()
     }
     lambda_verification = verify_dev_lambda_selection(
         complete_hit_rates=complete_hit_rates,
         selected_lambda=float(lambda_selection["lambda_weight"]),
         margin=0.01,
     )
+    for row in lambda_verification["candidates"]:
+        source = metrics_by_lambda[float(row["lambda"])]
+        row["case_count"] = int(source["case_count"])
+        row["mean_span_coverage"] = float(source["mean_span_coverage"])
     cases = _index(list(expected.get("cases") or []), "run_id", "expected experiment")
     records = _index(_read_jsonl(records_path), "run_id", "generation records")
     answers = _index(_read_jsonl(answers_path), "run_id", "saved answers")
     _assert_exact_coverage(set(cases), set(records), "generation records")
     _assert_exact_coverage(set(cases), set(answers), "saved answers")
-    gold = _index(_read_jsonl(gold_path), "question_id", "Gold")
+    gold = _index(gold_rows, "question_id", "Gold")
     eligibility_rows = _index(_read_jsonl(eligibility_path), "question_id", "eligibility")
     expected_questions = {str(case["question_id"]) for case in cases.values()}
     _assert_exact_coverage(expected_questions, set(eligibility_rows), "eligibility")
@@ -278,6 +326,8 @@ def adapt_m7_generation_artifacts(
         prompt_sha256 = (record.get("generation_trace") or {}).get("prompt_sha256")
         if prompt_sha256 is not None:
             prompt_sha256 = str(prompt_sha256)
+        if not technical_failure and prompt_sha256 is None:
+            raise ValueError(f"{run_id}: completed generation is missing prompt_sha256")
         identity_hash = canonical_json_sha256(
             {
                 "source_run_sha256": source_run_hash,
@@ -298,6 +348,7 @@ def adapt_m7_generation_artifacts(
                 lambda_weight=lambda_weight,
                 generation_model_family=family,
                 generation_model_revision=revision,
+                source_split=str(gold[str(case["question_id"])].get("split") or "dev"),
                 generation_seed=seed,
                 prompt_sha256=prompt_sha256,
                 eligibility=eligibility,
@@ -343,13 +394,36 @@ def adapt_m7_generation_artifacts(
     return converted, adapter_manifest
 
 
-def load_open_answer_scores(
+def _generator_model_id(item: GenerationEvaluationInput) -> str:
+    if item.generation_model_revision == "unspecified":
+        return item.generation_model_family
+    return f"{item.generation_model_family}:{item.generation_model_revision}"
+
+
+def _score_identity_sha256(inputs: Sequence[GenerationEvaluationInput]) -> str:
+    return canonical_json_sha256(
+        sorted(
+            (
+                {
+                    "evaluation_id": item.evaluation_id,
+                    "run_id": item.run_id,
+                    "answer_sha256": item.answer_sha256,
+                    "source_status": item.source_status.value,
+                }
+                for item in inputs
+            ),
+            key=lambda row: row["evaluation_id"],
+        )
+    )
+
+
+def _validated_open_answer_scores(
     score_path: Path,
     inputs: Sequence[GenerationEvaluationInput],
     *,
     gold_sha256: str,
 ) -> dict[str, OpenAnswerScore]:
-    """Load handoff scores and bind each row to the exact adapted answer."""
+    """Validate handoff rows before a run-specific sidecar is created or consumed."""
 
     try:
         scores = [OpenAnswerScore.model_validate(row) for row in _read_jsonl(score_path)]
@@ -372,6 +446,8 @@ def load_open_answer_scores(
             score.question_id != source.question_id
             or score.condition_id != source.condition.value
             or score.student_level.value != source.target_level.value
+            or score.generator_model != _generator_model_id(source)
+            or score.split != source.source_split
         ):
             raise ValueError(f"{run_id}: score identity differs from adapted input")
         if score.run_status != source.source_status.value:
@@ -381,12 +457,94 @@ def load_open_answer_scores(
             raise ValueError(f"{run_id}: score answer hash mismatch")
         if (
             score.score_status == "scored"
-            and not source.technical_failure
+            and source.source_status is GenerationRunStatus.ANSWERED
             and score.rubric_sha256 is None
         ):
             raise ValueError(f"{run_id}: scored answer is missing a rubric hash")
+        if source.source_status is not GenerationRunStatus.ANSWERED and not (
+            score.score_status == "scored"
+            and score.score == 0
+            and score.scoring_source == "system"
+        ):
+            raise ValueError(f"{run_id}: non-answer status must have a system score of zero")
         result[source.evaluation_id] = score
     return result
+
+
+def build_correctness_score_binding(
+    score_path: Path,
+    inputs: Sequence[GenerationEvaluationInput],
+    *,
+    evaluation_inputs_sha256: str,
+    gold_sha256: str,
+) -> CorrectnessScoreBinding:
+    """Create an explicit M8 binding after validating every imported score row."""
+
+    scores = _validated_open_answer_scores(score_path, inputs, gold_sha256=gold_sha256)
+    source_runs = {item.source_run_sha256 for item in inputs}
+    if None in source_runs or len(source_runs) != 1:
+        raise ValueError("correctness-score binding requires exactly one source run")
+    return CorrectnessScoreBinding(
+        score_sha256=file_sha256(score_path),
+        evaluation_inputs_sha256=evaluation_inputs_sha256,
+        source_run_sha256=str(next(iter(source_runs))),
+        gold_sha256=gold_sha256,
+        record_count=len(scores),
+        identity_set_sha256=_score_identity_sha256(inputs),
+        generator_models=sorted({_generator_model_id(item) for item in inputs}),
+        source_splits=sorted({item.source_split for item in inputs}),
+    )
+
+
+def write_correctness_score_binding(
+    binding: CorrectnessScoreBinding,
+    path: Path,
+) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(binding.model_dump(mode="json"), ensure_ascii=False, indent=2, sort_keys=True)
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def load_open_answer_scores(
+    score_path: Path,
+    inputs: Sequence[GenerationEvaluationInput],
+    *,
+    gold_sha256: str,
+    binding_path: Path,
+    evaluation_inputs_sha256: str,
+) -> dict[str, OpenAnswerScore]:
+    """Load correctness scores only when their M8 run binding matches exactly."""
+
+    try:
+        binding = CorrectnessScoreBinding.model_validate_json(
+            binding_path.read_text(encoding="utf-8")
+        )
+    except ValidationError as exc:
+        raise ValueError(f"{binding_path}: invalid correctness-score binding: {exc}") from exc
+    source_runs = {item.source_run_sha256 for item in inputs}
+    expected_source_run = next(iter(source_runs)) if len(source_runs) == 1 else None
+    expected = {
+        "score_sha256": file_sha256(score_path),
+        "evaluation_inputs_sha256": evaluation_inputs_sha256,
+        "source_run_sha256": expected_source_run,
+        "gold_sha256": gold_sha256,
+        "record_count": len(inputs),
+        "identity_set_sha256": _score_identity_sha256(inputs),
+        "generator_models": sorted({_generator_model_id(item) for item in inputs}),
+        "source_splits": sorted({item.source_split for item in inputs}),
+    }
+    actual = binding.model_dump(mode="json")
+    mismatches = [name for name, value in expected.items() if actual.get(name) != value]
+    if mismatches:
+        raise ValueError(
+            "correctness-score binding differs from the current source run: "
+            + ", ".join(mismatches)
+        )
+    return _validated_open_answer_scores(score_path, inputs, gold_sha256=gold_sha256)
 
 
 def write_adapter_outputs(
