@@ -388,7 +388,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = build_concept_check_report(
         events,
         starting_levels={profile_id: starting_level for profile_id in profiles},
-        topic_registry=TopicRegistry.model_validate_json(args.topic_registry.read_text()),
+        topic_registry=TopicRegistry.model_validate_json(
+            args.topic_registry.read_text(encoding="utf-8")
+        ),
     )
     write_concept_check_report(report, args.output_directory)
     return 0
