@@ -615,6 +615,30 @@ class GoldQuestion(V2Model):
         return self
 
 
+class GenerationQuestion(V2Model):
+    """Model-facing input: question and optional choices, without Gold answers."""
+
+    kind: Literal["open_ended", "multiple_choice"]
+    question: NonEmptyText
+    options: dict[ChoiceLabel, NonEmptyText] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_choices(self) -> GenerationQuestion:
+        if self.kind == "multiple_choice" and set(self.options) != {"A", "B", "C", "D"}:
+            raise ValueError("multiple-choice generation requires exactly options A, B, C, and D")
+        if self.kind == "open_ended" and self.options:
+            raise ValueError("open-ended generation must not carry options")
+        return self
+
+    @classmethod
+    def from_gold(cls, gold: GoldQuestion) -> GenerationQuestion:
+        return cls(
+            kind="multiple_choice" if gold.options else "open_ended",
+            question=gold.question,
+            options={label: option.text for label, option in gold.options.items()},
+        )
+
+
 class ConceptCheckQuestion(V2Model):
     """A practice-only four-choice question with stable evidence anchors.
 
@@ -714,6 +738,54 @@ class ConceptCheckQuestionRelease(V2Model):
             for item in self.binding.bindings
         ):
             raise ValueError("published question releases require resolved bindings")
+        return self
+
+
+class ConceptCheckSelectionStatus(StrEnum):
+    OFFERED = "offered"
+    NO_TOPIC_AVAILABLE = "no_topic_available"
+    NO_QUESTION_AVAILABLE = "no_question_available"
+    DISABLED = "disabled"
+
+
+class ConceptCheckErrorCode(StrEnum):
+    NO_RETRIEVAL_TOPIC = "NO_RETRIEVAL_TOPIC"
+    NO_RETRIEVAL_HITS = "NO_RETRIEVAL_HITS"
+    NO_TOPIC_AVAILABLE = "NO_TOPIC_AVAILABLE"
+    TOPIC_MAP_UNAVAILABLE = "TOPIC_MAP_UNAVAILABLE"
+    TOPIC_MAP_MISMATCH = "TOPIC_MAP_MISMATCH"
+    TOPIC_REGISTRY_UNAVAILABLE = "TOPIC_REGISTRY_UNAVAILABLE"
+    TOPIC_REGISTRY_MISMATCH = "TOPIC_REGISTRY_MISMATCH"
+    UNKNOWN_TOPIC = "UNKNOWN_TOPIC"
+    TOPIC_TIE = "TOPIC_TIE"
+    TOPIC_SUPPORT_BELOW_THRESHOLD = "TOPIC_SUPPORT_BELOW_THRESHOLD"
+    ANSWER_ABSTAINED = "ANSWER_ABSTAINED"
+    CITATION_VALIDATION_FAILED = "CITATION_VALIDATION_FAILED"
+    NO_CITATIONS = "NO_CITATIONS"
+    CITATION_NOT_IN_RETRIEVAL = "CITATION_NOT_IN_RETRIEVAL"
+    NO_USABLE_QUESTION = "NO_USABLE_QUESTION"
+
+
+class ConceptCheckSelection(V2Model):
+    """Versioned post-answer decision shared by the service and its consumers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    schema_version: Literal["0.1"] = "0.1"
+    status: ConceptCheckSelectionStatus
+    question: ConceptCheckQuestionRelease | None = None
+    error_code: ConceptCheckErrorCode | None = None
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> ConceptCheckSelection:
+        if (self.status is ConceptCheckSelectionStatus.OFFERED) != (self.question is not None):
+            raise ValueError("only offered selections may carry a question")
+        refused = self.status in {
+            ConceptCheckSelectionStatus.NO_TOPIC_AVAILABLE,
+            ConceptCheckSelectionStatus.NO_QUESTION_AVAILABLE,
+        }
+        if refused != (self.error_code is not None):
+            raise ValueError("only refused selections must carry an error code")
         return self
 
 

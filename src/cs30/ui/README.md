@@ -61,7 +61,8 @@ shown as a warning and does not interrupt the quiz.
 Generate CSV, JSON, and Markdown summaries from one JSONL event stream:
 
 ```bash
-cs30-concept-check-report path/to/events.jsonl path/to/output --starting-level beginner
+cs30-concept-check-report path/to/events.jsonl path/to/output --starting-level beginner \
+  --topic-registry path/to/reviewed-topic-registry.json
 ```
 
 The report includes submitted attempts, accuracy, skip rate, revocation rate,
@@ -72,3 +73,7 @@ so a formal report cannot silently assume a beginner profile.
 
 The student control panel (revoke/override/feature toggle) remains deferred until
 M7's control-event signatures are finalized.
+
+The Concept Check selection trace includes the shared selection status and stable
+error code. Refusals display their specific reason. Event reports validate Topic
+IDs against the supplied registry as well as checking the declared version.

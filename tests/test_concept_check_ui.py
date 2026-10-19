@@ -18,14 +18,7 @@ from cs30.v2.contracts import ConceptCheckResult, StudentLevel, StudentProfile
 
 
 def _page() -> Path:
-    return (
-        Path(__file__).parents[1]
-        / "src"
-        / "cs30"
-        / "ui"
-        / "pages"
-        / "1_Concept_Check_Demo.py"
-    )
+    return Path(__file__).parents[1] / "src" / "cs30" / "ui" / "pages" / "1_Concept_Check_Demo.py"
 
 
 def _scenario(scenario_id: str):
@@ -42,7 +35,9 @@ def test_demo_runtime_uses_shared_fixtures_and_m7_service(tmp_path) -> None:
         scenario=_scenario("acceleration"),
     )
 
-    release = select_demo_question(runtime)
+    selection = select_demo_question(runtime)
+    assert selection.status == "offered"
+    release = selection.question
 
     assert release is not None
     assert release.question.question_id == "cc-fixture-001"
@@ -79,8 +74,7 @@ def test_demo_page_hides_feedback_until_submit() -> None:
     assert any(expander.label == "Attempt record" for expander in app.expander)
     assert any("Current session report" in item.value for item in app.markdown)
     assert any(
-        'cc-report-label">Submitted' in item.value
-        and 'cc-report-value">1' in item.value
+        'cc-report-label">Submitted' in item.value and 'cc-report-value">1' in item.value
         for item in app.markdown
     )
     assert len(app.get("download_button")) == 3
@@ -96,7 +90,7 @@ def test_demo_page_skip_is_recorded_but_not_scored() -> None:
     assert any("not counted" in item.value for item in app.warning)
     assert any("Correct answer" in item.value for item in app.markdown)
     assert any(
-        "Scored attempts</span><span class=\"cc-state-value\">0 → 0" in item.value
+        'Scored attempts</span><span class="cc-state-value">0 → 0' in item.value
         for item in app.markdown
     )
     assert any(expander.label == "Attempt record" for expander in app.expander)
@@ -113,7 +107,7 @@ def test_demo_page_wrong_answer_is_final_after_feedback_is_revealed() -> None:
     assert not app.radio
     assert all(button.label != "Try again" for button in app.button)
     assert any(
-        "Scored attempts</span><span class=\"cc-state-value\">0 → 1" in item.value
+        'Scored attempts</span><span class="cc-state-value">0 → 1' in item.value
         for item in app.markdown
     )
 
@@ -133,15 +127,24 @@ def test_demo_page_next_question_selects_an_unused_release() -> None:
     assert not any(item.value == first_question for item in app.markdown)
 
 
-@pytest.mark.parametrize("scenario_id", ["topic-tie", "unmapped-chunk"])
-def test_demo_page_handles_scenarios_without_an_eligible_topic(scenario_id: str) -> None:
+@pytest.mark.parametrize(
+    "scenario_id, code, reason",
+    [
+        ("topic-tie", "TOPIC_TIE", "more than one topic equally"),
+        ("unmapped-chunk", "NO_TOPIC_AVAILABLE", "no assigned topic"),
+    ],
+)
+def test_demo_page_handles_scenarios_without_an_eligible_topic(scenario_id, code, reason) -> None:
     app = AppTest.from_file(_page()).run()
     app.selectbox[1].set_value(scenario_id).run()
     next(button for button in app.button if button.label == "Quiz me").click().run()
 
     assert not app.exception
     assert not app.radio
-    assert any("No eligible published fixture question" in item.value for item in app.info)
+    assert any(reason in item.value for item in app.info)
+    trace = app.session_state["concept_check_demo_selection_trace"]
+    assert trace["status"] == "no_topic_available"
+    assert trace["error_code"] == code
 
 
 def test_demo_page_two_block_advanced_selects_the_advanced_question() -> None:

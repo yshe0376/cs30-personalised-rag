@@ -107,3 +107,10 @@ grounding rules, and shared JSON parser. Source identity remains in the prompt.
 Each invalid output gets at most one repair section built from the original
 prompt. Provider failures retry that original prompt, and input or exhausted
 generation failures carry a `V2GenerationTrace` on `V2GenerationFailure`.
+
+
+The public service selection call returns `ConceptCheckSelection` from
+`cs30.v2.contracts`; callers read `.question`, `.status` and `.error_code`.
+Construct `EventReplayer(profile, registry, config)` with the actual `TopicRegistry`
+so unknown IDs cannot reach state or event storage. See
+`docs/member7-concept-check-handoff.md` for migration and generation input examples.

@@ -16,7 +16,6 @@ from cs30.concept_check.event_store import JsonlEventStore
 from cs30.concept_check.fixtures import (
     FIXTURE_CORPUS_HASH,
     FIXTURE_CORPUS_VERSION,
-    FIXTURE_TOPIC_REGISTRY_VERSION,
     FixtureScenario,
     load_fixture_chunk_topic_map,
     load_fixture_releases,
@@ -26,6 +25,7 @@ from cs30.concept_check.fixtures import (
 from cs30.concept_check.learner_state import EventReplayer
 from cs30.concept_check.provider import FixtureQuestionProvider
 from cs30.concept_check.service import ConceptCheckService
+from cs30.concept_check.topics import ChunkTopicResolver
 from cs30.evaluation.concept_check_reporting import (
     build_concept_check_report,
     load_concept_check_events,
@@ -36,36 +36,18 @@ from cs30.evaluation.concept_check_reporting import (
 from cs30.ui.concept_check import Choice, QuizAttemptView, clear_quiz_component, render_quiz
 from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
+    ConceptCheckErrorCode,
     ConceptCheckEvent,
     ConceptCheckQuestionRelease,
+    ConceptCheckSelection,
     RetrievalResult,
     StudentLevel,
     StudentProfile,
-    TopicResolution,
     ValidatedAnswer,
 )
-from cs30.v2.topics import resolve_topic_from_citations, resolve_topic_from_retrieval
 
 QUIZ_KEY = "concept-check-demo-quiz"
 _LOGGER = logging.getLogger(__name__)
-
-
-class _FixtureTopicResolver:
-    """Adapt the shared fixture map to the Concept Check service port."""
-
-    def __init__(self) -> None:
-        self.topic_map = load_fixture_chunk_topic_map()
-        self.registry = load_fixture_topic_registry()
-
-    def resolve_retrieval_topic(self, retrieval: RetrievalResult) -> TopicResolution:
-        return resolve_topic_from_retrieval(retrieval, self.topic_map, self.registry)
-
-    def resolve_cited_topic(
-        self,
-        retrieval: RetrievalResult,
-        validated: ValidatedAnswer,
-    ) -> TopicResolution:
-        return resolve_topic_from_citations(retrieval, validated, self.topic_map, self.registry)
 
 
 @dataclass(frozen=True)
@@ -86,13 +68,15 @@ def build_demo_runtime(
 ) -> DemoRuntime:
     """Compose only the shared deterministic fixture dependencies."""
 
-    replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION)
+    config = ConceptCheckConfig(enabled=True)
+    registry = load_fixture_topic_registry()
+    replayer = EventReplayer(profile, registry, config)
     event_store = JsonlEventStore(event_directory, replayer)
     retrieval = scenario.retrieval()
     validated = scenario.validated_answer()
     service = ConceptCheckService(
-        config=ConceptCheckConfig(enabled=True),
-        resolver=_FixtureTopicResolver(),
+        config=config,
+        resolver=ChunkTopicResolver(load_fixture_chunk_topic_map(), registry, config),
         provider=FixtureQuestionProvider(load_fixture_releases()),
         event_store=event_store,
         replayer=replayer,
@@ -107,7 +91,7 @@ def build_demo_runtime(
     )
 
 
-def select_demo_question(runtime: DemoRuntime) -> ConceptCheckQuestionRelease | None:
+def select_demo_question(runtime: DemoRuntime) -> ConceptCheckSelection:
     """Call M7's prepare and select seams in their required order."""
 
     prepared = runtime.service.prepare(runtime.retrieval, runtime.profile)
@@ -237,10 +221,7 @@ def _register_starting_level(profile: StudentProfile) -> None:
 
 
 def _report_signature(events: tuple[ConceptCheckEvent, ...]) -> tuple[str, ...]:
-    return tuple(
-        json.dumps(event.model_dump(mode="json"), sort_keys=True)
-        for event in events
-    )
+    return tuple(json.dumps(event.model_dump(mode="json"), sort_keys=True) for event in events)
 
 
 def _display_markdown(report: dict[str, Any]) -> str:
@@ -259,9 +240,7 @@ def _render_session_report_contents(event_directory: Path) -> None:
     events, warnings = _session_events(event_directory)
     if warnings:
         warning = (
-            warnings[0]
-            if len(warnings) == 1
-            else f"{len(warnings)} incomplete records ignored."
+            warnings[0] if len(warnings) == 1 else f"{len(warnings)} incomplete records ignored."
         )
         st.warning(warning)
     if not events:
@@ -270,13 +249,13 @@ def _render_session_report_contents(event_directory: Path) -> None:
 
     signature = _report_signature(events)
     report = st.session_state.get("concept_check_demo_report")
-    if (
-        st.session_state.get("concept_check_demo_report_signature") != signature
-        or not isinstance(report, dict)
+    if st.session_state.get("concept_check_demo_report_signature") != signature or not isinstance(
+        report, dict
     ):
         report = build_concept_check_report(
             events,
             starting_levels=_starting_levels(),
+            topic_registry=load_fixture_topic_registry(),
         )
         st.session_state["concept_check_demo_report"] = report
         st.session_state["concept_check_demo_report_signature"] = signature
@@ -297,9 +276,7 @@ def _render_session_report_contents(event_directory: Path) -> None:
         ),
         (
             "Revocation rate",
-            "n/a"
-            if overall["revocation_rate"] is None
-            else f"{overall['revocation_rate']:.3f}",
+            "n/a" if overall["revocation_rate"] is None else f"{overall['revocation_rate']:.3f}",
         ),
     )
     cards = "".join(
@@ -342,8 +319,7 @@ def _render_session_report(event_directory: Path) -> None:
     st.divider()
     st.markdown("### Current session report")
     st.caption(
-        "Automatically generated from submit and skip events recorded in this "
-        "fixture session."
+        "Automatically generated from submit and skip events recorded in this fixture session."
     )
     try:
         _render_session_report_contents(event_directory)
@@ -356,6 +332,7 @@ def _reset_selection() -> None:
     st.session_state.pop("concept_check_demo_release", None)
     st.session_state.pop("concept_check_demo_selection_trace", None)
     st.session_state.pop("concept_check_demo_no_question", None)
+    st.session_state.pop("concept_check_demo_selection", None)
     clear_quiz_component(QUIZ_KEY)
 
 
@@ -372,9 +349,41 @@ def _scenario_summary(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
             st.caption(f"Textbook: {hit.textbook_id} · Source: {hit.source_locator}")
 
 
+def selection_message(selection: ConceptCheckSelection) -> str:
+    """Explain refusal using the shared stable reason codes."""
+
+    reasons = {
+        ConceptCheckErrorCode.TOPIC_TIE: "The evidence covers more than one topic equally.",
+        ConceptCheckErrorCode.NO_TOPIC_AVAILABLE: "The evidence has no assigned topic.",
+        ConceptCheckErrorCode.NO_RETRIEVAL_TOPIC: "No topic was resolved for this answer.",
+        ConceptCheckErrorCode.NO_RETRIEVAL_HITS: "No supporting evidence was retrieved.",
+        ConceptCheckErrorCode.TOPIC_SUPPORT_BELOW_THRESHOLD: "Topic support is too low.",
+        ConceptCheckErrorCode.TOPIC_MAP_UNAVAILABLE: "Topic information is unavailable.",
+        ConceptCheckErrorCode.TOPIC_MAP_MISMATCH: "Topic information needs updating.",
+        ConceptCheckErrorCode.TOPIC_REGISTRY_UNAVAILABLE: "The topic registry is unavailable.",
+        ConceptCheckErrorCode.TOPIC_REGISTRY_MISMATCH: "The topic registry needs updating.",
+        ConceptCheckErrorCode.UNKNOWN_TOPIC: "The topic is absent from the current registry.",
+        ConceptCheckErrorCode.ANSWER_ABSTAINED: "The previous answer was declined.",
+        ConceptCheckErrorCode.CITATION_VALIDATION_FAILED: "The citations could not be verified.",
+        ConceptCheckErrorCode.NO_CITATIONS: "The answer has no verified citations.",
+        ConceptCheckErrorCode.CITATION_NOT_IN_RETRIEVAL: "A citation is outside the evidence.",
+        ConceptCheckErrorCode.NO_USABLE_QUESTION: "No unused reviewed question is available.",
+    }
+    if selection.status == "disabled":
+        return "Concept Check is disabled."
+    if selection.status == "offered":
+        return "A practice question is available."
+    return (
+        "No eligible published fixture question is available for this scenario. "
+        + reasons[selection.error_code]
+    )
+
+
 def _select_and_store_question(runtime: DemoRuntime, scenario: FixtureScenario) -> None:
     clear_quiz_component(QUIZ_KEY)
-    release = select_demo_question(runtime)
+    selection = select_demo_question(runtime)
+    release = selection.question
+    st.session_state["concept_check_demo_selection"] = selection
     st.session_state["concept_check_demo_selection_trace"] = {
         "steps": ["prepare", "select"],
         "profile_id": runtime.profile.profile_id,
@@ -382,6 +391,8 @@ def _select_and_store_question(runtime: DemoRuntime, scenario: FixtureScenario) 
         "scenario_title": scenario.title,
         "retrieval_chunk_ids": [hit.chunk_id for hit in runtime.retrieval.hits],
         "selected_question_id": release.question.question_id if release else None,
+        "status": selection.status.value,
+        "error_code": selection.error_code.value if selection.error_code else None,
     }
     if release is None:
         st.session_state["concept_check_demo_no_question"] = True
@@ -457,9 +468,8 @@ def main() -> None:
             key=QUIZ_KEY,
         )
     elif st.session_state.get("concept_check_demo_no_question"):
-        st.info(
-            "No eligible published fixture question is available for this scenario."
-        )
+        selection = st.session_state["concept_check_demo_selection"]
+        st.info(selection_message(selection))
 
     trace = st.session_state.get("concept_check_demo_selection_trace")
     if isinstance(trace, dict):

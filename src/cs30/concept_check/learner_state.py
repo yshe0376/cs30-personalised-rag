@@ -12,6 +12,7 @@ from cs30.v2.contracts import (
     LearnerState,
     StudentLevel,
     StudentProfile,
+    TopicRegistry,
     TopicState,
 )
 
@@ -89,12 +90,21 @@ class EventReplayer:
     def __init__(
         self,
         static_profile: StudentProfile,
-        topic_registry_version: str,
+        topic_registry: TopicRegistry,
         config: ConceptCheckConfig | None = None,
     ) -> None:
         self.static_profile = static_profile
-        self.topic_registry_version = topic_registry_version
+        self.topic_registry_version = topic_registry.topic_registry_version
+        self.topic_ids = frozenset(topic.topic_id for topic in topic_registry.topics)
+        for topic_id in static_profile.topic_levels:
+            self.validate_topic(topic_id)
         self.config = config or ConceptCheckConfig()
+
+    def validate_topic(self, topic_id: str) -> None:
+        """Reject identities outside the pinned registry before persistence or replay."""
+
+        if topic_id not in self.topic_ids:
+            raise ValueError(f"unknown Topic: {topic_id!r}")
 
     def replay(self, events: Sequence[ConceptCheckEvent]) -> LearnerState:
         ordered = sorted(events, key=lambda item: item.stream_version)
@@ -111,6 +121,7 @@ class EventReplayer:
                 raise ValueError("Concept Check event profile_id mismatch")
             if event.topic_registry_version != self.topic_registry_version:
                 raise ValueError("Concept Check topic registry version mismatch")
+            self.validate_topic(event.topic_id)
             if event.event_id in seen_events:
                 raise ValueError("duplicate Concept Check event_id")
             seen_events[event.event_id] = event

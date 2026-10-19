@@ -14,7 +14,18 @@ from cs30.evaluation.concept_check_reporting import (
     write_concept_check_report,
 )
 from cs30.v2.config import ConceptCheckConfig
-from cs30.v2.contracts import ConceptCheckEvent, ConceptCheckEventType, StudentLevel
+from cs30.v2.contracts import (
+    ConceptCheckEvent,
+    ConceptCheckEventType,
+    StudentLevel,
+    Topic,
+    TopicRegistry,
+)
+
+_REGISTRY = TopicRegistry(
+    topic_registry_version="topics-1",
+    topics=(Topic(topic_id="acceleration", title="Acceleration"),),
+)
 
 _TIME = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -96,6 +107,7 @@ def _events() -> tuple[ConceptCheckEvent, ...]:
 def test_report_computes_metrics_and_replays_state() -> None:
     report = build_concept_check_report(
         _events(),
+        topic_registry=_REGISTRY,
         starting_levels={"student-1": StudentLevel.BEGINNER},
     )
 
@@ -127,6 +139,7 @@ def test_report_writes_csv_json_and_markdown(tmp_path) -> None:
     loaded = load_concept_check_events(events_path)
     report = build_concept_check_report(
         loaded,
+        topic_registry=_REGISTRY,
         starting_levels={"student-1": StudentLevel.BEGINNER},
     )
 
@@ -134,9 +147,12 @@ def test_report_writes_csv_json_and_markdown(tmp_path) -> None:
     write_concept_check_report(report, output)
 
     assert (output / "concept_check_report.csv").is_file()
-    assert json.loads((output / "concept_check_report.json").read_text(encoding="utf-8"))[
-        "overall"
-    ]["submitted"] == 2
+    assert (
+        json.loads((output / "concept_check_report.json").read_text(encoding="utf-8"))["overall"][
+            "submitted"
+        ]
+        == 2
+    )
     markdown = (output / "concept_check_report.md").read_text(encoding="utf-8")
     assert "## Definitions" in markdown
     assert "submissions that were later revoked" in markdown
@@ -148,7 +164,7 @@ def test_report_writes_csv_json_and_markdown(tmp_path) -> None:
 
 def test_report_requires_a_starting_level_for_every_profile() -> None:
     with pytest.raises(ValueError, match="missing starting level"):
-        build_concept_check_report(_events(), starting_levels={})
+        build_concept_check_report(_events(), starting_levels={}, topic_registry=_REGISTRY)
 
 
 def test_answer_driven_demotion_is_counted_but_manual_changes_are_not() -> None:
@@ -165,6 +181,7 @@ def test_answer_driven_demotion_is_counted_but_manual_changes_are_not() -> None:
 
     report = build_concept_check_report(
         events,
+        topic_registry=_REGISTRY,
         starting_levels={"student-1": StudentLevel.INTERMEDIATE},
         config=ConceptCheckConfig(demotion_threshold=0.4),
     )
@@ -205,3 +222,35 @@ def test_cli_requires_an_explicit_starting_level(tmp_path) -> None:
         main([str(events_path), str(tmp_path / "report")])
 
     assert exc.value.code == 2
+
+
+def test_report_rejects_unknown_topic_even_with_a_matching_registry_version():
+    event = _events()[0].model_copy(update={"topic_id": "acceleration-TYPO"})
+    with pytest.raises(ValueError, match="unknown Topic"):
+        build_concept_check_report(
+            (event,),
+            starting_levels={"student-1": StudentLevel.BEGINNER},
+            topic_registry=_REGISTRY,
+        )
+
+
+def test_cli_validates_events_against_the_supplied_registry(tmp_path):
+    events_path = tmp_path / "events.jsonl"
+    registry_path = tmp_path / "registry.json"
+    events_path.write_text(_events()[0].model_dump_json() + "\n")
+    registry_path.write_text(_REGISTRY.model_dump_json())
+    output = tmp_path / "report"
+    assert (
+        main(
+            [
+                str(events_path),
+                str(output),
+                "--starting-level",
+                "beginner",
+                "--topic-registry",
+                str(registry_path),
+            ]
+        )
+        == 0
+    )
+    assert (output / "concept_check_report.json").is_file()

@@ -220,7 +220,7 @@ def _service(
     tmp_path, level: StudentLevel = StudentLevel.BEGINNER
 ) -> tuple[ConceptCheckService, StudentProfile]:
     profile = StudentProfile(profile_id="fixture-student", level=level)
-    replayer = EventReplayer(profile, FIXTURE_TOPIC_REGISTRY_VERSION)
+    replayer = EventReplayer(profile, load_fixture_topic_registry())
     service = ConceptCheckService(
         config=ConceptCheckConfig(enabled=True),
         resolver=_FixtureTopicResolver(),
@@ -241,7 +241,7 @@ def test_fixture_pack_drives_select_and_submit(tmp_path) -> None:
     retrieval, validated = scenario.retrieval(), scenario.validated_answer()
 
     prepared = service.prepare(retrieval, profile)
-    first = service.select(prepared, retrieval, validated)
+    first = service.select(prepared, retrieval, validated).question
     assert first is not None and first.question.question_id == "cc-fixture-003"
 
     grade, state = service.submit(
@@ -256,7 +256,7 @@ def test_fixture_pack_drives_select_and_submit(tmp_path) -> None:
     assert state.topics["newtons-second-law"].total_attempts == 1
 
     # The answered beginner question is excluded; the nearest level comes next.
-    second = service.select(prepared, retrieval, validated)
+    second = service.select(prepared, retrieval, validated).question
     assert second is not None and second.question.question_id == "cc-fixture-004"
 
 
@@ -267,14 +267,14 @@ def test_cited_topic_chooses_the_question_and_a_tie_offers_none(tmp_path) -> Non
     retrieval = differs.retrieval()
     prepared = service.prepare(retrieval, profile)
     assert prepared.snapshot.topic_id == "newtons-second-law"
-    release = service.select(prepared, retrieval, differs.validated_answer())
+    release = service.select(prepared, retrieval, differs.validated_answer()).question
     assert release is not None and release.question.question_id == "cc-fixture-001"
 
     tie = _scenario("topic-tie")
     retrieval = tie.retrieval()
     prepared = service.prepare(retrieval, profile)
     assert prepared.snapshot.topic_id is None
-    assert service.select(prepared, retrieval, tie.validated_answer()) is None
+    assert service.select(prepared, retrieval, tie.validated_answer()).question is None
 
 
 def test_level_not_scenario_decides_which_newton_question_comes_first(tmp_path) -> None:
@@ -288,5 +288,5 @@ def test_level_not_scenario_decides_which_newton_question_comes_first(tmp_path) 
     for level, question_id in expected.items():
         service, profile = _service(tmp_path / level.value, level)
         prepared = service.prepare(retrieval, profile)
-        release = service.select(prepared, retrieval, validated)
+        release = service.select(prepared, retrieval, validated).question
         assert release is not None and release.question.question_id == question_id
