@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1",
+  "reportable": false,
+  "assets": {
+    "gold_v0_1_1_integrated.jsonl": {
+      "url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m3-gold-v0.1.2-dev-v1/gold_v0_1_1_integrated.jsonl",
+      "sha256": "5875c2edc35195d475ea8d2980d7d9793cdfc8b83c12d12386049f13d1b69e6e"
+    },
+    "SHA256SUMS.txt": {
+      "url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m3-gold-v0.1.2-dev-v1/SHA256SUMS.txt",
+      "sha256": "aa9d2168cc20afd7c4888dbd800650d3ff74f93b8890cc468c583ee9b491e273"
+    },
+    "v2_structure_aware_corpus_3book_dev_main_3553825.zip": {
+      "url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m4-structure-v2-dev-v1/v2_structure_aware_corpus_3book_dev_main_3553825.zip",
+      "sha256": "9a10c86aad93d866d888f14d8360d6dde81e70e1970fcab67c7a128227f19976"
+    }
+  },
+  "limitations": [
+    "Draft three-textbook Gold: 162 pending and 26 proposed_test questions.",
+    "The 26-question Test set was previously exposed in M6 diagnostics.",
+    "No matching V2 Role annotations are supplied by these releases.",
+    "No split promotion, annotation review or formal approval is implied."
+  ]
+}
