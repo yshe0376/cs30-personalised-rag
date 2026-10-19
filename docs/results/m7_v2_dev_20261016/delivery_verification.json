@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "checks": [
+    "prepared input fingerprints",
+    "all 1944 checkpoint hashes and identities",
+    "saved answer and full trace equality against checkpoints",
+    "run output fingerprints",
+    "scoring denominator and pending counts",
+    "archive member inventory and every decompressed file hash",
+    "no local home-directory paths or common credential patterns in packaged files"
+  ],
+  "expected_cells": 1944,
+  "archive_members": 1973,
+  "archive_sha256": "284df57dbfb77f9fc44ee5df10c13c413a4c831831505d02261b52d892045974",
+  "source_input_output_bytes": "unchanged",
+  "reportable": false
+}

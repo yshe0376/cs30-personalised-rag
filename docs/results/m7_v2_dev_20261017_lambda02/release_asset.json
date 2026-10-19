@@ -1,0 +1,8 @@
+{
+  "release": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-dev-20261017-lambda02",
+  "asset": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-dev-20261017-lambda02/m7_v2_dev_20261017_lambda02.tar.gz",
+  "sha256": "2302abaa1452050e576c8aa368e66874c25cc9535b08a55096069dc003800ef2",
+  "size": 13824748,
+  "prerelease": true,
+  "source_commit": "78d73902ba8cce82dc29d34eb12a46ac69fc0cca"
+}

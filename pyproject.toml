@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.12,<3",
     "numpy>=1.26,<3",
+    "tzdata>=2025.1; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -54,6 +55,7 @@ cs30-concept-check-report = "cs30.evaluation.concept_check_reporting:main"
 cs30-v2-generation-eval = "cs30.evaluation.v2_generation_cli:main"
 cs30-score-open-answers = "cs30.evaluation.open_answer_cli:main"
 cs30-build-v2 = "cs30.v2.cli:run"
+cs30-experiment-v2 = "cs30.v2.experiment_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

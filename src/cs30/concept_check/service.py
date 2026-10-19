@@ -17,9 +17,11 @@ from cs30.v2.contracts import (
     ConceptCheckGrade,
     ConceptCheckQuestionRelease,
     ConceptCheckResult,
+    ConceptCheckSelection,
     LearnerContextSnapshot,
     LearnerState,
     RetrievalResult,
+    StudentLevel,
     StudentProfile,
     TopicResolution,
     TopicResolutionStatus,
@@ -70,7 +72,20 @@ class ConceptCheckService:
             resolution.status is TopicResolutionStatus.RESOLVED
             and resolution.topic_registry_version != self.replayer.topic_registry_version
         ):
-            raise ValueError("retrieval Topic registry version mismatch")
+            resolution = TopicResolution(
+                status=TopicResolutionStatus.TOPIC_MAP_MISMATCH,
+                topic_registry_version=resolution.topic_registry_version,
+                error_code="TOPIC_REGISTRY_MISMATCH",
+            )
+        if (
+            resolution.status is TopicResolutionStatus.RESOLVED
+            and resolution.topic_id not in self.replayer.topic_ids
+        ):
+            resolution = TopicResolution(
+                status=TopicResolutionStatus.NO_TOPIC_AVAILABLE,
+                topic_registry_version=resolution.topic_registry_version,
+                error_code="UNKNOWN_TOPIC",
+            )
         snapshot = build_learner_context_snapshot(
             static_profile,
             enabled=True,
@@ -84,25 +99,48 @@ class ConceptCheckService:
         prepared: PreparedRound,
         retrieval: RetrievalResult,
         validated: ValidatedAnswer,
-    ) -> ConceptCheckQuestionRelease | None:
-        """Offer a bound, reviewed question only after a cited valid answer."""
+    ) -> ConceptCheckSelection:
+        """Offer a current question or explain refusal according to spec §5.1/§5.3."""
 
-        if not self.config.enabled or prepared.retrieval_topic is None:
-            return None
+        if not self.config.enabled:
+            return ConceptCheckSelection(status="disabled")
+        if prepared.retrieval_topic is None:
+            return ConceptCheckSelection(
+                status="no_topic_available", error_code="NO_RETRIEVAL_TOPIC"
+            )
         if prepared.retrieval_topic.status is not TopicResolutionStatus.RESOLVED:
-            return None
-        if validated.abstained or validated.citation_status != "passed":
-            return None
-        if not validated.resolved_citations or retrieval.provenance is None:
-            return None
+            return ConceptCheckSelection(
+                status="no_topic_available",
+                error_code=prepared.retrieval_topic.error_code or "NO_TOPIC_AVAILABLE",
+            )
+        if validated.abstained:
+            return ConceptCheckSelection(
+                status="no_question_available", error_code="ANSWER_ABSTAINED"
+            )
+        if validated.citation_status != "passed":
+            return ConceptCheckSelection(
+                status="no_question_available", error_code="CITATION_VALIDATION_FAILED"
+            )
+        if not validated.resolved_citations:
+            return ConceptCheckSelection(status="no_question_available", error_code="NO_CITATIONS")
+        if retrieval.provenance is None:
+            return ConceptCheckSelection(
+                status="no_topic_available", error_code="TOPIC_MAP_UNAVAILABLE"
+            )
         cited_topic = self.resolver.resolve_cited_topic(retrieval, validated)
         if cited_topic.status is not TopicResolutionStatus.RESOLVED:
-            return None
+            return ConceptCheckSelection(
+                status="no_topic_available",
+                error_code=cited_topic.error_code or "NO_TOPIC_AVAILABLE",
+            )
         if cited_topic.topic_registry_version != self.replayer.topic_registry_version:
-            raise ValueError("cited Topic registry version mismatch")
+            return ConceptCheckSelection(
+                status="no_topic_available", error_code="TOPIC_REGISTRY_MISMATCH"
+            )
+        if cited_topic.topic_id not in self.replayer.topic_ids:
+            return ConceptCheckSelection(status="no_topic_available", error_code="UNKNOWN_TOPIC")
         topic_id = cited_topic.topic_id
-        if topic_id is None:
-            return None
+        assert topic_id is not None  # Enforced by the TopicResolution contract.
         events = self.event_store.events(prepared.snapshot.profile.profile_id)
         state = self.replayer.replay(events)
         topic_state = state.topics.get(topic_id) or TopicState(
@@ -111,7 +149,7 @@ class ConceptCheckService:
                 topic_id, self.replayer.static_profile.level
             ),
         )
-        used_ids = tuple(
+        used_ids = list(
             event.question_id
             for event in events
             if event.event_type
@@ -122,14 +160,27 @@ class ConceptCheckService:
             and event.question_id is not None
         )
         provenance = retrieval.provenance
-        return self.provider.select(
-            topic_id=topic_id,
-            target_levels=target_levels(topic_state, self.config),
-            corpus_version=provenance.corpus_version,
-            corpus_hash=provenance.corpus_hash,
-            cited_chunk_ids=validated.resolved_citations,
-            excluded_question_ids=used_ids,
-        )
+        while True:
+            release = self.provider.select(
+                topic_id=topic_id,
+                target_levels=target_levels(topic_state, self.config),
+                corpus_version=provenance.corpus_version,
+                corpus_hash=provenance.corpus_hash,
+                cited_chunk_ids=validated.resolved_citations,
+                excluded_question_ids=tuple(used_ids),
+            )
+            if release is None:
+                return ConceptCheckSelection(
+                    status="no_question_available", error_code="NO_USABLE_QUESTION"
+                )
+            question = release.question
+            if question.question_id in used_ids:
+                raise ValueError("question provider returned an excluded question")
+            if question.topic_registry_version != self.replayer.topic_registry_version:
+                # Exclude stale candidates before accepting the provider's next ranked choice.
+                used_ids.append(question.question_id)
+                continue
+            return ConceptCheckSelection(status="offered", question=release)
 
     def submit(
         self,
@@ -152,6 +203,7 @@ class ConceptCheckService:
             raise ValueError("question binding does not match the current corpus")
         if question.topic_registry_version != self.replayer.topic_registry_version:
             raise ValueError("question topic registry version mismatch")
+        self.replayer.validate_topic(question.topic_id)
         grade = self.grader.grade(
             question,
             attempt_id=attempt_id,
@@ -179,3 +231,71 @@ class ConceptCheckService:
         )
         stored = self.event_store.append(event)
         return grade, self.replayer.replay(self.event_store.events(stored.profile_id))
+
+    def revoke(
+        self,
+        attempt_id: str,
+        *,
+        event_id: str,
+        created_at: datetime | None = None,
+    ) -> LearnerState:
+        """Revoke the latest valid submission for its Topic; retries reuse event_id."""
+
+        if not self.config.enabled:
+            raise ValueError("Concept Check is disabled")
+        profile_id = self.replayer.static_profile.profile_id
+        target = next(
+            (
+                event
+                for event in self.event_store.events(profile_id)
+                if event.attempt_id == attempt_id
+                and event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
+            ),
+            None,
+        )
+        if target is None:
+            raise ValueError("revocation requires an existing submitted attempt")
+        event = ConceptCheckEvent(
+            event_id=event_id,
+            profile_id=profile_id,
+            topic_id=target.topic_id,
+            topic_registry_version=target.topic_registry_version,
+            revoked_attempt_id=attempt_id,
+            event_type=ConceptCheckEventType.ATTEMPT_REVOKED,
+            actor="student",
+            state_version_before=0,
+            stream_version=1,
+            created_at=created_at or datetime.now(UTC),
+        )
+        stored = self.event_store.append(event)
+        return self.replayer.replay(self.event_store.events(stored.profile_id))
+
+    def override_level(
+        self,
+        topic_id: str,
+        new_level: StudentLevel,
+        *,
+        reason: str,
+        event_id: str,
+        created_at: datetime | None = None,
+    ) -> LearnerState:
+        """Record a student's correction and replay the reset Topic epoch."""
+
+        if not self.config.enabled:
+            raise ValueError("Concept Check is disabled")
+        self.replayer.validate_topic(topic_id)
+        event = ConceptCheckEvent(
+            event_id=event_id,
+            profile_id=self.replayer.static_profile.profile_id,
+            topic_id=topic_id,
+            topic_registry_version=self.replayer.topic_registry_version,
+            new_level=new_level,
+            reason=reason,
+            actor="student",
+            event_type=ConceptCheckEventType.TOPIC_LEVEL_OVERRIDDEN,
+            state_version_before=0,
+            stream_version=1,
+            created_at=created_at or datetime.now(UTC),
+        )
+        stored = self.event_store.append(event)
+        return self.replayer.replay(self.event_store.events(stored.profile_id))
