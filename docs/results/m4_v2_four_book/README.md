@@ -49,9 +49,20 @@ retrieval corpus.
 - `validation_summary.json`: M4 engineering checks and per-book distributions.
 
 The full M5 handoff is intentionally not committed because it contains the
-62 MB `records.jsonl`. The local handoff archive is named
-`M4_to_M5_four_book_corpus_a1fe99e.zip`; its SHA-256 is
+62 MB `records.jsonl`. It is published unchanged on the development
+pre-release
+[`v2-m4-four-book-dev-v1`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m4-four-book-dev-v1)
+as `M4_to_M5_four_book_corpus_a1fe99e.zip`; its SHA-256 is
 `074ff89686fe3649089329f7858505f7a68d228d0284a83394a0c0b5a547a592`.
+The archive holds one folder, `2.0.0-dev.m4-four-book-main-a1fe99e/`, so unzip
+it into `artifacts/v2/textbooks/`:
+
+```sh
+gh release download v2-m4-four-book-dev-v1 --pattern "*.zip" --dir artifacts/v2/textbooks
+cd artifacts/v2/textbooks
+unzip -o M4_to_M5_four_book_corpus_a1fe99e.zip
+cd 2.0.0-dev.m4-four-book-main-a1fe99e && sha256sum -c SHA256SUMS
+```
 
 ## Limitations
 
