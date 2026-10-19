@@ -193,6 +193,7 @@ def test_adapter_preserves_statuses_hashes_and_chunk_citations(tmp_path: Path) -
     assert items[0].generation_model_revision == "20b"
     assert items[1].technical_failure is True
     assert manifest["status_counts"] == {"answered": 1, "output_truncated": 1}
+    assert manifest["matrix_complete"] is False
     written = write_adapter_outputs(items, manifest, tmp_path / "out")
     assert written["inputs"].is_file()
     assert written["manifest"].is_file()
@@ -201,6 +202,71 @@ def test_adapter_preserves_statuses_hashes_and_chunk_citations(tmp_path: Path) -
         written_manifest["output_sha256"]["generation_evaluation_inputs"]
         == hashlib.sha256(written["inputs"].read_bytes()).hexdigest()
     )
+
+
+def test_lambda_case_count_uses_experiment_questions_not_all_gold_rows(
+    tmp_path: Path,
+) -> None:
+    paths = _bundle(tmp_path)
+    _write_jsonl(
+        paths["gold"],
+        [
+            {"question_id": "q1", "question": "Why?"},
+            {"question_id": "unused-test-question", "question": "What?"},
+        ],
+    )
+    selection = json.loads(paths["lambda"].read_text(encoding="utf-8"))
+    selection["gold_sha256"] = _sha(paths["gold"])
+    _write_json(paths["lambda"], selection)
+    expected = json.loads(paths["expected"].read_text(encoding="utf-8"))
+    expected["gold_sha256"] = _sha(paths["gold"])
+    _write_json(paths["expected"], expected)
+    source_manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    source_manifest["prepared_inputs"]["input_sha256"].update(
+        {
+            "gold.jsonl": _sha(paths["gold"]),
+            "lambda_selection.json": _sha(paths["lambda"]),
+        }
+    )
+    source_manifest["output_sha256"]["expected_experiment.json"] = _sha(paths["expected"])
+    _write_json(paths["manifest"], source_manifest)
+
+    _, manifest = adapt_m7_generation_artifacts(
+        expected_path=paths["expected"],
+        records_path=paths["records"],
+        answers_path=paths["answers"],
+        run_manifest_path=paths["manifest"],
+        gold_path=paths["gold"],
+        eligibility_path=paths["eligibility"],
+        lambda_selection_path=paths["lambda"],
+    )
+    assert {
+        row["case_count"] for row in manifest["lambda_selection"]["candidates"]
+    } == {3}
+    assert manifest["question_count"] == 1
+
+
+def test_adapter_rejects_duplicate_logical_matrix_cells(tmp_path: Path) -> None:
+    paths = _bundle(tmp_path)
+    expected = json.loads(paths["expected"].read_text(encoding="utf-8"))
+    duplicate = dict(expected["cases"][0])
+    duplicate["run_id"] = "different-run-same-cell"
+    expected["cases"].append(duplicate)
+    _write_json(paths["expected"], expected)
+    source_manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    source_manifest["output_sha256"]["expected_experiment.json"] = _sha(paths["expected"])
+    _write_json(paths["manifest"], source_manifest)
+
+    with pytest.raises(ValueError, match="repeats a question/level/condition cell"):
+        adapt_m7_generation_artifacts(
+            expected_path=paths["expected"],
+            records_path=paths["records"],
+            answers_path=paths["answers"],
+            run_manifest_path=paths["manifest"],
+            gold_path=paths["gold"],
+            eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
+        )
 
 
 def test_adapter_rejects_tampered_generation_records(tmp_path: Path) -> None:

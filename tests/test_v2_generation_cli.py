@@ -133,3 +133,36 @@ def test_validity_report_cli_keeps_missing_required_checks_fail_closed(
     assert report["formal_use_allowed"] is False
     assert "duplicate_consistency" in report["failed_or_missing_required_checks"]
     assert "source_binding" in report["failed_or_missing_required_checks"]
+
+
+def test_validity_report_rejects_truthy_strings_in_boolean_fields(tmp_path: Path) -> None:
+    observations = tmp_path / "invalid-validity.json"
+    observations.write_text(
+        json.dumps(
+            {
+                "thresholds": {
+                    "threshold_version": "thresholds-v1",
+                    "p0r0_max_chance_deviation": 0.4,
+                    "duplicate_min_consistency": 1.0,
+                    "max_abs_length_correlation": 1.0,
+                    "max_formula_pass_rate_gap": 1.0,
+                    "order_min_consistency": 1.0,
+                    "second_judge_min_consistency": 1.0,
+                    "perturbation_min_detection_rate": 0.8,
+                },
+                "surface_rows": [["beginner", "false", 10, False]],
+            }
+        ),
+        encoding="utf-8",
+    )
+    with pytest.raises(SystemExit) as exc_info:
+        main(
+            [
+                "validity-report",
+                "--observations",
+                str(observations),
+                "--output",
+                str(tmp_path / "out.json"),
+            ]
+        )
+    assert exc_info.value.code == 2

@@ -37,10 +37,16 @@ from .level_adaptation import (
     build_adaptation_request,
 )
 from .level_discrimination import build_discrimination_request
-from .level_profiles import load_eligibility_package, load_profile_checklist_package
+from .level_profiles import (
+    eligible_levels,
+    load_eligibility_package,
+    load_profile_checklist_package,
+)
+from .models import PersonalisationEligibility
 from .v2_generation_artifacts import (
     adapt_m7_generation_artifacts,
     build_correctness_score_binding,
+    correctness_rubric_set_sha256,
     load_open_answer_scores,
     write_adapter_outputs,
     write_correctness_score_binding,
@@ -48,6 +54,7 @@ from .v2_generation_artifacts import (
 from .v2_generation_models import (
     EvaluationDecisionConfig,
     EvaluationMode,
+    ExperimentArm,
     GenerationEvaluationInput,
     GenerationRunStatus,
     JudgeConfiguration,
@@ -218,6 +225,7 @@ def _parser() -> argparse.ArgumentParser:
     development.add_argument("--correctness-score-binding", type=Path)
     development.add_argument("--judge-evaluation-dir", type=Path)
     development.add_argument("--validity-report", type=Path)
+    development.add_argument("--input-validation", type=Path)
     development.add_argument("--human-audit-ratings", type=Path)
     development.add_argument("--human-audit-packet", type=Path)
     development.add_argument("--human-audit-manifest", type=Path)
@@ -254,6 +262,7 @@ def _validate_inputs(args: argparse.Namespace) -> int:
             "profile_package_version": profiles.package_version,
             "profile_package_sha256": profiles.package_sha256,
             "eligibility_package_version": eligibility.package_version,
+            "eligibility_sha256": hashlib.sha256(args.eligibility.read_bytes()).hexdigest(),
             "gold_version": eligibility.gold_version,
             "gold_sha256": eligibility.gold_sha256,
             "question_count": len(question_ids),
@@ -454,6 +463,8 @@ def _validity_report(args: argparse.Namespace) -> int:
     inputs_sha256 = None
     source_run_hash = None
     judge_manifest_sha256 = None
+    derived_p0r0_guesses: list[LevelGuess] | None = None
+    derived_surface_rows: list[tuple[StudentLevel, bool, int, bool]] | None = None
     if args.inputs is not None:
         items = _load_inputs(args.inputs)
         source_run_hash = _source_run_sha256(items)
@@ -467,24 +478,114 @@ def _validity_report(args: argparse.Namespace) -> int:
         judge_manifest_sha256 = hashlib.sha256(
             (args.judge_evaluation_dir / "judge_evaluation_manifest.json").read_bytes()
         ).hexdigest()
+        declared_provenance = payload.get("provenance")
+        expected_provenance = {
+            "evaluation_inputs_sha256": inputs_sha256,
+            "source_run_sha256": source_run_hash,
+            "judge_evaluation_manifest_sha256": judge_manifest_sha256,
+        }
+        if not isinstance(declared_provenance, dict) or any(
+            declared_provenance.get(name) != value
+            for name, value in expected_provenance.items()
+        ):
+            raise ValueError("validity observations are not bound to the current judge run")
+        derived_p0r0_guesses = [
+            LevelGuess(str(row["predicted_level"]))
+            for row in judge_data["discrimination"]
+            if row.get("condition") == ExperimentArm.P0R0_PLAIN.value
+        ]
+        threshold = payload.get("adaptation_pass_threshold")
+        if isinstance(threshold, bool) or not isinstance(threshold, (int, float)):
+            raise ValueError("bound validity observations require adaptation_pass_threshold")
+        threshold = float(threshold)
+        if not 0.0 <= threshold <= 1.0:
+            raise ValueError("adaptation_pass_threshold must be between zero and one")
+        inputs_by_id = {item.evaluation_id: item for item in items}
+        derived_surface_rows = []
+        for row in judge_data["adaptation"]:
+            if not row.get("is_target_level_evaluation"):
+                continue
+            item = inputs_by_id[str(row["evaluation_id"])]
+            rate = row.get("criterion_pass_rate")
+            if item.answer is None or rate is None:
+                continue
+            diagnostics = answer_text_diagnostics(item.answer)
+            derived_surface_rows.append(
+                (
+                    item.target_level,
+                    float(rate) >= threshold,
+                    int(diagnostics["word_count"]),
+                    bool(diagnostics["formula_present"]),
+                )
+            )
+
+    def triples(name: str) -> list[tuple[str, str, str]]:
+        raw_rows = payload.get(name, [])
+        if not isinstance(raw_rows, list):
+            raise ValueError(f"{name} must be a list")
+        rows: list[tuple[str, str, str]] = []
+        for index, row in enumerate(raw_rows):
+            if (
+                not isinstance(row, list)
+                or len(row) != 3
+                or any(not isinstance(value, str) or not value for value in row)
+            ):
+                raise ValueError(f"{name}[{index}] must contain three non-empty strings")
+            rows.append((row[0], row[1], row[2]))
+        return rows
+
+    def booleans(name: str) -> list[bool]:
+        raw_values = payload.get(name, [])
+        if not isinstance(raw_values, list) or any(
+            not isinstance(value, bool) for value in raw_values
+        ):
+            raise ValueError(f"{name} must contain only JSON booleans")
+        return list(raw_values)
+
     try:
         thresholds = ValidityThresholds.model_validate(payload["thresholds"])
+        raw_p0r0 = payload.get("p0r0_guesses", [])
+        if not isinstance(raw_p0r0, list):
+            raise ValueError("p0r0_guesses must be a list")
+        p0r0_guesses = (
+            derived_p0r0_guesses
+            if derived_p0r0_guesses is not None
+            else [LevelGuess(value) for value in raw_p0r0]
+        )
+        raw_surface_rows = payload.get("surface_rows", [])
+        if not isinstance(raw_surface_rows, list):
+            raise ValueError("surface_rows must be a list")
+        surface_rows = derived_surface_rows
+        if surface_rows is None:
+            surface_rows = []
+            for index, row in enumerate(raw_surface_rows):
+                if (
+                    not isinstance(row, list)
+                    or len(row) != 4
+                    or not isinstance(row[1], bool)
+                    or isinstance(row[2], bool)
+                    or not isinstance(row[2], int)
+                    or row[2] < 0
+                    or not isinstance(row[3], bool)
+                ):
+                    raise ValueError(f"surface_rows[{index}] has invalid field types")
+                surface_rows.append(
+                    (StudentLevel(row[0]), row[1], row[2], row[3])
+                )
+        require_perturbation = payload.get("require_perturbation", False)
+        if not isinstance(require_perturbation, bool):
+            raise ValueError("require_perturbation must be a JSON boolean")
         report = build_validity_report(
             thresholds,
-            p0r0_guesses=[LevelGuess(value) for value in payload.get("p0r0_guesses", [])],
-            duplicate_rows=[tuple(row) for row in payload.get("duplicate_rows", [])],
-            surface_rows=[
-                (StudentLevel(row[0]), bool(row[1]), int(row[2]), bool(row[3]))
-                for row in payload.get("surface_rows", [])
-            ],
-            order_pairs=[tuple(row) for row in payload.get("order_pairs", [])],
-            second_judge_pairs=[tuple(row) for row in payload.get("second_judge_pairs", [])],
-            perturbation_detections=[
-                bool(value) for value in payload.get("perturbation_detections", [])
-            ],
-            require_perturbation=bool(payload.get("require_perturbation", False)),
+            p0r0_guesses=p0r0_guesses,
+            duplicate_rows=triples("duplicate_rows"),
+            surface_rows=surface_rows,
+            order_pairs=triples("order_pairs"),
+            second_judge_pairs=triples("second_judge_pairs"),
+            perturbation_detections=booleans("perturbation_detections"),
+            require_perturbation=require_perturbation,
         )
-    except (KeyError, TypeError, ValidationError) as exc:
+    except (KeyError, TypeError, ValidationError, ValueError) as exc:
         raise ValueError(f"{args.observations}: invalid validity observations: {exc}") from exc
     report["provenance"] = {
         "observations_sha256": hashlib.sha256(args.observations.read_bytes()).hexdigest(),
@@ -512,16 +613,23 @@ def _applicability_summary(
         groups[(item.eligibility.value, item.condition.value)].append(item)
     result = []
     for (eligibility, condition), rows in sorted(groups.items()):
-        correctness = [
-            correctness_by_id[item.evaluation_id]
-            for item in rows
-            if correctness_by_id.get(item.evaluation_id) is not None
-        ]
+        correctness_values = [correctness_by_id.get(item.evaluation_id) for item in rows]
+        correctness = [value for value in correctness_values if value is not None]
+        strict_correct_count = sum(score == 2 for score in correctness)
+        correctness_unresolved = len(rows) - len(correctness)
         adaptation = [
             adaptation_by_id[item.evaluation_id]
             for item in rows
             if adaptation_by_id.get(item.evaluation_id) is not None
         ]
+        eligibility_value = PersonalisationEligibility(eligibility)
+        adaptation_expected = sum(
+            item.target_level in eligible_levels(eligibility_value)
+            and not item.technical_failure
+            and not item.abstained
+            for item in rows
+        )
+        adaptation_unresolved = adaptation_expected - len(adaptation)
         result.append(
             {
                 "eligibility": eligibility,
@@ -529,12 +637,21 @@ def _applicability_summary(
                 "answer_count": len(rows),
                 "technical_failure_count": sum(item.technical_failure for item in rows),
                 "correctness_scored_count": len(correctness),
+                "correctness_unresolved_count": correctness_unresolved,
                 "strict_correct_rate": (
-                    sum(score == 2 for score in correctness) / len(correctness)
-                    if correctness
+                    strict_correct_count / len(rows)
+                    if rows and correctness_unresolved == 0
                     else None
                 ),
+                "strict_correct_rate_bounds": [
+                    strict_correct_count / len(rows) if rows else None,
+                    (strict_correct_count + correctness_unresolved) / len(rows)
+                    if rows
+                    else None,
+                ],
+                "adaptation_expected_count": adaptation_expected,
                 "adaptation_evaluable_count": len(adaptation),
+                "adaptation_unresolved_count": adaptation_unresolved,
                 "mean_adaptation_criterion_pass_rate": (
                     sum(adaptation) / len(adaptation) if adaptation else None
                 ),
@@ -601,6 +718,35 @@ def _development_report(args: argparse.Namespace) -> int:
             binding_path=args.correctness_score_binding,
             evaluation_inputs_sha256=actual_inputs_hash,
         )
+    rubric_set_sha256 = (
+        correctness_rubric_set_sha256(scores.values()) if scores else None
+    )
+    if (
+        decision_config.correctness_rubric_set_sha256 is not None
+        and rubric_set_sha256 is not None
+        and rubric_set_sha256 != decision_config.correctness_rubric_set_sha256
+    ):
+        raise ValueError("correctness rubric set differs from decision config")
+
+    input_validation = None
+    if args.input_validation is not None:
+        input_validation = _load_json_object(args.input_validation)
+        validation_checks = {
+            "valid": input_validation.get("valid") is True,
+            "gold_sha256": input_validation.get("gold_sha256") == manifest.get("gold_sha256"),
+            "eligibility_sha256": input_validation.get("eligibility_sha256")
+            == manifest.get("input_sha256", {}).get("eligibility"),
+            "question_count": input_validation.get("question_count")
+            == manifest.get("question_count"),
+        }
+        if args.decision_config is not None:
+            validation_checks["eligibility_definition_version"] = (
+                input_validation.get("eligibility_package_version")
+                == decision_config.eligibility_definition_version
+            )
+        failed = sorted(name for name, passed in validation_checks.items() if not passed)
+        if failed:
+            raise ValueError("input validation differs from adapted inputs: " + ", ".join(failed))
     correctness_rows = []
     correctness_by_id: dict[str, int | None] = {}
     observations = []
@@ -679,6 +825,7 @@ def _development_report(args: argparse.Namespace) -> int:
             else None
         )
         for evaluation_id, record in target_adaptation.items()
+        if record.get("enters_main_adaptation_result")
     }
     discrimination_rows = list(judge_data["discrimination"]) if judge_data else []
     evidence_rows = list(judge_data["evidence_support"]) if judge_data else []
@@ -830,6 +977,7 @@ def _development_report(args: argparse.Namespace) -> int:
                 if args.correctness_score_binding is not None
                 else None
             ),
+            "correctness_rubric_set_sha256": rubric_set_sha256,
             "correctness_rubric_sha256_values": sorted(
                 {
                     score.rubric_sha256
@@ -846,6 +994,12 @@ def _development_report(args: argparse.Namespace) -> int:
             ),
             "judge_evaluation_manifest": (
                 judge_data["manifest"] if judge_data is not None else None
+            ),
+            "input_validation": input_validation,
+            "input_validation_sha256": (
+                hashlib.sha256(args.input_validation.read_bytes()).hexdigest()
+                if args.input_validation is not None
+                else None
             ),
             "validity_report_sha256": (
                 hashlib.sha256(args.validity_report.read_bytes()).hexdigest()

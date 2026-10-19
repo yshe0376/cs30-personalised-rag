@@ -9,11 +9,13 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
+
+from cs30.contracts import StudentLevel
 
 from .condition_statistics import verify_dev_lambda_selection
 from .level_profiles import canonical_json_sha256
@@ -161,6 +163,9 @@ def adapt_m7_generation_artifacts(
     lambda_selection = _read_json(lambda_selection_path)
     if expected.get("schema_version") != "0.2":
         raise ValueError("expected experiment must use GenerationExperiment schema 0.2")
+    expected_rows = list(expected.get("cases") or [])
+    expected_question_ids = {str(row.get("question_id", "")) for row in expected_rows}
+    expected_lambda_case_count = len(expected_question_ids) * len(StudentLevel)
     gold_hash = file_sha256(gold_path)
     if expected.get("gold_sha256") != gold_hash:
         raise ValueError("expected experiment Gold hash does not match supplied Gold bytes")
@@ -183,7 +188,6 @@ def adapt_m7_generation_artifacts(
     if lambda_selection.get("gold_sha256") != gold_hash:
         raise ValueError("lambda selection Gold hash does not match supplied Gold bytes")
     gold_rows = _read_jsonl(gold_path)
-    expected_lambda_case_count = len(gold_rows) * 3
     candidate_lambdas = tuple(
         float(value) for value in lambda_selection.get("candidate_lambdas") or []
     )
@@ -236,7 +240,33 @@ def adapt_m7_generation_artifacts(
         source = metrics_by_lambda[float(row["lambda"])]
         row["case_count"] = int(source["case_count"])
         row["mean_span_coverage"] = float(source["mean_span_coverage"])
-    cases = _index(list(expected.get("cases") or []), "run_id", "expected experiment")
+    cases = _index(expected_rows, "run_id", "expected experiment")
+    logical_cells = [
+        (
+            str(case.get("question_id", "")),
+            str(case.get("student_level", "")),
+            str(case.get("condition_id", "")),
+        )
+        for case in expected_rows
+    ]
+    if len(logical_cells) != len(set(logical_cells)):
+        raise ValueError("expected experiment repeats a question/level/condition cell")
+    required_cells = {
+        (level.value, condition.value) for level in StudentLevel for condition in ExperimentArm
+    }
+    observed_by_question = {
+        question_id: {
+            (level, condition)
+            for observed_question, level, condition in logical_cells
+            if observed_question == question_id
+        }
+        for question_id in expected_question_ids
+    }
+    incomplete_questions = sorted(
+        question_id
+        for question_id, observed in observed_by_question.items()
+        if observed != required_cells
+    )
     records = _index(_read_jsonl(records_path), "run_id", "generation records")
     answers = _index(_read_jsonl(answers_path), "run_id", "saved answers")
     _assert_exact_coverage(set(cases), set(records), "generation records")
@@ -386,6 +416,9 @@ def adapt_m7_generation_artifacts(
             "lambda_selection": file_sha256(lambda_selection_path),
         },
         "record_count": len(converted),
+        "question_count": len(expected_question_ids),
+        "matrix_complete": not incomplete_questions,
+        "incomplete_matrix_question_ids": incomplete_questions,
         "status_counts": dict(Counter(item.source_status.value for item in converted)),
         "lambda_selection": lambda_verification,
         "reportable": False,
@@ -414,6 +447,30 @@ def _score_identity_sha256(inputs: Sequence[GenerationEvaluationInput]) -> str:
             ),
             key=lambda row: row["evaluation_id"],
         )
+    )
+
+
+def correctness_rubric_set_sha256(scores: Iterable[OpenAnswerScore]) -> str:
+    """Hash the exact per-question correctness rubrics used for answered rows."""
+
+    by_question: dict[str, str] = {}
+    for score in scores:
+        if score.run_status != GenerationRunStatus.ANSWERED.value:
+            continue
+        if score.rubric_sha256 is None:
+            raise ValueError(f"{score.run_id}: answered score is missing a rubric hash")
+        previous = by_question.setdefault(score.question_id, score.rubric_sha256)
+        if previous != score.rubric_sha256:
+            raise ValueError(
+                f"{score.question_id}: correctness scores use conflicting rubric hashes"
+            )
+    if not by_question:
+        raise ValueError("correctness scores contain no answered-question rubrics")
+    return canonical_json_sha256(
+        [
+            {"question_id": question_id, "rubric_sha256": rubric_sha256}
+            for question_id, rubric_sha256 in sorted(by_question.items())
+        ]
     )
 
 
@@ -455,12 +512,8 @@ def _validated_open_answer_scores(
         expected_answer_hash = source.answer_sha256
         if score.answer_sha256 != expected_answer_hash:
             raise ValueError(f"{run_id}: score answer hash mismatch")
-        if (
-            score.score_status == "scored"
-            and source.source_status is GenerationRunStatus.ANSWERED
-            and score.rubric_sha256 is None
-        ):
-            raise ValueError(f"{run_id}: scored answer is missing a rubric hash")
+        if source.source_status is GenerationRunStatus.ANSWERED and score.rubric_sha256 is None:
+            raise ValueError(f"{run_id}: answered score is missing a rubric hash")
         if source.source_status is not GenerationRunStatus.ANSWERED and not (
             score.score_status == "scored"
             and score.score == 0
@@ -468,6 +521,7 @@ def _validated_open_answer_scores(
         ):
             raise ValueError(f"{run_id}: non-answer status must have a system score of zero")
         result[source.evaluation_id] = score
+    correctness_rubric_set_sha256(result.values())
     return result
 
 
@@ -491,6 +545,7 @@ def build_correctness_score_binding(
         gold_sha256=gold_sha256,
         record_count=len(scores),
         identity_set_sha256=_score_identity_sha256(inputs),
+        rubric_set_sha256=correctness_rubric_set_sha256(scores.values()),
         generator_models=sorted({_generator_model_id(item) for item in inputs}),
         source_splits=sorted({item.source_split for item in inputs}),
     )
@@ -525,6 +580,7 @@ def load_open_answer_scores(
         )
     except ValidationError as exc:
         raise ValueError(f"{binding_path}: invalid correctness-score binding: {exc}") from exc
+    scores = _validated_open_answer_scores(score_path, inputs, gold_sha256=gold_sha256)
     source_runs = {item.source_run_sha256 for item in inputs}
     expected_source_run = next(iter(source_runs)) if len(source_runs) == 1 else None
     expected = {
@@ -534,6 +590,7 @@ def load_open_answer_scores(
         "gold_sha256": gold_sha256,
         "record_count": len(inputs),
         "identity_set_sha256": _score_identity_sha256(inputs),
+        "rubric_set_sha256": correctness_rubric_set_sha256(scores.values()),
         "generator_models": sorted({_generator_model_id(item) for item in inputs}),
         "source_splits": sorted({item.source_split for item in inputs}),
     }
@@ -544,7 +601,7 @@ def load_open_answer_scores(
             "correctness-score binding differs from the current source run: "
             + ", ".join(mismatches)
         )
-    return _validated_open_answer_scores(score_path, inputs, gold_sha256=gold_sha256)
+    return scores
 
 
 def write_adapter_outputs(

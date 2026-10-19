@@ -439,6 +439,7 @@ class EvaluationDecisionConfig(ContractModel):
     judge_config_version: Identifier | None = None
     validity_threshold_version: Identifier | None = None
     correctness_noninferiority_delta: float | None = Field(default=None, ge=0.0, le=1.0)
+    correctness_rubric_set_sha256: str | None = None
     adaptation_pass_threshold: float | None = Field(default=None, ge=0.0, le=1.0)
     lambda_selection_artifact_sha256: str | None = None
     selected_lambda: float | None = Field(default=None, gt=0.0, le=1.0)
@@ -456,6 +457,7 @@ class EvaluationDecisionConfig(ContractModel):
             "judge_config_version": self.judge_config_version,
             "validity_threshold_version": self.validity_threshold_version,
             "correctness_noninferiority_delta": self.correctness_noninferiority_delta,
+            "correctness_rubric_set_sha256": self.correctness_rubric_set_sha256,
             "adaptation_pass_threshold": self.adaptation_pass_threshold,
             "lambda_selection_artifact_sha256": self.lambda_selection_artifact_sha256,
             "selected_lambda": self.selected_lambda,
@@ -475,6 +477,11 @@ class EvaluationDecisionConfig(ContractModel):
                 self.lambda_selection_artifact_sha256,
                 "lambda_selection_artifact_sha256",
             )
+        if self.correctness_rubric_set_sha256 is not None:
+            _validate_sha256(
+                self.correctness_rubric_set_sha256,
+                "correctness_rubric_set_sha256",
+            )
         if self.human_audit_rubric_sha256 is not None:
             _validate_sha256(
                 self.human_audit_rubric_sha256,
@@ -493,6 +500,7 @@ class CorrectnessScoreBinding(ContractModel):
     gold_sha256: str
     record_count: int = Field(ge=1)
     identity_set_sha256: str
+    rubric_set_sha256: str
     generator_models: list[Identifier] = Field(min_length=1)
     source_splits: list[Identifier] = Field(min_length=1)
 
@@ -504,6 +512,7 @@ class CorrectnessScoreBinding(ContractModel):
             "source_run_sha256",
             "gold_sha256",
             "identity_set_sha256",
+            "rubric_set_sha256",
         ):
             _validate_sha256(str(getattr(self, name)), name)
         if len(self.generator_models) != len(set(self.generator_models)):

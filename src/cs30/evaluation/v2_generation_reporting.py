@@ -349,8 +349,8 @@ def build_v2_generation_report(
         blockers.append("human audit is not bound to its prepared packet and source run")
     elif human_audit.get("rating_count") != human_audit.get("expected_rating_count"):
         blockers.append("human audit does not cover the prepared packet exactly")
-    elif int(human_audit.get("rating_count", 0)) < 12:
-        blockers.append("human audit is too small to cover all level-condition cells")
+    elif int(human_audit.get("rating_count", 0)) < 20:
+        blockers.append("human audit is smaller than the registered 20-answer audit")
     elif (
         set(human_audit.get("audit_level_coverage", [])) != {level.value for level in StudentLevel}
         or set(human_audit.get("audit_condition_coverage", []))
@@ -373,6 +373,22 @@ def build_v2_generation_report(
         blockers.append("adapter record count is missing from provenance")
     elif denominator != int(adapter_record_count):
         blockers.append("correctness denominator differs from the adapted run size")
+    adapter_manifest = provenance.get("adapter_manifest")
+    if not isinstance(adapter_manifest, Mapping) or not adapter_manifest.get("matrix_complete"):
+        blockers.append("generation matrix is incomplete")
+    input_validation = provenance.get("input_validation")
+    if not isinstance(input_validation, Mapping) or not input_validation.get(
+        "reportable_input_validation"
+    ):
+        blockers.append("reportable profile and eligibility input validation is missing")
+    observed_rubric_set = provenance.get("correctness_rubric_set_sha256")
+    if observed_rubric_set is None:
+        blockers.append("correctness rubric set binding is missing")
+    elif (
+        decision_config.correctness_rubric_set_sha256 is not None
+        and observed_rubric_set != decision_config.correctness_rubric_set_sha256
+    ):
+        blockers.append("correctness rubric set differs from the frozen decision")
 
     by_metric_contrast: dict[tuple[str, str], Mapping[str, Any]] = {}
     duplicate_contrasts: set[tuple[str, str]] = set()

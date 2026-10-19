@@ -11,6 +11,8 @@ from cs30.evaluation.evaluation_audit import (
     load_bound_human_audit,
     prepare_calibration_and_audit,
 )
+from cs30.evaluation.models import PersonalisationEligibility
+from cs30.evaluation.v2_generation_cli import _applicability_summary
 from cs30.evaluation.v2_generation_models import (
     EvaluationDecisionConfig,
     EvaluationEvidence,
@@ -279,6 +281,33 @@ def test_noise_floor_uses_only_byte_identical_prompt_pairs() -> None:
     assert result["P0R0_vs_P0R1"]["answer_mismatch_rate"] == 1.0
 
 
+def test_applicability_summary_keeps_unresolved_scores_in_the_denominator() -> None:
+    all_items = _items()
+    items = [all_items[0], all_items[4]]
+    summary = _applicability_summary(
+        items,
+        {items[0].evaluation_id: 2, items[1].evaluation_id: None},
+        {items[0].evaluation_id: 0.75},
+    )[0]
+    assert summary["answer_count"] == 2
+    assert summary["correctness_unresolved_count"] == 1
+    assert summary["strict_correct_rate"] is None
+    assert summary["strict_correct_rate_bounds"] == [0.5, 1.0]
+    assert summary["adaptation_expected_count"] == 2
+    assert summary["adaptation_unresolved_count"] == 1
+
+    ineligible = items[0].model_copy(
+        update={"eligibility": PersonalisationEligibility.NONE}
+    )
+    ineligible_summary = _applicability_summary(
+        [ineligible],
+        {ineligible.evaluation_id: 2},
+        {},
+    )[0]
+    assert ineligible_summary["adaptation_expected_count"] == 0
+    assert ineligible_summary["adaptation_unresolved_count"] == 0
+
+
 def test_development_report_separates_sections_and_reportable_mode_fails_closed(
     tmp_path: Path,
 ) -> None:
@@ -372,6 +401,6 @@ def test_report_gate_rejects_unbound_audit_zero_denominator_and_missing_pairs() 
     }
     report = build_v2_generation_report(mode=EvaluationMode.DEVELOPMENT, **kwargs)
     assert (
-        "human audit is too small to cover all level-condition cells"
+        "human audit is smaller than the registered 20-answer audit"
         in report["development_blockers"]
     )
