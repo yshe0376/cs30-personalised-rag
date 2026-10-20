@@ -518,3 +518,37 @@ separate. Metric cells retain numerator, denominator, and value; empty valid
 denominators are `not_applicable`, including refusal Recall/F1 when the Gold set
 has no unanswerable samples. Ratings and Role inputs may be omitted during
 development, in which case their report sections remain explicitly `pending`.
+
+## V2 generation judge validity
+
+The M8 V2 command keeps development proposals separate from team-frozen
+decisions. `adaptation_pass_threshold` and every field in `ValidityThresholds`
+must be supplied in a versioned input; production code does not silently choose
+them. A candidate can be calibrated on Dev and reviewed by the Leader, but it
+must not be described as frozen or used for a reportable Test claim until that
+review is recorded in the decision configuration.
+
+The threshold file must also declare minimum sample counts. The code deliberately
+does not provide numerical defaults: the evaluation plan assigns threshold
+proposal to M7 and confirmation to the Leader. Until that decision is recorded,
+any local values are development-only and cannot support a reportable claim.
+
+For automatic validity comparisons, assemble four hash-bound output directories:
+the primary run, an independently executed repeat, a primary-model run prepared
+with `--reverse-adaptation-criteria`, and a different-family second-judge run.
+Every assembly uses a distinct `--judge-execution-id`. Then pass the three
+comparison directories to `validity-report` through
+`--repeat-judge-evaluation-dir`, `--order-judge-evaluation-dir`, and
+`--second-judge-evaluation-dir`. The command verifies source/profile/config
+bindings, derives comparisons itself, and compares normalized verdicts rather
+than free-form reasons. Insufficient sample size or missing level/condition
+coverage fails closed.
+
+The comparison runs may cover a preregistered subset rather than the full Dev
+set. Supply one UTF-8 `evaluation_id` per line through
+`--repeat-comparison-ids`, `--order-comparison-ids`, or
+`--second-comparison-ids`. The report records the selector-file hash, rejects
+unknown, duplicate, unanswered, or missing selected cases, and still enforces
+the configured minimum counts and required level/condition coverage. Omitting a
+selector means that the corresponding comparison must cover every answered
+evaluation.
