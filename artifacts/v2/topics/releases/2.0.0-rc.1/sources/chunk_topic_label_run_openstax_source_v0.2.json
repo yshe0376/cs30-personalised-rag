@@ -1,0 +1,23 @@
+{
+  "schema_version": "topic-chunk-label-run-v1",
+  "status": "pending_review",
+  "topic_registry_version": "topics-0.2",
+  "corpus_version": "2.0.0-dev.m4-structure-v2-main-3553825",
+  "corpus_hash": "sha256:6b4941ac4ba9ae09b7bcd9fbe4a266600820af89c2dbb2e2ad0dd8568983930f",
+  "corpus_reportable": false,
+  "model": "qwen3:8b",
+  "selected_chunk_count": 5976,
+  "completed_chunk_count": 5976,
+  "candidate_topic_chunk_count": 5960,
+  "no_candidate_chunk_count": 16,
+  "assignment_count": 4310,
+  "label_count": 14957,
+  "review_required_count": 4145,
+  "model_calls_this_run": 4845,
+  "chunk_label_file": "artifacts/v2/topics/chunk_topic_labels_full_topics-0.2.jsonl",
+  "review_queue_file": "artifacts/v2/topics/chunk_topic_label_review_queue_full_topics-0.2.json",
+  "chunk_topic_map_file": "artifacts/v2/topics/chunk_topic_map_full_topics-0.2.json",
+  "map_is_full_corpus": true,
+  "map_validation": "passed",
+  "release_gate": "M1 label review and M3 spot-check required; corpus is development-only"
+}

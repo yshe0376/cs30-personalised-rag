@@ -1,0 +1,73 @@
+{
+  "schema_version": "topic-registry-freeze-manifest-v1",
+  "status": "frozen_for_development_chunk_labeling",
+  "topic_registry_version": "topics-0.2",
+  "registry_file": "artifacts/v2/topics/topic_registry_v0.2.json",
+  "review_packet_file": "artifacts/v2/topics/topic_registry_review_packet_v0.2.json",
+  "frozen_at": "2026-10-13",
+  "topic_count": 2520,
+  "review_summary": {
+    "concept_topic_count": 2520,
+    "model_concept_group_count": 2518,
+    "topics_requiring_m3_definition_confirmation": 0,
+    "topics_with_user_confirmed_definitions": 2,
+    "topics_assistant_resolved_high_confidence": 2518,
+    "topics_flagged_for_user_definition_review": 0,
+    "topics_with_assistant_adjudication_overrides": 29,
+    "source_anomaly_decisions_applied": 1,
+    "topics_with_multiple_definition_candidates": 1181,
+    "section_title_seed_group_count": 309,
+    "title_seed_groups_matched_to_topics": 220,
+    "title_seed_match_rule_counts": {
+      "exact_normalized_title_or_alias": 172,
+      "high_confidence_title_alias": 27,
+      "leading_article_and_plural_normalized": 1,
+      "leading_article_removed": 17,
+      "simple_plural_normalized": 3
+    },
+    "title_seed_decisions_applied": 75,
+    "title_seed_decision_disposition_counts": {
+      "add_standalone_topic": 2,
+      "exclude_composite_section_title": 28,
+      "exclude_non_topic_heading": 7,
+      "map_to_existing_topic": 27,
+      "map_to_existing_topics": 9,
+      "retain_as_standalone_existing_topic": 2
+    },
+    "title_seed_groups_mapped_to_existing_topics": 9,
+    "title_seed_groups_retained_as_standalone_topics": 2,
+    "title_seed_groups_added_as_standalone_topics": 2,
+    "standalone_topics_added_from_section_titles": 2,
+    "excluded_title_seed_groups": 76,
+    "non_topic_heading_groups_excluded": 11,
+    "composite_section_title_groups_excluded": 65,
+    "unresolved_title_seed_groups": 0,
+    "unresolved_source_section_count": 0,
+    "all_title_seed_dispositions_resolved": true,
+    "title_seed_dispositions_total": 309,
+    "all_concept_merge_queue_items_resolved": true
+  },
+  "freeze_gate": {
+    "m3_definition_confirmations_outstanding": 0,
+    "user_definition_reviews_outstanding": 0,
+    "source_section_dispositions_outstanding": 0,
+    "title_seed_dispositions_outstanding": 0
+  },
+  "development_corpus_scope": {
+    "corpus_version": "2.0.0-dev.m4-structure-v2-main-3553825",
+    "corpus_hash": "sha256:6b4941ac4ba9ae09b7bcd9fbe4a266600820af89c2dbb2e2ad0dd8568983930f",
+    "reportable": false,
+    "note": "This registry is eligible for development-corpus labeling. Production release requires reviewed labels on the final corpus."
+  },
+  "source_sha256": {
+    "draft_registry": "sha256:c1f1961c0caa448a25294762499f752138ddb098e8083ea1ea9971276430b1c7",
+    "review_packet": "sha256:f187c1f9b32fdf466445ef9bc2c09e9d0dae44c28edd6cf2ca7fd754d0032548",
+    "definition_decisions": "sha256:4aa921187cb032f9756ccc785f79a84d4a182ff63262627c727ec561c20d0410",
+    "definition_reconciliation": "sha256:831c87a6af79375159f553826e5b39599ca23c56a5d2984179376c055ab22b95",
+    "manual_adjudications": "sha256:3f4776bd181306d18dc5a64fc480f4e30451cecb6a5c7f153bf6fd4596d75b4c",
+    "title_seed_decisions": "sha256:90eebca395158e4b4f162ba9bcd7b10741b8415803517c9c86f4d5c396a03b3b",
+    "merge_map": "sha256:89b04f45d86af9908f783c7d917f0aa1965ea51334e3489476b0ca771e222726"
+  },
+  "registry_sha256": "sha256:6eb7819a10e9be69a07147b8d29ee223d68cb20186f200c3de266de146059a5e",
+  "authorization_basis": "The user authorized proceeding to the next workflow step in this conversation."
+}
