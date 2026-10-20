@@ -13,7 +13,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from cs30.contracts import StudentLevel
 from cs30.contracts.models import ContractModel, Identifier, NonEmptyText
@@ -389,13 +389,15 @@ class JudgeRequest(ContractModel):
 class CriterionJudgement(ContractModel):
     criterion_id: Identifier
     verdict: CriterionVerdict
-    exact_quote: str | None = None
+    exact_quote: NonEmptyText | None
     reason: NonEmptyText
 
     @model_validator(mode="after")
     def validate_quote(self) -> CriterionJudgement:
         if self.verdict is CriterionVerdict.PASS and not self.exact_quote:
             raise ValueError("passing criterion judgements require an exact answer quote")
+        if self.verdict is CriterionVerdict.NOT_APPLICABLE and self.exact_quote is not None:
+            raise ValueError("not-applicable criterion judgements require a null quote")
         return self
 
 
@@ -409,7 +411,7 @@ class DiscriminationJudgeOutput(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     request_id: Identifier
     predicted_level: LevelGuess
-    exact_quote: str | None = None
+    exact_quote: NonEmptyText | None
     reason: NonEmptyText
 
 
@@ -418,9 +420,26 @@ class ClaimSupportJudgement(ContractModel):
     claim_text: NonEmptyText
     bundle_support: SupportVerdict
     citation_support: SupportVerdict
-    supporting_evidence_ids: list[Identifier] = Field(default_factory=list)
-    evidence_quotes: dict[Identifier, NonEmptyText] = Field(default_factory=dict)
+    supporting_evidence_ids: list[Identifier]
+    evidence_quotes: dict[Identifier, NonEmptyText]
     reason: NonEmptyText
+
+    @field_validator("evidence_quotes", mode="before")
+    @classmethod
+    def normalize_online_quote_rows(cls, value: object) -> object:
+        if not isinstance(value, list):
+            return value
+        quote_map: dict[str, object] = {}
+        for entry in value:
+            if not isinstance(entry, dict):
+                raise ValueError("evidence quote entries must be objects")
+            evidence_id = entry.get("evidence_id")
+            if not isinstance(evidence_id, str) or not evidence_id:
+                raise ValueError("evidence quote entries require an evidence_id")
+            if evidence_id in quote_map:
+                raise ValueError("evidence quote entries repeat an evidence_id")
+            quote_map[evidence_id] = entry.get("quote")
+        return quote_map
 
 
 class EvidenceSupportJudgeOutput(ContractModel):

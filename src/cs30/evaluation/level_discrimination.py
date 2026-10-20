@@ -54,7 +54,7 @@ def build_discrimination_request(
             "schema_version": "1.0",
             "request_id": "copy from request metadata",
             "predicted_level": "beginner | intermediate | advanced | uncertain",
-            "exact_quote": "optional exact answer substring",
+            "exact_quote": "exact answer substring, or null when none applies",
             "reason": "short reason",
         },
     }

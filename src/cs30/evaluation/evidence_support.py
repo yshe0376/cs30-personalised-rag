@@ -64,7 +64,12 @@ def build_evidence_support_request(
                     "bundle_support": "supported | unsupported | not_applicable",
                     "citation_support": "supported | unsupported | not_applicable",
                     "supporting_evidence_ids": ["IDs from supplied evidence"],
-                    "evidence_quotes": {"evidence ID": "exact evidence substring"},
+                    "evidence_quotes": [
+                        {
+                            "evidence_id": "one supporting evidence ID",
+                            "quote": "exact evidence substring",
+                        }
+                    ],
                     "reason": "short reason",
                 }
             ],
@@ -129,6 +134,10 @@ def validate_evidence_support_output(
                 )
         if claim.bundle_support is SupportVerdict.SUPPORTED and not supporting:
             raise ValueError(f"supported claim {claim.claim_id} requires supporting evidence")
+        if claim.bundle_support is not SupportVerdict.SUPPORTED and supporting:
+            raise ValueError(
+                f"non-supported claim {claim.claim_id} must not identify supporting evidence"
+            )
         if claim.citation_support is SupportVerdict.SUPPORTED:
             if claim.bundle_support is not SupportVerdict.SUPPORTED:
                 raise ValueError("citation support cannot be supported when bundle support is not")

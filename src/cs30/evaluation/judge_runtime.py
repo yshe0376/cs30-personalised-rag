@@ -57,6 +57,109 @@ _OUTPUT_MODELS: dict[JudgeTask, type[BaseModel]] = {
 }
 
 
+def _strict_object(properties: dict[str, object]) -> dict[str, object]:
+    """Build the object shape accepted by strict structured-output providers."""
+
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
+
+_NULLABLE_STRING: dict[str, object] = {
+    "anyOf": [{"type": "string"}, {"type": "null"}]
+}
+_ONLINE_OUTPUT_SCHEMAS: dict[JudgeTask, dict[str, object]] = {
+    JudgeTask.ADAPTATION: _strict_object(
+        {
+            "schema_version": {"type": "string", "enum": ["1.0"]},
+            "request_id": {"type": "string"},
+            "criteria": {
+                "type": "array",
+                "items": _strict_object(
+                    {
+                        "criterion_id": {"type": "string"},
+                        "verdict": {
+                            "type": "string",
+                            "enum": ["pass", "fail", "not_applicable"],
+                        },
+                        "exact_quote": _NULLABLE_STRING,
+                        "reason": {"type": "string"},
+                    }
+                ),
+            },
+        }
+    ),
+    JudgeTask.DISCRIMINATION: _strict_object(
+        {
+            "schema_version": {"type": "string", "enum": ["1.0"]},
+            "request_id": {"type": "string"},
+            "predicted_level": {
+                "type": "string",
+                "enum": ["beginner", "intermediate", "advanced", "uncertain"],
+            },
+            "exact_quote": _NULLABLE_STRING,
+            "reason": {"type": "string"},
+        }
+    ),
+    JudgeTask.EVIDENCE_SUPPORT: _strict_object(
+        {
+            "schema_version": {"type": "string", "enum": ["1.0"]},
+            "request_id": {"type": "string"},
+            "claims": {
+                "type": "array",
+                "items": _strict_object(
+                    {
+                        "claim_id": {"type": "string"},
+                        "claim_text": {"type": "string"},
+                        "bundle_support": {
+                            "type": "string",
+                            "enum": ["supported", "unsupported", "not_applicable"],
+                        },
+                        "citation_support": {
+                            "type": "string",
+                            "enum": ["supported", "unsupported", "not_applicable"],
+                        },
+                        "supporting_evidence_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "evidence_quotes": {
+                            "type": "array",
+                            "items": _strict_object(
+                                {
+                                    "evidence_id": {"type": "string"},
+                                    "quote": {"type": "string"},
+                                }
+                            ),
+                        },
+                        "reason": {"type": "string"},
+                    }
+                ),
+            },
+        }
+    ),
+}
+_REPAIR_MARKER = "\n\nREPAIR_REQUEST:\n"
+
+
+def _render_judge_prompt(request: JudgeRequest) -> str:
+    """Place validation feedback after the original request payload."""
+
+    instruction, marker, repair = request.system_instruction.partition(_REPAIR_MARKER)
+    prompt = (
+        f"{instruction.rstrip()}\n\n"
+        f"REQUEST_ID: {request.request_id}\n"
+        "REQUEST_PAYLOAD_JSON:\n"
+        + json.dumps(request.payload, ensure_ascii=False, sort_keys=True)
+    )
+    if marker:
+        prompt += _REPAIR_MARKER + repair
+    return prompt
+
+
 class StructuredJsonJudgeProvider:
     """Call an existing structured-output LLM client for one blinded judge request."""
 
@@ -68,20 +171,14 @@ class StructuredJsonJudgeProvider:
         request: JudgeRequest,
         configuration: JudgeConfiguration,
     ) -> JudgeProviderResponse:
-        output_model = _OUTPUT_MODELS[request.task]
-        prompt = (
-            f"{request.system_instruction}\n\n"
-            f"REQUEST_ID: {request.request_id}\n"
-            "REQUEST_PAYLOAD_JSON:\n"
-            + json.dumps(request.payload, ensure_ascii=False, sort_keys=True)
-        )
+        prompt = _render_judge_prompt(request)
         response = self.client.complete(
             prompt,
             {
                 "type": "json_schema",
                 "name": f"{request.task.value}_judge_output",
                 "strict": True,
-                "schema": output_model.model_json_schema(),
+                "schema": _ONLINE_OUTPUT_SCHEMAS[request.task],
             },
         )
         if response.done_reason == "length":
@@ -245,6 +342,30 @@ def _append_cache(path: Path, envelope: JudgeResultEnvelope) -> None:
         stream.write("\n")
 
 
+def _repair_judge_request(
+    request: JudgeRequest,
+    invalid_output: Mapping[str, Any],
+    error: Exception,
+) -> JudgeRequest:
+    """Append one bounded local-validation correction request for the next attempt."""
+
+    previous_output = json.dumps(
+        invalid_output,
+        ensure_ascii=False,
+        sort_keys=True,
+        default=str,
+    )[:2000]
+    repair_instruction = f"""{request.system_instruction.rstrip()}{_REPAIR_MARKER}
+The previous response was rejected by local validation.
+ERROR_TYPE: {type(error).__name__}
+ERROR: {str(error)[:2000]}
+PREVIOUS_OUTPUT: {previous_output}
+
+Return one corrected JSON object only.
+"""
+    return request.model_copy(update={"system_instruction": repair_instruction})
+
+
 class CachedJudgeRunner:
     """Run one approved judge task with deterministic cache and unresolved handling."""
 
@@ -308,9 +429,11 @@ class CachedJudgeRunner:
         validated: ValidatedOutput | None = None
         last_raw: dict[str, object] | None = None
         last_response: JudgeProviderResponse | None = None
+        attempt_request = request
         for attempt in range(1, self.max_attempts + 1):
+            attempt_raw: dict[str, object] | None = None
             try:
-                provider_result = provider(request, configuration)
+                provider_result = provider(attempt_request, configuration)
                 if isinstance(provider_result, JudgeProviderResponse):
                     response = provider_result
                     raw = response.output
@@ -331,12 +454,17 @@ class CachedJudgeRunner:
                     )
                 if not isinstance(raw, Mapping):
                     raise TypeError("judge provider must return a mapping")
-                last_raw = dict(raw)
+                attempt_raw = dict(raw)
+                last_raw = attempt_raw
                 last_response = response
                 validated = validator(raw)
                 break
             except Exception as exc:  # Provider failures remain auditable unresolved records.
                 errors.append(f"attempt {attempt}: {exc}")
+                if attempt < self.max_attempts and attempt_raw is not None:
+                    attempt_request = _repair_judge_request(request, attempt_raw, exc)
+                else:
+                    attempt_request = request
 
         if validated is None:
             envelope = JudgeResultEnvelope(

@@ -12,7 +12,14 @@ from cs30.evaluation.evidence_support import (
     validate_evidence_support_output,
 )
 from cs30.evaluation.judge_results import assemble_judge_results
-from cs30.evaluation.judge_runtime import CachedJudgeRunner, request_cache_key
+from cs30.evaluation.judge_runtime import (
+    _ONLINE_OUTPUT_SCHEMAS,
+    CachedJudgeRunner,
+    StructuredJsonJudgeProvider,
+    _render_judge_prompt,
+    request_cache_key,
+    validate_output_against_request,
+)
 from cs30.evaluation.level_adaptation import (
     adaptation_evaluation_levels,
     apply_adaptation_threshold,
@@ -26,18 +33,23 @@ from cs30.evaluation.level_discrimination import (
     validate_discrimination_output,
 )
 from cs30.evaluation.v2_generation_models import (
+    AdaptationJudgeOutput,
     ApprovalStatus,
     ChecklistCriterion,
+    DiscriminationJudgeOutput,
     EvaluationEvidence,
+    EvidenceSupportJudgeOutput,
     ExperimentArm,
     GenerationEvaluationInput,
     JudgeConfiguration,
     JudgeResultEnvelope,
+    JudgeTask,
     LevelChecklist,
     LevelGuess,
     LevelProfile,
     ProfileChecklistPackage,
 )
+from cs30.generation.client import LLMResponse, TokenUsage
 
 
 def _configuration() -> JudgeConfiguration:
@@ -330,6 +342,320 @@ def test_evidence_support_uses_short_judge_ids_and_restores_chunk_ids() -> None:
         item=item,
     )
     assert output.claims[0].supporting_evidence_ids == [chunk_id]
+
+
+def test_online_judge_schemas_require_every_property_and_forbid_extra_fields() -> None:
+    def assert_strict_objects(node: object) -> None:
+        if isinstance(node, dict):
+            if node.get("type") == "object":
+                properties = node.get("properties")
+                assert isinstance(properties, dict)
+                assert node.get("required") == list(properties)
+                assert node.get("additionalProperties") is False
+            for value in node.values():
+                assert_strict_objects(value)
+        elif isinstance(node, list):
+            for value in node:
+                assert_strict_objects(value)
+
+    for schema in _ONLINE_OUTPUT_SCHEMAS.values():
+        assert_strict_objects(schema)
+        assert "default" not in str(schema)
+
+    adaptation_item = _ONLINE_OUTPUT_SCHEMAS[JudgeTask.ADAPTATION]["properties"][
+        "criteria"
+    ]["items"]
+    discrimination = _ONLINE_OUTPUT_SCHEMAS[JudgeTask.DISCRIMINATION]
+    evidence_claim = _ONLINE_OUTPUT_SCHEMAS[JudgeTask.EVIDENCE_SUPPORT]["properties"][
+        "claims"
+    ]["items"]
+    assert "exact_quote" in adaptation_item["required"]
+    assert "exact_quote" in discrimination["required"]
+    assert "supporting_evidence_ids" in evidence_claim["required"]
+    assert "evidence_quotes" in evidence_claim["required"]
+    assert evidence_claim["properties"]["evidence_quotes"]["type"] == "array"
+
+
+def test_online_evidence_quote_rows_are_normalized_before_local_validation() -> None:
+    item = _item()
+    request = build_evidence_support_request(item, _configuration())
+    output = validate_output_against_request(
+        {
+            "schema_version": "1.0",
+            "request_id": request.request_id,
+            "claims": [
+                {
+                    "claim_id": "C1",
+                    "claim_text": "A net force causes acceleration",
+                    "bundle_support": "supported",
+                    "citation_support": "supported",
+                    "supporting_evidence_ids": ["E1"],
+                    "evidence_quotes": [
+                        {
+                            "evidence_id": "E1",
+                            "quote": "A net force produces acceleration",
+                        }
+                    ],
+                    "reason": "The cited evidence supports the claim.",
+                }
+            ],
+        },
+        request,
+    )
+    assert output.claims[0].evidence_quotes == {
+        "E1": "A net force produces acceleration"
+    }
+
+
+@pytest.mark.parametrize(
+    ("model", "raw"),
+    [
+        (
+            AdaptationJudgeOutput,
+            {
+                "schema_version": "1.0",
+                "request_id": "request-1",
+                "criteria": [
+                    {
+                        "criterion_id": "B1",
+                        "verdict": "fail",
+                        "reason": "The criterion was not met.",
+                    }
+                ],
+            },
+        ),
+        (
+            DiscriminationJudgeOutput,
+            {
+                "schema_version": "1.0",
+                "request_id": "request-1",
+                "predicted_level": "uncertain",
+                "reason": "No level was clearly supported.",
+            },
+        ),
+        (
+            EvidenceSupportJudgeOutput,
+            {
+                "schema_version": "1.0",
+                "request_id": "request-1",
+                "claims": [
+                    {
+                        "claim_id": "C1",
+                        "claim_text": "A claim.",
+                        "bundle_support": "unsupported",
+                        "citation_support": "unsupported",
+                        "reason": "No supplied evidence supports it.",
+                    }
+                ],
+            },
+        ),
+    ],
+)
+def test_local_models_reject_omitted_online_required_fields(model, raw) -> None:
+    with pytest.raises(ValueError):
+        model.model_validate(raw)
+
+
+def test_online_evidence_quote_rows_reject_duplicate_ids() -> None:
+    raw = {
+        "schema_version": "1.0",
+        "request_id": "request-1",
+        "claims": [
+            {
+                "claim_id": "C1",
+                "claim_text": "A claim.",
+                "bundle_support": "supported",
+                "citation_support": "supported",
+                "supporting_evidence_ids": ["E1"],
+                "evidence_quotes": [
+                    {"evidence_id": "E1", "quote": "first"},
+                    {"evidence_id": "E1", "quote": "second"},
+                ],
+                "reason": "Supported.",
+            }
+        ],
+    }
+    with pytest.raises(ValueError, match="repeat an evidence_id"):
+        EvidenceSupportJudgeOutput.model_validate(raw)
+
+
+def test_adaptation_rejects_a_quote_for_not_applicable() -> None:
+    with pytest.raises(ValueError, match="require a null quote"):
+        AdaptationJudgeOutput.model_validate(
+            {
+                "schema_version": "1.0",
+                "request_id": "request-1",
+                "criteria": [
+                    {
+                        "criterion_id": "B1",
+                        "verdict": "not_applicable",
+                        "exact_quote": "invented support",
+                        "reason": "Not relevant.",
+                    }
+                ],
+            }
+        )
+
+
+def test_evidence_support_rejects_support_ids_for_an_unsupported_claim() -> None:
+    item = _item()
+    request = build_evidence_support_request(item, _configuration())
+    raw = {
+        "schema_version": "1.0",
+        "request_id": request.request_id,
+        "claims": [
+            {
+                "claim_id": "C1",
+                "claim_text": "A net force causes acceleration",
+                "bundle_support": "unsupported",
+                "citation_support": "unsupported",
+                "supporting_evidence_ids": ["E1"],
+                "evidence_quotes": {
+                    "E1": "A net force produces acceleration",
+                },
+                "reason": "The evidence does not support the complete claim.",
+            }
+        ],
+    }
+    with pytest.raises(ValueError, match="must not identify supporting evidence"):
+        validate_evidence_support_output(raw, request=request, item=item)
+
+
+def test_structured_provider_sends_the_handwritten_strict_schema() -> None:
+    request = build_discrimination_request(
+        _item(),
+        [_profile(level) for level in StudentLevel],
+        _configuration(),
+    )
+
+    class CapturingClient:
+        def __init__(self) -> None:
+            self.text_format = None
+
+        def complete(self, _prompt, text_format):
+            self.text_format = text_format
+            return LLMResponse(
+                text=(
+                    '{"schema_version":"1.0","request_id":"'
+                    + request.request_id
+                    + '","predicted_level":"uncertain",'
+                    '"exact_quote":null,"reason":"unclear"}'
+                ),
+                model="independent-family",
+                usage=TokenUsage(),
+                response_id="response-1",
+                latency_ms=1.0,
+            )
+
+    client = CapturingClient()
+    result = StructuredJsonJudgeProvider(client)(request, _configuration())
+    assert result.output["exact_quote"] is None
+    assert client.text_format == {
+        "type": "json_schema",
+        "name": "discrimination_judge_output",
+        "strict": True,
+        "schema": _ONLINE_OUTPUT_SCHEMAS[JudgeTask.DISCRIMINATION],
+    }
+
+
+def test_cached_runner_adds_validation_error_to_the_retry_prompt(tmp_path: Path) -> None:
+    item = _item()
+    checklist = _checklist(StudentLevel.BEGINNER)
+    request = build_adaptation_request(
+        item,
+        _profile(StudentLevel.BEGINNER),
+        checklist,
+        _configuration(),
+    )
+    prompts: list[str] = []
+
+    def provider(attempt_request, _configuration):
+        prompts.append(attempt_request.system_instruction)
+        criteria = [
+            {
+                "criterion_id": criterion.criterion_id,
+                "verdict": "pass",
+                "reason": "supported",
+                **(
+                    {"exact_quote": "A net force causes acceleration"}
+                    if len(prompts) == 2
+                    else {}
+                ),
+            }
+            for criterion in checklist.criteria
+        ]
+        return {
+            "schema_version": "1.0",
+            "request_id": request.request_id,
+            "criteria": criteria,
+        }
+
+    result = CachedJudgeRunner(
+        tmp_path / "cache.jsonl",
+        judge_execution_id="execution-one",
+        model_digest="weights-one",
+        context_window=32768,
+    ).run(
+        request,
+        _configuration(),
+        provider,
+        lambda raw: validate_adaptation_output(
+            raw,
+            request=request,
+            answer=item.answer or "",
+            checklist=checklist,
+        ),
+    )
+    assert result.unresolved is False
+    assert len(prompts) == 2
+    assert "REPAIR_REQUEST:" not in prompts[0]
+    assert "REPAIR_REQUEST:" in prompts[1]
+    assert "exact_quote" in prompts[1]
+    assert "PREVIOUS_OUTPUT:" in prompts[1]
+    rendered_retry = _render_judge_prompt(
+        request.model_copy(update={"system_instruction": prompts[1]})
+    )
+    assert rendered_retry.index("REQUEST_PAYLOAD_JSON:") < rendered_retry.index(
+        "REPAIR_REQUEST:"
+    )
+    assert rendered_retry.rstrip().endswith("Return one corrected JSON object only.")
+
+
+def test_cached_runner_does_not_repair_a_provider_failure(tmp_path: Path) -> None:
+    request = build_discrimination_request(
+        _item(),
+        [_profile(level) for level in StudentLevel],
+        _configuration(),
+    )
+    prompts: list[str] = []
+
+    def provider(attempt_request, _configuration):
+        prompts.append(attempt_request.system_instruction)
+        if len(prompts) == 1:
+            raise TimeoutError("temporary timeout")
+        return {
+            "schema_version": "1.0",
+            "request_id": request.request_id,
+            "predicted_level": "uncertain",
+            "exact_quote": None,
+            "reason": "The answer does not clearly indicate one level.",
+        }
+
+    result = CachedJudgeRunner(
+        tmp_path / "cache.jsonl",
+        judge_execution_id="execution-one",
+    ).run(
+        request,
+        _configuration(),
+        provider,
+        lambda raw: validate_discrimination_output(
+            raw,
+            request=request,
+            answer=_item().answer or "",
+        ),
+    )
+    assert result.unresolved is False
+    assert prompts == [request.system_instruction, request.system_instruction]
 
 
 def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresolved(
