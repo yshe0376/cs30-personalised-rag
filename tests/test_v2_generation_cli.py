@@ -8,8 +8,17 @@ import pytest
 
 from cs30.contracts import StudentLevel
 from cs30.evaluation.judge_runtime import configuration_sha256
-from cs30.evaluation.v2_generation_cli import _assert_comparable_judge_runs, main
-from cs30.evaluation.v2_generation_models import ExperimentArm, JudgeConfiguration
+from cs30.evaluation.v2_generation_cli import (
+    _assert_comparable_judge_runs,
+    _judge_response_fingerprint,
+    main,
+)
+from cs30.evaluation.v2_generation_models import (
+    ExperimentArm,
+    JudgeConfiguration,
+    JudgeResultEnvelope,
+    JudgeTask,
+)
 from cs30.generation.client import LLMResponse, TokenUsage
 
 
@@ -71,6 +80,20 @@ def test_cli_help_keeps_legacy_report_extension_v1_only(capsys: pytest.CaptureFi
     output = capsys.readouterr().out
     assert "cs30-evaluate report-" in output
     assert "extension command remains V1-only" in output
+
+
+def test_validate_inputs_uses_evidence_files_instead_of_declaration_flags(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        main(["validate-inputs", "--help"])
+
+    assert exc_info.value.code == 0
+    output = capsys.readouterr().out
+    assert "--leader-calibration-record" in output
+    assert "--label-provenance-record" in output
+    assert "--calibrated-with-leader" not in output
+    assert "--labels-created-without-model-answers" not in output
 
 
 def test_run_judge_requests_calls_provider_and_records_fresh_response(
@@ -184,6 +207,40 @@ def test_repeat_comparison_rejects_reused_provider_responses() -> None:
     repeat = {"manifest": {"provenance": {**shared, "judge_execution_id": "second"}}}
     with pytest.raises(ValueError, match="reused provider responses"):
         _assert_comparable_judge_runs(primary, repeat, purpose="repeat")
+
+
+def test_response_fingerprint_detects_reuse_across_request_and_timestamp_changes() -> None:
+    first = JudgeResultEnvelope(
+        task=JudgeTask.DISCRIMINATION,
+        request_id="request-one",
+        cache_key="a" * 64,
+        judge_config_version="judge-v1",
+        output={"decision": "beginner"},
+        provider_response_id="provider-response-shared",
+        completed_at_utc="2026-10-20T00:00:00+00:00",
+    )
+    repeated = first.model_copy(
+        update={
+            "request_id": "request-two",
+            "cache_key": "b" * 64,
+            "completed_at_utc": "2026-10-20T00:05:00+00:00",
+        }
+    )
+    assert _judge_response_fingerprint(first) == _judge_response_fingerprint(repeated)
+
+    timestamp_only = first.model_copy(update={"provider_response_id": None})
+    same_timestamp = repeated.model_copy(
+        update={
+            "provider_response_id": None,
+            "completed_at_utc": timestamp_only.completed_at_utc,
+        }
+    )
+    assert _judge_response_fingerprint(timestamp_only) == _judge_response_fingerprint(
+        same_timestamp
+    )
+    assert _judge_response_fingerprint(timestamp_only) != _judge_response_fingerprint(
+        repeated.model_copy(update={"provider_response_id": None})
+    )
 
 
 def test_second_judge_comparison_normalizes_model_size_suffixes() -> None:

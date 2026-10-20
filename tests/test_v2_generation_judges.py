@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+import cs30.evaluation.judge_runtime as judge_runtime
 from cs30.contracts import StudentLevel
 from cs30.evaluation.evidence_support import (
     build_evidence_support_request,
@@ -333,6 +334,7 @@ def test_evidence_support_uses_short_judge_ids_and_restores_chunk_ids() -> None:
 
 def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresolved(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     item = _item()
     checklist = _checklist(StudentLevel.BEGINNER)
@@ -369,6 +371,11 @@ def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresol
     )
     cache_path = tmp_path / "judge-cache.jsonl"
     runner = CachedJudgeRunner(cache_path)
+
+    def reject_cache_reload(_path: Path) -> dict[str, JudgeResultEnvelope]:
+        raise AssertionError("judge cache must be loaded once per runner")
+
+    monkeypatch.setattr(judge_runtime, "_load_cache", reject_cache_reload)
     first = runner.run(request, _configuration(), provider, validator)
     second = runner.run(request, _configuration(), provider, validator)
     assert first.cache_hit is False

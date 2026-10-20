@@ -143,8 +143,8 @@ def test_eligibility_sidecar_requires_exact_coverage_and_resolved_values(
         gold_version="gold-v1",
         gold_sha256="a" * 64,
         calibration_question_count=15,
-        calibrated_with_leader=True,
-        labels_created_without_model_answers=True,
+        leader_calibration_record_sha256="b" * 64,
+        label_provenance_record_sha256="c" * 64,
         expected_question_ids={"q-1", "q-2"},
     )
     assert len(package.records) == 2
@@ -155,8 +155,8 @@ def test_eligibility_sidecar_requires_exact_coverage_and_resolved_values(
             gold_version="gold-v1",
             gold_sha256="a" * 64,
             calibration_question_count=15,
-            calibrated_with_leader=True,
-            labels_created_without_model_answers=True,
+            leader_calibration_record_sha256="b" * 64,
+            label_provenance_record_sha256="c" * 64,
             expected_question_ids={"q-1", "q-2"},
             require_resolved=True,
         )

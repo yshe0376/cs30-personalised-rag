@@ -152,23 +152,17 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("--gold-version", required=True)
     validate.add_argument("--eligibility-version", required=True)
     validate.add_argument("--eligibility-calibration-count", required=True, type=int)
-    validate.add_argument("--calibrated-with-leader", required=True, action="store_true")
-    validate.add_argument(
-        "--labels-created-without-model-answers",
-        required=True,
-        action="store_true",
-    )
     validate.add_argument(
         "--leader-calibration-record",
         required=True,
         type=Path,
-        help="nonempty reviewed calibration record supporting --calibrated-with-leader",
+        help="nonempty reviewed Leader calibration record whose bytes are hash-bound",
     )
     validate.add_argument(
         "--label-provenance-record",
         required=True,
         type=Path,
-        help="nonempty provenance record supporting label creation without model answers",
+        help="nonempty label-provenance record whose bytes are hash-bound",
     )
     validate.add_argument("--reportable", action="store_true")
     validate.add_argument("--output", required=True, type=Path)
@@ -320,17 +314,6 @@ def _validate_inputs(args: argparse.Namespace) -> int:
     question_ids = [str(row["question_id"]) for row in _read_jsonl(args.gold)]
     if len(question_ids) != len(set(question_ids)):
         raise ValueError("Gold contains duplicate question_id values")
-    eligibility = load_eligibility_package(
-        args.eligibility,
-        package_version=args.eligibility_version,
-        gold_version=args.gold_version,
-        gold_sha256=gold_sha256,
-        calibration_question_count=args.eligibility_calibration_count,
-        calibrated_with_leader=args.calibrated_with_leader,
-        labels_created_without_model_answers=args.labels_created_without_model_answers,
-        expected_question_ids=question_ids,
-        require_resolved=args.reportable,
-    )
     evidence_files = {
         "leader_calibration_record": args.leader_calibration_record,
         "label_provenance_record": args.label_provenance_record,
@@ -340,6 +323,17 @@ def _validate_inputs(args: argparse.Namespace) -> int:
         if not path.is_file() or not path.read_bytes().strip():
             raise ValueError(f"{label} must point to a nonempty evidence file")
         evidence_hashes[label] = hashlib.sha256(path.read_bytes()).hexdigest()
+    eligibility = load_eligibility_package(
+        args.eligibility,
+        package_version=args.eligibility_version,
+        gold_version=args.gold_version,
+        gold_sha256=gold_sha256,
+        calibration_question_count=args.eligibility_calibration_count,
+        leader_calibration_record_sha256=evidence_hashes["leader_calibration_record"],
+        label_provenance_record_sha256=evidence_hashes["label_provenance_record"],
+        expected_question_ids=question_ids,
+        require_resolved=args.reportable,
+    )
     _write_json(
         args.output,
         {
@@ -549,6 +543,26 @@ def _bind_correctness_scores(args: argparse.Namespace) -> int:
     return 0
 
 
+def _judge_response_fingerprint(envelope: JudgeResultEnvelope) -> str:
+    """Return a cross-run identity that exposes reused provider responses."""
+
+    if envelope.provider_response_id is not None:
+        identity = {
+            "kind": "provider_response_id",
+            "value": envelope.provider_response_id,
+        }
+    elif envelope.completed_at_utc is not None:
+        identity = {
+            "kind": "completed_at_utc",
+            "value": envelope.completed_at_utc,
+        }
+    else:
+        raise ValueError("resolved judge response is missing provider response provenance")
+    return hashlib.sha256(
+        json.dumps(identity, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
+
 def _assemble_judge_results(args: argparse.Namespace) -> int:
     items = _load_inputs(args.inputs)
     source_run_hash = _source_run_sha256(items)
@@ -572,17 +586,7 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
             raise ValueError(f"cross-level file references unknown evaluation IDs: {unknown}")
     envelopes = load_judge_envelopes(args.judge_results)
     response_fingerprints = sorted(
-        hashlib.sha256(
-            json.dumps(
-                {
-                    "request_id": envelope.request_id,
-                    "provider_response_id": envelope.provider_response_id,
-                    "completed_at_utc": envelope.completed_at_utc,
-                },
-                sort_keys=True,
-                separators=(",", ":"),
-            ).encode("utf-8")
-        ).hexdigest()
+        _judge_response_fingerprint(envelope)
         for envelope in envelopes.values()
         if not envelope.unresolved
     )

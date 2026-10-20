@@ -253,6 +253,7 @@ class CachedJudgeRunner:
             raise ValueError("max_attempts must be positive")
         self.cache_path = cache_path
         self.max_attempts = max_attempts
+        self._cache = _load_cache(cache_path)
 
     def run(
         self,
@@ -265,8 +266,7 @@ class CachedJudgeRunner:
         if request.config_sha256 != expected_config:
             raise ValueError("judge request is bound to a different configuration")
         cache_key = request_cache_key(request)
-        cache = _load_cache(self.cache_path)
-        cached = cache.get(cache_key)
+        cached = self._cache.get(cache_key)
         if cached is not None:
             return cached.model_copy(update={"cache_hit": True})
 
@@ -334,6 +334,7 @@ class CachedJudgeRunner:
             )
         if not envelope.unresolved:
             _append_cache(self.cache_path, envelope)
+            self._cache[cache_key] = envelope
         return envelope
 
 

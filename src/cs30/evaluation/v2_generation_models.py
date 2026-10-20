@@ -228,13 +228,21 @@ class EligibilityPackage(ContractModel):
     gold_version: Identifier
     gold_sha256: str
     calibration_question_count: int = Field(ge=15, le=20)
-    calibrated_with_leader: Literal[True] = True
-    labels_created_without_model_answers: Literal[True] = True
+    leader_calibration_record_sha256: str
+    label_provenance_record_sha256: str
     records: list[EligibilityRecord] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_package(self) -> EligibilityPackage:
         _validate_sha256(self.gold_sha256, "gold_sha256")
+        _validate_sha256(
+            self.leader_calibration_record_sha256,
+            "leader_calibration_record_sha256",
+        )
+        _validate_sha256(
+            self.label_provenance_record_sha256,
+            "label_provenance_record_sha256",
+        )
         question_ids = [record.question_id for record in self.records]
         if len(question_ids) != len(set(question_ids)):
             raise ValueError("eligibility package contains duplicate question_id values")

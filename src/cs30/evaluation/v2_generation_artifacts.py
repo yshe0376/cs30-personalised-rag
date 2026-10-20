@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -258,9 +259,13 @@ def adapt_m7_generation_artifacts(
             raise ValueError(f"lambda={candidate} span_coverage values must be in [0, 1]")
         recomputed_hit_rate = sum(observed_hits) / case_count
         recomputed_span_coverage = sum(observed_coverage) / case_count
-        if abs(float(row["complete_hit_rate"]) - recomputed_hit_rate) > 1e-12:
+        declared_hit_rate = float(row["complete_hit_rate"])
+        declared_span_coverage = float(row["mean_span_coverage"])
+        if not math.isfinite(declared_hit_rate) or not math.isfinite(declared_span_coverage):
+            raise ValueError(f"lambda={candidate} aggregate metrics must be finite")
+        if abs(declared_hit_rate - recomputed_hit_rate) > 1e-12:
             raise ValueError(f"lambda={candidate} complete_hit_rate does not match its cases")
-        if abs(float(row["mean_span_coverage"]) - recomputed_span_coverage) > 1e-12:
+        if abs(declared_span_coverage - recomputed_span_coverage) > 1e-12:
             raise ValueError(f"lambda={candidate} mean_span_coverage does not match its cases")
         if selection_identities is None:
             selection_identities = identity_set

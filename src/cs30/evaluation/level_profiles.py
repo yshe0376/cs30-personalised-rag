@@ -97,8 +97,8 @@ def load_eligibility_package(
     gold_version: str,
     gold_sha256: str,
     calibration_question_count: int,
-    calibrated_with_leader: bool,
-    labels_created_without_model_answers: bool,
+    leader_calibration_record_sha256: str,
+    label_provenance_record_sha256: str,
     expected_question_ids: Iterable[str] | None = None,
     require_resolved: bool = False,
 ) -> EligibilityPackage:
@@ -111,8 +111,8 @@ def load_eligibility_package(
             gold_version=gold_version,
             gold_sha256=gold_sha256,
             calibration_question_count=calibration_question_count,
-            calibrated_with_leader=calibrated_with_leader,
-            labels_created_without_model_answers=labels_created_without_model_answers,
+            leader_calibration_record_sha256=leader_calibration_record_sha256,
+            label_provenance_record_sha256=label_provenance_record_sha256,
             records=records,
         )
     except ValidationError as exc:

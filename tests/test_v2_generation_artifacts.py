@@ -435,6 +435,28 @@ def test_adapter_rejects_incomplete_or_duplicate_lambda_evidence(
         )
 
 
+def test_adapter_rejects_nonfinite_lambda_aggregate_metrics(tmp_path: Path) -> None:
+    paths = _bundle(tmp_path)
+    selection = json.loads(paths["lambda"].read_text(encoding="utf-8"))
+    selection["metrics"][0]["mean_span_coverage"] = float("nan")
+    _write_json(paths["lambda"], selection)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["prepared_inputs"]["input_sha256"]["lambda_selection.json"] = _sha(
+        paths["lambda"]
+    )
+    _write_json(paths["manifest"], manifest)
+    with pytest.raises(ValueError, match="aggregate metrics must be finite"):
+        adapt_m7_generation_artifacts(
+            expected_path=paths["expected"],
+            records_path=paths["records"],
+            answers_path=paths["answers"],
+            run_manifest_path=paths["manifest"],
+            gold_path=paths["gold"],
+            eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
+        )
+
+
 def test_score_import_binds_answer_hash_and_output_truncated(tmp_path: Path) -> None:
     paths = _bundle(tmp_path)
     items, manifest = adapt_m7_generation_artifacts(
