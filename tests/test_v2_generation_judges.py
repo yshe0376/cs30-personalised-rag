@@ -190,6 +190,39 @@ def test_adaptation_supports_cross_level_and_randomized_criterion_order() -> Non
     assert "target_level" not in request.payload
 
 
+def test_adaptation_missing_content_can_fail_without_an_invented_quote() -> None:
+    item = _item()
+    checklist = _checklist(StudentLevel.BEGINNER)
+    request = build_adaptation_request(
+        item,
+        _profile(StudentLevel.BEGINNER),
+        checklist,
+        _configuration(),
+    )
+    raw = {
+        "schema_version": "1.0",
+        "request_id": request.request_id,
+        "criteria": [
+            {
+                "criterion_id": criterion.criterion_id,
+                "verdict": "fail",
+                "exact_quote": None,
+                "reason": "The required explanation is absent.",
+            }
+            for criterion in checklist.criteria
+        ],
+    }
+    output = validate_adaptation_output(
+        raw,
+        request=request,
+        answer=item.answer or "",
+        checklist=checklist,
+    )
+    score = score_adaptation_output(output)
+    assert score["fail_count"] == len(checklist.criteria)
+    assert score["not_applicable_count"] == 0
+
+
 def test_p0r0_and_frozen_cross_level_samples_use_all_three_checklists() -> None:
     p0r0 = _item().model_copy(update={"condition": ExperimentArm.P0R0_PLAIN})
     assert adaptation_evaluation_levels(p0r0) == tuple(StudentLevel)
@@ -259,6 +292,45 @@ def test_evidence_support_validates_claims_citations_and_source_quotes() -> None
         validate_evidence_support_output(raw, request=request, item=item)
 
 
+def test_evidence_support_uses_short_judge_ids_and_restores_chunk_ids() -> None:
+    chunk_id = "chunk-" + "a" * 64
+    item = _item().model_copy(
+        update={
+            "evidence": [
+                EvaluationEvidence(
+                    evidence_id=chunk_id,
+                    text="A net force produces acceleration and changes velocity.",
+                    rank=1,
+                    role="definition",
+                )
+            ],
+            "citation_ids": [chunk_id],
+        }
+    )
+    request = build_evidence_support_request(item, _configuration())
+    assert request.payload["evidence"][0]["evidence_id"] == "E1"
+    output = validate_evidence_support_output(
+        {
+            "schema_version": "1.0",
+            "request_id": request.request_id,
+            "claims": [
+                {
+                    "claim_id": "C1",
+                    "claim_text": "A net force causes acceleration",
+                    "bundle_support": "supported",
+                    "citation_support": "supported",
+                    "supporting_evidence_ids": ["E1"],
+                    "evidence_quotes": {"E1": "A net force produces acceleration"},
+                    "reason": "The cited evidence supports the claim.",
+                }
+            ],
+        },
+        request=request,
+        item=item,
+    )
+    assert output.claims[0].supporting_evidence_ids == [chunk_id]
+
+
 def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresolved(
     tmp_path: Path,
 ) -> None:
@@ -295,19 +367,29 @@ def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresol
         answer=item.answer or "",
         checklist=checklist,
     )
-    runner = CachedJudgeRunner(tmp_path / "judge-cache.jsonl")
+    cache_path = tmp_path / "judge-cache.jsonl"
+    runner = CachedJudgeRunner(cache_path)
     first = runner.run(request, _configuration(), provider, validator)
     second = runner.run(request, _configuration(), provider, validator)
-    assert first == second
+    assert first.cache_hit is False
+    assert second.cache_hit is True
+    assert first.model_copy(update={"cache_hit": True}) == second
     assert calls == 1
 
     bad_request = request.model_copy(
         update={"request_id": "adaptation-bad", "input_sha256": "b" * 64}
     )
+    bad_calls = 0
+
+    def bad_provider(*_args: object) -> dict[str, object]:
+        nonlocal bad_calls
+        bad_calls += 1
+        return {"unexpected": True}
+
     bad = runner.run(
         bad_request,
         _configuration(),
-        lambda *_args: {"unexpected": True},
+        bad_provider,
         lambda raw: validate_adaptation_output(
             raw,
             request=bad_request,
@@ -318,6 +400,21 @@ def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresol
     assert bad.unresolved is True
     assert bad.raw_output == {"unexpected": True}
     assert "attempt 2" in (bad.error or "")
+    with cache_path.open("a", encoding="utf-8") as stream:
+        stream.write(bad.model_dump_json() + "\n")
+    retried = runner.run(
+        bad_request,
+        _configuration(),
+        bad_provider,
+        lambda raw: validate_adaptation_output(
+            raw,
+            request=bad_request,
+            answer=item.answer or "",
+            checklist=checklist,
+        ),
+    )
+    assert retried.unresolved is True
+    assert bad_calls == 4
 
 
 def test_assemble_judge_results_validates_and_reattaches_hidden_metadata() -> None:
@@ -380,6 +477,7 @@ def test_assemble_judge_results_validates_and_reattaches_hidden_metadata() -> No
             cache_key=request_cache_key(request),
             judge_config_version=configuration.config_version,
             output=output,
+            completed_at_utc="2026-10-20T00:00:00+00:00",
         )
         for request, output in (
             (adaptation_request, adaptation_output),

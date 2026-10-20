@@ -45,6 +45,18 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
     }
     _write_jsonl(paths["gold"], [{"question_id": "q1", "question": "Why?"}])
     _write_jsonl(paths["eligibility"], [{"question_id": "q1", "eligibility": "full"}])
+    def selection_cases(hits: tuple[bool, bool, bool]) -> list[dict[str, object]]:
+        return [
+            {
+                "question_id": "lambda-dev-q1",
+                "level": level,
+                "complete_hit": hit,
+                "span_coverage": float(hit),
+            }
+            for level, hit in zip(
+                ("beginner", "intermediate", "advanced"), hits, strict=True
+            )
+        ]
     _write_json(
         paths["lambda"],
         {
@@ -58,33 +70,38 @@ def _bundle(tmp_path: Path) -> dict[str, Path]:
             "metrics": [
                 {
                     "lambda_weight": 0.0,
-                    "complete_hit_rate": 0.827,
-                    "mean_span_coverage": 0.84,
+                    "complete_hit_rate": 1.0,
+                    "mean_span_coverage": 1.0,
                     "case_count": 3,
+                    "cases": selection_cases((True, True, True)),
                 },
                 {
                     "lambda_weight": 0.1,
-                    "complete_hit_rate": 0.823,
-                    "mean_span_coverage": 0.83,
+                    "complete_hit_rate": 1.0,
+                    "mean_span_coverage": 1.0,
                     "case_count": 3,
+                    "cases": selection_cases((True, True, True)),
                 },
                 {
                     "lambda_weight": 0.2,
-                    "complete_hit_rate": 0.821,
-                    "mean_span_coverage": 0.82,
+                    "complete_hit_rate": 1.0,
+                    "mean_span_coverage": 1.0,
                     "case_count": 3,
+                    "cases": selection_cases((True, True, True)),
                 },
                 {
                     "lambda_weight": 0.35,
-                    "complete_hit_rate": 0.796,
-                    "mean_span_coverage": 0.80,
+                    "complete_hit_rate": 2 / 3,
+                    "mean_span_coverage": 2 / 3,
                     "case_count": 3,
+                    "cases": selection_cases((True, True, False)),
                 },
                 {
                     "lambda_weight": 0.5,
-                    "complete_hit_rate": 0.636,
-                    "mean_span_coverage": 0.65,
+                    "complete_hit_rate": 1 / 3,
+                    "mean_span_coverage": 1 / 3,
                     "case_count": 3,
+                    "cases": selection_cases((True, False, False)),
                 },
             ],
         },
@@ -189,6 +206,7 @@ def test_adapter_preserves_statuses_hashes_and_chunk_citations(tmp_path: Path) -
     )
     assert [item.source_status.value for item in items] == ["answered", "output_truncated"]
     assert items[0].citation_ids == ["chunk-1"]
+    assert items[0].evidence[0].role == "definition"
     assert items[0].generation_model_family == "gpt-oss"
     assert items[0].generation_model_revision == "20b"
     assert items[1].technical_failure is True
@@ -244,6 +262,53 @@ def test_lambda_case_count_uses_experiment_questions_not_all_gold_rows(
         row["case_count"] for row in manifest["lambda_selection"]["candidates"]
     } == {3}
     assert manifest["question_count"] == 1
+
+
+def test_test_run_accepts_dev_lambda_evidence_with_its_own_gold_hash(tmp_path: Path) -> None:
+    paths = _bundle(tmp_path)
+    selection = json.loads(paths["lambda"].read_text(encoding="utf-8"))
+    selection["gold_sha256"] = "c" * 64
+    _write_json(paths["lambda"], selection)
+    source_manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    source_manifest["prepared_inputs"]["input_sha256"]["lambda_selection.json"] = _sha(
+        paths["lambda"]
+    )
+    _write_json(paths["manifest"], source_manifest)
+
+    _, manifest = adapt_m7_generation_artifacts(
+        expected_path=paths["expected"],
+        records_path=paths["records"],
+        answers_path=paths["answers"],
+        run_manifest_path=paths["manifest"],
+        gold_path=paths["gold"],
+        eligibility_path=paths["eligibility"],
+        lambda_selection_path=paths["lambda"],
+    )
+    assert manifest["gold_sha256"] == _sha(paths["gold"])
+    assert manifest["lambda_selection_gold_sha256"] == "c" * 64
+
+
+def test_lambda_selection_recomputes_aggregate_metrics_from_cases(tmp_path: Path) -> None:
+    paths = _bundle(tmp_path)
+    selection = json.loads(paths["lambda"].read_text(encoding="utf-8"))
+    selection["metrics"][0]["complete_hit_rate"] = 0.0
+    _write_json(paths["lambda"], selection)
+    source_manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    source_manifest["prepared_inputs"]["input_sha256"]["lambda_selection.json"] = _sha(
+        paths["lambda"]
+    )
+    _write_json(paths["manifest"], source_manifest)
+
+    with pytest.raises(ValueError, match="complete_hit_rate does not match"):
+        adapt_m7_generation_artifacts(
+            expected_path=paths["expected"],
+            records_path=paths["records"],
+            answers_path=paths["answers"],
+            run_manifest_path=paths["manifest"],
+            gold_path=paths["gold"],
+            eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
+        )
 
 
 def test_adapter_rejects_duplicate_logical_matrix_cells(tmp_path: Path) -> None:

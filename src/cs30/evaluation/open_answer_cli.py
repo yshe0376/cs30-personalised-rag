@@ -127,7 +127,10 @@ def main(argv: list[str] | None = None) -> int:
             manifest = OpenAnswerExperiment.model_validate_json(snapshots["expected_manifest"])
             if input_hashes["gold"] != manifest.gold_sha256:
                 raise ValueError("Gold file hash differs from the expected experiment")
-            if input_hashes["rubrics"] != manifest.rubrics_sha256:
+            if (
+                manifest.rubrics_sha256 is not None
+                and input_hashes["rubrics"] != manifest.rubrics_sha256
+            ):
                 raise ValueError("rubric file hash differs from the expected experiment")
             gold = load_gold(args.gold, snapshots["gold"])
             rubrics = unique_models(
@@ -159,6 +162,7 @@ def main(argv: list[str] | None = None) -> int:
             provenance = {
                 "command": "score",
                 "matrix_version": manifest.matrix_version,
+                "generation_matrix_schema_version": manifest.schema_version,
                 "input_sha256": input_hashes,
                 "provider": args.provider,
                 "judge_config": scorer.judge_config,

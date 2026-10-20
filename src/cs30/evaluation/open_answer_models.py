@@ -68,14 +68,18 @@ class ExpectedAnswer(ScoringModel):
 
 
 class OpenAnswerExperiment(ScoringModel):
-    schema_version: Literal["0.1"] = "0.1"
+    schema_version: Literal["0.1", "0.2"] = "0.1"
     matrix_version: NonEmptyText
     gold_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    rubrics_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    rubrics_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     cases: list[ExpectedAnswer] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_cases(self) -> OpenAnswerExperiment:
+        if self.schema_version == "0.1" and self.rubrics_sha256 is None:
+            raise ValueError("schema 0.1 experiments require rubrics_sha256")
+        if self.schema_version == "0.2" and self.rubrics_sha256 is not None:
+            raise ValueError("schema 0.2 generation experiments must not bind M8 rubrics")
         ids = [case.run_id for case in self.cases]
         cells = [
             (c.question_id, c.condition_id, c.student_level, c.generator_model) for c in self.cases

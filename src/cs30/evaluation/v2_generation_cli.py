@@ -13,6 +13,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from cs30.contracts import StudentLevel
+from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 
 from .condition_statistics import MetricObservation, paired_condition_contrasts
 from .evaluation_audit import (
@@ -28,7 +29,12 @@ from .judge_results import (
     summarize_discrimination_rows,
     write_judge_evaluation_outputs,
 )
-from .judge_runtime import write_judge_requests
+from .judge_runtime import (
+    CachedJudgeRunner,
+    StructuredJsonJudgeProvider,
+    validate_output_against_request,
+    write_judge_requests,
+)
 from .judge_validity import (
     ValidityThresholds,
     build_validity_report,
@@ -63,8 +69,11 @@ from .v2_generation_models import (
     GenerationEvaluationInput,
     GenerationRunStatus,
     JudgeConfiguration,
+    JudgeRequest,
+    JudgeResultEnvelope,
     JudgeTask,
     LevelGuess,
+    canonical_model_family,
 )
 from .v2_generation_reporting import (
     answer_text_diagnostics,
@@ -149,6 +158,18 @@ def _parser() -> argparse.ArgumentParser:
         required=True,
         action="store_true",
     )
+    validate.add_argument(
+        "--leader-calibration-record",
+        required=True,
+        type=Path,
+        help="nonempty reviewed calibration record supporting --calibrated-with-leader",
+    )
+    validate.add_argument(
+        "--label-provenance-record",
+        required=True,
+        type=Path,
+        help="nonempty provenance record supporting label creation without model answers",
+    )
     validate.add_argument("--reportable", action="store_true")
     validate.add_argument("--output", required=True, type=Path)
 
@@ -176,6 +197,23 @@ def _parser() -> argparse.ArgumentParser:
         help="prepare the registered checklist-order perturbation for adaptation only",
     )
     prepare.add_argument("--output", required=True, type=Path)
+
+    run_judges = commands.add_parser(
+        "run-judge-requests",
+        help="execute prepared blinded requests with the configured structured-output provider",
+    )
+    run_judges.add_argument("--requests", required=True, type=Path)
+    run_judges.add_argument("--judge-config", required=True, type=Path)
+    run_judges.add_argument("--cache", required=True, type=Path)
+    run_judges.add_argument("--output", required=True, type=Path)
+    run_judges.add_argument("--timeout", type=float, default=120.0)
+    run_judges.add_argument("--max-output-tokens", type=int, default=2048)
+    run_judges.add_argument("--max-attempts", type=int, default=2)
+    run_judges.add_argument(
+        "--require-fresh-cache",
+        action="store_true",
+        help="refuse an existing nonempty cache for repeat or order-independence runs",
+    )
 
     stats = commands.add_parser("condition-stats")
     stats.add_argument("--observations", required=True, type=Path)
@@ -293,6 +331,15 @@ def _validate_inputs(args: argparse.Namespace) -> int:
         expected_question_ids=question_ids,
         require_resolved=args.reportable,
     )
+    evidence_files = {
+        "leader_calibration_record": args.leader_calibration_record,
+        "label_provenance_record": args.label_provenance_record,
+    }
+    evidence_hashes: dict[str, str] = {}
+    for label, path in evidence_files.items():
+        if not path.is_file() or not path.read_bytes().strip():
+            raise ValueError(f"{label} must point to a nonempty evidence file")
+        evidence_hashes[label] = hashlib.sha256(path.read_bytes()).hexdigest()
     _write_json(
         args.output,
         {
@@ -304,11 +351,70 @@ def _validate_inputs(args: argparse.Namespace) -> int:
             "gold_version": eligibility.gold_version,
             "gold_sha256": eligibility.gold_sha256,
             "question_count": len(question_ids),
+            "eligibility_evidence_sha256": evidence_hashes,
             "reportable_input_validation": bool(args.reportable),
             "valid": True,
         },
     )
     return 0
+
+
+def _run_judge_requests(args: argparse.Namespace) -> int:
+    if args.output.exists():
+        raise ValueError("judge result output already exists")
+    if args.require_fresh_cache and args.cache.exists() and args.cache.stat().st_size:
+        raise ValueError("fresh judge execution requires a new empty cache path")
+    if args.timeout <= 0 or args.max_output_tokens <= 0 or args.max_attempts <= 0:
+        raise ValueError("judge timeout, output limit, and attempts must be positive")
+    try:
+        configuration = JudgeConfiguration.model_validate_json(
+            args.judge_config.read_text(encoding="utf-8")
+        )
+        requests = [JudgeRequest.model_validate(row) for row in _read_jsonl(args.requests)]
+    except ValidationError as exc:
+        raise ValueError(f"invalid judge execution input: {exc}") from exc
+    request_ids = [request.request_id for request in requests]
+    if not requests or len(request_ids) != len(set(request_ids)):
+        raise ValueError("judge request file must contain unique nonempty request IDs")
+
+    provider_name = configuration.provider.casefold()
+    if provider_name == "ollama":
+        client = OllamaChatClient(
+            configuration.model_revision,
+            temperature=configuration.temperature,
+            timeout_seconds=args.timeout,
+            max_output_tokens=args.max_output_tokens,
+            seed=configuration.seed or 0,
+        )
+    elif provider_name == "openai":
+        client = OpenAIResponsesClient(
+            configuration.model_revision,
+            temperature=configuration.temperature,
+            timeout_seconds=args.timeout,
+            max_output_tokens=args.max_output_tokens,
+        )
+    else:
+        raise ValueError("judge configuration provider must be 'ollama' or 'openai'")
+    provider = StructuredJsonJudgeProvider(client)
+    runner = CachedJudgeRunner(args.cache, max_attempts=args.max_attempts)
+    results: list[JudgeResultEnvelope] = []
+    for request in requests:
+        results.append(
+            runner.run(
+                request,
+                configuration,
+                provider,
+                lambda raw, bound=request: validate_output_against_request(raw, bound),
+            )
+        )
+    if args.require_fresh_cache and any(result.cache_hit for result in results):
+        raise ValueError("fresh judge execution unexpectedly reused a cached result")
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        "".join(result.model_dump_json() + "\n" for result in results),
+        encoding="utf-8",
+    )
+    return 3 if any(result.unresolved for result in results) else 0
 
 
 def _prepare_requests(args: argparse.Namespace) -> int:
@@ -464,11 +570,27 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
         unknown = sorted(cross_level_ids - {item.evaluation_id for item in items})
         if unknown:
             raise ValueError(f"cross-level file references unknown evaluation IDs: {unknown}")
+    envelopes = load_judge_envelopes(args.judge_results)
+    response_fingerprints = sorted(
+        hashlib.sha256(
+            json.dumps(
+                {
+                    "request_id": envelope.request_id,
+                    "provider_response_id": envelope.provider_response_id,
+                    "completed_at_utc": envelope.completed_at_utc,
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
+        for envelope in envelopes.values()
+        if not envelope.unresolved
+    )
     result = assemble_judge_results(
         items,
         package,
         configuration,
-        load_judge_envelopes(args.judge_results),
+        envelopes,
         cross_level_evaluation_ids=cross_level_ids,
         mode=EvaluationMode(args.mode),
         reverse_adaptation_criteria=args.reverse_adaptation_criteria,
@@ -489,6 +611,8 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
             "judge_model_revision": configuration.model_revision,
             "judge_results_sha256": hashlib.sha256(args.judge_results.read_bytes()).hexdigest(),
             "judge_execution_id": args.judge_execution_id,
+            "judge_cache_hit_count": sum(envelope.cache_hit for envelope in envelopes.values()),
+            "judge_response_fingerprints": response_fingerprints,
             "cross_level_ids_sha256": (
                 hashlib.sha256(args.cross_level_evaluation_ids.read_bytes()).hexdigest()
                 if args.cross_level_evaluation_ids is not None
@@ -565,6 +689,21 @@ def _assert_comparable_judge_runs(
             "judge_configuration_sha256"
         ):
             raise ValueError(f"{purpose} judge run must use the primary judge configuration")
+        if (
+            primary_provenance.get("judge_cache_hit_count") != 0
+            or comparison_provenance.get("judge_cache_hit_count") != 0
+        ):
+            raise ValueError(
+                f"{purpose} comparison requires fresh primary and comparison caches"
+            )
+        primary_fingerprints = set(primary_provenance.get("judge_response_fingerprints") or [])
+        comparison_fingerprints = set(
+            comparison_provenance.get("judge_response_fingerprints") or []
+        )
+        if not primary_fingerprints or not comparison_fingerprints:
+            raise ValueError(f"{purpose} comparison requires provider response provenance")
+        if primary_fingerprints.intersection(comparison_fingerprints):
+            raise ValueError(f"{purpose} judge run reused provider responses from the primary run")
     if purpose == "repeat" and (
         primary_provenance.get("reverse_adaptation_criteria") is True
         or comparison_provenance.get("reverse_adaptation_criteria") is True
@@ -580,7 +719,7 @@ def _assert_comparable_judge_runs(
         second_family = comparison_provenance.get("judge_model_family")
         if not isinstance(primary_family, str) or not isinstance(second_family, str):
             raise ValueError("second-judge comparison requires recorded model families")
-        if primary_family.casefold() == second_family.casefold():
+        if canonical_model_family(primary_family) == canonical_model_family(second_family):
             raise ValueError("second judge must use a different model family")
 
 
@@ -1402,6 +1541,8 @@ def main(argv: list[str] | None = None) -> int:
             return _validate_inputs(args)
         if args.command == "prepare-judge-requests":
             return _prepare_requests(args)
+        if args.command == "run-judge-requests":
+            return _run_judge_requests(args)
         if args.command == "condition-stats":
             return _condition_stats(args)
         if args.command == "prepare-audit":

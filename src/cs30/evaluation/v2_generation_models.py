@@ -8,6 +8,8 @@ into these evaluation-only records and remain hash-bound to their source files.
 from __future__ import annotations
 
 import hashlib
+import re
+from datetime import datetime
 from enum import StrEnum
 from typing import Literal
 
@@ -23,6 +25,17 @@ def _validate_sha256(value: str, field_name: str) -> str:
     if len(value) != 64 or any(character not in "0123456789abcdef" for character in value):
         raise ValueError(f"{field_name} must be a lowercase SHA-256 hex digest")
     return value
+
+
+_MODEL_SIZE_SUFFIX = re.compile(r"(?:[-_:]?\d+(?:\.\d+)?[bm])(?:[-_:].*)?$", re.IGNORECASE)
+
+
+def canonical_model_family(value: str) -> str:
+    """Normalize model revisions and size suffixes before family comparisons."""
+
+    family = value.strip().casefold().rsplit("/", 1)[-1].split(":", 1)[0]
+    family = _MODEL_SIZE_SUFFIX.sub("", family).rstrip("-_:")
+    return family
 
 
 class EvaluationMode(StrEnum):
@@ -330,8 +343,8 @@ class JudgeConfiguration(ContractModel):
 
     @model_validator(mode="after")
     def validate_role_label_overlap(self) -> JudgeConfiguration:
-        overlap = self.model_family.casefold() in {
-            family.casefold() for family in self.role_label_model_families
+        overlap = canonical_model_family(self.model_family) in {
+            canonical_model_family(family) for family in self.role_label_model_families
         }
         if overlap and self.role_label_family_overlap_disclosure is None:
             raise ValueError("judge/Role-label model-family overlap requires disclosure")
@@ -340,7 +353,9 @@ class JudgeConfiguration(ContractModel):
     def assert_allowed(self, generation_model_family: str, mode: EvaluationMode) -> None:
         if not self.local_model and self.data_approval is not ApprovalStatus.APPROVED:
             raise ValueError("third-party judge use requires approved data transfer")
-        same_family = self.model_family.casefold() == generation_model_family.casefold()
+        same_family = canonical_model_family(self.model_family) == canonical_model_family(
+            generation_model_family
+        )
         if same_family and not self.allow_same_family_exploratory:
             raise ValueError("judge model family must differ from generation model family")
         if mode is EvaluationMode.REPORTABLE and self.allow_same_family_exploratory:
@@ -371,8 +386,8 @@ class CriterionJudgement(ContractModel):
 
     @model_validator(mode="after")
     def validate_quote(self) -> CriterionJudgement:
-        if self.verdict is not CriterionVerdict.NOT_APPLICABLE and not self.exact_quote:
-            raise ValueError("pass/fail criterion judgements require an exact answer quote")
+        if self.verdict is CriterionVerdict.PASS and not self.exact_quote:
+            raise ValueError("passing criterion judgements require an exact answer quote")
         return self
 
 
@@ -418,6 +433,12 @@ class JudgeResultEnvelope(ContractModel):
     raw_output: dict[str, object] | None = None
     unresolved: bool = False
     error: NonEmptyText | None = None
+    provider_response_id: NonEmptyText | None = None
+    completed_at_utc: NonEmptyText | None = None
+    reported_model: NonEmptyText | None = None
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cache_hit: bool = False
 
     @model_validator(mode="after")
     def validate_envelope(self) -> JudgeResultEnvelope:
@@ -427,6 +448,17 @@ class JudgeResultEnvelope(ContractModel):
                 raise ValueError("unresolved judge results require an error")
         elif self.output is None:
             raise ValueError("resolved judge results require output")
+        if not self.unresolved and self.completed_at_utc is None:
+            raise ValueError("resolved judge results require a provider completion timestamp")
+        if self.completed_at_utc is not None:
+            try:
+                completed_at = datetime.fromisoformat(
+                    self.completed_at_utc.replace("Z", "+00:00")
+                )
+            except ValueError as exc:
+                raise ValueError("completed_at_utc must be an ISO-8601 timestamp") from exc
+            if completed_at.tzinfo is None or completed_at.utcoffset() is None:
+                raise ValueError("completed_at_utc must include a UTC offset")
         return self
 
 

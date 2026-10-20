@@ -2,19 +2,29 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel
 
+from cs30.generation.client import LLMClient
+
 from .level_profiles import canonical_json_sha256
 from .v2_generation_models import (
+    AdaptationJudgeOutput,
+    DiscriminationJudgeOutput,
     EvaluationMode,
+    EvidenceSupportJudgeOutput,
     JudgeConfiguration,
     JudgeRequest,
     JudgeResultEnvelope,
     JudgeTask,
+    SupportVerdict,
+    canonical_model_family,
 )
 
 ValidatedOutput = TypeVar("ValidatedOutput", bound=BaseModel)
@@ -27,7 +37,69 @@ class JudgeProvider(Protocol):
         self,
         request: JudgeRequest,
         configuration: JudgeConfiguration,
-    ) -> Mapping[str, Any]: ...
+    ) -> Mapping[str, Any] | JudgeProviderResponse: ...
+
+
+@dataclass(frozen=True)
+class JudgeProviderResponse:
+    output: Mapping[str, Any]
+    response_id: str | None
+    completed_at_utc: str
+    reported_model: str | None = None
+    input_tokens: int = 0
+    output_tokens: int = 0
+
+
+_OUTPUT_MODELS: dict[JudgeTask, type[BaseModel]] = {
+    JudgeTask.ADAPTATION: AdaptationJudgeOutput,
+    JudgeTask.DISCRIMINATION: DiscriminationJudgeOutput,
+    JudgeTask.EVIDENCE_SUPPORT: EvidenceSupportJudgeOutput,
+}
+
+
+class StructuredJsonJudgeProvider:
+    """Call an existing structured-output LLM client for one blinded judge request."""
+
+    def __init__(self, client: LLMClient) -> None:
+        self.client = client
+
+    def __call__(
+        self,
+        request: JudgeRequest,
+        configuration: JudgeConfiguration,
+    ) -> JudgeProviderResponse:
+        output_model = _OUTPUT_MODELS[request.task]
+        prompt = (
+            f"{request.system_instruction}\n\n"
+            f"REQUEST_ID: {request.request_id}\n"
+            "REQUEST_PAYLOAD_JSON:\n"
+            + json.dumps(request.payload, ensure_ascii=False, sort_keys=True)
+        )
+        response = self.client.complete(
+            prompt,
+            {
+                "type": "json_schema",
+                "name": f"{request.task.value}_judge_output",
+                "strict": True,
+                "schema": output_model.model_json_schema(),
+            },
+        )
+        if response.done_reason == "length":
+            raise ValueError("judge provider output was truncated")
+        try:
+            raw = json.loads(response.text)
+        except json.JSONDecodeError as exc:
+            raise ValueError("judge provider did not return valid JSON") from exc
+        if not isinstance(raw, Mapping):
+            raise ValueError("judge provider JSON must be an object")
+        return JudgeProviderResponse(
+            output=raw,
+            response_id=response.response_id,
+            completed_at_utc=datetime.now(UTC).isoformat(),
+            reported_model=response.model,
+            input_tokens=response.usage.input_tokens,
+            output_tokens=response.usage.output_tokens,
+        )
 
 
 def configuration_sha256(configuration: JudgeConfiguration) -> str:
@@ -69,6 +141,83 @@ def request_cache_key(request: JudgeRequest) -> str:
     return canonical_json_sha256(request.model_dump(mode="json"))
 
 
+def validate_output_against_request(
+    raw: Mapping[str, Any],
+    request: JudgeRequest,
+) -> BaseModel:
+    """Validate provider JSON against the blinded request before it can be cached."""
+
+    output_model = _OUTPUT_MODELS[request.task]
+    output = output_model.model_validate(raw)
+    if getattr(output, "request_id", None) != request.request_id:
+        raise ValueError("judge output request_id does not match request")
+    answer = request.payload.get("answer")
+    if not isinstance(answer, str):
+        raise ValueError("judge request is missing answer text")
+
+    if isinstance(output, AdaptationJudgeOutput):
+        checklist = request.payload.get("checklist")
+        if not isinstance(checklist, list):
+            raise ValueError("adaptation request is missing its checklist")
+        expected_ids = {
+            str(item.get("criterion_id"))
+            for item in checklist
+            if isinstance(item, Mapping) and item.get("criterion_id")
+        }
+        actual_ids = [item.criterion_id for item in output.criteria]
+        if len(actual_ids) != len(set(actual_ids)) or set(actual_ids) != expected_ids:
+            raise ValueError("adaptation output criterion coverage does not match request")
+        for judgement in output.criteria:
+            if judgement.exact_quote is not None and judgement.exact_quote not in answer:
+                raise ValueError(
+                    f"criterion {judgement.criterion_id} quote is not an exact answer substring"
+                )
+        return output
+
+    if isinstance(output, DiscriminationJudgeOutput):
+        if output.exact_quote is not None and output.exact_quote not in answer:
+            raise ValueError("discrimination quote is not an exact answer substring")
+        return output
+
+    if not isinstance(output, EvidenceSupportJudgeOutput):
+        raise AssertionError(f"unsupported judge output model: {type(output)!r}")
+    evidence_rows = request.payload.get("evidence")
+    if not isinstance(evidence_rows, list):
+        raise ValueError("evidence-support request is missing evidence")
+    evidence = {
+        str(item["evidence_id"]): str(item["text"])
+        for item in evidence_rows
+        if isinstance(item, Mapping) and "evidence_id" in item and "text" in item
+    }
+    citations = {str(value) for value in request.payload.get("citation_ids") or []}
+    claim_ids = [claim.claim_id for claim in output.claims]
+    if len(claim_ids) != len(set(claim_ids)):
+        raise ValueError("evidence-support output contains duplicate claim IDs")
+    for claim in output.claims:
+        if claim.claim_text not in answer:
+            raise ValueError(f"claim {claim.claim_id} is not an exact answer substring")
+        supporting = set(claim.supporting_evidence_ids)
+        if len(supporting) != len(claim.supporting_evidence_ids):
+            raise ValueError(f"claim {claim.claim_id} repeats supporting evidence IDs")
+        if not supporting <= evidence.keys():
+            raise ValueError(f"claim {claim.claim_id} references unknown evidence")
+        if set(claim.evidence_quotes) != supporting:
+            raise ValueError(f"claim {claim.claim_id} requires one quote per supporting ID")
+        if any(
+            quote not in evidence[evidence_id]
+            for evidence_id, quote in claim.evidence_quotes.items()
+        ):
+            raise ValueError(f"claim {claim.claim_id} has a quote outside the supplied evidence")
+        if claim.bundle_support is SupportVerdict.SUPPORTED and not supporting:
+            raise ValueError(f"supported claim {claim.claim_id} requires supporting evidence")
+        if claim.citation_support is SupportVerdict.SUPPORTED and (
+            claim.bundle_support is not SupportVerdict.SUPPORTED
+            or not supporting.intersection(citations)
+        ):
+            raise ValueError(f"claim {claim.claim_id} lacks support among the cited evidence")
+    return output
+
+
 def _load_cache(path: Path) -> dict[str, JudgeResultEnvelope]:
     if not path.exists():
         return {}
@@ -81,20 +230,19 @@ def _load_cache(path: Path) -> dict[str, JudgeResultEnvelope]:
                 envelope = JudgeResultEnvelope.model_validate_json(line)
             except ValueError as exc:
                 raise ValueError(f"{path}:{line_number}: invalid judge cache: {exc}") from exc
+            if envelope.unresolved:
+                continue
             if envelope.cache_key in cache:
                 raise ValueError(f"{path}:{line_number}: duplicate judge cache key")
             cache[envelope.cache_key] = envelope
     return cache
 
 
-def _write_cache(path: Path, cache: Mapping[str, JudgeResultEnvelope]) -> None:
+def _append_cache(path: Path, envelope: JudgeResultEnvelope) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_suffix(path.suffix + ".tmp")
-    with temporary.open("w", encoding="utf-8", newline="\n") as stream:
-        for cache_key in sorted(cache):
-            stream.write(cache[cache_key].model_dump_json())
-            stream.write("\n")
-    temporary.replace(path)
+    with path.open("a", encoding="utf-8", newline="\n") as stream:
+        stream.write(envelope.model_dump_json())
+        stream.write("\n")
 
 
 class CachedJudgeRunner:
@@ -120,17 +268,37 @@ class CachedJudgeRunner:
         cache = _load_cache(self.cache_path)
         cached = cache.get(cache_key)
         if cached is not None:
-            return cached
+            return cached.model_copy(update={"cache_hit": True})
 
         errors: list[str] = []
         validated: ValidatedOutput | None = None
         last_raw: dict[str, object] | None = None
+        last_response: JudgeProviderResponse | None = None
         for attempt in range(1, self.max_attempts + 1):
             try:
-                raw = provider(request, configuration)
+                provider_result = provider(request, configuration)
+                if isinstance(provider_result, JudgeProviderResponse):
+                    response = provider_result
+                    raw = response.output
+                else:
+                    raw = provider_result
+                    response = JudgeProviderResponse(
+                        output=raw,
+                        response_id=None,
+                        completed_at_utc=datetime.now(UTC).isoformat(),
+                    )
+                if (
+                    response.reported_model is not None
+                    and canonical_model_family(response.reported_model)
+                    != canonical_model_family(configuration.model_family)
+                ):
+                    raise ValueError(
+                        "judge provider reported a model outside the configured model family"
+                    )
                 if not isinstance(raw, Mapping):
                     raise TypeError("judge provider must return a mapping")
                 last_raw = dict(raw)
+                last_response = response
                 validated = validator(raw)
                 break
             except Exception as exc:  # Provider failures remain auditable unresolved records.
@@ -145,17 +313,27 @@ class CachedJudgeRunner:
                 raw_output=last_raw,
                 unresolved=True,
                 error="; ".join(errors),
+                completed_at_utc=(
+                    last_response.completed_at_utc if last_response is not None else None
+                ),
             )
         else:
+            if last_response is None:
+                raise AssertionError("validated judge output is missing provider metadata")
             envelope = JudgeResultEnvelope(
                 task=request.task,
                 request_id=request.request_id,
                 cache_key=cache_key,
                 judge_config_version=configuration.config_version,
                 output=validated.model_dump(mode="json"),
+                provider_response_id=last_response.response_id,
+                completed_at_utc=last_response.completed_at_utc,
+                reported_model=last_response.reported_model,
+                input_tokens=last_response.input_tokens,
+                output_tokens=last_response.output_tokens,
             )
-        cache[cache_key] = envelope
-        _write_cache(self.cache_path, cache)
+        if not envelope.unresolved:
+            _append_cache(self.cache_path, envelope)
         return envelope
 
 

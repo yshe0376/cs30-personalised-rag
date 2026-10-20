@@ -8,6 +8,7 @@ import pytest
 from cs30.contracts import StudentLevel
 from cs30.evaluation.level_profiles import (
     candidate_role_richness,
+    eligible_levels,
     load_eligibility_package,
     load_profile_checklist_package,
     profile_package_content_sha256,
@@ -18,6 +19,7 @@ from cs30.evaluation.v2_generation_models import (
     EvaluationMode,
     GenerationEvaluationInput,
     JudgeConfiguration,
+    PersonalisationEligibility,
 )
 
 
@@ -215,6 +217,8 @@ def test_judge_configuration_blocks_unapproved_or_same_family_use() -> None:
     )
     with pytest.raises(ValueError, match="must differ"):
         same_family.assert_allowed("gpt-oss", EvaluationMode.DEVELOPMENT)
+    with pytest.raises(ValueError, match="must differ"):
+        same_family.assert_allowed("gpt-oss-120b", EvaluationMode.DEVELOPMENT)
 
     with pytest.raises(ValueError, match="overlap requires disclosure"):
         JudgeConfiguration(
@@ -229,6 +233,12 @@ def test_judge_configuration_blocks_unapproved_or_same_family_use() -> None:
             data_approval=ApprovalStatus.NOT_REQUIRED,
             role_label_model_families=["qwen"],
         )
+
+
+def test_endpoint_only_excludes_intermediate_from_main_result() -> None:
+    assert eligible_levels(PersonalisationEligibility.ENDPOINT_ONLY) == frozenset(
+        {StudentLevel.BEGINNER, StudentLevel.ADVANCED}
+    )
 
 
 def test_candidate_role_richness_uses_top_twenty_and_level_specific_roles() -> None:

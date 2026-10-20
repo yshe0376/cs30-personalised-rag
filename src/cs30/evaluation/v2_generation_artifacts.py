@@ -165,7 +165,6 @@ def adapt_m7_generation_artifacts(
         raise ValueError("expected experiment must use GenerationExperiment schema 0.2")
     expected_rows = list(expected.get("cases") or [])
     expected_question_ids = {str(row.get("question_id", "")) for row in expected_rows}
-    expected_lambda_case_count = len(expected_question_ids) * len(StudentLevel)
     gold_hash = file_sha256(gold_path)
     if expected.get("gold_sha256") != gold_hash:
         raise ValueError("expected experiment Gold hash does not match supplied Gold bytes")
@@ -185,8 +184,11 @@ def adapt_m7_generation_artifacts(
         raise ValueError("lambda selection uses an unsupported objective")
     if float(lambda_selection.get("noninferiority_margin", -1)) != 0.01:
         raise ValueError("lambda selection must use the frozen one-percentage-point margin")
-    if lambda_selection.get("gold_sha256") != gold_hash:
-        raise ValueError("lambda selection Gold hash does not match supplied Gold bytes")
+    selection_gold_hash = str(lambda_selection.get("gold_sha256") or "")
+    if len(selection_gold_hash) != 64 or any(
+        character not in "0123456789abcdef" for character in selection_gold_hash
+    ):
+        raise ValueError("lambda selection must bind its own Gold with a SHA-256 digest")
     gold_rows = _read_jsonl(gold_path)
     candidate_lambdas = tuple(
         float(value) for value in lambda_selection.get("candidate_lambdas") or []
@@ -198,6 +200,7 @@ def adapt_m7_generation_artifacts(
         )
     metric_rows = list(lambda_selection.get("metrics") or [])
     metrics_by_lambda: dict[float, dict[str, Any]] = {}
+    selection_identities: set[tuple[str, str]] | None = None
     for row in metric_rows:
         candidate = float(row["lambda_weight"])
         if candidate in metrics_by_lambda:
@@ -208,25 +211,67 @@ def adapt_m7_generation_artifacts(
         if "mean_span_coverage" not in row:
             raise ValueError(f"lambda={candidate} is missing mean_span_coverage")
         cases_for_candidate = list(row.get("cases") or [])
-        if cases_for_candidate:
-            identities = [
-                (str(case.get("question_id", "")), str(case.get("level", "")))
-                for case in cases_for_candidate
-            ]
-            if len(cases_for_candidate) != case_count or len(identities) != len(set(identities)):
-                raise ValueError(
-                    f"lambda={candidate} case rows must be unique and match case_count"
-                )
+        if not cases_for_candidate:
+            raise ValueError(f"lambda={candidate} must include its per-question case records")
+        identities = [
+            (str(case.get("question_id", "")), str(case.get("level", "")))
+            for case in cases_for_candidate
+        ]
+        identity_set = set(identities)
+        if (
+            len(cases_for_candidate) != case_count
+            or len(identities) != len(identity_set)
+            or any(not question_id for question_id, _level in identities)
+        ):
+            raise ValueError(f"lambda={candidate} case rows must be unique and match case_count")
+        invalid_levels = sorted(
+            {level for _question_id, level in identity_set}
+            - {level.value for level in StudentLevel}
+        )
+        if invalid_levels:
+            raise ValueError(f"lambda={candidate} uses unsupported levels: {invalid_levels}")
+        levels_by_question = {
+            question_id: {
+                level
+                for observed_question, level in identity_set
+                if observed_question == question_id
+            }
+            for question_id, _level in identity_set
+        }
+        incomplete = sorted(
+            question_id
+            for question_id, levels in levels_by_question.items()
+            if levels != {level.value for level in StudentLevel}
+        )
+        if incomplete:
+            raise ValueError(
+                f"lambda={candidate} does not contain all three levels for questions: {incomplete}"
+            )
+        try:
+            observed_hits = [case["complete_hit"] for case in cases_for_candidate]
+            observed_coverage = [float(case["span_coverage"]) for case in cases_for_candidate]
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"lambda={candidate} has invalid per-question metrics") from exc
+        if any(type(value) is not bool for value in observed_hits):
+            raise ValueError(f"lambda={candidate} complete_hit values must be booleans")
+        if any(not 0.0 <= value <= 1.0 for value in observed_coverage):
+            raise ValueError(f"lambda={candidate} span_coverage values must be in [0, 1]")
+        recomputed_hit_rate = sum(observed_hits) / case_count
+        recomputed_span_coverage = sum(observed_coverage) / case_count
+        if abs(float(row["complete_hit_rate"]) - recomputed_hit_rate) > 1e-12:
+            raise ValueError(f"lambda={candidate} complete_hit_rate does not match its cases")
+        if abs(float(row["mean_span_coverage"]) - recomputed_span_coverage) > 1e-12:
+            raise ValueError(f"lambda={candidate} mean_span_coverage does not match its cases")
+        if selection_identities is None:
+            selection_identities = identity_set
+        elif identity_set != selection_identities:
+            raise ValueError("lambda candidates must use the same internal question/level cases")
         metrics_by_lambda[candidate] = row
     if set(metrics_by_lambda) != set(candidate_lambdas):
         raise ValueError("lambda metric coverage must exactly match candidate_lambdas")
     case_counts = {int(row["case_count"]) for row in metrics_by_lambda.values()}
     if len(case_counts) != 1:
         raise ValueError("every lambda candidate must use the same case_count")
-    if case_counts != {expected_lambda_case_count}:
-        raise ValueError(
-            "lambda candidate case_count must equal three levels for every Gold question"
-        )
     complete_hit_rates = {
         candidate: float(row["complete_hit_rate"])
         for candidate, row in metrics_by_lambda.items()
@@ -279,6 +324,35 @@ def adapt_m7_generation_artifacts(
     if missing_gold:
         raise ValueError(f"Gold is missing expected questions: {sorted(missing_gold)}")
 
+    roles_by_question_level: dict[tuple[str, str], dict[str, str]] = {}
+    for run_id, case in cases.items():
+        condition = ExperimentArm(str(case["condition_id"]))
+        if condition not in {
+            ExperimentArm.P0R1_RERANKING_ONLY,
+            ExperimentArm.P1R1_COMBINED,
+        }:
+            continue
+        candidates = (records[run_id].get("rerank_trace") or {}).get("candidates") or []
+        role_map: dict[str, str] = {}
+        for candidate in candidates:
+            chunk_id = str(candidate.get("chunk_id") or "")
+            role = str(candidate.get("role") or "")
+            if not chunk_id or not role:
+                raise ValueError(f"{run_id}: R1 candidates require nonempty chunk_id and role")
+            if chunk_id in role_map:
+                raise ValueError(f"{run_id}: R1 candidates repeat chunk_id={chunk_id}")
+            role_map[chunk_id] = role
+        key = (str(case["question_id"]), str(case["student_level"]))
+        shared_roles = roles_by_question_level.setdefault(key, {})
+        for chunk_id, role in role_map.items():
+            existing_role = shared_roles.get(chunk_id)
+            if existing_role is not None and existing_role != role:
+                raise ValueError(
+                    f"{run_id}: R1 Role labels disagree for chunk {chunk_id} in "
+                    f"question/level {key[0]}/{key[1]}"
+                )
+            shared_roles[chunk_id] = role
+
     source_hash = file_sha256(records_path)
     source_run_hash = file_sha256(run_manifest_path)
     seed = (manifest.get("client") or {}).get("seed")
@@ -328,8 +402,12 @@ def adapt_m7_generation_artifacts(
         if technical_failure and answer_text is not None:
             raise ValueError(f"{run_id}: technical failure must not contain answer text")
         evidence_bundle = record.get("evidence") or {}
-        rerank_candidates = (record.get("rerank_trace") or {}).get("candidates") or []
-        roles = {str(item["chunk_id"]): item.get("role") for item in rerank_candidates}
+        role_key = (str(case["question_id"]), str(case["student_level"]))
+        roles = roles_by_question_level.get(role_key)
+        if roles is None:
+            raise ValueError(
+                f"{run_id}: no R1 Role-label trace is available for {role_key[0]}/{role_key[1]}"
+            )
         evidence = [
             EvaluationEvidence(
                 evidence_id=str(item["chunk_id"]),
@@ -340,6 +418,12 @@ def adapt_m7_generation_artifacts(
             )
             for item in evidence_bundle.get("evidence_items") or []
         ]
+        missing_roles = sorted(item.evidence_id for item in evidence if item.role is None)
+        if missing_roles:
+            raise ValueError(
+                f"{run_id}: evidence chunks are missing Role labels from the paired R1 trace: "
+                f"{missing_roles}"
+            )
         evidence_ids = {item.evidence_id for item in evidence}
         unknown_citations = set(citations) - evidence_ids
         if unknown_citations:
@@ -421,6 +505,7 @@ def adapt_m7_generation_artifacts(
         "incomplete_matrix_question_ids": incomplete_questions,
         "status_counts": dict(Counter(item.source_status.value for item in converted)),
         "lambda_selection": lambda_verification,
+        "lambda_selection_gold_sha256": selection_gold_hash,
         "reportable": False,
         "claim_boundary": "Validated development adapter output; not a formal evaluation result.",
     }

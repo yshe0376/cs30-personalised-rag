@@ -434,8 +434,10 @@ def test_reports_never_promote_unvalidated_scores_or_overwrite_originals(tmp_pat
     output = tmp_path / "report"
     report = write_open_answer_reports(records, output, {"fixture": True})
     assert report["reportable"] is False
-    assert (output / "open_answer_summary.csv").read_text().splitlines()[1].endswith("1.0,1.0,1.0")
-    assert (output / "open_answer_review_queue.jsonl").read_text() == ""
+    assert (output / "open_answer_summary.csv").read_text(encoding="utf-8").splitlines()[
+        1
+    ].endswith("1.0,1.0,1.0")
+    assert (output / "open_answer_review_queue.jsonl").read_text(encoding="utf-8") == ""
     with pytest.raises(FileExistsError):
         write_open_answer_reports(records, output, {})
 
@@ -499,7 +501,7 @@ def test_corrupt_cache_is_rejected_and_endpoint_credentials_are_not_exposed(tmp_
     assert "secret" not in json.dumps(scorer.judge_config)
     score(scorer, [run(answer="slowing down")])
     path = next(tmp_path.glob("*.json"))
-    payload = json.loads(path.read_text())
+    payload = json.loads(path.read_text(encoding="utf-8"))
     payload["trace"]["judge_model"] = "wrong-model"
     path.write_text(json.dumps(payload))
     with pytest.raises(ValueError, match="cache identity"):
@@ -567,7 +569,7 @@ def test_numeric_rubric_cannot_bypass_unit_case_through_aliases():
 def test_report_provenance_cannot_override_nonreportable_status(tmp_path):
     output = tmp_path / "report"
     write_open_answer_reports(score(), output, {"reportable": True, "schema_version": "wrong"})
-    manifest = json.loads((output / "run_manifest.json").read_text())
+    manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
     assert manifest["reportable"] is False and manifest["schema_version"] == "0.1"
 
 

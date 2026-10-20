@@ -38,18 +38,22 @@ def build_evidence_support_request(
 ) -> JudgeRequest:
     if item.technical_failure or item.answer is None:
         raise ValueError("technical failures do not receive evidence-support judge calls")
+    short_ids = {
+        evidence.evidence_id: f"E{index}"
+        for index, evidence in enumerate(item.evidence, start=1)
+    }
     payload: dict[str, object] = {
         "question": item.question,
         "answer": item.answer,
         "evidence": [
             {
-                "evidence_id": evidence.evidence_id,
+                "evidence_id": short_ids[evidence.evidence_id],
                 "text": evidence.text,
                 "source_locator": evidence.source_locator,
             }
             for evidence in item.evidence
         ],
-        "citation_ids": item.citation_ids,
+        "citation_ids": [short_ids[evidence_id] for evidence_id in item.citation_ids],
         "required_output": {
             "schema_version": "1.0",
             "request_id": "copy from request metadata",
@@ -93,8 +97,18 @@ def validate_evidence_support_output(
     claim_ids = [claim.claim_id for claim in output.claims]
     if len(claim_ids) != len(set(claim_ids)):
         raise ValueError("evidence-support output contains duplicate claim IDs")
-    evidence = {entry.evidence_id: entry.text for entry in item.evidence}
-    citations = set(item.citation_ids)
+    canonical_by_short = {
+        f"E{index}": entry.evidence_id
+        for index, entry in enumerate(item.evidence, start=1)
+    }
+    evidence = {
+        f"E{index}": entry.text for index, entry in enumerate(item.evidence, start=1)
+    }
+    citations = {
+        short_id
+        for short_id, canonical_id in canonical_by_short.items()
+        if canonical_id in item.citation_ids
+    }
     for claim in output.claims:
         if claim.claim_text not in item.answer:
             raise ValueError(f"claim {claim.claim_id} is not an exact answer substring")
@@ -122,7 +136,16 @@ def validate_evidence_support_output(
                 raise ValueError(
                     f"claim {claim.claim_id} has no supporting evidence among cited IDs"
                 )
-    return output
+    normalized = output.model_dump(mode="json")
+    for claim in normalized["claims"]:
+        claim["supporting_evidence_ids"] = [
+            canonical_by_short[evidence_id] for evidence_id in claim["supporting_evidence_ids"]
+        ]
+        claim["evidence_quotes"] = {
+            canonical_by_short[evidence_id]: quote
+            for evidence_id, quote in claim["evidence_quotes"].items()
+        }
+    return EvidenceSupportJudgeOutput.model_validate(normalized)
 
 
 def score_evidence_support(output: EvidenceSupportJudgeOutput) -> dict[str, Any]:

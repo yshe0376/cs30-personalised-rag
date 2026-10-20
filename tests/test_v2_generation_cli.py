@@ -7,8 +7,10 @@ from pathlib import Path
 import pytest
 
 from cs30.contracts import StudentLevel
-from cs30.evaluation.v2_generation_cli import main
-from cs30.evaluation.v2_generation_models import ExperimentArm
+from cs30.evaluation.judge_runtime import configuration_sha256
+from cs30.evaluation.v2_generation_cli import _assert_comparable_judge_runs, main
+from cs30.evaluation.v2_generation_models import ExperimentArm, JudgeConfiguration
+from cs30.generation.client import LLMResponse, TokenUsage
 
 
 def _write_judge_evaluation_dir(
@@ -69,6 +71,147 @@ def test_cli_help_keeps_legacy_report_extension_v1_only(capsys: pytest.CaptureFi
     output = capsys.readouterr().out
     assert "cs30-evaluate report-" in output
     assert "extension command remains V1-only" in output
+
+
+def test_run_judge_requests_calls_provider_and_records_fresh_response(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request_id = "discrimination-request-1"
+    requests = tmp_path / "requests.jsonl"
+    requests.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "task": "discrimination",
+                "request_id": request_id,
+                "input_sha256": "a" * 64,
+                "config_sha256": "b" * 64,
+                "system_instruction": "Return the required structured JSON.",
+                "payload": {
+                    "answer": "A net force causes acceleration.",
+                    "required_output": {},
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "judge-config.json"
+    config.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "config_version": "judge-v1",
+                "provider": "ollama",
+                "model_family": "judge-family",
+                "model_revision": "judge-family:7b",
+                "temperature": 0,
+                "seed": 5703,
+                "prompt_version": "prompt-v1",
+                "output_schema_version": "1.0",
+                "local_model": True,
+                "data_approval": "not_required",
+            }
+        ),
+        encoding="utf-8",
+    )
+    request_payload = json.loads(requests.read_text(encoding="utf-8"))
+    request_payload["config_sha256"] = configuration_sha256(
+        JudgeConfiguration.model_validate_json(config.read_text(encoding="utf-8"))
+    )
+    requests.write_text(json.dumps(request_payload) + "\n", encoding="utf-8")
+
+    class Client:
+        def complete(self, _prompt: str, _text_format: dict) -> LLMResponse:
+            return LLMResponse(
+                text=json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "request_id": request_id,
+                        "predicted_level": "beginner",
+                        "exact_quote": "A net force causes acceleration",
+                        "reason": "The answer states the core relation directly.",
+                    }
+                ),
+                model="judge-family:7b",
+                usage=TokenUsage(input_tokens=10, output_tokens=8, total_tokens=18),
+                response_id="provider-response-1",
+                latency_ms=1.0,
+            )
+
+    monkeypatch.setattr(
+        "cs30.evaluation.v2_generation_cli.OllamaChatClient",
+        lambda *_args, **_kwargs: Client(),
+    )
+    cache = tmp_path / "cache.jsonl"
+    output = tmp_path / "results.jsonl"
+    assert (
+        main(
+            [
+                "run-judge-requests",
+                "--requests",
+                str(requests),
+                "--judge-config",
+                str(config),
+                "--cache",
+                str(cache),
+                "--output",
+                str(output),
+                "--require-fresh-cache",
+            ]
+        )
+        == 0
+    )
+    envelope = json.loads(output.read_text(encoding="utf-8"))
+    assert envelope["provider_response_id"] == "provider-response-1"
+    assert envelope["reported_model"] == "judge-family:7b"
+    assert envelope["cache_hit"] is False
+    assert len(cache.read_text(encoding="utf-8").splitlines()) == 1
+
+
+def test_repeat_comparison_rejects_reused_provider_responses() -> None:
+    shared = {
+        "evaluation_inputs_sha256": "a" * 64,
+        "source_run_sha256": "b" * 64,
+        "profile_package_sha256": "c" * 64,
+        "judge_configuration_sha256": "d" * 64,
+        "judge_cache_hit_count": 0,
+        "judge_response_fingerprints": ["same-provider-response"],
+        "reverse_adaptation_criteria": False,
+    }
+    primary = {"manifest": {"provenance": {**shared, "judge_execution_id": "first"}}}
+    repeat = {"manifest": {"provenance": {**shared, "judge_execution_id": "second"}}}
+    with pytest.raises(ValueError, match="reused provider responses"):
+        _assert_comparable_judge_runs(primary, repeat, purpose="repeat")
+
+
+def test_second_judge_comparison_normalizes_model_size_suffixes() -> None:
+    shared = {
+        "evaluation_inputs_sha256": "a" * 64,
+        "source_run_sha256": "b" * 64,
+        "profile_package_sha256": "c" * 64,
+    }
+    primary = {
+        "manifest": {
+            "provenance": {
+                **shared,
+                "judge_execution_id": "first",
+                "judge_model_family": "gpt-oss",
+            }
+        }
+    }
+    second = {
+        "manifest": {
+            "provenance": {
+                **shared,
+                "judge_execution_id": "second",
+                "judge_model_family": "gpt-oss-120b",
+            }
+        }
+    }
+    with pytest.raises(ValueError, match="different model family"):
+        _assert_comparable_judge_runs(primary, second, purpose="second")
 
 
 def test_condition_stats_cli_writes_all_four_predeclared_contrasts(tmp_path: Path) -> None:
@@ -320,6 +463,7 @@ def test_validity_cli_derives_semantic_repeat_order_and_second_judge_pairs(
         "profile_package_sha256": "c" * 64,
         "judge_configuration_sha256": "d" * 64,
         "judge_model_family": "primary-family",
+        "judge_cache_hit_count": 0,
         "reverse_adaptation_criteria": False,
     }
     primary = tmp_path / "primary"
@@ -347,12 +491,20 @@ def test_validity_cli_derives_semantic_repeat_order_and_second_judge_pairs(
     _write_judge_evaluation_dir(
         primary,
         rows=result_rows,
-        provenance={**shared_provenance, "judge_execution_id": "primary-run"},
+        provenance={
+            **shared_provenance,
+            "judge_execution_id": "primary-run",
+            "judge_response_fingerprints": ["primary-response"],
+        },
     )
     _write_judge_evaluation_dir(
         repeat,
         rows=_rows_for_evaluation_ids(result_rows, repeat_ids),
-        provenance={**shared_provenance, "judge_execution_id": "repeat-run"},
+        provenance={
+            **shared_provenance,
+            "judge_execution_id": "repeat-run",
+            "judge_response_fingerprints": ["repeat-response"],
+        },
     )
     _write_judge_evaluation_dir(
         order,
@@ -360,6 +512,7 @@ def test_validity_cli_derives_semantic_repeat_order_and_second_judge_pairs(
         provenance={
             **shared_provenance,
             "judge_execution_id": "order-run",
+            "judge_response_fingerprints": ["order-response"],
             "reverse_adaptation_criteria": True,
         },
     )
@@ -371,6 +524,7 @@ def test_validity_cli_derives_semantic_repeat_order_and_second_judge_pairs(
             "judge_execution_id": "second-run",
             "judge_configuration_sha256": "e" * 64,
             "judge_model_family": "second-family",
+            "judge_response_fingerprints": ["second-response"],
         },
     )
     primary_manifest_sha256 = hashlib.sha256(

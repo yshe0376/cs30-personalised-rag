@@ -62,19 +62,35 @@ def inputs(tmp_path, answer="deceleration", missing=False):
 def test_cli_scores_and_writes_versioned_outputs_without_model_calls(tmp_path):
     args, output = inputs(tmp_path)
     assert main(args) == 0
-    report = json.loads((output / "open_answer_summary.json").read_text())
+    report = json.loads((output / "open_answer_summary.json").read_text(encoding="utf-8"))
     assert report["overall"]["open_answer_full_correct_rate_e2e"]["value"] == 1
     assert report["reportable"] is False
-    manifest = json.loads((output / "run_manifest.json").read_text())
+    manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
     assert manifest["input_sha256"]["gold"] == sha256_bytes((tmp_path / "gold.jsonl").read_bytes())
     assert len(list(output.iterdir())) == 6
+
+
+def test_cli_scores_m7_schema_0_2_and_binds_m8_rubrics_independently(tmp_path):
+    args, output = inputs(tmp_path)
+    expected_path = tmp_path / "expected.json"
+    expected = json.loads(expected_path.read_text(encoding="utf-8"))
+    expected["schema_version"] = "0.2"
+    expected.pop("rubrics_sha256")
+    expected_path.write_text(json.dumps(expected), encoding="utf-8")
+
+    assert main(args) == 0
+    manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["generation_matrix_schema_version"] == "0.2"
+    assert manifest["input_sha256"]["rubrics"] == sha256_bytes(
+        (tmp_path / "rubrics.jsonl").read_bytes()
+    )
 
 
 @pytest.mark.parametrize("missing", [False, True])
 def test_cli_pending_returns_attention_code_and_preserves_denominator(tmp_path, missing):
     args, output = inputs(tmp_path, answer="a synonymous answer", missing=missing)
     assert main(args) == 3
-    report = json.loads((output / "open_answer_summary.json").read_text())
+    report = json.loads((output / "open_answer_summary.json").read_text(encoding="utf-8"))
     metric = report["overall"]["open_answer_full_correct_rate_e2e"]
     assert metric["value"] is None and metric["denominator"] == 1
     assert len(read_jsonl(output / "open_answer_review_queue.jsonl")) == 1
@@ -178,7 +194,9 @@ def test_calibration_command_reads_actual_double_ratings(tmp_path):
         )
         == 0
     )
-    report = json.loads((calibrated / "calibration_summary.json").read_text())
+    report = json.loads(
+        (calibrated / "calibration_summary.json").read_text(encoding="utf-8")
+    )
     assert report["sample_count"] == 1 and report["raw_human_agreement"] == 1
     assert report["linear_weighted_cohen_kappa"] is None
     assert report["reportable"] is False
@@ -215,7 +233,7 @@ def test_cli_scores_a_consistent_input_snapshot_when_files_change_during_judging
         lambda *a, **kw: MutatingClient(assessment()),
     )
     assert main(args + ["--provider", "ollama", "--model", "judge-v1"]) == 0
-    saved = json.loads((output / "run_manifest.json").read_text())
+    saved = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
     assert saved["input_sha256"]["gold"] == original_hash
     assert saved["input_sha256"]["gold"] != sha256_bytes(gold_path.read_bytes())
 
