@@ -437,6 +437,9 @@ class JudgeResultEnvelope(ContractModel):
     request_id: Identifier
     cache_key: str
     judge_config_version: Identifier
+    judge_execution_id: Identifier | None = None
+    model_digest: NonEmptyText | None = None
+    context_window: int | None = Field(default=None, gt=0)
     output: dict[str, object] | None = None
     raw_output: dict[str, object] | None = None
     unresolved: bool = False

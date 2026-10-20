@@ -370,7 +370,12 @@ def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresol
         checklist=checklist,
     )
     cache_path = tmp_path / "judge-cache.jsonl"
-    runner = CachedJudgeRunner(cache_path)
+    runner = CachedJudgeRunner(
+        cache_path,
+        judge_execution_id="execution-one",
+        model_digest="weights-one",
+        context_window=32768,
+    )
 
     def reject_cache_reload(_path: Path) -> dict[str, JudgeResultEnvelope]:
         raise AssertionError("judge cache must be loaded once per runner")
@@ -379,9 +384,50 @@ def test_cached_runner_reuses_identical_request_and_keeps_invalid_output_unresol
     first = runner.run(request, _configuration(), provider, validator)
     second = runner.run(request, _configuration(), provider, validator)
     assert first.cache_hit is False
-    assert second.cache_hit is True
-    assert first.model_copy(update={"cache_hit": True}) == second
+    assert second.cache_hit is False
+    assert first == second
+    assert first.judge_execution_id == "execution-one"
+    assert first.model_digest == "weights-one"
+    assert first.context_window == 32768
     assert calls == 1
+    monkeypatch.undo()
+
+    resumed = CachedJudgeRunner(
+        cache_path,
+        judge_execution_id="execution-one",
+        model_digest="weights-one",
+        context_window=32768,
+        require_current_execution_cache=True,
+    ).run(request, _configuration(), provider, validator)
+    assert resumed.cache_hit is False
+    assert calls == 1
+
+    reused = CachedJudgeRunner(
+        cache_path,
+        judge_execution_id="execution-two",
+        model_digest="weights-one",
+        context_window=32768,
+    ).run(request, _configuration(), provider, validator)
+    assert reused.cache_hit is True
+    assert reused.judge_execution_id == "execution-one"
+    assert calls == 1
+
+    with pytest.raises(ValueError, match="another or unaudited execution"):
+        CachedJudgeRunner(
+            cache_path,
+            judge_execution_id="execution-two",
+            model_digest="weights-one",
+            context_window=32768,
+            require_current_execution_cache=True,
+        )
+
+    with pytest.raises(ValueError, match="resume runtime differs"):
+        CachedJudgeRunner(
+            cache_path,
+            judge_execution_id="execution-one",
+            model_digest="changed-weights",
+            context_window=32768,
+        ).run(request, _configuration(), provider, validator)
 
     bad_request = request.model_copy(
         update={"request_id": "adaptation-bad", "input_sha256": "b" * 64}

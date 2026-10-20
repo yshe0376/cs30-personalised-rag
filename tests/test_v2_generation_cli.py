@@ -11,6 +11,7 @@ from cs30.evaluation.judge_runtime import configuration_sha256
 from cs30.evaluation.v2_generation_cli import (
     _assert_comparable_judge_runs,
     _judge_response_fingerprint,
+    _validate_judge_execution_records,
     main,
 )
 from cs30.evaluation.v2_generation_models import (
@@ -145,7 +146,16 @@ def test_run_judge_requests_calls_provider_and_records_fresh_response(
     )
     requests.write_text(json.dumps(request_payload) + "\n", encoding="utf-8")
 
+    created_client_arguments: dict[str, object] = {}
+
     class Client:
+        def __init__(self, context_window: int) -> None:
+            self.context_window = context_window
+            self.model_digest: str | None = None
+
+        def pin_model(self) -> None:
+            self.model_digest = "ollama-weights-v1"
+
         def complete(self, _prompt: str, _text_format: dict) -> LLMResponse:
             return LLMResponse(
                 text=json.dumps(
@@ -163,9 +173,13 @@ def test_run_judge_requests_calls_provider_and_records_fresh_response(
                 latency_ms=1.0,
             )
 
+    def client_factory(*_args: object, **kwargs: object) -> Client:
+        created_client_arguments.update(kwargs)
+        return Client(int(kwargs["context_window"]))
+
     monkeypatch.setattr(
         "cs30.evaluation.v2_generation_cli.OllamaChatClient",
-        lambda *_args, **_kwargs: Client(),
+        client_factory,
     )
     cache = tmp_path / "cache.jsonl"
     output = tmp_path / "results.jsonl"
@@ -181,6 +195,10 @@ def test_run_judge_requests_calls_provider_and_records_fresh_response(
                 str(cache),
                 "--output",
                 str(output),
+                "--judge-execution-id",
+                "primary-execution",
+                "--context-window",
+                "32768",
                 "--require-fresh-cache",
             ]
         )
@@ -189,7 +207,11 @@ def test_run_judge_requests_calls_provider_and_records_fresh_response(
     envelope = json.loads(output.read_text(encoding="utf-8"))
     assert envelope["provider_response_id"] == "provider-response-1"
     assert envelope["reported_model"] == "judge-family:7b"
+    assert envelope["judge_execution_id"] == "primary-execution"
+    assert envelope["model_digest"] == "ollama-weights-v1"
+    assert envelope["context_window"] == 32768
     assert envelope["cache_hit"] is False
+    assert created_client_arguments["context_window"] == 32768
     assert len(cache.read_text(encoding="utf-8").splitlines()) == 1
 
 
@@ -241,6 +263,38 @@ def test_response_fingerprint_detects_reuse_across_request_and_timestamp_changes
     assert _judge_response_fingerprint(timestamp_only) != _judge_response_fingerprint(
         repeated.model_copy(update={"provider_response_id": None})
     )
+
+
+def test_judge_execution_records_bind_cache_and_ollama_runtime() -> None:
+    current = JudgeResultEnvelope(
+        task=JudgeTask.DISCRIMINATION,
+        request_id="request-one",
+        cache_key="a" * 64,
+        judge_config_version="judge-v1",
+        judge_execution_id="execution-one",
+        model_digest="weights-one",
+        context_window=32768,
+        output={"decision": "beginner"},
+        completed_at_utc="2026-10-20T00:00:00+00:00",
+    )
+    _validate_judge_execution_records(
+        {current.request_id: current},
+        judge_execution_id="execution-one",
+        provider_name="ollama",
+    )
+
+    with pytest.raises(ValueError, match="cache-hit status"):
+        _validate_judge_execution_records(
+            {current.request_id: current.model_copy(update={"cache_hit": True})},
+            judge_execution_id="execution-one",
+            provider_name="ollama",
+        )
+    with pytest.raises(ValueError, match="weights digest"):
+        _validate_judge_execution_records(
+            {current.request_id: current.model_copy(update={"model_digest": None})},
+            judge_execution_id="execution-one",
+            provider_name="ollama",
+        )
 
 
 def test_second_judge_comparison_normalizes_model_size_suffixes() -> None:

@@ -200,8 +200,18 @@ def _parser() -> argparse.ArgumentParser:
     run_judges.add_argument("--judge-config", required=True, type=Path)
     run_judges.add_argument("--cache", required=True, type=Path)
     run_judges.add_argument("--output", required=True, type=Path)
+    run_judges.add_argument(
+        "--judge-execution-id",
+        required=True,
+        help="stable audited ID reused only when resuming the same judge execution",
+    )
     run_judges.add_argument("--timeout", type=float, default=120.0)
     run_judges.add_argument("--max-output-tokens", type=int, default=2048)
+    run_judges.add_argument(
+        "--context-window",
+        type=int,
+        help="required Ollama context length; use 32768 for the approved local run",
+    )
     run_judges.add_argument("--max-attempts", type=int, default=2)
     run_judges.add_argument(
         "--require-fresh-cache",
@@ -356,8 +366,9 @@ def _validate_inputs(args: argparse.Namespace) -> int:
 def _run_judge_requests(args: argparse.Namespace) -> int:
     if args.output.exists():
         raise ValueError("judge result output already exists")
-    if args.require_fresh_cache and args.cache.exists() and args.cache.stat().st_size:
-        raise ValueError("fresh judge execution requires a new empty cache path")
+    judge_execution_id = args.judge_execution_id.strip()
+    if not judge_execution_id:
+        raise ValueError("judge execution ID must not be empty")
     if args.timeout <= 0 or args.max_output_tokens <= 0 or args.max_attempts <= 0:
         raise ValueError("judge timeout, output limit, and attempts must be positive")
     try:
@@ -372,15 +383,32 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
         raise ValueError("judge request file must contain unique nonempty request IDs")
 
     provider_name = configuration.provider.casefold()
+    model_digest: str | None = None
+    context_window: int | None = None
     if provider_name == "ollama":
+        if (
+            args.context_window is None
+            or args.context_window <= args.max_output_tokens + 512
+        ):
+            raise ValueError(
+                "Ollama judge requires --context-window with room for output and framing"
+            )
         client = OllamaChatClient(
             configuration.model_revision,
             temperature=configuration.temperature,
             timeout_seconds=args.timeout,
             max_output_tokens=args.max_output_tokens,
+            context_window=args.context_window,
             seed=configuration.seed or 0,
         )
+        client.pin_model()
+        if not client.model_digest:
+            raise ValueError("Ollama judge did not expose a pinned model weights digest")
+        model_digest = client.model_digest
+        context_window = client.context_window
     elif provider_name == "openai":
+        if args.context_window is not None:
+            raise ValueError("--context-window is only supported by the Ollama judge")
         client = OpenAIResponsesClient(
             configuration.model_revision,
             temperature=configuration.temperature,
@@ -390,7 +418,14 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
     else:
         raise ValueError("judge configuration provider must be 'ollama' or 'openai'")
     provider = StructuredJsonJudgeProvider(client)
-    runner = CachedJudgeRunner(args.cache, max_attempts=args.max_attempts)
+    runner = CachedJudgeRunner(
+        args.cache,
+        judge_execution_id=judge_execution_id,
+        model_digest=model_digest,
+        context_window=context_window,
+        max_attempts=args.max_attempts,
+        require_current_execution_cache=args.require_fresh_cache,
+    )
     results: list[JudgeResultEnvelope] = []
     for request in requests:
         results.append(
@@ -563,7 +598,39 @@ def _judge_response_fingerprint(envelope: JudgeResultEnvelope) -> str:
     ).hexdigest()
 
 
+def _validate_judge_execution_records(
+    envelopes: dict[str, JudgeResultEnvelope],
+    *,
+    judge_execution_id: str,
+    provider_name: str,
+) -> None:
+    """Verify that cache provenance and local runtime identity are auditable."""
+
+    if any(envelope.judge_execution_id is None for envelope in envelopes.values()):
+        raise ValueError("judge results contain records without an execution ID")
+    if any(
+        envelope.cache_hit
+        != (envelope.judge_execution_id != judge_execution_id)
+        for envelope in envelopes.values()
+    ):
+        raise ValueError("judge cache-hit status does not match result execution IDs")
+    current_execution_records = [
+        envelope for envelope in envelopes.values() if not envelope.cache_hit
+    ]
+    if provider_name.casefold() != "ollama" or not current_execution_records:
+        return
+    model_digests = {envelope.model_digest for envelope in current_execution_records}
+    context_windows = {envelope.context_window for envelope in current_execution_records}
+    if None in model_digests or len(model_digests) != 1:
+        raise ValueError("Ollama judge results require one pinned model weights digest")
+    if None in context_windows or len(context_windows) != 1:
+        raise ValueError("Ollama judge results require one pinned context window")
+
+
 def _assemble_judge_results(args: argparse.Namespace) -> int:
+    judge_execution_id = args.judge_execution_id.strip()
+    if not judge_execution_id:
+        raise ValueError("judge execution ID must not be empty")
     items = _load_inputs(args.inputs)
     source_run_hash = _source_run_sha256(items)
     _require_exact_answer_hashes(items)
@@ -585,6 +652,11 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
         if unknown:
             raise ValueError(f"cross-level file references unknown evaluation IDs: {unknown}")
     envelopes = load_judge_envelopes(args.judge_results)
+    _validate_judge_execution_records(
+        envelopes,
+        judge_execution_id=judge_execution_id,
+        provider_name=configuration.provider,
+    )
     response_fingerprints = sorted(
         _judge_response_fingerprint(envelope)
         for envelope in envelopes.values()
@@ -614,8 +686,22 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
             "judge_model_family": configuration.model_family,
             "judge_model_revision": configuration.model_revision,
             "judge_results_sha256": hashlib.sha256(args.judge_results.read_bytes()).hexdigest(),
-            "judge_execution_id": args.judge_execution_id,
+            "judge_execution_id": judge_execution_id,
             "judge_cache_hit_count": sum(envelope.cache_hit for envelope in envelopes.values()),
+            "judge_model_digests": sorted(
+                {
+                    envelope.model_digest
+                    for envelope in envelopes.values()
+                    if envelope.model_digest is not None
+                }
+            ),
+            "judge_context_windows": sorted(
+                {
+                    envelope.context_window
+                    for envelope in envelopes.values()
+                    if envelope.context_window is not None
+                }
+            ),
             "judge_response_fingerprints": response_fingerprints,
             "cross_level_ids_sha256": (
                 hashlib.sha256(args.cross_level_evaluation_ids.read_bytes()).hexdigest()

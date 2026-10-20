@@ -248,12 +248,36 @@ def _append_cache(path: Path, envelope: JudgeResultEnvelope) -> None:
 class CachedJudgeRunner:
     """Run one approved judge task with deterministic cache and unresolved handling."""
 
-    def __init__(self, cache_path: Path, *, max_attempts: int = 2) -> None:
+    def __init__(
+        self,
+        cache_path: Path,
+        *,
+        judge_execution_id: str,
+        model_digest: str | None = None,
+        context_window: int | None = None,
+        max_attempts: int = 2,
+        require_current_execution_cache: bool = False,
+    ) -> None:
         if max_attempts < 1:
             raise ValueError("max_attempts must be positive")
+        judge_execution_id = judge_execution_id.strip()
+        if not judge_execution_id:
+            raise ValueError("judge_execution_id must not be empty")
+        if context_window is not None and context_window <= 0:
+            raise ValueError("context_window must be positive")
         self.cache_path = cache_path
+        self.judge_execution_id = judge_execution_id
+        self.model_digest = model_digest
+        self.context_window = context_window
         self.max_attempts = max_attempts
         self._cache = _load_cache(cache_path)
+        if require_current_execution_cache and any(
+            envelope.judge_execution_id != self.judge_execution_id
+            for envelope in self._cache.values()
+        ):
+            raise ValueError(
+                "fresh judge execution cache contains results from another or unaudited execution"
+            )
 
     def run(
         self,
@@ -268,7 +292,17 @@ class CachedJudgeRunner:
         cache_key = request_cache_key(request)
         cached = self._cache.get(cache_key)
         if cached is not None:
-            return cached.model_copy(update={"cache_hit": True})
+            reused_from_other_execution = (
+                cached.judge_execution_id != self.judge_execution_id
+            )
+            if not reused_from_other_execution and (
+                cached.model_digest != self.model_digest
+                or cached.context_window != self.context_window
+            ):
+                raise ValueError(
+                    "judge resume runtime differs from the original execution"
+                )
+            return cached.model_copy(update={"cache_hit": reused_from_other_execution})
 
         errors: list[str] = []
         validated: ValidatedOutput | None = None
@@ -310,6 +344,9 @@ class CachedJudgeRunner:
                 request_id=request.request_id,
                 cache_key=cache_key,
                 judge_config_version=configuration.config_version,
+                judge_execution_id=self.judge_execution_id,
+                model_digest=self.model_digest,
+                context_window=self.context_window,
                 raw_output=last_raw,
                 unresolved=True,
                 error="; ".join(errors),
@@ -325,6 +362,9 @@ class CachedJudgeRunner:
                 request_id=request.request_id,
                 cache_key=cache_key,
                 judge_config_version=configuration.config_version,
+                judge_execution_id=self.judge_execution_id,
+                model_digest=self.model_digest,
+                context_window=self.context_window,
                 output=validated.model_dump(mode="json"),
                 provider_response_id=last_response.response_id,
                 completed_at_utc=last_response.completed_at_utc,
