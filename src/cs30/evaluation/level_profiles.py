@@ -141,12 +141,17 @@ def load_eligibility_package(
 def eligible_levels(
     eligibility: PersonalisationEligibility,
 ) -> frozenset[StudentLevel]:
-    """Return levels entering the main adaptation denominator."""
+    """Return levels entering the main adaptation denominator.
 
-    if eligibility is PersonalisationEligibility.FULL:
+    ``endpoint_only`` describes the expected separation between endpoint answers;
+    it does not remove the intermediate-level observation from the main result.
+    """
+
+    if eligibility in {
+        PersonalisationEligibility.FULL,
+        PersonalisationEligibility.ENDPOINT_ONLY,
+    }:
         return frozenset(StudentLevel)
-    if eligibility is PersonalisationEligibility.ENDPOINT_ONLY:
-        return frozenset({StudentLevel.BEGINNER, StudentLevel.ADVANCED})
     return frozenset()
 
 

@@ -235,10 +235,8 @@ def test_judge_configuration_blocks_unapproved_or_same_family_use() -> None:
         )
 
 
-def test_endpoint_only_excludes_intermediate_from_main_result() -> None:
-    assert eligible_levels(PersonalisationEligibility.ENDPOINT_ONLY) == frozenset(
-        {StudentLevel.BEGINNER, StudentLevel.ADVANCED}
-    )
+def test_endpoint_only_keeps_all_levels_in_main_result() -> None:
+    assert eligible_levels(PersonalisationEligibility.ENDPOINT_ONLY) == frozenset(StudentLevel)
 
 
 def test_candidate_role_richness_uses_top_twenty_and_level_specific_roles() -> None:
