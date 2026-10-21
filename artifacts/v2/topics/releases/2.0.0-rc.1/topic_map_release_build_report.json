@@ -1,0 +1,46 @@
+{
+  "schema_version": "topic-map-release-build-report-v1",
+  "status": "validated",
+  "corpus": {
+    "corpus_version": "2.0.0-rc.1",
+    "corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+    "manifest_hash": "sha256:5b45185684c8e7d7e024ca31e782b07f8b8ec399b873f2c5dfd2e4001973aa71",
+    "record_count": 6184,
+    "reportable": true
+  },
+  "topic_registry_version": "topics-0.2",
+  "topic_registry_topic_count": 2520,
+  "source_maps": [
+    {
+      "file": "chunk_topic_map_openstax_source_v0.2.json",
+      "sha256": "sha256:cd6b6577b98d8e6e773e3d9e7bbf96f4b6c83dae1ebdb99cde2b1b9a4601a938",
+      "source_corpus_version": "2.0.0-dev.m4-structure-v2-main-3553825",
+      "source_corpus_hash": "sha256:6b4941ac4ba9ae09b7bcd9fbe4a266600820af89c2dbb2e2ad0dd8568983930f",
+      "assignment_count": 4310
+    },
+    {
+      "file": "chunk_topic_map_ck12_m1_source_v0.2.json",
+      "sha256": "sha256:f2f2826b06c9fd0bfe44476a4fcd2fa100c1bd2cd0ffc2971778693862470587",
+      "source_corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
+      "source_corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+      "assignment_count": 176
+    }
+  ],
+  "merged_map": {
+    "file": "chunk_topic_map_topics-0.2.json",
+    "sha256": "sha256:6679e95c7eac535a13d53891ef0f1305cb22d6079d3c798613b39c00416f0fa5",
+    "assignment_count": 4486,
+    "topic_link_count": 8378,
+    "assignments_by_textbook": {
+      "ck12_peoples_physics_concepts": 176,
+      "openstax_college_physics_2e": 1706,
+      "openstax_college_physics_ap_2e": 1686,
+      "openstax_physics": 918
+    },
+    "source_assignment_counts": {
+      "chunk_topic_map_ck12_m1_source_v0.2.json": 176,
+      "chunk_topic_map_openstax_source_v0.2.json": 4310
+    }
+  },
+  "validation": "passed"
+}
