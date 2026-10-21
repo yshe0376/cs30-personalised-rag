@@ -52,6 +52,10 @@ v2 的情况不同：
 
 ### 3.1 三份全局等级画像 `level-profile-v1` 【建议】
 
+M7 编写交付（2026-10-21）：[三档画像、逐级清单与非 Gold 示例](evaluation/level-profile-v1/README.md)，
+含机器可读草稿与经真实核对后导出 `ProfileChecklistPackage` 的工具。
+当前 `frozen=false`，Leader 确认与 M3 物理核对待完成，不把编写完成视为团队冻结。
+
 负责人建议：Leader + M7（对应 backlog B14），M3 核对物理内容。冻结后才能制定清单和校准 judge。
 
 主实验使用全局等级的固定画像（基线 §4.5），不按 Topic 分别定义。每档写清：

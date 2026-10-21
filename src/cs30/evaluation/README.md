@@ -521,6 +521,14 @@ development, in which case their report sections remain explicitly `pending`.
 
 ## V2 generation judge validity
 
+M7's [level-profile-v1 authoring package](../../../docs/evaluation/level-profile-v1/README.md)
+contains three global learner profiles, eleven checklist criteria and three shared
+non-Gold questions with answers at every level. Its draft deliberately has
+`frozen=false` and no physics reviewer IDs. Validate it using
+`python -m cs30.evaluation.profile_authoring`; export to the existing frozen-input
+contract only after hash-bound Leader and M3 review records are actually complete.
+This does not change the M8 loader or claim that judge calibration has passed.
+
 The M8 V2 command keeps development proposals separate from team-frozen
 decisions. `adaptation_pass_threshold` and every field in `ValidityThresholds`
 must be supplied in a versioned input; production code does not silently choose
