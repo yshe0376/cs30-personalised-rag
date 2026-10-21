@@ -1,0 +1,95 @@
+{
+  "schema_version": "m7-level-profile-authoring-verification-v1",
+  "date": "2026-10-21",
+  "source_base_commit": "90fbc927925c15cfdbd958bf4d8b29e0b7a85a40",
+  "scope": "M7 B14 profile/checklist authoring and M8-compatible reviewed export",
+  "package_version": "level-profile-v1",
+  "draft_package_sha256": "e6d93a6cce7121c433dc9d13c1ed06eb3ea859727dfb591250dca671a4676e0d",
+  "frozen": false,
+  "reportable": false,
+  "pending": [
+    "Leader profile and checklist confirmation",
+    "M3 independent physics review",
+    "Review of semantic independence from Gold",
+    "M8 Dev judge calibration and validity checks"
+  ],
+  "tests": {
+    "focused": {
+      "command": "python -m pytest tests/test_m7_level_profile_authoring.py",
+      "passed": 23,
+      "failed": 0
+    },
+    "full_regression": {
+      "command": "python -m pytest -rs",
+      "passed": 1086,
+      "failed": 0,
+      "skipped": 2,
+      "environment": "Clean Git-initialized source snapshot of base main plus only this M7 change; user pre-existing contracts/models.py edit preserved in original working tree and excluded from tested/submitted changes.",
+      "skip_reasons": [
+        "CS30_M2_OPENSTAX_OUTPUT is not set",
+        "Pinned google-bert/bert-base-uncased tokenizer revision is not cached"
+      ]
+    },
+    "lint": {
+      "command": "python -m ruff check .",
+      "result": "passed"
+    },
+    "pipeline_smoke": {
+      "mode": "offline fixture",
+      "checks": [
+        "In-domain answer has grounded citations",
+        "Out-of-scope question abstains with empty evidence and citations"
+      ],
+      "result": "passed"
+    },
+    "m8_integration": {
+      "review_identity_source": "Synthetic test-only Leader/physics records in temporary paths; no actual approval claimed or exported into this delivery",
+      "checks": [
+        "Draft rejected by existing frozen loader",
+        "Pending/rejected/missing/stale/mutated approvals rejected",
+        "Successful reviewed export reloads using existing M8 ProfileChecklistPackage contract",
+        "All levels build single-answer adaptation requests and discrimination requests"
+      ],
+      "result": "passed"
+    },
+    "human_machine_content_parity": {
+      "fields_checked": 90,
+      "result": "passed"
+    },
+    "physical_calculation_cross_check": {
+      "water_equilibrium_celsius": 30,
+      "initial_and_unchanged_branch_current_amperes": 1.5,
+      "parallel_total_current_amperes": 3,
+      "pendulum": "Mass cancels from ideal pendulum dynamics; small-angle period formula and limits checked against OpenStax."
+    },
+    "non_gold_anchors": {
+      "anchor_count": 3,
+      "gold_sources": [
+        {
+          "path": "m3_gold/gold_v0_1_1.jsonl",
+          "sha256": "52d8bab9655ae2f4df2a8bf883a7cbc87acbe83dbb11af983bc228c1412839ad",
+          "questions_checked": 20
+        },
+        {
+          "path": "artifacts/v2-dev-full-20261016/inputs/gold.jsonl",
+          "sha256": "b1fef6db2c71649c1ff10c85547b2bd0be0460b47dba4f462d62a43e235d86c4",
+          "questions_checked": 188
+        }
+      ],
+      "exact_normalized_question_or_id_collisions": 0,
+      "semantic_independence_requires_review": true
+    }
+  },
+  "source_file_sha256": {
+    "docs/backlog.md": "b4a2f615e2b8dbcb1c7887a6d6cdc563333cdf2600e7c9f19faabe1f7cb0777b",
+    "docs/v2-generation-evaluation-plan.md": "cf9e150960688bcaa40bcde5c32c88587dcf8c9de6fc45b8644b68b98d4d27b4",
+    "src/cs30/evaluation/README.md": "165dfabd3ec0719ffc4e931c490c3eef6a13e3973db19586ebd108c477ff0503",
+    "src/cs30/evaluation/profile_authoring.py": "b16b9c5c415a1b206e14c6f27b6fac478a267d1855a98c8a379e95bfa7dc2eff",
+    "tests/test_m7_level_profile_authoring.py": "dd7966c7a10d8a52dec3497823002d54f332343b764f62158bb3ae2fa647970a",
+    "docs/evaluation/level-profile-v1/README.md": "b3fe0ca4af41a88e02146b1589c5dee7d18987aafc8206012bc84629924ec275",
+    "docs/evaluation/level-profile-v1/profile_checklist.draft.json": "61f9afe2a011757c96b1cb18dc1a5bf75fc2259a2029e7d42a6d6eb814c5b809",
+    "docs/evaluation/level-profile-v1/review_record.template.json": "9f34552777a0768da4dde7ef32fd9d9f1234922a703ecb3cbd0b32e86fd1d9e9"
+  },
+  "live_generation_or_judge_calls": 0,
+  "held_out_test_generation_or_judge_scoring_performed": false
+}
