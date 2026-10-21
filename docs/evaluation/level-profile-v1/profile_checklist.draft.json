@@ -52,10 +52,10 @@
           "is_gold": false
         },
         {
-          "anchor_id": "m7-anchor-water-mixing",
-          "question": "Mix 200 g of water at 20 degrees Celsius with 100 g of water at 50 degrees Celsius in an insulated container. Neglect the container heat capacity and assume constant water specific heat with no phase change. What is the equilibrium temperature, and why is it not 35 degrees Celsius?",
-          "answer": "The final temperature is 30 degrees Celsius. Heat, the energy passed from warmer water to cooler water, brings both portions to the same temperature. For water, equal amounts need equal energy for equal temperature changes. There is twice as much cool water, so a 10 degree rise in it balances a 20 degree drop in the warm water: 200 times 10 equals 100 times 20. The simple midpoint, 35 degrees, would work for equal amounts of water.",
-          "rationale": "Uses energy transfer, explained in context, and explicit arithmetic to connect unequal masses to unequal temperature changes; no unexplained heat-capacity notation.",
+          "anchor_id": "m7-anchor-siren-doppler",
+          "question": "An ambulance siren sounds higher in pitch while the ambulance approaches a listener standing at the roadside, and lower in pitch after it passes. What is this effect called?",
+          "answer": "This is called the Doppler effect: the pitch you hear, meaning how high or low a sound seems, changes when the source of the sound moves toward you or away from you. The siren itself keeps making the same sound; only the pitch reaching you changes.",
+          "rationale": "Names the effect and explains the new term in everyday words. The question asks only for the name, so B2 is met by the correct identification without a derivation, and the situation in the question already supplies concrete support. Separating the sound made from the sound heard avoids a misleading claim.",
           "is_gold": false
         },
         {
@@ -110,10 +110,10 @@
           "is_gold": false
         },
         {
-          "anchor_id": "m7-anchor-water-mixing",
-          "question": "Mix 200 g of water at 20 degrees Celsius with 100 g of water at 50 degrees Celsius in an insulated container. Neglect the container heat capacity and assume constant water specific heat with no phase change. What is the equilibrium temperature, and why is it not 35 degrees Celsius?",
-          "answer": "Conservation of energy gives heat lost by warm water equal to heat gained by cool water: 100c(50 - T) = 200c(T - 20), where c is water's specific heat and T is the final temperature in degrees Celsius. Cancel c and solve to obtain T = 30 degrees Celsius. The 35 degree midpoint ignores the unequal masses.",
-          "rationale": "Names conservation of energy, connects it to a heat balance, and interprets the result using algebra-based first-year knowledge.",
+          "anchor_id": "m7-anchor-siren-doppler",
+          "question": "An ambulance siren sounds higher in pitch while the ambulance approaches a listener standing at the roadside, and lower in pitch after it passes. What is this effect called?",
+          "answer": "The Doppler effect. Motion of the sound source relative to the listener changes the frequency the listener receives: it is higher while the source approaches and lower while it recedes.",
+          "rationale": "The correct name satisfies I1 for an identification question, and one sentence links it to the observed pitch change in course terms such as frequency, without redefining sound or pitch. No derivation is needed because the question asks only for the name.",
           "is_gold": false
         },
         {
@@ -168,10 +168,10 @@
           "is_gold": false
         },
         {
-          "anchor_id": "m7-anchor-water-mixing",
-          "question": "Mix 200 g of water at 20 degrees Celsius with 100 g of water at 50 degrees Celsius in an insulated container. Neglect the container heat capacity and assume constant water specific heat with no phase change. What is the equilibrium temperature, and why is it not 35 degrees Celsius?",
-          "answer": "For the thermally isolated water system, energy balance with constant common specific heat gives 200c(T_f - 20) + 100c(T_f - 50) = 0, hence T_f = (200 times 20 + 100 times 50)/300 = 30 degrees Celsius. The arithmetic midpoint requires equal heat capacities, not merely the same substance. Container heat capacity and phase changes are excluded as stipulated.",
-          "rationale": "States the system boundary and exact heat-capacity condition; uses the quantitative relation to resolve the misconception rather than adding basic definitions.",
+          "anchor_id": "m7-anchor-siren-doppler",
+          "question": "An ambulance siren sounds higher in pitch while the ambulance approaches a listener standing at the roadside, and lower in pitch after it passes. What is this effect called?",
+          "answer": "The Doppler effect for sound: the observed frequency is higher than the emitted frequency while the source approaches and lower while it recedes; the siren's emitted frequency itself is unchanged.",
+          "rationale": "A precise identification that separates observed from emitted frequency passes A4 without an argument the question does not ask for. No quantitative relation is needed, so A3 is not applicable, and there is no redundant tutorial on sound or frequency (A1).",
           "is_gold": false
         },
         {
@@ -193,12 +193,12 @@
         {
           "criterion_id": "B1",
           "level": "beginner",
-          "description": "Explain each key unfamiliar physical term or specialised meaning at first use, or express it in understandable everyday language. Terms explicitly allowed by the beginner profile need no definition. Always assess for a substantive answer. Pass with an exact answer quote showing accessible wording or the explanation; fail if necessary terminology remains unexplained."
+          "description": "Explain each key unfamiliar physical term or specialised meaning at first use, or express it in understandable everyday language. Terms explicitly allowed by the beginner profile need no definition. Terms the question itself already uses also need no definition unless the answer gives them a new technical meaning. Always assess for a substantive answer. Pass with an exact answer quote showing accessible wording or the explanation; fail if necessary terminology remains unexplained."
         },
         {
           "criterion_id": "B2",
           "level": "beginner",
-          "description": "Make the physical reasoning needed to answer the question recoverable from the beginner prior: connect the givens, the introduced physical idea, and the conclusion without an unexplained conceptual jump. Routine arithmetic can be combined. Always assess; a direct identification need not acquire an artificial multistep derivation. A missing necessary step is fail, never not_applicable."
+          "description": "Make the physical reasoning needed to answer the question recoverable from the beginner prior: connect the givens, the introduced physical idea, and the conclusion without an unexplained conceptual jump. Routine arithmetic can be combined. Always assess. If the question only asks to identify or name a term, object, quantity, or fact, and does not ask why or how, a correct identification with no unsupported claim passes; do not require reasoning the question does not ask for. Otherwise a missing necessary step is fail, never not_applicable."
         },
         {
           "criterion_id": "B3",
@@ -220,12 +220,12 @@
         {
           "criterion_id": "I1",
           "level": "intermediate",
-          "description": "Identify the governing principle, law, or concept relevant to the question. Use standard terminology accurately; a concise identification may itself name the relevant concept. Always assess substantive answers. Do not demand an irrelevant law or a proof just to make the answer look longer."
+          "description": "Identify the governing principle, law, or concept relevant to the question. Use standard terminology accurately. If the question only asks to identify or name a term, object, quantity, or fact, the correct identification itself satisfies I1. Always assess substantive answers. Do not demand an irrelevant law or a proof just to make the answer look longer."
         },
         {
           "criterion_id": "I2",
           "level": "intermediate",
-          "description": "Explain how the givens, evidence, or governing principle lead to the conclusion at the intermediate prior. Routine algebra may be compressed, but a non-obvious physical inference or consequential assumption must remain clear. Always assess; a missing necessary connection is fail, not not_applicable."
+          "description": "Explain how the givens, evidence, or governing principle lead to the conclusion at the intermediate prior. Routine algebra may be compressed, but a non-obvious physical inference or consequential assumption must remain clear. Always assess. If the question only asks to identify or name a term, object, quantity, or fact, and does not ask why or how, a correct identification with no unsupported claim passes; do not require an explanation the question does not ask for. Otherwise a missing necessary connection is fail, not not_applicable."
         },
         {
           "criterion_id": "I3",
@@ -257,10 +257,10 @@
         {
           "criterion_id": "A4",
           "level": "advanced",
-          "description": "Give a logically supported, precise physical argument with appropriately qualified claims, consistent quantities and no misleading over-generalisation. Standard recoverable steps may be compressed; specialist notation and non-obvious inferences still require enough context. Always assess substantive answers; apparent sophistication and formula count do not establish rigour."
+          "description": "Give a logically supported, precise physical argument with appropriately qualified claims, consistent quantities and no misleading over-generalisation. Standard recoverable steps may be compressed; specialist notation and non-obvious inferences still require enough context. Always assess substantive answers. If the question only asks to identify or name a term, object, quantity, or fact, and does not ask why or how, a correct and precisely stated identification with no unsupported or over-general claim passes; do not require an argument the question does not ask for. Apparent sophistication and formula count do not establish rigour."
         }
       ]
     }
   ],
-  "package_sha256": "e6d93a6cce7121c433dc9d13c1ed06eb3ea859727dfb591250dca671a4676e0d"
+  "package_sha256": "2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e"
 }

@@ -4,6 +4,8 @@
 
 **状态：M7 编写完成，等待 Leader 共同确认、M3 物理核对后冻结。** 本稿不表示 Leader 已参与编写，不表示 M3 已审核，也不表示 judge 已校准。机器文件中 `frozen=false`、`physics_reviewer_ids=[]`；M8 的冻结包加载器会拒绝本稿。
 
+**修订（2026-10-21，Leader 审核意见）：** 用 M7 的画像和清单试跑本地 judge 时，一句话的识别题答案在推理类条目上被判为不通过。为此补充识别题的判定规则（B1、B2、I1、I2、A4），并把混水计算题换成识别型示例题 `m7-anchor-siren-doppler`；草稿内容哈希随之更新，审核仍待完成。
+
 英文画像、清单与锚点用于英文物理问答的 judge 输入；下列内容与同目录的 `profile_checklist.draft.json` 对应。
 
 ## 使用原则
@@ -12,6 +14,7 @@
 - 以学生先备知识和所需推理决定适配，不以字数、术语数量、公式数量或句数代替评分。
 - 每次只读一份匿名答案。适切度读取目标档画像及清单；区分度读取三份画像，但隐藏目标档。不得要求对三份答案排序。
 - 清单统一 `pass / fail / not_applicable`（是 / 否 / 不适用）。通过与不通过必须给简短理由；通过附答案精确子串。不通过若因内容缺失，可用 `exact_quote=null` 并明确缺了什么；已有错误内容时引用原文。不适用须 `exact_quote=null` 并依据题目和先验说明原因。不得编造不存在的原文。
+- 题目只要求识别或说出名称、不问为什么或怎样时，答对且没有无依据的说法即满足 B2、I1、I2、A4，不能因为没有推导而判不通过；题目本身已用的术语不要求再解释（B1）。
 - 不适用只由题目和目标档判断，不能因答案漏写而使用。不适用从该条分母剔除；整份无适用项时不记满分。B1/B2/B4、I1/I2/I3、A1/A4 对有内容的答案均评；B3、A2、A3 的触发条件写在各条内。
 - 画像中陌生术语、符号和关键推理不能因“高级”一词就自动视为已知。高级学生不是所有领域的专家。
 - 正确性按三档统一标准另评；适配通过率不能补偿错误事实。适切度达标阈值、judge 有效性阈值、λ 和题目 eligibility 不由本交付擅自设定。
@@ -159,7 +162,7 @@ A standard law-to-model-to-result chain may be compressed into a well-defined re
 
 ## 6. 非 Gold 示例题与三档好答案
 
-三道题由本次 M7 交付新写，覆盖力学、热学和电路。每档回答同一题。检查器只比较 Gold 题号与规范化题干，不读 Gold 参考答案或使用已有生成答案；精确不重合不等于已完成人工语义审查。
+三道题由本次 M7 交付新写，覆盖力学、声学和电路；第 2 题为识别题（2026-10-21 替换原混水计算题）。每档回答同一题。检查器只比较 Gold 题号与规范化题干，不读 Gold 参考答案或使用已有生成答案；精确不重合不等于已完成人工语义审查。
 
 ### 示例 1：m7-anchor-pendulum-mass
 
@@ -185,29 +188,31 @@ The periods are equal. For an ideal point bob on a massless inextensible string,
 
 **为什么符合该档：** Uses a compact quantitative argument with its idealisation and small-angle scope; no introductory explanation of gravity or inertia.
 
-### 示例 2：m7-anchor-water-mixing
+### 示例 2：m7-anchor-siren-doppler
+
+这是只要求说出名称的识别题。Dev 中识别与定义题共 93/162，本题示范 B2、I1、I2、A4 在这类题上如何判：答对且没有无依据的说法即可通过，不要求题目没问的推导；各档的差别体现在术语解释（B1）和是否冗余（I3、A1）。
 
 **题目**
 
-Mix 200 g of water at 20 degrees Celsius with 100 g of water at 50 degrees Celsius in an insulated container. Neglect the container heat capacity and assume constant water specific heat with no phase change. What is the equilibrium temperature, and why is it not 35 degrees Celsius?
+An ambulance siren sounds higher in pitch while the ambulance approaches a listener standing at the roadside, and lower in pitch after it passes. What is this effect called?
 
 **初学者答案**
 
-The final temperature is 30 degrees Celsius. Heat, the energy passed from warmer water to cooler water, brings both portions to the same temperature. For water, equal amounts need equal energy for equal temperature changes. There is twice as much cool water, so a 10 degree rise in it balances a 20 degree drop in the warm water: 200 times 10 equals 100 times 20. The simple midpoint, 35 degrees, would work for equal amounts of water.
+This is called the Doppler effect: the pitch you hear, meaning how high or low a sound seems, changes when the source of the sound moves toward you or away from you. The siren itself keeps making the same sound; only the pitch reaching you changes.
 
-**为什么符合该档：** Uses energy transfer, explained in context, and explicit arithmetic to connect unequal masses to unequal temperature changes; no unexplained heat-capacity notation.
+**为什么符合该档：** Names the effect and explains the new term in everyday words. The question asks only for the name, so B2 is met by the correct identification without a derivation, and the situation in the question already supplies concrete support. Separating the sound made from the sound heard avoids a misleading claim.
 
 **中级答案**
 
-Conservation of energy gives heat lost by warm water equal to heat gained by cool water: 100c(50 - T) = 200c(T - 20), where c is water's specific heat and T is the final temperature in degrees Celsius. Cancel c and solve to obtain T = 30 degrees Celsius. The 35 degree midpoint ignores the unequal masses.
+The Doppler effect. Motion of the sound source relative to the listener changes the frequency the listener receives: it is higher while the source approaches and lower while it recedes.
 
-**为什么符合该档：** Names conservation of energy, connects it to a heat balance, and interprets the result using algebra-based first-year knowledge.
+**为什么符合该档：** The correct name satisfies I1 for an identification question, and one sentence links it to the observed pitch change in course terms such as frequency, without redefining sound or pitch. No derivation is needed because the question asks only for the name.
 
 **高级答案**
 
-For the thermally isolated water system, energy balance with constant common specific heat gives 200c(T_f - 20) + 100c(T_f - 50) = 0, hence T_f = (200 times 20 + 100 times 50)/300 = 30 degrees Celsius. The arithmetic midpoint requires equal heat capacities, not merely the same substance. Container heat capacity and phase changes are excluded as stipulated.
+The Doppler effect for sound: the observed frequency is higher than the emitted frequency while the source approaches and lower while it recedes; the siren's emitted frequency itself is unchanged.
 
-**为什么符合该档：** States the system boundary and exact heat-capacity condition; uses the quantitative relation to resolve the misconception rather than adding basic definitions.
+**为什么符合该档：** A precise identification that separates observed from emitted frequency passes A4 without an argument the question does not ask for. No quantitative relation is needed, so A3 is not applicable, and there is no redundant tutorial on sound or frequency (A1).
 
 ### 示例 3：m7-anchor-parallel-current
 
@@ -236,7 +241,7 @@ With ideal fixed terminal voltage and constant ohmic resistances, I_original = V
 物理关系交叉核对资料（仅核对原理，本题情境、参数及答案为本次编写）：
 
 - [OpenStax：Pendulums](https://openstax.org/books/university-physics-volume-1/pages/15-4-pendulums)：小角度单摆模型及质量消去。
-- [OpenStax：Heat Transfer, Specific Heat, and Calorimetry](https://openstax.org/books/university-physics-volume-2/pages/1-4-heat-transfer-specific-heat-and-calorimetry)：热平衡与能量平衡。
+- [OpenStax：The Doppler Effect](https://openstax.org/books/university-physics-volume-1/pages/17-7-the-doppler-effect)：声源靠近时观察频率升高、远离时降低，声源发出的频率不变。
 - [OpenStax：Parallel Circuits](https://openstax.org/books/physics/pages/19-3-parallel-circuits) 与 [Electromotive Force](https://openstax.org/books/university-physics-volume-2/pages/10-1-electromotive-force)：并联支路同电压、理想电池假设。
 
 这些资料支持公式和物理模型，不替代 M3 审核，也不证明画像已经得到真实学习者验证。
@@ -247,9 +252,9 @@ With ideal fixed terminal voltage and constant ohmic resistances, I_original = V
 
 ### 初学者
 
-**B1** — Explain each key unfamiliar physical term or specialised meaning at first use, or express it in understandable everyday language. Terms explicitly allowed by the beginner profile need no definition. Always assess for a substantive answer. Pass with an exact answer quote showing accessible wording or the explanation; fail if necessary terminology remains unexplained.
+**B1** — Explain each key unfamiliar physical term or specialised meaning at first use, or express it in understandable everyday language. Terms explicitly allowed by the beginner profile need no definition. Terms the question itself already uses also need no definition unless the answer gives them a new technical meaning. Always assess for a substantive answer. Pass with an exact answer quote showing accessible wording or the explanation; fail if necessary terminology remains unexplained.
 
-**B2** — Make the physical reasoning needed to answer the question recoverable from the beginner prior: connect the givens, the introduced physical idea, and the conclusion without an unexplained conceptual jump. Routine arithmetic can be combined. Always assess; a direct identification need not acquire an artificial multistep derivation. A missing necessary step is fail, never not_applicable.
+**B2** — Make the physical reasoning needed to answer the question recoverable from the beginner prior: connect the givens, the introduced physical idea, and the conclusion without an unexplained conceptual jump. Routine arithmetic can be combined. Always assess. If the question only asks to identify or name a term, object, quantity, or fact, and does not ask why or how, a correct identification with no unsupported claim passes; do not require reasoning the question does not ask for. Otherwise a missing necessary step is fail, never not_applicable.
 
 **B3** — When an unfamiliar abstract concept needs concrete support, supply a correct example, bounded analogy, explicit concrete calculation, or explanatory use of the situation already in the question. Assess necessity from the question and beginner prior before inspecting whether support was supplied. If no such support is needed for this question, use not_applicable; if needed but missing, use fail. Extra decorative examples earn no credit.
 
@@ -257,9 +262,9 @@ With ideal fixed terminal voltage and constant ohmic resistances, I_original = V
 
 ### 中级
 
-**I1** — Identify the governing principle, law, or concept relevant to the question. Use standard terminology accurately; a concise identification may itself name the relevant concept. Always assess substantive answers. Do not demand an irrelevant law or a proof just to make the answer look longer.
+**I1** — Identify the governing principle, law, or concept relevant to the question. Use standard terminology accurately. If the question only asks to identify or name a term, object, quantity, or fact, the correct identification itself satisfies I1. Always assess substantive answers. Do not demand an irrelevant law or a proof just to make the answer look longer.
 
-**I2** — Explain how the givens, evidence, or governing principle lead to the conclusion at the intermediate prior. Routine algebra may be compressed, but a non-obvious physical inference or consequential assumption must remain clear. Always assess; a missing necessary connection is fail, not not_applicable.
+**I2** — Explain how the givens, evidence, or governing principle lead to the conclusion at the intermediate prior. Routine algebra may be compressed, but a non-obvious physical inference or consequential assumption must remain clear. Always assess. If the question only asks to identify or name a term, object, quantity, or fact, and does not ask why or how, a correct identification with no unsupported claim passes; do not require an explanation the question does not ask for. Otherwise a missing necessary connection is fail, not not_applicable.
 
 **I3** — Use course terminology accurately and explain unfamiliar specialist ideas while avoiding redundant redefinitions of the intermediate assumed core. A brief clarification that resolves a real ambiguity is helpful, not redundant. Always assess substantive answers. Judge conceptual role and precision, not terminology count or answer length.
 
@@ -271,7 +276,7 @@ With ideal fixed terminal voltage and constant ohmic resistances, I_original = V
 
 **A3** — Use an accurate quantitative, scaling, or limiting relationship when it materially explains the question or is required for the requested result, with sufficient symbol meaning for the advanced prior. Determine usefulness from the question and prior, not whether the answer contains an equation. If none is useful, use not_applicable; if useful but absent or incorrectly used, use fail. Gratuitous formulas do not count as success.
 
-**A4** — Give a logically supported, precise physical argument with appropriately qualified claims, consistent quantities and no misleading over-generalisation. Standard recoverable steps may be compressed; specialist notation and non-obvious inferences still require enough context. Always assess substantive answers; apparent sophistication and formula count do not establish rigour.
+**A4** — Give a logically supported, precise physical argument with appropriately qualified claims, consistent quantities and no misleading over-generalisation. Standard recoverable steps may be compressed; specialist notation and non-obvious inferences still require enough context. Always assess substantive answers. If the question only asks to identify or name a term, object, quantity, or fact, and does not ask why or how, a correct and precisely stated identification with no unsupported or over-general claim passes; do not require an argument the question does not ask for. Apparent sophistication and formula count do not establish rigour.
 
 ## 与生成 prompt 的独立性及差异记录
 
@@ -281,7 +286,7 @@ The profiles are specified from learner prerequisites and the evaluation plan, i
 
 ## M7 → Leader / M3 / M8 交接
 
-1. Leader 逐条确认学生定位、先备知识、清单及示例。M3 独立核对物理关系、理想化条件、量纲和三个答案的教学表述；特别检查单摆的小角度模型、等比热的质量加权、并联电路的理想电源边界。
+1. Leader 逐条确认学生定位、先备知识、清单及示例。M3 独立核对物理关系、理想化条件、量纲和三个答案的教学表述；特别检查单摆的小角度模型、多普勒效应中观察频率与发出频率的区分、并联电路的理想电源边界。
 2. 在 `review_record.template.json` 的副本填写真实审核人、审核记录 ID、带时区时间及理由；尚未核对必须保持 `pending`。任何内容修订都先更新草稿内容哈希，再重审；旧审核记录不能批准新内容。
 3. 两份真实审核均为 `approved` 后，用下面的导出命令生成 M8 原生 `ProfileChecklistPackage`；工具保留独立审核人、原草稿哈希、审核记录哈希和冻结包哈希，不会把软件测试当作 M3 签名。
 4. M8 用既有 `load_profile_checklist_package` 读冻结包；适切度和区分度使用同一个内容包。再进行 Dev judge 校准和有效性检查，不能把导出成功当作 judge 已有效。
@@ -305,7 +310,7 @@ python -m cs30.evaluation.profile_authoring \
 
 工具同时保存 `.review.json` 来源记录。冻结表示画像审核完成，不代表整个实验 `reportable=true`；该决定仍由 M8 的其余冻结配置及检查控制。
 
-当前草稿内容哈希：`e6d93a6cce7121c433dc9d13c1ed06eb3ea859727dfb591250dca671a4676e0d`。
+当前草稿内容哈希：`2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e`。
 
 ## 本次 M7 自检记录
 
@@ -313,5 +318,5 @@ python -m cs30.evaluation.profile_authoring \
 - 全量回归：隔离的最终代码副本中 **1086 passed, 2 skipped**；全仓代码规范检查通过。隔离副本使用 `main` 中的公共契约，未带入用户原有的无关未提交修改。
 - 两项跳过原因：本机未配置 M2 parser 输出目录，以及未缓存固定版本的 BERT tokenizer；没有将其记作通过。
 - 20 题已入库 Gold 与现有 v2 188 题文件的题号/规范化题干碰撞均为 0。只做锚点独立性校验，未运行 Test 生成、judge 评分或 Test 调参；自动校验不能代替 M3 的语义核对。
-- 人工可读文档与机器文件的 90 个画像、锚点及条目文本字段一致；混水能量平衡和并联电流结果另行复算，单摆模型另对照教材原理。
+- 人工可读文档与机器文件的 90 个画像、锚点及条目文本字段一致；并联电流结果另行复算，单摆模型与多普勒效应另对照教材原理。
 - 详细来源、文件哈希及检查范围见 [verification.json](verification.json)。本次只有 M7 编写与软件自检完成；Leader/M3 的真实审核和 judge 校准仍待各负责人执行。

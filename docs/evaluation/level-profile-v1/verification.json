@@ -4,7 +4,7 @@
   "source_base_commit": "90fbc927925c15cfdbd958bf4d8b29e0b7a85a40",
   "scope": "M7 B14 profile/checklist authoring and M8-compatible reviewed export",
   "package_version": "level-profile-v1",
-  "draft_package_sha256": "e6d93a6cce7121c433dc9d13c1ed06eb3ea859727dfb591250dca671a4676e0d",
+  "draft_package_sha256": "2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e",
   "frozen": false,
   "reportable": false,
   "pending": [
@@ -57,10 +57,10 @@
       "result": "passed"
     },
     "physical_calculation_cross_check": {
-      "water_equilibrium_celsius": 30,
       "initial_and_unchanged_branch_current_amperes": 1.5,
       "parallel_total_current_amperes": 3,
-      "pendulum": "Mass cancels from ideal pendulum dynamics; small-angle period formula and limits checked against OpenStax."
+      "pendulum": "Mass cancels from ideal pendulum dynamics; small-angle period formula and limits checked against OpenStax.",
+      "doppler": "Moving source, stationary listener: observed frequency is higher than emitted while approaching and lower while receding; emitted frequency unchanged. Checked against OpenStax University Physics Volume 1, section 17.7."
     },
     "non_gold_anchors": {
       "anchor_count": 3,
@@ -86,10 +86,54 @@
     "src/cs30/evaluation/README.md": "165dfabd3ec0719ffc4e931c490c3eef6a13e3973db19586ebd108c477ff0503",
     "src/cs30/evaluation/profile_authoring.py": "b16b9c5c415a1b206e14c6f27b6fac478a267d1855a98c8a379e95bfa7dc2eff",
     "tests/test_m7_level_profile_authoring.py": "dd7966c7a10d8a52dec3497823002d54f332343b764f62158bb3ae2fa647970a",
-    "docs/evaluation/level-profile-v1/README.md": "b3fe0ca4af41a88e02146b1589c5dee7d18987aafc8206012bc84629924ec275",
-    "docs/evaluation/level-profile-v1/profile_checklist.draft.json": "61f9afe2a011757c96b1cb18dc1a5bf75fc2259a2029e7d42a6d6eb814c5b809",
-    "docs/evaluation/level-profile-v1/review_record.template.json": "9f34552777a0768da4dde7ef32fd9d9f1234922a703ecb3cbd0b32e86fd1d9e9"
+    "docs/evaluation/level-profile-v1/README.md": "dcc28fd9aae190fe8e39bf34f435a21f0bda06443efd4c331e98aa683a8e5947",
+    "docs/evaluation/level-profile-v1/profile_checklist.draft.json": "b0c97513e1086506c91d790ca70b6c2f72aa63e1569a835bb2506006e6f5d26a",
+    "docs/evaluation/level-profile-v1/review_record.template.json": "056516ceb7ce6bab276c096aaf024b663b57b7a0bbc1c2c99b30d14c0b25757a"
   },
   "live_generation_or_judge_calls": 0,
-  "held_out_test_generation_or_judge_scoring_performed": false
+  "held_out_test_generation_or_judge_scoring_performed": false,
+  "revisions": [
+    {
+      "date": "2026-10-21",
+      "requested_by": "Leader (yshe0376) review of PR #197",
+      "reason": "A local qwen3:8b adaptation trial with this checklist failed a correct one-line answer to a pure identification question on B1, B2, I1, I2 and A4; identification and definition questions are 93 of the 162 Dev questions.",
+      "changes": [
+        "B1: terms the question itself already uses need no definition",
+        "B2, I1, I2, A4: a correct identification with no unsupported claim passes when the question only asks to identify or name something",
+        "Anchor m7-anchor-water-mixing replaced by identification anchor m7-anchor-siren-doppler"
+      ],
+      "previous_draft_package_sha256": "e6d93a6cce7121c433dc9d13c1ed06eb3ea859727dfb591250dca671a4676e0d",
+      "checks": {
+        "focused_tests": {
+          "passed": 23,
+          "failed": 0
+        },
+        "full_regression": {
+          "passed": 1062,
+          "failed": 0,
+          "skipped": 1,
+          "environment": "Windows, Python 3.14, default cp936 locale"
+        },
+        "lint": "passed",
+        "human_machine_content_parity_fields": 90,
+        "non_gold_exact_collisions": 0,
+        "synthetic_review_export_reloaded_by_m8_loader": true,
+        "local_judge_trial": {
+          "judge": "qwen3:8b via Ollama, num_ctx 32768, digest 500a1f067a9f",
+          "question_type": "identification (one Dev smoke question)",
+          "criterion_pass_counts_before": {
+            "beginner": "1/3",
+            "intermediate": "1/3",
+            "advanced": "1/2"
+          },
+          "criterion_pass_counts_after": {
+            "beginner": "3/3",
+            "intermediate": "3/3",
+            "advanced": "2/2"
+          },
+          "interpretation": "One question and one local judge; a direction check, not judge calibration."
+        }
+      }
+    }
+  ]
 }
