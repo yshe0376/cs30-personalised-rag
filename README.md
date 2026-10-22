@@ -12,11 +12,16 @@ model-effectiveness results.
 
 ## M6 W6 four-book retrieval experiment
 
-The current nine-model retrieval comparison is in
+The current nine-model diagnostic retrieval comparison is in
 [`M6_W6_v2_retrieval_dev_test_full.ipynb`](M6_W6_v2_retrieval_dev_test_full.ipynb).
 It uses the four-book M4 corpus, the matching M5 index handoff, Golden Evidence
-v0.1.3, and a deterministic 273 Dev / 68 Test split. Lightweight result tables
-and the provenance manifest are under
+v0.1.3, and a deterministic 273-question development split plus a previously
+exposed 68-question diagnostic holdout. Model and Hybrid-weight selection uses
+Dev only. Retrieval runs through `build_real_retrieval_deps()` with pinned model
+revisions, the project BM25 tokenizer, `rrf_input_top_k=20`, and the Qwen3
+`query` prompt. The holdout is not a clean final Test set and is never swept
+across all configurations. Lightweight result tables and the clean-run
+provenance manifest are under
 [`docs/results/m6_w6_v2_four_book_gold_v0_1_3/`](docs/results/m6_w6_v2_four_book_gold_v0_1_3/).
 Exact input names, hashes, and setup instructions are documented in
 [`eval_inputs/m6_v2/README.md`](eval_inputs/m6_v2/README.md).
