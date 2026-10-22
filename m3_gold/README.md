@@ -1,17 +1,21 @@
-# M3 Gold Evidence v0.1.1
+# M3 Gold Dataset v0.1.3
 
-This directory contains the W5 M3 Gold Evidence handoff. It supersedes the
-removed v0.1 draft files.
+This directory contains the final M3 Gold v0.1.3 delivery: reviewed Strong and
+Multi candidate pools, the integrated Gold JSONL, its schema, and the scripts
+used to build and screen the dataset.
 
 ## Files
 
-- `gold_v0_1_1.jsonl`: final M3 Gold v0.1.1 JSONL for this W5 package.
+- `final_v0_1_1/gold_v0_1_3.jsonl`: authoritative final Gold JSONL.
+- `final_v0_1_1/CHANGELOG_v0_1_3.md`: release notes and validation summary.
 - `gold_v0_1_1.schema.json`: JSON Schema for one JSONL record.
-- `candidate_pool_v0_1_1.review_labeled.csv`: M3 manual review record for accepted candidates.
-- `dev_test_split_plan_v0_1_1.md`: deterministic proposed Dev/Test split plan.
-- `personalisation_candidate_list_v0_1_1.csv`: provisional M3 personalisation candidate screen.
-- `personalisation_candidate_list_v0_1_1.md`: narrative summary of the personalisation screen.
-- `validate_gold.py`: validator that uses the shared main evaluation loader and, when supplied, the shared prepared corpus loader.
+- `candidate_pool_strong_v1_3_2.csv`: reviewed Strong candidate pool.
+- `candidate_pool_multi_v1_3_2.csv`: reviewed Multi-evidence candidate pool.
+- `build_final_gold_dataset.py`: reproducible Gold integration script.
+- `screen_strong_single_evidence.py`: Strong candidate screener.
+- `screen_multi_evidence.py`: Multi-evidence candidate screener.
+- `candidate_screening_common.py`: shared screening and CSV-schema utilities.
+- `test_build_final_gold_dataset.py`: integration validation tests.
 
 ## Evidence Semantics
 
@@ -34,28 +38,17 @@ Evidence is restricted by the shared W5 policy to `body`, `equation`, `example`,
 `summary`, `learning_objective`, `problem`, or another excluded block type, the
 item should be replaced with allowed evidence or moved to unresolved review.
 
-`annotation_status` is `m3_initial` for this package.
-`personalisation_eligibility` remains `pending` until M1 finalises the A3
-taxonomy.
+The final release uses Gold annotation version `m3_gold_v0.1.3`, corpus version
+`2.0.0-dev.m4-structure-v2-main-3553825`, and parser version `1.3.2`.
 
 ## Validation
 
-Schema and contract validation without the large corpus:
+Schema and contract validation:
 
 ```sh
-python3 m3_gold/validate_gold.py m3_gold/gold_v0_1_1.jsonl
+python3 m3_gold/test_build_final_gold_dataset.py
 ```
 
-Full span replay requires the shared M4 prepared corpus directory and uses
-`load_prepared_corpus()` from the main evaluation package. This mode also
-resolves every span against the prepared evidence block index and reports
-`resolved`, `stale`, and `ambiguous` counts:
-
-```sh
-python3 m3_gold/validate_gold.py \
-  --prepared-corpus-root m3_unified_source_corpus/source_corpus \
-  m3_gold/gold_v0_1_1.jsonl
-```
-
-The prepared corpus itself is not committed. Rebuild it with
-`cs30-evaluate prepare-corpus` as documented in `m3_unified_source_corpus/README.md`.
+The parser corpora are kept outside this delivery branch. Screening and
+integration commands must be given the appropriate local evidence-corpus and
+manifest paths; the expected parser version is `1.3.2`.
