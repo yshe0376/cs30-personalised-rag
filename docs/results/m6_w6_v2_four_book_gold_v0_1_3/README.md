@@ -1,7 +1,7 @@
 # M6 W6 four-book retrieval results
 
 These files are from the clean shared-retriever run recorded in
-`run_manifest.json` at commit `8bf226c1876ed1ae0bc7463e553cda93938f4686`.
+`run_manifest.json` at commit `e9c1449626df155637d2cb3991fa540b1c031200`.
 The run uses `cs30.pipeline.build_real_retrieval_deps`, all nine pinned model
 revisions, `rrf_input_top_k=20`, and the Qwen3 `query` prompt.
 

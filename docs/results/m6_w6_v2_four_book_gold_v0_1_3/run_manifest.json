@@ -1,6 +1,6 @@
 {
   "schema_version": "m6-w6-v2-four-book-project-retriever-2",
-  "created_at_utc": "2026-10-22T16:56:34.613935+00:00",
+  "created_at_utc": "2026-10-22T17:10:41.757087+00:00",
   "reportable": false,
   "evaluation_set_version": "m6-v2-diagnostic-gold-341-v0.1.3-split-273-68-2026-10-22",
   "gold_acceptance_policy": "user_accepted_for_m6_evaluation",
@@ -21,9 +21,9 @@
   "gold_rebound_to_corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
   "binding_sha256": "sha256:99b72302fd335676f5ff8b53516972db361e81eca97aa52b0ee050086b4c055e",
   "git": {
-    "commit": "8bf226c1876ed1ae0bc7463e553cda93938f4686",
+    "commit": "e9c1449626df155637d2cb3991fa540b1c031200",
     "dirty": false,
-    "snapshot_sha256": "5adf30336adf434d2588f5208e4ebb6386b5a2e680cc507dd56fd392d4392967"
+    "snapshot_sha256": "d6662bbff4e41bfff9486c607f1b708e82cd6bec5eb12dbb9c24856242087629"
   },
   "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
   "method_config": {
@@ -173,14 +173,14 @@
   "cross_split_evidence_chunk_count": 0,
   "unanswerable_question_count": 0,
   "result_file_sha256": {
-    "dev_summary.csv": "sha256:f0da82b4cf4d4a9f1a06a2b1cf3993318af1aa23e5c3d1a2ff555f6857757be8",
-    "dev_overall_ranked.csv": "sha256:f0da82b4cf4d4a9f1a06a2b1cf3993318af1aa23e5c3d1a2ff555f6857757be8",
-    "dev_grouped_summary.csv": "sha256:3cf2eb57e83810f632d552615d384ef3cdd1182cc193c6898fb5dee39ac84658",
-    "dev_baseline_comparison.csv": "sha256:0bde5786629ca34fbaf9891a9b908e5fff2399f00ae41b413cba3d5c8f476b67",
-    "diagnostic_holdout_summary.csv": "sha256:a319cb8ab76b574e72d717cd42a6a51b322c19ac4bdd98cdaaa8946b9a79a541",
-    "truncation_diagnostics.csv": "sha256:09c64a4f08dc7872ce62734f563259ba70878638731de47084f489ccbe2f551d",
-    "evaluation_split_assignments.jsonl": "sha256:d9a78575c64d14ef7ea07f02817ada911d55fde541fd9a565d408ced7b1ca6d0",
-    "gold_span_bindings.jsonl": "sha256:34aaae062ee9b8a5a584b71bf82331051617798a0e13249f45fdcf774917be71"
+    "dev_summary.csv": "sha256:650faef9ce8bb2afbf1700468bfd7b727a02ac85871ac07aa4a6474a3b7893c8",
+    "dev_overall_ranked.csv": "sha256:650faef9ce8bb2afbf1700468bfd7b727a02ac85871ac07aa4a6474a3b7893c8",
+    "dev_grouped_summary.csv": "sha256:b91d9bcd124509994e026a108ab6284efce365d8e3278628af93a37b2f4fbfff",
+    "dev_baseline_comparison.csv": "sha256:56b7ca3ec508ece60c7e1cd2e7aaafe9222ffc743512b7680ffeed9d54a295c1",
+    "diagnostic_holdout_summary.csv": "sha256:85236ddd8a99019f8a96483717bd576cf432ea2aec8ebd5407ce9d15098d9ae3",
+    "truncation_diagnostics.csv": "sha256:78a7ecce555891d1f6ca59a993568af8bfb40f5dabc335072953030bc5c2ea5f",
+    "evaluation_split_assignments.jsonl": "sha256:dec061827a146746189711cab22fb47c52be12bef9d79c6e9447b9b6a3f2b2ed",
+    "gold_span_bindings.jsonl": "sha256:58886f17b485fadf48df40f7f6aebad9c92ef1a209ae9cf8408716abdfc910b3"
   },
   "limitations": [
     "the 273/68 split is diagnostic and not team-approved as a final split",
