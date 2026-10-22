@@ -1,6 +1,6 @@
 {
   "schema_version": "m6-w6-v2-four-book-project-retriever-2",
-  "created_at_utc": "2026-10-22T17:40:46.679037+00:00",
+  "created_at_utc": "2026-10-22T18:03:34.595563+00:00",
   "reportable": false,
   "evaluation_set_version": "m6-v2-diagnostic-gold-341-v0.1.3-split-273-68-2026-10-22",
   "gold_acceptance_policy": "user_accepted_for_m6_evaluation",
@@ -21,9 +21,9 @@
   "gold_rebound_to_corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
   "binding_sha256": "sha256:99b72302fd335676f5ff8b53516972db361e81eca97aa52b0ee050086b4c055e",
   "git": {
-    "commit": "68521494358b970505ec1f7ab7696d9a4b8abdd7",
+    "commit": "5c57d6cf550cdd3b4540f1aa62a432f40f7179a2",
     "dirty": false,
-    "snapshot_sha256": "59ade8111dfcdfa356caaf6252a494b70cb56d39ed58e3ee2f8f8559e8ebe216"
+    "snapshot_sha256": "e5fdc63e41ade32d16225a1709cd354e76010fd339fefda35691718dd14000ac"
   },
   "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
   "method_config": {
@@ -127,10 +127,27 @@
     }
   },
   "baseline_selection": {
+    "comparison_role": "dev_metric_winner",
+    "baseline_run_name": "bm25_bm25",
+    "candidate_run_name": "bge_base_hybrid_d0.05_b0.95",
+    "candidate_selection_basis": "highest complete_hit_at_5, then highest mrr, among Dev hybrids",
+    "question_count": 273,
+    "baseline_complete_hits_at_5": 215,
+    "candidate_complete_hits_at_5": 218,
+    "baseline_mrr": 0.5750421536,
+    "candidate_mrr": 0.5696392232,
+    "baseline_only_hits": 0,
+    "candidate_only_hits": 3,
+    "exact_mcnemar_p": 0.25,
+    "passes_baseline_replacement_rule": false,
+    "selection_decision": "retain_bm25",
+    "selection_reason": "candidate did not pass the preregistered Dev replacement rule"
+  },
+  "provisional_candidate_comparison": {
+    "comparison_role": "team_selected_provisional",
     "baseline_run_name": "bm25_bm25",
     "candidate_run_name": "bge_m3_hybrid_d0.10_b0.90",
     "candidate_selection_basis": "team-selected provisional retriever for downstream generator evaluation",
-    "metric_winner_run_name": "bge_base_hybrid_d0.05_b0.95",
     "question_count": 273,
     "baseline_complete_hits_at_5": 215,
     "candidate_complete_hits_at_5": 217,
@@ -139,6 +156,7 @@
     "baseline_only_hits": 4,
     "candidate_only_hits": 6,
     "exact_mcnemar_p": 0.75390625,
+    "passes_baseline_replacement_rule": false,
     "selection_decision": "retain_bm25",
     "selection_reason": "candidate did not pass the preregistered Dev replacement rule"
   },
@@ -263,7 +281,7 @@
     "dev_summary.csv": "sha256:650faef9ce8bb2afbf1700468bfd7b727a02ac85871ac07aa4a6474a3b7893c8",
     "dev_overall_ranked.csv": "sha256:650faef9ce8bb2afbf1700468bfd7b727a02ac85871ac07aa4a6474a3b7893c8",
     "dev_grouped_summary.csv": "sha256:b91d9bcd124509994e026a108ab6284efce365d8e3278628af93a37b2f4fbfff",
-    "dev_baseline_comparison.csv": "sha256:1845866356dd63cf78b549cc645432435863477f4e64560f85412c8353facb75",
+    "dev_baseline_comparison.csv": "sha256:7e52ca73cbdd36e08e2aea9184fe5274b444e06c1051350a343761ab85ccab2e",
     "diagnostic_holdout_summary.csv": "sha256:e88da702862d2d8a36e175d17df36ab5b3adedfea381f32610defb7226adcbd7",
     "truncation_diagnostics.csv": "sha256:78a7ecce555891d1f6ca59a993568af8bfb40f5dabc335072953030bc5c2ea5f",
     "evaluation_split_assignments.jsonl": "sha256:dec061827a146746189711cab22fb47c52be12bef9d79c6e9447b9b6a3f2b2ed",
