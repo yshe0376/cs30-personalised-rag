@@ -1,0 +1,2 @@
+baseline_run_name,candidate_run_name,question_count,baseline_complete_hits_at_5,candidate_complete_hits_at_5,baseline_mrr,candidate_mrr,baseline_only_hits,candidate_only_hits,exact_mcnemar_p,selection_decision,selection_reason
+bm25_bm25,bge_base_hybrid_d0.05_b0.95,273,215,218,0.5750421536135821,0.5696392232106517,0,3,0.25,retain_bm25,candidate did not pass the preregistered Dev replacement rule

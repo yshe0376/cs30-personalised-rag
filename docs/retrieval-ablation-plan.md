@@ -13,12 +13,12 @@ final evaluation.
 |---|---|---|---|---|---|---|---|
 | A1 | ★ | `dense_min_similarity` | `None` (disabled) | A threshold calibrated on the validation set | Dense and Hybrid | Recall@K, MRR, abstention precision, abstention recall, abstention F1 | Pending evaluation dataset |
 | A2 | High | BM25 query stopword filtering | Disabled | Enabled | BM25 and Hybrid | Recall@K, MRR, out-of-scope abstention accuracy | Configuration available (`retrieval.bm25_stopwords`) |
-| A3 | High | Retrieval mode | BM25 | Dense and Hybrid RRF | All modes | Recall@K, Hit@K, MRR | Clean four-book shared-retriever rerun required; superseded custom-retriever scores are withdrawn |
+| A3 | High | Retrieval mode | BM25 | Dense and Hybrid RRF | All modes | Recall@K, Hit@K, MRR | Clean shared-retriever Dev run: best Hybrid reaches 218/273 complete Hit@5 vs BM25 215/273, but has lower MRR (0.5696 vs 0.5750) and McNemar `p=0.25`; retain BM25 |
 | A4 | Medium | `bm25_min_score` | `0.0` | Validation-set calibrated value | BM25 and Hybrid | Recall@K, MRR, abstention accuracy | Configuration available |
 | A5 | Medium | `rrf_k` | `60` | Validation-set alternatives | Hybrid | Recall@K, MRR | Configuration available |
 | A6 | Medium | `rrf_input_top_k` | `20` | Validation-set alternatives | Hybrid | Recall@K, MRR and latency | Configuration available |
 | A7 | Low | Final returned `top_k` | Configured default | Candidate values such as 3, 5 and 10 | All modes | Hit@K, Recall@K, MRR and latency | Configuration available |
-| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | Dev-only sweep through the shared project retriever; clean rerun required |
+| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | Dev-only shared-retriever sweep selects BGE Base Dense 0.05 / BM25 0.95 by the diagnostic ranking rule; it does not pass the baseline-replacement rule |
 | A9 | High | Embedding model | BM25 | Nine pinned dense models, including M5 BGE-M3, GTE-ModernBERT and Qwen3 | Dense and Hybrid | Hit@K, Recall@K, MRR, truncation diagnostics | Full revisions are passed to the shared loader; Jina/Nomic remote code is pinned; Qwen3 uses the `query` prompt |
 
 ## Dense Similarity Threshold
@@ -58,9 +58,12 @@ requires a new team-approved untouched split.
 
 The baseline replacement rule remains strict: replace BM25 only if a Dev
 candidate improves complete Hit@5, does not reduce MRR, and passes an exact
-paired McNemar test at `p < 0.05`. Superseded results produced by the notebook's
-former private BM25/RRF implementation are withdrawn; the decision must be
-recomputed from a clean shared-retriever run.
+paired McNemar test at `p < 0.05`. The clean shared-retriever run selects BGE
+Base Hybrid with Dense 0.05 / BM25 0.95 by complete Hit@5 followed by MRR. It
+improves complete Hit@5 from 215/273 to 218/273, but MRR falls from 0.5750 to
+0.5696 and the exact McNemar result is `p=0.25`; BM25 therefore remains the
+baseline. Superseded scores from the former notebook-local BM25/RRF
+implementation remain withdrawn.
 
 The four-book corpus remains `reportable=false`, Golden Evidence annotations
 remain `draft`, and the derived 273/68 split is reproducible but not an approved

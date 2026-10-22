@@ -1,0 +1,192 @@
+{
+  "schema_version": "m6-w6-v2-four-book-project-retriever-2",
+  "created_at_utc": "2026-10-22T16:56:34.613935+00:00",
+  "reportable": false,
+  "evaluation_set_version": "m6-v2-diagnostic-gold-341-v0.1.3-split-273-68-2026-10-22",
+  "gold_acceptance_policy": "user_accepted_for_m6_evaluation",
+  "source_annotation_status_counts": {
+    "draft": 341
+  },
+  "gold_annotation_version": [
+    "m3_gold_v0.1.3"
+  ],
+  "gold_row_count": 341,
+  "gold_evidence_span_count": 352,
+  "gold_sha256": "sha256:7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8",
+  "github_gold_sha256": "sha256:52d8bab9655ae2f4df2a8bf883a7cbc87acbe83dbb11af983bc228c1412839ad",
+  "gold_source_corpus_versions": [
+    "2.0.0-dev.m4-structure-v2-main-3553825",
+    "ck12-people-physics-2016-09-09"
+  ],
+  "gold_rebound_to_corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
+  "binding_sha256": "sha256:99b72302fd335676f5ff8b53516972db361e81eca97aa52b0ee050086b4c055e",
+  "git": {
+    "commit": "8bf226c1876ed1ae0bc7463e553cda93938f4686",
+    "dirty": false,
+    "snapshot_sha256": "5adf30336adf434d2588f5208e4ebb6386b5a2e680cc507dd56fd392d4392967"
+  },
+  "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
+  "method_config": {
+    "rrf_k": 60,
+    "rrf_input_top_k": 20,
+    "final_top_k": 10,
+    "bm25_stopwords": true,
+    "bm25_implementation": "cs30.retrieval.real.BM25Retriever",
+    "rrf_implementation": "cs30.retrieval.real.RRFRetriever"
+  },
+  "corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
+  "corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+  "corpus_manifest_hash": "sha256:d2bae925137e52e7381fc26fd241d7f9718f6dfd3beaa3b471281f14a24858c3",
+  "chunk_config_hash": "sha256:914659582bf24dd81618d55d18b9717e7e0a1d63ace5ff740966b2b0e924c191",
+  "required_textbook_ids": [
+    "openstax_college_physics_2e",
+    "openstax_physics",
+    "openstax_college_physics_ap_2e",
+    "ck12_peoples_physics_concepts"
+  ],
+  "included_textbook_ids": [
+    "openstax_college_physics_2e",
+    "openstax_physics",
+    "openstax_college_physics_ap_2e",
+    "ck12_peoples_physics_concepts"
+  ],
+  "corpus_zip_sha256": "sha256:074ff89686fe3649089329f7858505f7a68d228d0284a83394a0c0b5a547a592",
+  "m5_zip_sha256": "sha256:2851abf71164e131b9064de0e87385b3b7f38943cbfcbf420dad5a40c0bf8c3e",
+  "models": {
+    "minilm": {
+      "model": "sentence-transformers/all-MiniLM-L6-v2",
+      "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:b806be4a297e7d800bc04d0e1d7ae5d84f2b4b6c0086321f4bf7111315cdb1cb"
+    },
+    "mpnet": {
+      "model": "sentence-transformers/all-mpnet-base-v2",
+      "revision": "e8c3b32edf5434bc2275fc9bab85f82640a19130",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:8659395ab6f06bb2d3cede0d09fe310ec244b7ae651ab53d9b22e4e96d4b69d4"
+    },
+    "e5_base": {
+      "model": "intfloat/e5-base-v2",
+      "revision": "f52bf8ec8c7124536f0efb74aca902b2995e5bcd",
+      "trust_remote_code": false,
+      "query_instruction": "query: ",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:f8fc739d7c5fa1d86f7a3a91cc4839cbec8dd57c75c041e8acb1d17655de6f72"
+    },
+    "bge_base": {
+      "model": "BAAI/bge-base-en-v1.5",
+      "revision": "a5beb1e3e68b9ab74eb54cfd186867f64f240e1a",
+      "trust_remote_code": false,
+      "query_instruction": "Represent this sentence for searching relevant passages: ",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:90e1a4b8b5e566203b3eb8e62269493b7eac7f9fc5b02a99f2d41058fd0a90d1"
+    },
+    "jina": {
+      "model": "jinaai/jina-embeddings-v2-small-en",
+      "revision": "44e7d1d6caec8c883c2d4b207588504d519788d0",
+      "trust_remote_code": true,
+      "query_instruction": "",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:3b2f2645410c226a6aaf314effe15a948d0cc818f8999381c40a4573a16375f1"
+    },
+    "gte_modernbert": {
+      "model": "Alibaba-NLP/gte-modernbert-base",
+      "revision": "e7f32e3c00f91d699e8c43b53106206bcc72bb22",
+      "trust_remote_code": true,
+      "query_instruction": "",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:10b3fb1ee367077516e8d32d33df0f3d0f68dac86f85c684111370a0ac07099b"
+    },
+    "nomic": {
+      "model": "nomic-ai/nomic-embed-text-v1.5",
+      "revision": "e9b6763023c676ca8431644204f50c2b100d9aab",
+      "trust_remote_code": true,
+      "query_instruction": "search_query: ",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:884bc1464d520ea034291736da70c685668a336a2456054eb80a62edfdc587f2"
+    },
+    "bge_m3": {
+      "model": "BAAI/bge-m3",
+      "revision": "5617a9f61b028005a4858fdac845db406aefb181",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": null,
+      "index_sha256": "sha256:d6104872cb3a0135e5cd4dc50039e61e6c12ee76aab8cdc257589b5c0f39cb62"
+    },
+    "qwen3": {
+      "model": "Qwen/Qwen3-Embedding-0.6B",
+      "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+      "trust_remote_code": false,
+      "query_instruction": "",
+      "query_prompt_name": "query",
+      "index_sha256": "sha256:8ad02b46c320d840c009c75aebff2c487d1c90d789a3e8c54dd9c66665c18077"
+    }
+  },
+  "baseline_selection": {
+    "baseline_run_name": "bm25_bm25",
+    "candidate_run_name": "bge_base_hybrid_d0.05_b0.95",
+    "question_count": 273,
+    "baseline_complete_hits_at_5": 215,
+    "candidate_complete_hits_at_5": 218,
+    "baseline_mrr": 0.5750421536,
+    "candidate_mrr": 0.5696392232,
+    "baseline_only_hits": 0,
+    "candidate_only_hits": 3,
+    "exact_mcnemar_p": 0.25,
+    "selection_decision": "retain_bm25",
+    "selection_reason": "candidate did not pass the preregistered Dev replacement rule"
+  },
+  "diagnostic_configuration": {
+    "model": "bge_base",
+    "mode": "hybrid_d0.05_b0.95",
+    "dense_weight": 0.05,
+    "bm25_weight": 0.95,
+    "selected_on": "273-question diagnostic development only",
+    "selection_metric": "complete_hit_at_5 then mrr",
+    "holdout_used_for_selection": false
+  },
+  "dev_question_count": 273,
+  "diagnostic_holdout_question_count": 68,
+  "diagnostic_holdout_configuration_count": 2,
+  "diagnostic_holdout_policy": "BM25 and the Dev-selected hybrid only; no all-model holdout sweep",
+  "diagnostic_holdout_exposure_status": "previously exposed to 64 configurations in a superseded run",
+  "diagnostic_holdout_used_for_selection": false,
+  "final_test_status": "not run; requires a new team-approved untouched split",
+  "split_method": "deterministic textbook-quota evidence-component stratification",
+  "split_seed": "m6-v2-gold-v0.1.3-stratified-80-20",
+  "split_stratify_fields": [
+    "question_type",
+    "question_difficulty",
+    "source_split"
+  ],
+  "holdout_textbook_quotas": {
+    "openstax_college_physics_2e": 25,
+    "openstax_college_physics_ap_2e": 19,
+    "ck12_peoples_physics_concepts": 17,
+    "openstax_physics": 7
+  },
+  "holdout_question_ids_sha256": "sha256:684634162f4ad0d68816ec1fc457f2bd270c4e888a81d936971de8e0a68b432a",
+  "cross_split_evidence_chunk_count": 0,
+  "unanswerable_question_count": 0,
+  "result_file_sha256": {
+    "dev_summary.csv": "sha256:f0da82b4cf4d4a9f1a06a2b1cf3993318af1aa23e5c3d1a2ff555f6857757be8",
+    "dev_overall_ranked.csv": "sha256:f0da82b4cf4d4a9f1a06a2b1cf3993318af1aa23e5c3d1a2ff555f6857757be8",
+    "dev_grouped_summary.csv": "sha256:3cf2eb57e83810f632d552615d384ef3cdd1182cc193c6898fb5dee39ac84658",
+    "dev_baseline_comparison.csv": "sha256:0bde5786629ca34fbaf9891a9b908e5fff2399f00ae41b413cba3d5c8f476b67",
+    "diagnostic_holdout_summary.csv": "sha256:a319cb8ab76b574e72d717cd42a6a51b322c19ac4bdd98cdaaa8946b9a79a541",
+    "truncation_diagnostics.csv": "sha256:09c64a4f08dc7872ce62734f563259ba70878638731de47084f489ccbe2f551d",
+    "evaluation_split_assignments.jsonl": "sha256:d9a78575c64d14ef7ea07f02817ada911d55fde541fd9a565d408ced7b1ca6d0",
+    "gold_span_bindings.jsonl": "sha256:34aaae062ee9b8a5a584b71bf82331051617798a0e13249f45fdcf774917be71"
+  },
+  "limitations": [
+    "the 273/68 split is diagnostic and not team-approved as a final split",
+    "the 68-question holdout was exposed to all configurations in a superseded run",
+    "development corpus is reportable=false",
+    "Gold annotation status is draft",
+    "all questions are answerable"
+  ]
+}
