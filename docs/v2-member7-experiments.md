@@ -11,24 +11,31 @@ judge、人工校准和评分报告；修改 rubric 不改变 M7 的输入摘要
 
 ## 准备输入
 
-获取团队已发布的开发数据并验证摘要：
+获取团队已发布的开发数据并验证摘要：M3 Gold v0.1.3、M4 四本书语料
+（`2.0.0-dev.m4-four-book-main-a1fe99e`）和对应的四本书 Role 包。
 
 ```bash
 python scripts/fetch_v2_experiment_inputs.py --output-dir artifacts/v2-experiment-inputs
 python -m cs30.v2.experiment_cli convert-gold \
-  --gold artifacts/v2-experiment-inputs/gold_v0_1_1_integrated.jsonl \
-  --corpus-dir artifacts/v2-experiment-inputs/corpus-release \
+  --gold artifacts/v2-experiment-inputs/gold_v0_1_3.jsonl \
+  --corpus-dir artifacts/v2-experiment-inputs/2.0.0-dev.m4-four-book-main-a1fe99e \
   --split-map docs/examples/v2-m7-provisional-splits.json \
-  --output-dir artifacts/v2-experiment-inputs/converted-provisional
+  --output-dir artifacts/v2-experiment-inputs/converted-v0.1.3
 ```
 
 转换保留参考答案、原始章节坐标和证据注释；只有 chapter/block/原文精确唯一匹配时才绑定。
 `pending → dev`、`proposed_test → test` 是开发临时映射，不构成正式划分批准。
-已有 26 题 Test 暴露情况仍需披露。Gold 参考答案不会进入模型提示词。
+v0.1.3 有 311 题 pending、30 题 proposed_test；其中 26 题 Test 已在 M6 诊断中暴露，仍需披露。
+82 题的证据来自 CK-12，只能在四本书语料上绑定。Gold 参考答案不会进入模型提示词。
 
-Role 包使用团队 [V2 Role 开发 Release](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-role-labels-v2-dev-v1)，
-核对发布摘要后传入解压的 Role manifest。要求所有候选 chunk 都有匹配标签；只有诊断运行才
-允许显式 `--allow-missing-roles`。已有 Role 包主要由模型标注，未完成独立人工验证。
+输入已从 Gold v0.1.2 + 三本书语料换成 v0.1.3 + 四本书语料。2026-10-17 的 Dev 运行及其
+lambda 选择基于旧输入，不能与新输入的结果直接比较；新输入需要重新做 Dev 选择。
+
+Role 包使用团队 [四本书 V2 Role 开发 Release](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-role-labels-v2-four-book-dev-v1)，
+下载脚本已核对摘要，`--role-manifest` 传
+`artifacts/v2-experiment-inputs/role_labels_v2_provenance_manifest.json`。要求所有候选 chunk
+都有匹配标签；只有诊断运行才允许显式 `--allow-missing-roles`。Role 包主要由模型标注，
+未完成独立人工验证。
 
 若需新标注，可使用 `role-template` 导出候选及空白 Role，再用 `import-roles` 打包真实填写的
 标注。这两个命令不会伪造标注。原生检索候选也可通过 `prepare --retrieval` 提供；
@@ -36,14 +43,14 @@ Role 包使用团队 [V2 Role 开发 Release](https://github.com/yshe0376/cs30-p
 
 ## Dev 选择正 lambda
 
-先冻结开发候选（将示例中的 Role manifest 路径替换为实际已校验的包）：
+先冻结开发候选：
 
 ```bash
 python -m cs30.v2.experiment_cli prepare \
-  --corpus-dir artifacts/v2-experiment-inputs/corpus-release \
-  --gold artifacts/v2-experiment-inputs/converted-provisional/gold.jsonl \
-  --gold-conversion-manifest artifacts/v2-experiment-inputs/converted-provisional/conversion_manifest.json \
-  --role-manifest artifacts/role-v2/role_manifest.json \
+  --corpus-dir artifacts/v2-experiment-inputs/2.0.0-dev.m4-four-book-main-a1fe99e \
+  --gold artifacts/v2-experiment-inputs/converted-v0.1.3/gold.jsonl \
+  --gold-conversion-manifest artifacts/v2-experiment-inputs/converted-v0.1.3/conversion_manifest.json \
+  --role-manifest artifacts/v2-experiment-inputs/role_labels_v2_provenance_manifest.json \
   --model gpt-oss:20b --split dev --candidate-k 20 --evidence-k 5 \
   --output-dir artifacts/v2-dev-candidates
 python -m cs30.v2.experiment_cli select-lambda \
@@ -55,17 +62,17 @@ python -m cs30.v2.experiment_cli select-lambda \
 `lambda > 0` 且 `complete_hit_rate(lambda) >= complete_hit_rate(0) - 0.01`
 的候选中选择最大的 lambda。span 覆盖率作为审计指标记录，不改变该选择规则。
 没有合格正值就报错。此处 0.01 是绝对 1 个百分点，不是相对下降 1%。
-2026-10-16 的冻结 Dev 网格按新规则应选择 0.2；正式运行以保存的选择文件为准。
+2026-10-16 的冻结 Dev 网格（旧输入）按新规则应选择 0.2；正式运行以保存的选择文件为准。
 Test 禁止调参，只能复用匹配语料、Gold、Role 和参数的 Dev 选择。
 
 使用选择结果重新准备最终输入：
 
 ```bash
 python -m cs30.v2.experiment_cli prepare \
-  --corpus-dir artifacts/v2-experiment-inputs/corpus-release \
-  --gold artifacts/v2-experiment-inputs/converted-provisional/gold.jsonl \
-  --gold-conversion-manifest artifacts/v2-experiment-inputs/converted-provisional/conversion_manifest.json \
-  --role-manifest artifacts/role-v2/role_manifest.json \
+  --corpus-dir artifacts/v2-experiment-inputs/2.0.0-dev.m4-four-book-main-a1fe99e \
+  --gold artifacts/v2-experiment-inputs/converted-v0.1.3/gold.jsonl \
+  --gold-conversion-manifest artifacts/v2-experiment-inputs/converted-v0.1.3/conversion_manifest.json \
+  --role-manifest artifacts/v2-experiment-inputs/role_labels_v2_provenance_manifest.json \
   --selected-lambda artifacts/v2-dev-lambda.json \
   --model gpt-oss:20b --split dev --output-dir artifacts/v2-dev-final
 python -m cs30.v2.experiment_cli check --prepared-dir artifacts/v2-dev-final
