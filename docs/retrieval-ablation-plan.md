@@ -13,12 +13,12 @@ final evaluation.
 |---|---|---|---|---|---|---|---|
 | A1 | ★ | `dense_min_similarity` | `None` (disabled) | A threshold calibrated on the validation set | Dense and Hybrid | Recall@K, MRR, abstention precision, abstention recall, abstention F1 | Pending evaluation dataset |
 | A2 | High | BM25 query stopword filtering | Disabled | Enabled | BM25 and Hybrid | Recall@K, MRR, out-of-scope abstention accuracy | Configuration available (`retrieval.bm25_stopwords`) |
-| A3 | High | Retrieval mode | BM25 | Dense and Hybrid RRF | All modes | Recall@K, Hit@K, MRR | W6 Dev retains BM25: best Hybrid is 136/162 vs 134/162 complete Hit@5, but has lower MRR and exact paired McNemar `p=0.50` |
+| A3 | High | Retrieval mode | BM25 | Dense and Hybrid RRF | All modes | Recall@K, Hit@K, MRR | Four-book Dev: BGE-M3 Hybrid reaches 216/273 vs BM25 213/273 complete Hit@5, but MRR is 0.5703 vs 0.5729; BM25 remains the baseline under the replacement rule |
 | A4 | Medium | `bm25_min_score` | `0.0` | Validation-set calibrated value | BM25 and Hybrid | Recall@K, MRR, abstention accuracy | Configuration available |
 | A5 | Medium | `rrf_k` | `60` | Validation-set alternatives | Hybrid | Recall@K, MRR | Configuration available |
 | A6 | Medium | `rrf_input_top_k` | `20` | Validation-set alternatives | Hybrid | Recall@K, MRR and latency | Configuration available |
 | A7 | Low | Final returned `top_k` | Configured default | Candidate values such as 3, 5 and 10 | All modes | Hit@K, Recall@K, MRR and latency | Configuration available |
-| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | W6: six weights evaluated on Dev; BGE-M3 `0.10/0.90` is diagnostic and was not selected by the Dev replacement rule |
+| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | Six weights evaluated on four-book Dev; BGE-M3 `0.10/0.90` is the diagnostic lexicographic winner but does not replace BM25 because MRR decreases |
 | A9 | High | Embedding model | BM25 | Nine pinned dense models, including M5 BGE-M3, GTE-ModernBERT and Qwen3 | Dense and Hybrid | Hit@K, Recall@K, MRR, truncation diagnostics | W6: revisions pinned and propagated through custom loaders; source and copied FAISS hashes validated; Qwen3 query prompt recorded |
 
 ## Dense Similarity Threshold
@@ -44,21 +44,25 @@ RRF fusion. The RRF calculation itself remains unchanged.
 
 ## Dev and Test separation
 
-The current M6 v2 dataset is a provisional three-textbook working set. It maps
-162 `pending` questions to Dev and 26 `proposed_test` questions to Test. The
-formal six-textbook target remains 60 Dev and 180 Test questions. Model and
-RRF-weight comparisons use Dev only.
+The current M6 W6 four-book experiment uses Golden Evidence v0.1.3 with 341
+answerable questions. It deterministically derives 273 Dev and 68 stratified
+Test questions while keeping questions that share a rebound evidence chunk in
+the same split. The split has zero exact-evidence overlap. Model and weight
+comparisons use Dev. The notebook's diagnostic lexicographic rule (complete
+evidence Hit@5 followed by MRR) identifies BGE-M3 Hybrid with Dense 0.10 / BM25
+0.90, and records that candidate on the 68-question Test split.
 
-The 26-question Test set was previously evaluated across all 64 configurations,
-so it is already exposed and is not a pristine one-time Test. The current W6
-notebook reports BM25 and BGE-M3 Hybrid (Dense 0.10 / BM25 0.90) on those same
-questions only as a diagnostic comparison. These Test results must not be used
-to select or retune the model or weights.
+The baseline replacement rule remains stricter: replace BM25 only if a Dev
+candidate improves complete Hit@5, does not reduce MRR, and passes an exact
+paired McNemar test at `p < 0.05`. On four-book Dev, BGE-M3 improves complete
+Hit@5 from 213/273 to 216/273 but reduces MRR from 0.5729 to 0.5703, so it does
+not replace BM25 as the baseline. The all-model Test table is exploratory and
+must not be used to retune or override this rule.
 
-The baseline replacement rule is fixed before reading the diagnostic Test
-comparison: replace BM25 only if a Dev candidate improves complete Hit@5, does
-not reduce MRR, and passes an exact paired McNemar test at `p < 0.05`. The
-current best Hybrid does not pass this rule, so BM25 remains the baseline.
+The four-book corpus remains `reportable=false`, Golden Evidence annotations
+remain `draft`, and the derived 273/68 split is reproducible but not an approved
+frozen release split. The earlier 162/26 three-book result remains historical
+and is not the current M6 W6 comparison.
 
 ## Calibration Procedure
 

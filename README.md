@@ -10,6 +10,21 @@ The current milestone is `v0.1-thin-slice`: a small OpenStax Physics path used
 to validate the engineering workflow. It does not report formal retrieval or
 model-effectiveness results.
 
+## M6 W6 four-book retrieval experiment
+
+The current nine-model retrieval comparison is in
+[`M6_W6_v2_retrieval_dev_test_full.ipynb`](M6_W6_v2_retrieval_dev_test_full.ipynb).
+It uses the four-book M4 corpus, the matching M5 index handoff, Golden Evidence
+v0.1.3, and a deterministic 273 Dev / 68 Test split. Lightweight result tables
+and the provenance manifest are under
+[`docs/results/m6_w6_v2_four_book_gold_v0_1_3/`](docs/results/m6_w6_v2_four_book_gold_v0_1_3/).
+Exact input names, hashes, and setup instructions are documented in
+[`eval_inputs/m6_v2/README.md`](eval_inputs/m6_v2/README.md).
+
+These results are diagnostic, not formally reportable: the supplied corpus is
+marked `reportable=false`, Golden Evidence annotations are `draft`, and the
+derived split has not been approved as a frozen release split.
+
 ## Code repository scope
 
 This is the source of truth for the project's code and engineering interfaces,
