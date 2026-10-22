@@ -18,7 +18,7 @@ final evaluation.
 | A5 | Medium | `rrf_k` | `60` | Validation-set alternatives | Hybrid | Recall@K, MRR | Configuration available |
 | A6 | Medium | `rrf_input_top_k` | `20` | Validation-set alternatives | Hybrid | Recall@K, MRR and latency | Configuration available |
 | A7 | Low | Final returned `top_k` | Configured default | Candidate values such as 3, 5 and 10 | All modes | Hit@K, Recall@K, MRR and latency | Configuration available |
-| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | BGE Base Dense 0.05 / BM25 0.95 is the Dev metric winner; the team selected BGE-M3 Dense 0.10 / BM25 0.90 provisionally for downstream generator evaluation; neither changes the formal BM25 baseline |
+| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | BGE Base Dense 0.05 / BM25 0.95 is the Dev metric winner; the team selected BGE-M3 Dense 0.10 / BM25 0.90 provisionally for downstream generator evaluation; low-Dense settings mainly rerank BM25 candidates; neither changes the formal BM25 baseline |
 | A9 | High | Embedding model | BM25 | Nine pinned dense models, including M5 BGE-M3, GTE-ModernBERT and Qwen3 | Dense and Hybrid | Hit@K, Recall@K, MRR, truncation diagnostics | Full revisions are passed to the shared loader; Jina/Nomic remote code is pinned; Qwen3 uses the `query` prompt |
 
 ## Dense Similarity Threshold
@@ -42,6 +42,21 @@ below the configured threshold is removed before ranks are assigned.
 In Hybrid mode, the threshold applies only to the Dense candidate list before
 RRF fusion. The RRF calculation itself remains unchanged.
 
+## Weighted RRF interpretation
+
+The experiment uses `rrf_k=60`, `rrf_input_top_k=20`, and returns at most 10
+chunks. For every tested Hybrid with Dense weight at most 0.25, the best possible
+Dense-only score is lower than the weakest BM25-only score in the 20-candidate
+input: `dense_weight / 61 < bm25_weight / 80`. Provided BM25 returns all 20
+candidates, a Dense-only chunk therefore cannot enter the fused top 10. Dense
+can still change the ordering by boosting chunks found in both top-20 lists.
+
+Accordingly, the winning low-Dense configurations should be described as using
+Dense overlap to rerank the BM25 candidate set, not as demonstrating that Dense
+introduced new evidence chunks into the final top 10. Evaluating that different
+mechanism would require another fusion design or candidate-depth/weight
+ablation selected on Dev.
+
 ## Dev and Test separation
 
 The current M6 W6 four-book experiment uses Golden Evidence v0.1.3 with 341
@@ -56,16 +71,17 @@ runs only BM25 and the team-selected provisional BGE-M3 Hybrid configuration on
 that holdout, marks the result diagnostic, and does not use it for selection. A
 final paper result requires a new team-approved untouched split.
 
-The baseline replacement rule remains strict: replace BM25 only if a Dev
-candidate improves complete Hit@5, does not reduce MRR, and passes an exact
-paired McNemar test at `p < 0.05`. The clean shared-retriever run selects BGE
-Base Hybrid with Dense 0.05 / BM25 0.95 by complete Hit@5 followed by MRR. The
-team nevertheless selected BGE-M3 Dense 0.10 / BM25 0.90 as a provisional
-candidate for the downstream generator experiment; that choice is not reported
-as the retrieval metric winner and does not change the formal baseline. BGE Base
-improves complete Hit@5 from 215/273 to 218/273, but MRR falls from 0.5750 to
-0.5696 and the exact McNemar result is `p=0.25`; BM25 therefore remains the
-baseline. Superseded scores from the former notebook-local BM25/RRF
+The baseline replacement rule remains strict: replace BM25 only if the Dev
+metric winner improves complete Hit@5, does not reduce MRR, and passes an exact
+paired McNemar test at `p < 0.05`. The clean shared-retriever run identifies BGE
+Base Hybrid with Dense 0.05 / BM25 0.95 as that metric winner. It improves
+complete Hit@5 from 215/273 to 218/273, but MRR falls from 0.5750 to 0.5696 and
+the exact McNemar result is `p=0.25`; BM25 therefore remains the baseline.
+
+The team separately selected BGE-M3 Dense 0.10 / BM25 0.90 as a provisional
+candidate for the downstream generator experiment. Its paired comparison with
+BM25 is reported separately (`p=0.7539`) and does not control the formal baseline
+decision. Superseded scores from the former notebook-local BM25/RRF
 implementation remain withdrawn.
 
 The four-book corpus remains `reportable=false`, Golden Evidence annotations
