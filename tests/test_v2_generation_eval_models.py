@@ -20,7 +20,14 @@ from cs30.evaluation.v2_generation_models import (
     GenerationEvaluationInput,
     JudgeConfiguration,
     PersonalisationEligibility,
+    canonical_model_family,
 )
+
+
+def test_gemini_revisions_share_one_model_family() -> None:
+    assert canonical_model_family("gemini") == "gemini"
+    assert canonical_model_family("models/gemini-3.1-flash-lite") == "gemini"
+    assert canonical_model_family("gemini-3.8-pro") == "gemini"
 
 
 def _profile(level: str) -> dict[str, object]:
@@ -232,6 +239,18 @@ def test_judge_configuration_blocks_unapproved_or_same_family_use() -> None:
             local_model=True,
             data_approval=ApprovalStatus.NOT_REQUIRED,
             role_label_model_families=["qwen"],
+        )
+    with pytest.raises(ValueError, match="freeze thinking_level"):
+        JudgeConfiguration(
+            config_version="gemini-v1",
+            provider="gemini",
+            model_family="gemini",
+            model_revision="gemini-3.1-flash-lite",
+            temperature=1,
+            prompt_version="prompt-v1",
+            output_schema_version="1.0",
+            local_model=False,
+            data_approval=ApprovalStatus.APPROVED,
         )
 
 

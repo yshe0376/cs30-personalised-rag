@@ -48,6 +48,7 @@ class JudgeProviderResponse:
     reported_model: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    thought_tokens: int = 0
 
 
 _OUTPUT_MODELS: dict[JudgeTask, type[BaseModel]] = {
@@ -196,11 +197,17 @@ class StructuredJsonJudgeProvider:
             reported_model=response.model,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
+            thought_tokens=int(getattr(response, "thought_tokens", 0)),
         )
 
 
 def configuration_sha256(configuration: JudgeConfiguration) -> str:
-    return canonical_json_sha256(configuration.model_dump(mode="json"))
+    payload = configuration.model_dump(mode="json")
+    # thinking_level only exists for Gemini. Leaving an unset value out keeps every
+    # earlier non-Gemini configuration hash, and the requests and caches bound to it, valid.
+    if payload.get("thinking_level") is None:
+        payload.pop("thinking_level", None)
+    return canonical_json_sha256(payload)
 
 
 def make_judge_request(
@@ -499,6 +506,7 @@ class CachedJudgeRunner:
                 reported_model=last_response.reported_model,
                 input_tokens=last_response.input_tokens,
                 output_tokens=last_response.output_tokens,
+                thought_tokens=last_response.thought_tokens,
             )
         if not envelope.unresolved:
             _append_cache(self.cache_path, envelope)

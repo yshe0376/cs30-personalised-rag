@@ -324,7 +324,11 @@ def adapt_m7_generation_artifacts(
     gold = _index(gold_rows, "question_id", "Gold")
     eligibility_rows = _index(_read_jsonl(eligibility_path), "question_id", "eligibility")
     expected_questions = {str(case["question_id"]) for case in cases.values()}
-    _assert_exact_coverage(expected_questions, set(eligibility_rows), "eligibility")
+    missing_eligibility = expected_questions - set(eligibility_rows)
+    if missing_eligibility:
+        raise ValueError(
+            f"eligibility is missing expected questions: {sorted(missing_eligibility)}"
+        )
     missing_gold = expected_questions - set(gold)
     if missing_gold:
         raise ValueError(f"Gold is missing expected questions: {sorted(missing_gold)}")

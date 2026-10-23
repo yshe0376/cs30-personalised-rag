@@ -105,6 +105,51 @@ def test_cli_live_adapter_passes_strict_judge_schema(tmp_path, monkeypatch):
     assert read_jsonl(output / "open_answer_scores.jsonl")[0]["score"] == 2
 
 
+def test_cli_can_select_gemini_for_open_answer_judging(tmp_path, monkeypatch):
+    args, output = inputs(tmp_path, answer="slowing down")
+    client = JudgeClient(assessment())
+    captured = {}
+
+    def client_factory(*_args, **kwargs):
+        captured.update(kwargs)
+        return client
+
+    monkeypatch.setattr(
+        "cs30.evaluation.open_answer_cli.GeminiJudgeClient", client_factory
+    )
+
+    assert main(args + ["--provider", "gemini", "--model", "gemini-test"]) == 0
+
+    assert len(client.prompts) == 1
+    manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["provider"] == "gemini"
+    assert captured["temperature"] == 1.0
+    assert captured["thinking_level"] == "high"
+    assert captured["max_output_tokens"] == 8192
+
+
+def test_cli_temperature_defaults_per_provider_and_is_configurable(tmp_path, monkeypatch):
+    captured = {}
+
+    def client_factory(*_args, **kwargs):
+        captured.update(kwargs)
+        return JudgeClient(assessment())
+
+    monkeypatch.setattr("cs30.evaluation.open_answer_cli.OllamaChatClient", client_factory)
+    (tmp_path / "default").mkdir()
+    args, _ = inputs(tmp_path / "default", answer="slowing down")
+    assert main(args + ["--provider", "ollama", "--model", "judge-v1"]) == 0
+    assert captured["temperature"] == 0.0
+
+    (tmp_path / "override").mkdir()
+    args, _ = inputs(tmp_path / "override", answer="slowing down")
+    assert (
+        main(args + ["--provider", "ollama", "--model", "judge-v1", "--temperature", "0.7"])
+        == 0
+    )
+    assert captured["temperature"] == 0.7
+
+
 @pytest.mark.parametrize("change", ["gold", "rubrics"])
 def test_cli_rejects_changed_input_before_calling_provider(tmp_path, monkeypatch, change):
     args, output = inputs(tmp_path)
