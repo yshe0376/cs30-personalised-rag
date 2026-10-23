@@ -1,8 +1,9 @@
 {
-  "schema_version": "m6-w6-v2-four-book-project-retriever-2",
-  "created_at_utc": "2026-10-22T18:03:34.595563+00:00",
+  "schema_version": "m6-w6-v2-four-book-project-retriever-3",
+  "created_at_utc": "2026-10-23T10:09:40.136737+00:00",
   "reportable": false,
-  "evaluation_set_version": "m6-v2-diagnostic-gold-341-v0.1.3-split-273-68-2026-10-22",
+  "evaluation_set_version": "m6-v2-diagnostic-gold-341-v0.1.3-original-split-273-68-exposed-2026-10-23",
+  "query_set": "original",
   "gold_acceptance_policy": "user_accepted_for_m6_evaluation",
   "source_annotation_status_counts": {
     "draft": 341
@@ -13,6 +14,7 @@
   "gold_row_count": 341,
   "gold_evidence_span_count": 352,
   "gold_sha256": "sha256:7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8",
+  "original_gold_sha256": "sha256:7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8",
   "github_gold_sha256": "sha256:52d8bab9655ae2f4df2a8bf883a7cbc87acbe83dbb11af983bc228c1412839ad",
   "gold_source_corpus_versions": [
     "2.0.0-dev.m4-structure-v2-main-3553825",
@@ -21,9 +23,10 @@
   "gold_rebound_to_corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
   "binding_sha256": "sha256:99b72302fd335676f5ff8b53516972db361e81eca97aa52b0ee050086b4c055e",
   "git": {
-    "commit": "5c57d6cf550cdd3b4540f1aa62a432f40f7179a2",
+    "commit": "cd3ef1eaad7f5d4a5c6a6548bdee5fe386b42dd8",
+    "checkpoint_generation_commit": "768d0b300ec526ee58238e0b81b626851d6aa4e2",
     "dirty": false,
-    "snapshot_sha256": "e5fdc63e41ade32d16225a1709cd354e76010fd339fefda35691718dd14000ac"
+    "snapshot_sha256": "4c7cb03b0e64048c4a9494dbf9891847be950115853d562a57be27ce4277bea0"
   },
   "project_retriever": "cs30.pipeline.build_real_retrieval_deps",
   "method_config": {
@@ -143,11 +146,11 @@
     "selection_decision": "retain_bm25",
     "selection_reason": "candidate did not pass the preregistered Dev replacement rule"
   },
-  "provisional_candidate_comparison": {
-    "comparison_role": "team_selected_provisional",
+  "system_retriever_baseline_comparison": {
+    "comparison_role": "system_retriever_joint_robustness_rule",
     "baseline_run_name": "bm25_bm25",
     "candidate_run_name": "bge_m3_hybrid_d0.10_b0.90",
-    "candidate_selection_basis": "team-selected provisional retriever for downstream generator evaluation",
+    "candidate_selection_basis": "team system decision after joint original/para-v1 Dev review on 2026-10-23; BGE-M3 is retained for the downstream M7 handoff and is not described as the joint metric winner",
     "question_count": 273,
     "baseline_complete_hits_at_5": 215,
     "candidate_complete_hits_at_5": 217,
@@ -243,21 +246,32 @@
     "partial_evidence_count_at_5_defined_count": 273,
     "partial_evidence_count_at_10_defined_count": 273
   },
+  "system_retriever_selection": {
+    "primary_metric": "combined original+para-v1 Dev Complete Hit@5",
+    "tie_breaker": "question-count-weighted mean MRR",
+    "joint_metric_winner_run_name": "qwen3_hybrid_d0.10_b0.90",
+    "selected_run_name": "bge_m3_hybrid_d0.10_b0.90",
+    "selected_joint_rank": 2,
+    "selection_type": "documented_team_operational_decision",
+    "selection_basis": "team system decision after joint original/para-v1 Dev review on 2026-10-23; BGE-M3 is retained for the downstream M7 handoff and is not described as the joint metric winner",
+    "decision_date": "2026-10-23",
+    "statistical_superiority_claimed": false
+  },
   "diagnostic_configuration": {
     "model": "bge_m3",
     "mode": "hybrid_d0.10_b0.90",
     "dense_weight": 0.1,
     "bm25_weight": 0.9,
-    "selected_on": "team decision after the 273-question Dev comparison",
-    "selection_basis": "team-selected provisional retriever for downstream generator evaluation",
-    "selection_status": "provisional_not_metric_winner",
+    "selected_on": "joint original and para-v1 273-question Dev comparison",
+    "selection_basis": "team system decision after joint original/para-v1 Dev review on 2026-10-23; BGE-M3 is retained for the downstream M7 handoff and is not described as the joint metric winner",
+    "selection_status": "selected_by_team_after_joint_robustness_review",
     "metric_winner_run_name": "bge_base_hybrid_d0.05_b0.95",
     "holdout_used_for_selection": false
   },
   "dev_question_count": 273,
   "diagnostic_holdout_question_count": 68,
   "diagnostic_holdout_configuration_count": 2,
-  "diagnostic_holdout_policy": "BM25 and the team-selected provisional BGE-M3 hybrid only; no all-model holdout sweep",
+  "diagnostic_holdout_policy": "BM25 and the BGE-M3 0.10/0.90 system retriever only; no all-model holdout sweep",
   "diagnostic_holdout_exposure_status": "previously exposed to 64 configurations in a superseded run",
   "diagnostic_holdout_used_for_selection": false,
   "final_test_status": "not run; requires a new team-approved untouched split",
@@ -281,11 +295,15 @@
     "dev_summary.csv": "sha256:650faef9ce8bb2afbf1700468bfd7b727a02ac85871ac07aa4a6474a3b7893c8",
     "dev_overall_ranked.csv": "sha256:650faef9ce8bb2afbf1700468bfd7b727a02ac85871ac07aa4a6474a3b7893c8",
     "dev_grouped_summary.csv": "sha256:b91d9bcd124509994e026a108ab6284efce365d8e3278628af93a37b2f4fbfff",
-    "dev_baseline_comparison.csv": "sha256:7e52ca73cbdd36e08e2aea9184fe5274b444e06c1051350a343761ab85ccab2e",
+    "dev_baseline_comparison.csv": "sha256:55009c3d17f985e7787614a60ba7dffa8cccbfeb597f84631130ead65d555681",
     "diagnostic_holdout_summary.csv": "sha256:e88da702862d2d8a36e175d17df36ab5b3adedfea381f32610defb7226adcbd7",
     "truncation_diagnostics.csv": "sha256:78a7ecce555891d1f6ca59a993568af8bfb40f5dabc335072953030bc5c2ea5f",
     "evaluation_split_assignments.jsonl": "sha256:dec061827a146746189711cab22fb47c52be12bef9d79c6e9447b9b6a3f2b2ed",
-    "gold_span_bindings.jsonl": "sha256:58886f17b485fadf48df40f7f6aebad9c92ef1a209ae9cf8408716abdfc910b3"
+    "gold_span_bindings.jsonl": "sha256:58886f17b485fadf48df40f7f6aebad9c92ef1a209ae9cf8408716abdfc910b3",
+    "dev_rule1_selection.csv": "sha256:da949dc0505cc058bb5dc752eff076c88fe953662dad43f50874420bfe109f8f",
+    "dev_paired_bm25_vs_bge_m3_summary.csv": "sha256:0aa277455e5f099cce43cfd3779fb2ebbbb6f38a27bd6d74dd0f1ceebf1398fe",
+    "dev_paired_bm25_vs_bge_m3_questions.csv": "sha256:b263669bdf8f39a5d5753abb67eb6f9849d2b5a03b60561c202155c00370e8bc",
+    "m7_bge_m3_d0.10_b0.90_original_top20_manifest.json": "sha256:20510ab518a0c620c419503f41dc3634f2bc334c02fc9c26526b8666bad4b6a2"
   },
   "limitations": [
     "the 273/68 split is diagnostic and not team-approved as a final split",

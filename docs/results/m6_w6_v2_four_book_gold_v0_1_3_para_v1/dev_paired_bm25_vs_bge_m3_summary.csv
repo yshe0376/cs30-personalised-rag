@@ -1,0 +1,3 @@
+query_set,question_count,baseline_complete_hits_at_5,candidate_complete_hits_at_5,baseline_only_hits,candidate_only_hits,exact_mcnemar_p,baseline_mrr,candidate_mrr,mrr_difference,mrr_difference_bootstrap_95_ci_low,mrr_difference_bootstrap_95_ci_high
+original,273,215,217,4,6,0.75390625,0.5750421536135821,0.5459212744927031,-0.029120879120879118,-0.04880374585731729,-0.011224271759986066
+para_v1,273,178,182,3,7,0.34375,0.4582243153671725,0.4601386708529565,0.0019143554857840553,-0.018877732717018435,0.021867877492877462
