@@ -91,7 +91,18 @@ def _parser() -> argparse.ArgumentParser:
     )
     score.add_argument("--cache-dir", type=Path)
     score.add_argument("--timeout", type=float, default=120.0)
-    score.add_argument("--max-output-tokens", type=int, default=2048)
+    score.add_argument(
+        "--max-output-tokens",
+        type=int,
+        help="provider output limit; defaults to 8192 for Gemini and 2048 otherwise",
+    )
+    score.add_argument("--temperature", type=float, default=1.0)
+    score.add_argument(
+        "--thinking-level",
+        choices=("minimal", "low", "medium", "high"),
+        default="high",
+        help="fixed Gemini reasoning level recorded in the judge configuration",
+    )
     score.add_argument("--max-retries", type=int, default=1)
     score.add_argument(
         "--allow-self-judge",
@@ -120,8 +131,16 @@ def main(argv: list[str] | None = None) -> int:
         if args.output_dir.exists():
             raise ValueError("output directory already exists; keep original reports immutable")
         if args.command == "score":
-            if not math.isfinite(args.timeout) or args.timeout <= 0 or args.max_output_tokens <= 0:
-                raise ValueError("judge timeout and output token limit must be finite and positive")
+            if (
+                not math.isfinite(args.timeout)
+                or args.timeout <= 0
+                or (args.max_output_tokens is not None and args.max_output_tokens <= 0)
+                or not math.isfinite(args.temperature)
+                or args.temperature < 0
+            ):
+                raise ValueError(
+                    "judge timeout/output limit must be positive and temperature nonnegative"
+                )
             snapshots = {
                 name: getattr(args, name).read_bytes()
                 for name in ("gold", "rubrics", "runs", "expected_manifest")
@@ -152,11 +171,20 @@ def main(argv: list[str] | None = None) -> int:
                     "gemini": GeminiJudgeClient,
                 }
                 client_type = client_types[args.provider]
+                max_output_tokens = args.max_output_tokens or (
+                    8192 if args.provider == "gemini" else 2048
+                )
+                provider_options = (
+                    {"thinking_level": args.thinking_level}
+                    if args.provider == "gemini"
+                    else {}
+                )
                 client = client_type(
                     args.model,
                     timeout_seconds=args.timeout,
-                    max_output_tokens=args.max_output_tokens,
-                    temperature=0.0,
+                    max_output_tokens=max_output_tokens,
+                    temperature=args.temperature,
+                    **provider_options,
                 )
             scorer = OpenAnswerScorer(
                 client,

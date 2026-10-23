@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from cs30.generation.client import LLMResponse, TokenUsage
@@ -13,6 +14,13 @@ from cs30.generation.exceptions import (
     LLMProviderError,
     LLMTimeoutError,
 )
+
+
+@dataclass(frozen=True)
+class GeminiJudgeResponse(LLMResponse):
+    """Shared response plus Gemini's separately reported reasoning-token count."""
+
+    thought_tokens: int = 0
 
 
 class GeminiJudgeClient:
@@ -25,10 +33,11 @@ class GeminiJudgeClient:
         model: str,
         *,
         api_key: str | None = None,
-        temperature: float | None = 0.0,
+        temperature: float | None = 1.0,
         timeout_seconds: float = 120.0,
-        max_output_tokens: int = 2048,
+        max_output_tokens: int = 8192,
         seed: int | None = None,
+        thinking_level: str = "high",
         sdk_client: Any | None = None,
     ) -> None:
         self.model = model.strip()
@@ -36,12 +45,15 @@ class GeminiJudgeClient:
         self.timeout_seconds = timeout_seconds
         self.max_output_tokens = max_output_tokens
         self.seed = seed
+        self.thinking_level = thinking_level.strip().casefold()
         if not self.model:
             raise ValueError("model must not be empty")
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         if max_output_tokens <= 0:
             raise ValueError("max_output_tokens must be positive")
+        if self.thinking_level not in {"minimal", "low", "medium", "high"}:
+            raise ValueError("thinking_level must be minimal, low, medium, or high")
 
         if sdk_client is not None:
             self._client = sdk_client
@@ -65,7 +77,13 @@ class GeminiJudgeClient:
             ) from exc
         self._client = genai.Client(
             api_key=resolved_key,
-            http_options=types.HttpOptions(timeout=round(timeout_seconds * 1000)),
+            http_options=types.HttpOptions(
+                timeout=round(timeout_seconds * 1000),
+                retry_options=types.HttpRetryOptions(
+                    attempts=5,
+                    http_status_codes=[408, 429, *range(500, 600)],
+                ),
+            ),
         )
 
     def complete(self, prompt: str, text_format: dict) -> LLMResponse:
@@ -78,6 +96,7 @@ class GeminiJudgeClient:
             "max_output_tokens": self.max_output_tokens,
             "response_mime_type": "application/json",
             "response_json_schema": dict(schema),
+            "thinking_config": {"thinking_level": self.thinking_level},
         }
         if self.temperature is not None:
             config["temperature"] = self.temperature
@@ -111,22 +130,25 @@ class GeminiJudgeClient:
         usage = getattr(response, "usage_metadata", None)
         input_tokens = self._integer_field(usage, "prompt_token_count")
         output_tokens = self._integer_field(usage, "candidates_token_count")
+        thought_tokens = self._integer_field(usage, "thoughts_token_count")
+        billed_output_tokens = output_tokens + thought_tokens
         total_tokens = self._integer_field(usage, "total_token_count")
         if total_tokens == 0:
-            total_tokens = input_tokens + output_tokens
+            total_tokens = input_tokens + billed_output_tokens
         reported_model = getattr(response, "model_version", None)
         response_id = getattr(response, "response_id", None)
-        return LLMResponse(
+        return GeminiJudgeResponse(
             text=text,
             model=str(reported_model or self.model),
             usage=TokenUsage(
                 input_tokens=input_tokens,
-                output_tokens=output_tokens,
+                output_tokens=billed_output_tokens,
                 total_tokens=total_tokens,
             ),
             response_id=str(response_id) if response_id else None,
             latency_ms=(time.perf_counter() - started) * 1000,
             done_reason=done_reason,
+            thought_tokens=thought_tokens,
         )
 
     @staticmethod

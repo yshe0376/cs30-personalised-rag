@@ -108,8 +108,14 @@ def test_cli_live_adapter_passes_strict_judge_schema(tmp_path, monkeypatch):
 def test_cli_can_select_gemini_for_open_answer_judging(tmp_path, monkeypatch):
     args, output = inputs(tmp_path, answer="slowing down")
     client = JudgeClient(assessment())
+    captured = {}
+
+    def client_factory(*_args, **kwargs):
+        captured.update(kwargs)
+        return client
+
     monkeypatch.setattr(
-        "cs30.evaluation.open_answer_cli.GeminiJudgeClient", lambda *a, **kw: client
+        "cs30.evaluation.open_answer_cli.GeminiJudgeClient", client_factory
     )
 
     assert main(args + ["--provider", "gemini", "--model", "gemini-test"]) == 0
@@ -117,6 +123,9 @@ def test_cli_can_select_gemini_for_open_answer_judging(tmp_path, monkeypatch):
     assert len(client.prompts) == 1
     manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
     assert manifest["provider"] == "gemini"
+    assert captured["temperature"] == 1.0
+    assert captured["thinking_level"] == "high"
+    assert captured["max_output_tokens"] == 8192
 
 
 @pytest.mark.parametrize("change", ["gold", "rubrics"])

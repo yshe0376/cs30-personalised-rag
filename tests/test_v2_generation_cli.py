@@ -225,8 +225,9 @@ def test_run_judge_requests_can_select_gemini_provider(
         provider="gemini",
         model_family="gemini",
         model_revision="gemini-3.1-flash-lite",
-        temperature=0,
+        temperature=1,
         seed=5703,
+        thinking_level="high",
         prompt_version="prompt-v1",
         output_schema_version="1.0",
         local_model=False,
@@ -307,6 +308,12 @@ def test_run_judge_requests_can_select_gemini_provider(
     assert envelope["model_digest"] is None
     assert envelope["context_window"] is None
     assert created["seed"] == 5703
+    assert created["temperature"] == 1
+    assert created["thinking_level"] == "high"
+    assert created["max_output_tokens"] == 8192
+
+    changed = configuration.model_copy(update={"thinking_level": "low"})
+    assert configuration_sha256(changed) != configuration_sha256(configuration)
 
 
 def test_repeat_comparison_rejects_reused_provider_responses() -> None:

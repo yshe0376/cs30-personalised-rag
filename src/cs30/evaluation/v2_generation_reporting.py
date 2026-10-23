@@ -245,6 +245,177 @@ def generation_noise_floor(
     }
 
 
+def _difference_distribution(values: Sequence[float]) -> dict[str, Any]:
+    if not values:
+        return {
+            "pair_count": 0,
+            "mean_difference": None,
+            "mean_absolute_difference": None,
+            "quantiles": None,
+            "absolute_difference_quantiles": None,
+        }
+    ordered = sorted(values)
+    absolute = sorted(abs(value) for value in values)
+
+    def quantile(data: Sequence[float], probability: float) -> float:
+        position = (len(data) - 1) * probability
+        lower = int(position)
+        upper = min(lower + 1, len(data) - 1)
+        fraction = position - lower
+        return data[lower] * (1 - fraction) + data[upper] * fraction
+
+    return {
+        "pair_count": len(values),
+        "mean_difference": sum(values) / len(values),
+        "mean_absolute_difference": sum(abs(value) for value in values) / len(values),
+        "quantiles": {
+            "q05": quantile(ordered, 0.05),
+            "q25": quantile(ordered, 0.25),
+            "q50": quantile(ordered, 0.50),
+            "q75": quantile(ordered, 0.75),
+            "q95": quantile(ordered, 0.95),
+        },
+        "absolute_difference_quantiles": {
+            "q05": quantile(absolute, 0.05),
+            "q25": quantile(absolute, 0.25),
+            "q50": quantile(absolute, 0.50),
+            "q75": quantile(absolute, 0.75),
+            "q95": quantile(absolute, 0.95),
+        },
+    }
+
+
+def paired_generation_noise_floor(
+    baseline_rows: Sequence[Mapping[str, Any]],
+    repeat_rows: Sequence[Mapping[str, Any]],
+    *,
+    correctness_delta: float | None = None,
+) -> dict[str, Any]:
+    """Compare a 30-question repeat generation batch with its Dev baseline by run ID."""
+
+    def index(rows: Sequence[Mapping[str, Any]], label: str) -> dict[str, Mapping[str, Any]]:
+        indexed: dict[str, Mapping[str, Any]] = {}
+        for row in rows:
+            run_id = str(row.get("run_id") or "")
+            if not run_id or run_id in indexed:
+                raise ValueError(f"{label} rows require unique nonempty run_id values")
+            indexed[run_id] = row
+        return indexed
+
+    baseline = index(baseline_rows, "baseline")
+    repeated = index(repeat_rows, "repeat")
+    repeat_questions = {str(row.get("question_id") or "") for row in repeat_rows}
+    if len(repeat_rows) != 360 or len(repeat_questions) != 30 or "" in repeat_questions:
+        raise ValueError("generation repeat batch must contain 30 questions x 12 cells (360 rows)")
+    expected_cells = {
+        (level.value, condition.value) for level in StudentLevel for condition in ExperimentArm
+    }
+    for question_id in repeat_questions:
+        observed = {
+            (str(row.get("target_level")), str(row.get("condition")))
+            for row in repeat_rows
+            if row.get("question_id") == question_id
+        }
+        if observed != expected_cells:
+            raise ValueError(f"repeat question {question_id} does not contain all 12 cells")
+    if not set(repeated) <= set(baseline):
+        raise ValueError("repeat run IDs must be a subset of the baseline Dev run IDs")
+
+    paired: list[dict[str, Any]] = []
+    for run_id, repeat in repeated.items():
+        base = baseline[run_id]
+        for field in (
+            "question_id",
+            "target_level",
+            "condition",
+            "generation_model_family",
+            "generation_model_revision",
+        ):
+            if base.get(field) != repeat.get(field):
+                raise ValueError(f"{run_id}: repeat {field} differs from the Dev baseline")
+        required = (
+            "correctness_score",
+            "adaptation_criterion_pass_rate",
+            "adaptation_passed",
+        )
+        if any(base.get(field) is None or repeat.get(field) is None for field in required):
+            raise ValueError(f"{run_id}: paired generation-noise outcomes must be resolved")
+        baseline_correctness = int(base["correctness_score"])
+        repeat_correctness = int(repeat["correctness_score"])
+        baseline_adaptation = float(base["adaptation_criterion_pass_rate"])
+        repeat_adaptation = float(repeat["adaptation_criterion_pass_rate"])
+        paired.append(
+            {
+                "run_id": run_id,
+                "question_id": repeat["question_id"],
+                "target_level": repeat["target_level"],
+                "condition": repeat["condition"],
+                "correctness_difference": repeat_correctness - baseline_correctness,
+                "adaptation_difference": repeat_adaptation - baseline_adaptation,
+                "correct_flip": (repeat_correctness == 2) != (baseline_correctness == 2),
+                "adaptation_pass_flip": bool(repeat["adaptation_passed"])
+                != bool(base["adaptation_passed"]),
+            }
+        )
+
+    def summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        count = len(rows)
+        return {
+            "pair_count": count,
+            "correctness_score_difference": _difference_distribution(
+                [float(row["correctness_difference"]) for row in rows]
+            ),
+            "adaptation_score_difference": _difference_distribution(
+                [float(row["adaptation_difference"]) for row in rows]
+            ),
+            "correct_flip_count": sum(bool(row["correct_flip"]) for row in rows),
+            "correct_flip_rate": (
+                sum(bool(row["correct_flip"]) for row in rows) / count if count else None
+            ),
+            "adaptation_pass_flip_count": sum(
+                bool(row["adaptation_pass_flip"]) for row in rows
+            ),
+            "adaptation_pass_flip_rate": (
+                sum(bool(row["adaptation_pass_flip"]) for row in rows) / count
+                if count
+                else None
+            ),
+        }
+
+    grouped = []
+    for condition in ExperimentArm:
+        for level in StudentLevel:
+            rows = [
+                row
+                for row in paired
+                if row["condition"] == condition.value
+                and row["target_level"] == level.value
+            ]
+            grouped.append(
+                {"condition": condition.value, "target_level": level.value, **summary(rows)}
+            )
+    overall = summary(paired)
+    mean_absolute = overall["correctness_score_difference"]["mean_absolute_difference"]
+    return {
+        "status": "complete",
+        "method": "paired_by_run_id_on_30_question_dev_repeat_batch",
+        "question_count": len(repeat_questions),
+        "pair_count": len(paired),
+        "overall": overall,
+        "by_condition_and_level": grouped,
+        "correctness_noninferiority_delta": correctness_delta,
+        "delta_exceeds_mean_absolute_correctness_difference": (
+            correctness_delta > mean_absolute
+            if correctness_delta is not None and mean_absolute is not None
+            else None
+        ),
+        "interpretation": (
+            "A claimed correctness delta must exceed this paired generation noise floor. "
+            "Judge repeat agreement measures judge variability and cannot replace this comparison."
+        ),
+    }
+
+
 def strict_correctness_summary(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """Score technical failures as zero and unresolved judge rows as bounded unknowns."""
 
@@ -504,7 +675,10 @@ def build_v2_generation_report(
             "Automatic, validity, and human-audit results are reported separately.",
             "Text and Role statistics are descriptive and are not adaptation outcomes.",
             "Development data used for tuning cannot provide an untouched Test claim.",
-            "Generation at temperature zero remains stochastic; see the reported noise floor.",
+            "Generation remains stochastic; condition effects must exceed the paired repeated-"
+            "generation noise floor when that batch is supplied.",
+            "Judge repeat agreement measures judge variability and cannot substitute for the "
+            "paired repeated-generation comparison.",
         ],
     }
 

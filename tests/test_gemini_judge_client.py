@@ -40,6 +40,7 @@ def response(
         usage_metadata=SimpleNamespace(
             prompt_token_count=31,
             candidates_token_count=7,
+            thoughts_token_count=2,
             total_token_count=40,
         ),
         model_version="gemini-3.1-flash-lite",
@@ -56,6 +57,7 @@ def test_complete_uses_gemini_json_schema_and_preserves_metadata() -> None:
         timeout_seconds=90,
         max_output_tokens=512,
         seed=5703,
+        thinking_level="high",
         sdk_client=sdk(models),
     )
     schema = {
@@ -78,6 +80,7 @@ def test_complete_uses_gemini_json_schema_and_preserves_metadata() -> None:
                 "temperature": 0.0,
                 "max_output_tokens": 512,
                 "seed": 5703,
+                "thinking_config": {"thinking_level": "high"},
                 "response_mime_type": "application/json",
                 "response_json_schema": schema,
             },
@@ -88,8 +91,9 @@ def test_complete_uses_gemini_json_schema_and_preserves_metadata() -> None:
     assert result.response_id == "gemini-response-1"
     assert result.done_reason == "stop"
     assert result.usage.input_tokens == 31
-    assert result.usage.output_tokens == 7
+    assert result.usage.output_tokens == 9
     assert result.usage.total_tokens == 40
+    assert result.thought_tokens == 2
 
 
 def test_max_tokens_is_exposed_as_shared_truncation_reason() -> None:
@@ -146,3 +150,29 @@ def test_constructor_and_schema_validation_fail_before_network(monkeypatch) -> N
     with pytest.raises(ValueError, match="object JSON schema"):
         client.complete("prompt", {"type": "json_schema", "schema": {"type": "array"}})
     assert models.calls == []
+
+
+def test_constructor_configures_sdk_retry_policy(monkeypatch) -> None:
+    from google import genai
+
+    captured = {}
+
+    def client_factory(**kwargs):
+        captured.update(kwargs)
+        return sdk(RecordingModels(response()))
+
+    monkeypatch.setattr(genai, "Client", client_factory)
+    GeminiJudgeClient("gemini-test", api_key="not-a-real-key")
+
+    options = captured["http_options"]
+    assert options.timeout == 120000
+    assert options.retry_options.attempts == 5
+    assert {408, 429, 500, 599} <= set(options.retry_options.http_status_codes)
+
+
+def test_defaults_follow_frozen_gemini_judge_policy() -> None:
+    client = GeminiJudgeClient("gemini-test", sdk_client=sdk(RecordingModels(response())))
+
+    assert client.temperature == 1.0
+    assert client.max_output_tokens == 8192
+    assert client.thinking_level == "high"

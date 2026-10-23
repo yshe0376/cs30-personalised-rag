@@ -240,6 +240,18 @@ def test_judge_configuration_blocks_unapproved_or_same_family_use() -> None:
             data_approval=ApprovalStatus.NOT_REQUIRED,
             role_label_model_families=["qwen"],
         )
+    with pytest.raises(ValueError, match="freeze thinking_level"):
+        JudgeConfiguration(
+            config_version="gemini-v1",
+            provider="gemini",
+            model_family="gemini",
+            model_revision="gemini-3.1-flash-lite",
+            temperature=1,
+            prompt_version="prompt-v1",
+            output_schema_version="1.0",
+            local_model=False,
+            data_approval=ApprovalStatus.APPROVED,
+        )
 
 
 def test_endpoint_only_keeps_all_levels_in_main_result() -> None:
