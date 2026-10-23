@@ -1,0 +1,77 @@
+{
+  "schema_version": "topic-map-release-attestation-v1",
+  "status": "approved_for_release_by_m1_owner",
+  "release_version": "2.0.0-rc.1",
+  "python_package_version": "2.0.0rc1",
+  "corpus": {
+    "corpus_version": "2.0.0-rc.1",
+    "corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+    "manifest_hash": "sha256:5b45185684c8e7d7e024ca31e782b07f8b8ec399b873f2c5dfd2e4001973aa71",
+    "record_count": 6184,
+    "mode": "official",
+    "reportable": true
+  },
+  "topic_registry_version": "topics-0.2",
+  "map": {
+    "file": "chunk_topic_map_topics-0.2.json",
+    "assignment_count": 4486,
+    "topic_link_count": 8378,
+    "validation": "passed"
+  },
+  "ck12_m1_review": {
+    "reviewed_chunk_count": 148,
+    "reviewed_topic_decision_count": 407,
+    "decision_counts": {
+      "keep": 355,
+      "drop": 52,
+      "uncertain": 0
+    },
+    "keep_quote_validation": "passed",
+    "confirmed_map_checks": [
+      {
+        "chunk_id": "ck12_peoples_physics_concepts__d976bbd43160dfdf__13__e924c191__00134",
+        "topic_id": "total-resistance-in-parallel",
+        "decision": "keep",
+        "present_in_release_map": true
+      },
+      {
+        "chunk_id": "ck12_peoples_physics_concepts__d976bbd43160dfdf__13__e924c191__00140",
+        "topic_id": "total-resistance-in-parallel",
+        "decision": "keep",
+        "present_in_release_map": true
+      },
+      {
+        "chunk_id": "ck12_peoples_physics_concepts__d976bbd43160dfdf__4__e924c191__00042",
+        "topic_id": "trigonometric-relationships-in-vector-components",
+        "decision": "drop",
+        "present_in_release_map": false,
+        "retained_topic_ids": [
+          "net-force",
+          "resolution-of-vectors-into-components"
+        ]
+      },
+      {
+        "chunk_id": "ck12_peoples_physics_concepts__d976bbd43160dfdf__9__e924c191__00094",
+        "topic_id": "moment-of-inertia",
+        "decision": "keep",
+        "present_in_release_map": true
+      }
+    ]
+  },
+  "m3_spot_check": {
+    "status": "accepted_as_complete_by_user_instruction",
+    "accepted_on": "2026-10-21",
+    "note": "The M1 lead directed that the M3 spot-check be treated as complete for this release. This records owner acceptance; it does not claim a separate assistant-run spot-check log."
+  },
+  "openstax_source_review_scope": {
+    "source_status": "pending_review_in_source_run_report",
+    "source_selected_chunk_count": 5976,
+    "source_assignment_count": 4310,
+    "source_review_required_count": 4145,
+    "note": "The OpenStax high-confidence source map is included in the released map. Its source run report records 4,145 review-required chunks; this release carries that source status transparently and does not claim those chunks received a separate item-by-item M1 review here."
+  },
+  "release_approval": {
+    "basis": "The M1 lead directed that this Topic map be treated as a publishable release and that the M3 spot-check gate be considered complete.",
+    "recorded_on": "2026-10-21"
+  }
+}

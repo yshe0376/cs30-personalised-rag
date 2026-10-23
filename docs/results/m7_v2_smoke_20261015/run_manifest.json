@@ -1,0 +1,107 @@
+{
+  "schema_version": "0.1",
+  "result_type": "m7_v2_generation_run",
+  "status": "completed",
+  "reportable": false,
+  "provider": "ollama",
+  "prepared_manifest_sha256": "1301ae0a9ebeacbfaa8e9efd825645e9dfe9fb849919058cddc45e493b4db1e4",
+  "prepared_inputs": {
+    "schema_version": "0.1",
+    "result_type": "m7_v2_prepared_experiment",
+    "reportable": false,
+    "split": "dev",
+    "question_count": 1,
+    "expected_runs": 12,
+    "selected_question_ids": [
+      "sciq-train-00004"
+    ],
+    "input_sha256": {
+      "gold.jsonl": "b1fef6db2c71649c1ff10c85547b2bd0be0460b47dba4f462d62a43e235d86c4",
+      "rubrics.jsonl": "ff103ba222ce65ced1e6ab447dd1732833a8799d5f2e1b2e0dcd208b00eee62a",
+      "retrieval.jsonl": "2f622b8ce1337959d39c867734a376fb679db498833a17f0a45328819b288a9c",
+      "config.json": "6660499ac817a137327fcd87ac5abfed28302016bd38fcbd94ce26a9e31fe41b",
+      "expected_experiment.json": "4bf37b66000c0ec7d3f2bb000755da7909057edcf2fcec395431def1e4c0e4ba",
+      "role_labels.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "corpus_manifest.json": "8ea9cc93289edeae419ce7c787be0d833057b6dd5af07c57e68a27ce5733d679",
+      "gold_bindings.jsonl": "00e5a259346973c459666606844568b134b368ed5f5572a6cf24e79ae8863b11",
+      "lambda_selection.json": "38e0b9de817f645c4bec37c0d4a3e58baecccb040f5718dc069a72c7385a0bed",
+      "gold_conversion.json": "2c82fe32d51f6ffaca0e36db5b599d3b667254064ee91bb0170923a50f7532ef"
+    },
+    "source_retrieval_sha256": null,
+    "role_provenance": null,
+    "missing_role_chunk_ids": [
+      "openstax_college_physics_2e__89ad46e1222dbb4a__11__e924c191__00719",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__12__e924c191__00808",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__12__e924c191__00815",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__18__e924c191__01217",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__22__e924c191__01524",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__24__e924c191__01654",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__24__e924c191__01656",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__31__e924c191__02143",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__3__e924c191__00195",
+      "openstax_college_physics_2e__89ad46e1222dbb4a__7__e924c191__00467",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__11__e924c191__00706",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__12__e924c191__00794",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__12__e924c191__00801",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__18__e924c191__01177",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__22__e924c191__01501",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__24__e924c191__01629",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__31__e924c191__02111",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__3__e924c191__00190",
+      "openstax_college_physics_ap_2e__919d8eba53f94d04__7__e924c191__00458",
+      "openstax_physics__68184df67ec9780c__5__e924c191__00270"
+    ],
+    "candidate_unique_chunks": 20,
+    "role_coverage_complete": false,
+    "lambda_source": "fixed_exploratory",
+    "profile_policy": "controlled_static_levels_with_explicit_confidence",
+    "limitations": [
+      "Development result; no formal Gold, rubric, or Test approval inferred.",
+      "Only a saved Dev selection artifact establishes Dev-selected lambda; no selection or tuning occurs on Test.",
+      "Role gaps fall back to retrieval scores and prevent interpreting reranking effects.",
+      "Citation IDs are checked structurally; semantic support and level adaptation need separate evaluation."
+    ]
+  },
+  "configuration": {
+    "schema_version": "0.1",
+    "generator_model": "gpt-oss:20b",
+    "split": "dev",
+    "levels": [
+      "beginner",
+      "intermediate",
+      "advanced"
+    ],
+    "candidate_k": 20,
+    "evidence_k": 5,
+    "lambda_weight": 0.35,
+    "profile_confidence": 1.0,
+    "max_retries": 1,
+    "allow_missing_roles": true,
+    "lambda_policy": "fixed_exploratory"
+  },
+  "implementation_sha256": {
+    "v2/experiment.py": "5832618d0c5f376a9703d74faa940397b858902a40dc1e3f8adb00702ffc1834",
+    "v2/generation.py": "e1a3884922a45525ad649265f5047a64e99e8eb6714ffa0548b873e1a3ff9f4a",
+    "v2/generation_prompt.py": "788be2eb9483fe4e9f45e6a3a324472415fdd20e5267d44371624a1f31805679",
+    "v2/evidence.py": "ee137c333c248aa178bb4b31a22f55c840e49b0a925dcfb03e5cb3bd7074ad10",
+    "generation/client.py": "8e56ca1e6c3b13c3cf1b1aaf71611a148e0e60b0c14dc2469fd9198ce222d918",
+    "generation/prompt.py": "754f8f35c06d69dcc396eed1b21f6066cec942ddde8aaf9aeb6567b60c64ee1e",
+    "generation/reranking.py": "1a3526c2d37a0206ef03abcd5b2136fa98a83a8591eb8aae0043be916f9d566f",
+    "retrieval/real.py": "d86efa2d34d5d4e32ec5232639bfd4972545e902c01e8403017bdd60519392c2"
+  },
+  "client": {
+    "model": "gpt-oss:20b",
+    "temperature": 0.0,
+    "max_output_tokens": 2048,
+    "endpoint_sha256": "65dc2471edc1b6ec37d1cf63a22372cf681f08dc57cb58a2fbdc51daf47fd3ec"
+  },
+  "completed_cells": 12,
+  "technical_failures": 0,
+  "output_sha256": {
+    "expected_experiment.json": "4bf37b66000c0ec7d3f2bb000755da7909057edcf2fcec395431def1e4c0e4ba",
+    "saved_answers.jsonl": "bbcd3598ae0f5d64556b14489fbc8f33d0d25a8c711b60445e9e7706c10a3239",
+    "generation_records.jsonl": "bd257a7b2c64607235b491a4ccc0984cb25aaef1dfa745a53e7990e9edcc00d1",
+    "generation_summary.json": "e790f6395414fd282194e9b9ffbcb287d3fdc2d695a0cf8e35f89585c95f2a26",
+    "generation_report.md": "dbd0215b397713f9500f1a552043a4fbee562a13d9f7dd5c370b04150321a3aa"
+  }
+}

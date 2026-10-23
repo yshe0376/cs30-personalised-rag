@@ -11,6 +11,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pydantic>=2.12,<3",
     "numpy>=1.26,<3",
+    "tzdata>=2025.1; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +35,10 @@ notebook = [
     "ipykernel>=6,<8",
 ]
 
+topic-llm = [
+    "google-genai>=2.0,<3",
+]
+
 parse = [
     "PyMuPDF>=1.24,<2",
     "pdfplumber>=0.11,<1",
@@ -47,7 +52,10 @@ cs30-parse-openstax = "cs30.ingest.college_physics_parser:main"
 cs30-list-textbooks = "cs30.ingest.textbooks:main"
 cs30-evaluate = "cs30.evaluation.cli:main"
 cs30-concept-check-report = "cs30.evaluation.concept_check_reporting:main"
+cs30-v2-generation-eval = "cs30.evaluation.v2_generation_cli:main"
+cs30-score-open-answers = "cs30.evaluation.open_answer_cli:main"
 cs30-build-v2 = "cs30.v2.cli:run"
+cs30-experiment-v2 = "cs30.v2.experiment_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

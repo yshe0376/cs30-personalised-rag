@@ -52,7 +52,7 @@ def test_cli_builds_a_development_diagnostic_corpus(tmp_path: Path) -> None:
     assert (output_dir / "manifest.json").is_file()
 
 
-def test_cli_official_passes_the_m4_gate_and_stops_on_the_missing_provider(
+def test_cli_official_passes_the_source_gates_and_stops_on_missing_sources(
     tmp_path: Path,
 ) -> None:
     output_dir = tmp_path / "artifacts" / "v2" / "cli-official"
@@ -73,7 +73,7 @@ def test_cli_official_passes_the_m4_gate_and_stops_on_the_missing_provider(
     )
 
     assert result.returncode == 4
-    assert "REQUIRED_PROVIDER_MISSING" in result.stderr
+    assert "INPUT_NOT_FOUND" in result.stderr
     assert not output_dir.exists()
 
 

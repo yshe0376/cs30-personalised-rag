@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "draft_package_sha256": "2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e",
+  "reviews": [
+    {
+      "role": "leader",
+      "reviewer_id": null,
+      "status": "pending",
+      "review_record_id": null,
+      "reviewed_at": null,
+      "notes": null
+    },
+    {
+      "role": "physics",
+      "reviewer_id": null,
+      "status": "pending",
+      "review_record_id": null,
+      "reviewed_at": null,
+      "notes": null
+    }
+  ]
+}

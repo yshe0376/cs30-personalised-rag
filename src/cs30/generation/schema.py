@@ -40,11 +40,17 @@ def openai_text_format() -> dict:
     }
 
 
-def parse_answer_payload(raw_text: str) -> AnswerPayload:
+def parse_answer_payload(raw_text: str, *, allow_json_fence: bool = False) -> AnswerPayload:
     """Parse strict JSON and validate that it has exactly the three agreed fields."""
 
     if not raw_text or not raw_text.strip():
         raise LLMOutputValidationError("model returned an empty response")
+    if allow_json_fence:
+        import re
+
+        match = re.fullmatch(r"\s*```(?:json)?\s*\n(.*?)\n```\s*", raw_text, re.DOTALL)
+        if match:
+            raw_text = match.group(1)
     try:
         value = json.loads(raw_text)
     except json.JSONDecodeError as exc:

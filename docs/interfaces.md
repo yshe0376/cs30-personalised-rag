@@ -177,6 +177,17 @@ M3 character offsets are chapter-local, so span replay must use a
 document text alone. The loader keeps the legacy string-option fixture shape
 for engineering tests, but does not silently discard M3 metadata.
 
+From M3 Gold v0.1.2 on, Gold questions are open-ended: a record carries no
+`options` and no `gold_answer`, and its reference answer is `gold_answer_text`.
+Both `GoldSample` and the v2 `GoldQuestion` accept either shape. A
+multiple-choice record must carry exactly A–D and, when answerable, a
+`gold_answer` label; an open-ended record must not carry a `gold_answer`, and
+when answerable it must carry `gold_answer_text`. Answer scoring reports an
+open-ended question as `answer_outcome: open_ended` and keeps it out of every
+`answer_choice_accuracy_*` denominator. Retrieval and abstention metrics are
+unchanged. How an open-ended answer is scored against `gold_answer_text` is
+not decided yet.
+
 M1's normalized Gold v0.2 representation preserves raw M3 `char_start` and
 `char_end` as chapter-local coordinates. It must copy them to
 `chapter_char_start` and `chapter_char_end`; the generic fields are never

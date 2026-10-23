@@ -1,0 +1,31 @@
+{
+  "artifact_ready": false,
+  "corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+  "corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
+  "cross_textbook_duplicate_groups": 16677,
+  "document_count": 4,
+  "environment": "development",
+  "failed_textbook_ids": [],
+  "failures": [],
+  "included_textbook_ids": [
+    "openstax_college_physics_2e",
+    "openstax_physics",
+    "openstax_college_physics_ap_2e",
+    "ck12_peoples_physics_concepts"
+  ],
+  "manifest_hash": "sha256:d2bae925137e52e7381fc26fd241d7f9718f6dfd3beaa3b471281f14a24858c3",
+  "mode": "development",
+  "record_count": 6184,
+  "reportable": false,
+  "required_textbook_ids": [
+    "openstax_college_physics_2e",
+    "openstax_physics",
+    "openstax_college_physics_ap_2e",
+    "ck12_peoples_physics_concepts"
+  ],
+  "run_id": "141d14db4b774fef",
+  "schema_version": "2.0",
+  "validation_errors": [
+    "development mode is diagnostic-only"
+  ]
+}

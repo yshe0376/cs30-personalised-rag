@@ -146,6 +146,57 @@ def test_answerable_sample_requires_a_complete_gold_evidence_set() -> None:
         evaluation.GoldSample.model_validate(payload)
 
 
+def test_open_ended_sample_needs_no_options_or_choice_label() -> None:
+    payload = _open_ended_gold_payload()
+
+    sample = evaluation.GoldSample.model_validate(payload)
+
+    assert sample.options == {}
+    assert sample.gold_answer is None
+    assert sample.gold_answer_text == "Alpha"
+
+
+def test_gold_loader_reads_open_ended_m3_records(tmp_path: Path) -> None:
+    path = tmp_path / "gold_open_ended.jsonl"
+    path.write_text(json.dumps(_open_ended_gold_payload()) + "\n", encoding="utf-8")
+
+    [sample] = evaluation.load_gold_samples(
+        path,
+        chapter_documents={("fixture_openstax", "1"): "Alpha. Beta. Gamma. Partial."},
+    )
+
+    assert sample.options == {}
+    assert sample.gold_answer_text == "Alpha"
+
+
+@pytest.mark.parametrize(
+    ("update", "removed", "message"),
+    [
+        ({}, ("gold_answer_text",), "open-ended samples require gold_answer_text"),
+        ({"gold_answer": "A"}, (), "requires options"),
+        ({"options": {"A": "One", "B": "Two"}}, (), "exactly A, B, C, and D"),
+    ],
+)
+def test_open_ended_sample_rejects_incomplete_answer_shapes(
+    update: dict[str, object], removed: tuple[str, ...], message: str
+) -> None:
+    payload = _open_ended_gold_payload()
+    payload.update(update)
+    for key in removed:
+        payload.pop(key)
+
+    with pytest.raises(ValidationError, match=message):
+        evaluation.GoldSample.model_validate(payload)
+
+
+def test_answerable_multiple_choice_sample_still_requires_gold_answer() -> None:
+    payload = _minimal_gold_payload()
+    payload.pop("gold_answer")
+
+    with pytest.raises(ValidationError, match="multiple-choice samples require gold_answer"):
+        evaluation.GoldSample.model_validate(payload)
+
+
 def test_reviewed_sample_cannot_leave_answerability_unresolved() -> None:
     payload = _minimal_gold_payload()
     payload["answerable"] = None
@@ -242,6 +293,30 @@ def _minimal_gold_payload() -> dict[str, object]:
         "annotation_status": "reviewed",
         "review_record_id": "review_fixture_joint",
     }
+
+
+def _open_ended_gold_payload() -> dict[str, object]:
+    """An M3 v0.1.2-shaped record: open-ended, so no options or choice label."""
+
+    payload = _minimal_gold_payload()
+    payload.pop("options")
+    payload.pop("gold_answer")
+    payload.update(
+        source_split="test",
+        gold_answer_text="Alpha",
+        source={
+            "dataset": "SciQ standardized",
+            "source_question_id": "fixture_joint",
+            "support": "Alpha.",
+        },
+    )
+    payload["gold_core_evidence_sets"][0][0].update(
+        chapter_id="1",
+        block_id="fixture_openstax_ch01_p0001_b000",
+        sufficiency="core_sufficient",
+        annotation_note="States the answer directly.",
+    )
+    return payload
 
 
 def _complete_normalized_gold_payload() -> dict[str, object]:

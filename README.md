@@ -216,6 +216,22 @@ python -m cs30.pipeline --mode real --provider ollama --model gpt-oss:20b \
 
 ### Member 7 smoke delivery
 
+For native V2 four-condition generation, positive Dev-only lambda selection
+and the independent M8 scoring handoff, use
+[the V2 M7 experiment guide](docs/v2-member7-experiments.md).
+
+The [complete 2026-10-17 Dev run with lambda=0.2](docs/results/m7_v2_dev_20261017_lambda02/README.md)
+contains **1,944/1,944 successful answers**, zero technical failures and zero
+output truncations. The delivery provides saved answers, generation reports,
+integrity checks and a GitHub pre-release containing the frozen inputs, raw
+traces and all checkpoints. Independent M8 scoring remains pending.
+
+The previous [complete 2026-10-16 Dev run](docs/results/m7_v2_dev_20261016/README.md)
+contains all 1,944 expected cells: 1,930 generated answers and 14 retained
+generation failures. The delivery includes frozen inputs, raw model traces,
+checkpoints and integrity checks. Answer correctness remains pending independent
+scoring; these are development results.
+
 The Week 1 profile, prompt, fixed JSON, retry, and citation path can be exercised
 against every available local and packaged dataset without an API key:
 

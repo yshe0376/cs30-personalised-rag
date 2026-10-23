@@ -17,6 +17,7 @@ import streamlit as st
 from cs30.v2.catalog import get_textbook_spec
 from cs30.v2.contracts import (
     ConceptCheckEvent,
+    ConceptCheckEventType,
     ConceptCheckGrade,
     ConceptCheckQuestionRelease,
     ConceptCheckResult,
@@ -42,6 +43,7 @@ class QuizAttemptView:
 SubmitCallback = Callable[[Choice], QuizAttemptView]
 SkipCallback = Callable[[], QuizAttemptView]
 NextCallback = Callable[[], None]
+RevokeCallback = Callable[[str], None]
 
 
 def inject_concept_check_styles() -> None:
@@ -230,12 +232,15 @@ def render_quiz(
     on_submit: SubmitCallback,
     on_skip: SkipCallback,
     on_next: NextCallback | None = None,
+    on_revoke: RevokeCallback | None = None,
     key: str = "concept-check-quiz",
 ) -> QuizAttemptView | None:
     """Render one reusable A–D quiz and invoke the supplied persistence callbacks.
 
     The correct answer, rationale, and evidence are rendered only after submit
-    or skip. The component never calls an LLM and never constructs a service or
+    or skip. An optional revocation callback keeps the related action beside the
+    attempt result while leaving eligibility and persistence to the shared
+    service. The component never calls an LLM and never constructs a service or
     event store itself.
     """
 
@@ -249,6 +254,26 @@ def render_quiz(
     stored = st.session_state.get(f"{key}:result")
     if isinstance(stored, QuizAttemptView):
         _render_result(release, stored)
+        if (
+            on_revoke is not None
+            and stored.event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
+            and stored.event.attempt_id is not None
+        ):
+            st.caption(
+                "Undo applies to this most recent scored attempt. The original record "
+                "stays in the event history and a revocation event is added."
+            )
+            if st.button(
+                "Undo latest scored attempt",
+                key=f"{key}:revoke",
+                use_container_width=True,
+            ):
+                try:
+                    on_revoke(stored.event.attempt_id)
+                except ValueError as exc:
+                    st.error(f"The attempt could not be undone: {exc}")
+                else:
+                    st.rerun()
         if on_next is not None and st.button(
             "Next question",
             key=f"{key}:next",

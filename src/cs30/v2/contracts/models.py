@@ -547,13 +547,19 @@ class GoldQuestion(V2Model):
     enums/models.  This v2 wrapper changes only the evidence representation:
     Gold evidence uses the same chapter-local :class:`EvidenceSpan` as
     Concept Check anchors, so M4 can resolve both with one implementation.
+
+    As in ``cs30.evaluation.GoldSample``, a multiple-choice question carries
+    all four ``options`` and a ``gold_answer`` label, while an open-ended
+    question carries neither and states its reference answer in
+    ``gold_answer_text``.
     """
 
     schema_version: Literal["2.0"] = "2.0"
     question_id: Identifier
     question: NonEmptyText
-    options: dict[ChoiceLabel, GoldOption]
+    options: dict[ChoiceLabel, GoldOption] = Field(default_factory=dict)
     gold_answer: ChoiceLabel | None = None
+    gold_answer_text: NonEmptyText | None = None
     answerable: bool | None
     gold_core_evidence_sets: tuple[tuple[V2GoldEvidence, ...], ...] = ()
     partial_evidence: tuple[V2GoldEvidence, ...] = ()
@@ -576,8 +582,10 @@ class GoldQuestion(V2Model):
 
     @model_validator(mode="after")
     def validate_gold_shape(self) -> GoldQuestion:
-        if set(self.options) != {"A", "B", "C", "D"}:
-            raise ValueError("options must contain exactly A, B, C, and D")
+        if self.options and set(self.options) != {"A", "B", "C", "D"}:
+            raise ValueError("options must be empty or contain exactly A, B, C, and D")
+        if self.gold_answer is not None and not self.options:
+            raise ValueError("gold_answer is a choice label and requires options")
         if any(not evidence_set for evidence_set in self.gold_core_evidence_sets):
             raise ValueError("gold_core_evidence_sets must not contain an empty AND group")
 
@@ -591,8 +599,10 @@ class GoldQuestion(V2Model):
             raise ValueError("Gold evidence span_id values must be unique")
 
         if self.answerable is True:
-            if self.gold_answer is None:
-                raise ValueError("answerable Gold questions require gold_answer")
+            if self.options and self.gold_answer is None:
+                raise ValueError("answerable multiple-choice Gold questions require gold_answer")
+            if not self.options and self.gold_answer_text is None:
+                raise ValueError("answerable open-ended Gold questions require gold_answer_text")
             if not self.gold_core_evidence_sets:
                 raise ValueError("answerable Gold questions require complete evidence")
         elif self.answerable is False and self.gold_core_evidence_sets:
@@ -603,6 +613,30 @@ class GoldQuestion(V2Model):
         if (self.topic_id is None) != (self.topic_registry_version is None):
             raise ValueError("topic_id and topic_registry_version must be set together")
         return self
+
+
+class GenerationQuestion(V2Model):
+    """Model-facing input: question and optional choices, without Gold answers."""
+
+    kind: Literal["open_ended", "multiple_choice"]
+    question: NonEmptyText
+    options: dict[ChoiceLabel, NonEmptyText] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_choices(self) -> GenerationQuestion:
+        if self.kind == "multiple_choice" and set(self.options) != {"A", "B", "C", "D"}:
+            raise ValueError("multiple-choice generation requires exactly options A, B, C, and D")
+        if self.kind == "open_ended" and self.options:
+            raise ValueError("open-ended generation must not carry options")
+        return self
+
+    @classmethod
+    def from_gold(cls, gold: GoldQuestion) -> GenerationQuestion:
+        return cls(
+            kind="multiple_choice" if gold.options else "open_ended",
+            question=gold.question,
+            options={label: option.text for label, option in gold.options.items()},
+        )
 
 
 class ConceptCheckQuestion(V2Model):
@@ -704,6 +738,54 @@ class ConceptCheckQuestionRelease(V2Model):
             for item in self.binding.bindings
         ):
             raise ValueError("published question releases require resolved bindings")
+        return self
+
+
+class ConceptCheckSelectionStatus(StrEnum):
+    OFFERED = "offered"
+    NO_TOPIC_AVAILABLE = "no_topic_available"
+    NO_QUESTION_AVAILABLE = "no_question_available"
+    DISABLED = "disabled"
+
+
+class ConceptCheckErrorCode(StrEnum):
+    NO_RETRIEVAL_TOPIC = "NO_RETRIEVAL_TOPIC"
+    NO_RETRIEVAL_HITS = "NO_RETRIEVAL_HITS"
+    NO_TOPIC_AVAILABLE = "NO_TOPIC_AVAILABLE"
+    TOPIC_MAP_UNAVAILABLE = "TOPIC_MAP_UNAVAILABLE"
+    TOPIC_MAP_MISMATCH = "TOPIC_MAP_MISMATCH"
+    TOPIC_REGISTRY_UNAVAILABLE = "TOPIC_REGISTRY_UNAVAILABLE"
+    TOPIC_REGISTRY_MISMATCH = "TOPIC_REGISTRY_MISMATCH"
+    UNKNOWN_TOPIC = "UNKNOWN_TOPIC"
+    TOPIC_TIE = "TOPIC_TIE"
+    TOPIC_SUPPORT_BELOW_THRESHOLD = "TOPIC_SUPPORT_BELOW_THRESHOLD"
+    ANSWER_ABSTAINED = "ANSWER_ABSTAINED"
+    CITATION_VALIDATION_FAILED = "CITATION_VALIDATION_FAILED"
+    NO_CITATIONS = "NO_CITATIONS"
+    CITATION_NOT_IN_RETRIEVAL = "CITATION_NOT_IN_RETRIEVAL"
+    NO_USABLE_QUESTION = "NO_USABLE_QUESTION"
+
+
+class ConceptCheckSelection(V2Model):
+    """Versioned post-answer decision shared by the service and its consumers."""
+
+    model_config = ConfigDict(frozen=True)
+
+    schema_version: Literal["0.1"] = "0.1"
+    status: ConceptCheckSelectionStatus
+    question: ConceptCheckQuestionRelease | None = None
+    error_code: ConceptCheckErrorCode | None = None
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> ConceptCheckSelection:
+        if (self.status is ConceptCheckSelectionStatus.OFFERED) != (self.question is not None):
+            raise ValueError("only offered selections may carry a question")
+        refused = self.status in {
+            ConceptCheckSelectionStatus.NO_TOPIC_AVAILABLE,
+            ConceptCheckSelectionStatus.NO_QUESTION_AVAILABLE,
+        }
+        if refused != (self.error_code is not None):
+            raise ValueError("only refused selections must carry an error code")
         return self
 
 

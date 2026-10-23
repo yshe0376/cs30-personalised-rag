@@ -238,7 +238,7 @@ def test_only_textbooks_with_a_real_parser_are_registered(
 ) -> None:
     from cs30.v2 import catalog
 
-    pending = "ck12_pending_book"
+    pending = "pending_provider_book"
     spec = get_textbook_spec("openstax_physics")
     monkeypatch.setattr(
         catalog, "REQUIRED_TEXTBOOK_IDS", (*catalog.REQUIRED_TEXTBOOK_IDS, pending)
@@ -249,16 +249,17 @@ def test_only_textbooks_with_a_real_parser_are_registered(
         replace(
             spec,
             textbook_id=pending,
-            provider="ck12",
+            provider="pending",
             source_name=pending,
-            parser_name="ck12",
+            parser_name="not-implemented",
         ),
     )
 
     registry = build_parser_registry(("openstax_physics", pending))
 
     assert isinstance(registry.parser_for("openstax_physics"), OpenStaxPdfParser)
-    # CK-12 has no parser yet, so the pipeline reports PARSER_NOT_REGISTERED.
+    # No adapter exists for this parser_name, so the pipeline reports
+    # PARSER_NOT_REGISTERED.
     with pytest.raises(KeyError):
         registry.parser_for(pending)
 

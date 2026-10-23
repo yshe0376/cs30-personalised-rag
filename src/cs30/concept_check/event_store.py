@@ -64,6 +64,7 @@ class JsonlEventStore:
 
     def append(self, event: ConceptCheckEvent) -> ConceptCheckEvent:
         with self._lock:
+            self.replayer.validate_topic(event.topic_id)
             existing, valid_payload = self._read_events(event.profile_id)
             for prior in existing:
                 same_event = prior.event_id == event.event_id

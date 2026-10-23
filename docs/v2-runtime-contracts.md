@@ -76,3 +76,21 @@ binding 时，`ConceptCheckQuestionRelease` 才能发布。
 
 后续 M7/M3/M4/M8 只应实现这些 Protocol 或补充独立 adapter，不应在各自模块复制
 同名 schema，也不应修改 v1 `src/cs30/contracts`。
+
+
+## M7 输入与选题返回契约（2026-10-15）
+
+`AnswerGenerator.generate` 的 `question` 接受 `str | GenerationQuestion | GoldQuestion`。
+选择题评估传完整 `GoldQuestion`，或 `GenerationQuestion(kind="multiple_choice", question=...,
+options=...)`；后者要求完整 A–D 选项。适配器只提取题干与选项，不传 Gold 答案和标注。
+字符串用于开放题，不能从裸题干推断丢失的选项。选择题的 null 字母输出进入修复，耗尽后失败。
+
+`ConceptCheckService.select(...) -> ConceptCheckSelection` 直接返回共享 schema `0.1`。
+`ConceptCheckSelectionStatus` 固定四种状态：`offered`、`no_topic_available`、
+`no_question_available`、`disabled`。拒绝结果必须携带共享 `ConceptCheckErrorCode` 枚举，
+`offered` 必须携带题目，`disabled` 不携带题目和错误。M8 从 `.question` 取题目、从
+`.error_code.value` 获取稳定统计键；旧 `select_result` 已由此接口替代。
+
+`EventReplayer(profile, topic_registry, config)` 需要实际 `TopicRegistry`，同时核对版本和
+Topic ID。服务与 event store 在持久化前拒绝未知 Topic，回放和报告也拒绝未知 ID；已存在的
+非法事件不会被自动改写或删除。详见 `docs/member7-concept-check-handoff.md`。

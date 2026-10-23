@@ -39,10 +39,17 @@ from cs30.v2.contracts import (
     SpanResolutionStatus,
     StudentLevel,
     StudentProfile,
+    Topic,
+    TopicRegistry,
     TopicResolution,
     TopicResolutionStatus,
     TopicState,
     ValidatedAnswer,
+)
+
+_REGISTRY = TopicRegistry(
+    topic_registry_version="topics-1",
+    topics=(Topic(topic_id="motion", title="Motion"), Topic(topic_id="heat", title="Heat")),
 )
 
 _TIME = datetime(2026, 9, 29, tzinfo=UTC)
@@ -134,7 +141,7 @@ def test_grader_and_promotion_replay_are_deterministic() -> None:
         is ConceptCheckResult.SKIPPED
     )
 
-    replayer = EventReplayer(_PROFILE, "topics-1")
+    replayer = EventReplayer(_PROFILE, _REGISTRY)
     events = tuple(
         _event(i, difficulty=StudentLevel.INTERMEDIATE if i > 4 else StudentLevel.BEGINNER)
         for i in range(1, 7)
@@ -147,7 +154,7 @@ def test_grader_and_promotion_replay_are_deterministic() -> None:
 
 
 def test_revocation_is_latest_only_and_recomputes_state() -> None:
-    replayer = EventReplayer(_PROFILE, "topics-1")
+    replayer = EventReplayer(_PROFILE, _REGISTRY)
     first, second = _event(1), _event(2, performance=0.0)
     with pytest.raises(ValueError, match="most recent"):
         replayer.replay(
@@ -177,7 +184,7 @@ def test_revocation_is_latest_only_and_recomputes_state() -> None:
 
 
 def test_jsonl_store_is_append_only_and_attempt_idempotent(tmp_path) -> None:
-    replayer = EventReplayer(_PROFILE, "topics-1")
+    replayer = EventReplayer(_PROFILE, _REGISTRY)
     store = JsonlEventStore(tmp_path, replayer)
     first = store.append(_event(1))
     retry = _event(2).model_copy(update={"attempt_id": "attempt-1", "question_id": "q-1"})
@@ -223,7 +230,7 @@ def test_disabled_service_never_calls_resolver_or_store() -> None:
         resolver=Forbidden(),
         provider=Forbidden(),
         event_store=Forbidden(),
-        replayer=EventReplayer(_PROFILE, "topics-1"),
+        replayer=EventReplayer(_PROFILE, _REGISTRY),
     )
     retrieval = RetrievalResult(query="What is force?", mode=RetrievalMode.FIXTURE)
     prepared = service.prepare(retrieval, _PROFILE)
@@ -233,7 +240,7 @@ def test_disabled_service_never_calls_resolver_or_store() -> None:
         answer=GeneratedAnswer(explanation="No evidence.", abstained=True),
         citation_status="skipped",
     )
-    assert service.select(prepared, retrieval, validated) is None
+    assert service.select(prepared, retrieval, validated).question is None
 
 
 def test_enabled_service_selects_once_then_replays_submission(tmp_path) -> None:
@@ -274,7 +281,7 @@ def test_enabled_service_selects_once_then_replays_submission(tmp_path) -> None:
             self.reads += 1
             return super()._read_events(profile_id)
 
-    replayer = CountingReplayer(_PROFILE, "topics-1")
+    replayer = CountingReplayer(_PROFILE, _REGISTRY)
     store = CountingStore(tmp_path, replayer)
     service = ConceptCheckService(
         config=ConceptCheckConfig(enabled=True),
@@ -305,7 +312,7 @@ def test_enabled_service_selects_once_then_replays_submission(tmp_path) -> None:
         resolved_citations=("chunk-1",),
     )
     reads_before = store.reads
-    release = service.select(prepared, retrieval, validated)
+    release = service.select(prepared, retrieval, validated).question
     assert store.reads - reads_before == 1
     assert release is not None and release.question.question_id == "q-1"
     reads_before, replays_before = store.reads, replayer.calls
@@ -322,7 +329,7 @@ def test_enabled_service_selects_once_then_replays_submission(tmp_path) -> None:
     assert replayer.calls - replays_before == 2  # One write validation, one returned state.
     assert grade.result is ConceptCheckResult.CORRECT
     assert state.topics["motion"].mastery_score == pytest.approx(0.6)
-    assert service.select(prepared, retrieval, validated) is None
+    assert service.select(prepared, retrieval, validated).question is None
     assert resolver.calls == 3
 
     class DifferentCitedTopic(Resolver):
@@ -345,7 +352,7 @@ def test_enabled_service_selects_once_then_replays_submission(tmp_path) -> None:
         event_store=store,
         replayer=replayer,
     )
-    assert cited_service.select(prepared, retrieval, validated) == heat_release
+    assert cited_service.select(prepared, retrieval, validated).question == heat_release
     with pytest.raises(ValueError, match="current corpus"):
         service.submit(
             release,
@@ -627,7 +634,7 @@ def test_submit_retry_with_default_audit_time_is_idempotent(tmp_path, monkeypatc
             return next(cls.times)
 
     monkeypatch.setattr("cs30.concept_check.service.datetime", Clock)
-    replayer = EventReplayer(_PROFILE, "topics-1")
+    replayer = EventReplayer(_PROFILE, _REGISTRY)
     store = JsonlEventStore(tmp_path, replayer)
     service = ConceptCheckService(
         config=ConceptCheckConfig(enabled=True),
@@ -657,7 +664,7 @@ def test_submit_retry_with_default_audit_time_is_idempotent(tmp_path, monkeypatc
 def test_control_event_retry_ignores_audit_time_but_rejects_content_conflict(
     tmp_path, kind
 ) -> None:
-    store = JsonlEventStore(tmp_path, EventReplayer(_PROFILE, "topics-1"))
+    store = JsonlEventStore(tmp_path, EventReplayer(_PROFILE, _REGISTRY))
     store.append(_event(1))
     control = ConceptCheckEvent(
         event_id="control",
@@ -684,7 +691,7 @@ def test_control_event_retry_ignores_audit_time_but_rejects_content_conflict(
 
 
 def test_events_only_reads_and_does_not_replay(tmp_path, monkeypatch) -> None:
-    replayer = EventReplayer(_PROFILE, "topics-1")
+    replayer = EventReplayer(_PROFILE, _REGISTRY)
     store = JsonlEventStore(tmp_path, replayer)
     stored = store.append(_event(1))
 
@@ -696,7 +703,7 @@ def test_events_only_reads_and_does_not_replay(tmp_path, monkeypatch) -> None:
 
 
 def test_partial_final_record_is_warned_skipped_and_recovered_on_append(tmp_path, caplog) -> None:
-    replayer = EventReplayer(_PROFILE, "topics-1")
+    replayer = EventReplayer(_PROFILE, _REGISTRY)
     store = JsonlEventStore(tmp_path, replayer)
     first = store.append(_event(1))
     path = next(tmp_path.glob("*.jsonl"))
@@ -712,7 +719,7 @@ def test_partial_final_record_is_warned_skipped_and_recovered_on_append(tmp_path
 
 
 def test_valid_unterminated_final_record_keeps_its_content_on_append(tmp_path) -> None:
-    store = JsonlEventStore(tmp_path, EventReplayer(_PROFILE, "topics-1"))
+    store = JsonlEventStore(tmp_path, EventReplayer(_PROFILE, _REGISTRY))
     first = store.append(_event(1))
     path = next(tmp_path.glob("*.jsonl"))
     path.write_bytes(path.read_bytes().rstrip(b"\n"))
@@ -725,7 +732,7 @@ def test_valid_unterminated_final_record_keeps_its_content_on_append(tmp_path) -
     "tail, error", [(b"not JSON\n", json.JSONDecodeError), (b"{}", ValidationError)]
 )
 def test_complete_or_schema_invalid_corruption_is_not_skipped(tmp_path, tail, error) -> None:
-    store = JsonlEventStore(tmp_path, EventReplayer(_PROFILE, "topics-1"))
+    store = JsonlEventStore(tmp_path, EventReplayer(_PROFILE, _REGISTRY))
     store.append(_event(1))
     path = next(tmp_path.glob("*.jsonl"))
     with path.open("ab") as stream:
@@ -742,7 +749,7 @@ def test_prepare_rejects_a_profile_different_from_the_replayer_before_io() -> No
         resolver=None,
         provider=None,
         event_store=None,
-        replayer=EventReplayer(_PROFILE, "topics-1"),
+        replayer=EventReplayer(_PROFILE, _REGISTRY),
     )
     changed_profile = _PROFILE.model_copy(update={"level": StudentLevel.ADVANCED})
     with pytest.raises(ValueError, match="must match the replayer"):
@@ -758,7 +765,7 @@ def test_unreviewed_question_flag_is_rejected_explicitly() -> None:
             resolver=None,
             provider=None,
             event_store=None,
-            replayer=EventReplayer(_PROFILE, "topics-1"),
+            replayer=EventReplayer(_PROFILE, _REGISTRY),
         )
 
 
