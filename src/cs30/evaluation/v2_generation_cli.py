@@ -15,7 +15,7 @@ from pydantic import ValidationError
 from cs30.contracts import StudentLevel
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 
-from .condition_statistics import MetricObservation, paired_condition_contrasts
+from .condition_statistics import CONTRASTS, MetricObservation, paired_condition_contrasts
 from .evaluation_audit import (
     load_bound_human_audit,
     prepare_calibration_and_audit,
@@ -738,6 +738,41 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
         },
     )
     return 0
+
+
+def _validate_generation_repeat_judge(
+    baseline_provenance: dict[str, Any],
+    repeat_provenance: dict[str, Any],
+    *,
+    repeat_inputs_hash: str,
+    repeat_source_run: str,
+) -> None:
+    """Bind the repeat batch's judge run to the Dev baseline's frozen judge setup.
+
+    Mirrors the efficacy-comparison checks: a different profile package or a reversed
+    checklist would mix judge-side changes into the generation noise floor.
+    """
+
+    if repeat_provenance.get("evaluation_inputs_sha256") != repeat_inputs_hash:
+        raise ValueError("repeat judge evaluation is bound to different inputs")
+    if repeat_provenance.get("source_run_sha256") != repeat_source_run:
+        raise ValueError("repeat judge evaluation is bound to a different source run")
+    for field in (
+        "judge_configuration_sha256",
+        "judge_config_version",
+        "profile_package_sha256",
+    ):
+        if not baseline_provenance.get(field) or baseline_provenance.get(
+            field
+        ) != repeat_provenance.get(field):
+            raise ValueError(
+                f"generation baseline and repeat must use the same frozen judge {field}"
+            )
+    if (
+        baseline_provenance.get("reverse_adaptation_criteria") is not False
+        or repeat_provenance.get("reverse_adaptation_criteria") is not False
+    ):
+        raise ValueError("generation baseline and repeat must use the registered checklist order")
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -1625,19 +1660,12 @@ def _development_report(args: argparse.Namespace) -> int:
         repeat_judge = load_judge_evaluation_outputs(
             args.generation_repeat_judge_evaluation_dir
         )
-        repeat_judge_provenance = repeat_judge["manifest"].get("provenance", {})
-        if repeat_judge_provenance.get("evaluation_inputs_sha256") != repeat_inputs_hash:
-            raise ValueError("repeat judge evaluation is bound to different inputs")
-        if repeat_judge_provenance.get("source_run_sha256") != repeat_source_run:
-            raise ValueError("repeat judge evaluation is bound to a different source run")
-        baseline_judge_provenance = judge_data["manifest"].get("provenance", {})
-        for field in ("judge_configuration_sha256", "judge_config_version"):
-            if not baseline_judge_provenance.get(field) or baseline_judge_provenance.get(
-                field
-            ) != repeat_judge_provenance.get(field):
-                raise ValueError(
-                    f"generation baseline and repeat must use the same frozen judge {field}"
-                )
+        _validate_generation_repeat_judge(
+            judge_data["manifest"].get("provenance", {}),
+            repeat_judge["manifest"].get("provenance", {}),
+            repeat_inputs_hash=repeat_inputs_hash,
+            repeat_source_run=str(repeat_source_run),
+        )
         repeat_adaptation_records = list(repeat_judge["adaptation"])
         if decision_config.adaptation_pass_threshold is not None:
             repeat_adaptation_records = [
@@ -1665,6 +1693,7 @@ def _development_report(args: argparse.Namespace) -> int:
             )
             adaptation = item_adaptation.get(item.evaluation_id, {})
             return {
+                "adaptation_applicable": not item.technical_failure and not item.abstained,
                 "run_id": item.run_id,
                 "question_id": item.question_id,
                 "target_level": item.target_level.value,
@@ -1676,6 +1705,36 @@ def _development_report(args: argparse.Namespace) -> int:
                 "adaptation_passed": adaptation.get("adaptation_passed"),
             }
 
+        strict_contrasts = {
+            str(row["contrast"]): row
+            for row in contrasts
+            if row.get("metric") == "strict_correct"
+            and int(row.get("paired_question_level_count", 0) or 0) > 0
+        }
+        main_comparison: dict[str, Any] | None = None
+        primary_contrast = decision_config.primary_contrast
+        if primary_contrast is not None and primary_contrast in strict_contrasts:
+            treatment, control = CONTRASTS[primary_contrast]
+            main_comparison = {
+                "contrast": primary_contrast,
+                "conditions": [treatment.value, control.value],
+                "paired_cell_count": int(
+                    strict_contrasts[primary_contrast]["paired_question_level_count"]
+                ),
+                "cell_count_source": "registered primary strict_correct contrast on Dev",
+            }
+        elif primary_contrast is None and strict_contrasts:
+            main_comparison = {
+                "contrast": None,
+                "conditions": [],
+                "paired_cell_count": min(
+                    int(row["paired_question_level_count"])
+                    for row in strict_contrasts.values()
+                ),
+                "cell_count_source": (
+                    "smallest strict_correct contrast on Dev (no registered primary contrast)"
+                ),
+            }
         paired_noise = paired_generation_noise_floor(
             [paired_row(item, scores, target_adaptation) for item in items],
             [
@@ -1683,6 +1742,8 @@ def _development_report(args: argparse.Namespace) -> int:
                 for item in repeat_items
             ],
             correctness_delta=decision_config.correctness_noninferiority_delta,
+            main_comparison=main_comparison,
+            adaptation_threshold_frozen=decision_config.adaptation_pass_threshold is not None,
         )
         repeat_provenance = {
             "adapter_manifest": repeat_manifest,

@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import math
 import re
 from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
@@ -290,15 +291,24 @@ def paired_generation_noise_floor(
     repeat_rows: Sequence[Mapping[str, Any]],
     *,
     correctness_delta: float | None = None,
+    main_comparison: Mapping[str, Any] | None = None,
+    adaptation_threshold_frozen: bool = False,
 ) -> dict[str, Any]:
     """Compare a 30-question repeat generation batch with its Dev baseline by run ID.
 
-    The noise floor is measured on the same scale as the registered non-inferiority
-    margin: the strict-correct rate (score 2 only, between zero and one). For each of
-    the four conditions it is the absolute difference between the repeat batch and its
-    paired Dev baseline; the floor is the largest of the four. Unresolved judge outcomes
-    stay in the denominator as bounded unknowns, as in ``strict_correctness_summary``,
-    so the floor and its comparison with the margin are withheld until they are scored.
+    The correctness noise floor is the standard deviation that generation noise adds
+    to the main strict-correct comparison: ``sqrt(flip_rate / n)``. ``flip_rate`` is
+    the share of paired cells whose strict-correct outcome (score 2) changes between
+    the two runs, averaged over the two conditions of the main contrast, and ``n`` is
+    that comparison's paired cell count. Flips in opposite directions therefore do not
+    cancel. Unresolved correctness stays in the denominator as a bounded unknown, as in
+    ``strict_correctness_summary``: the floor is reported as bounds and compared with
+    delta only once every pair is scored.
+
+    Adaptation outcomes are summarised separately. Pairs where an answer was abstained
+    or failed technically, or where the pass threshold is not frozen, are counted as
+    not applicable rather than as unevaluated, so they never hold the correctness
+    status open.
     """
 
     def index(rows: Sequence[Mapping[str, Any]], label: str) -> dict[str, Mapping[str, Any]]:
@@ -314,18 +324,35 @@ def paired_generation_noise_floor(
         value = row.get("correctness_score")
         if value is None:
             return None
-        numeric = int(value)
-        if numeric not in {0, 1, 2}:
+        if type(value) is not int or value not in {0, 1, 2}:
             raise ValueError(f"{run_id}: correctness_score must be 0, 1, 2, or null")
-        return numeric
+        return value
 
     def optional_float(row: Mapping[str, Any], field: str) -> float | None:
         value = row.get(field)
-        return None if value is None else float(value)
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{field} must be numeric or null")
+        numeric = float(value)
+        if not math.isfinite(numeric) or not 0.0 <= numeric <= 1.0:
+            raise ValueError(f"{field} must be finite and between zero and one")
+        return numeric
 
     def optional_bool(row: Mapping[str, Any], field: str) -> bool | None:
         value = row.get(field)
-        return None if value is None else bool(value)
+        if value is None:
+            return None
+        if type(value) is not bool:
+            raise ValueError(f"{field} must be a boolean or null")
+        return value
+
+    def classify(applicable: bool, left: object, right: object) -> str:
+        if not applicable:
+            return "not_applicable"
+        if left is None or right is None:
+            return "not_evaluated"
+        return "evaluated"
 
     baseline = index(baseline_rows, "baseline")
     repeated = index(repeat_rows, "repeat")
@@ -360,11 +387,24 @@ def paired_generation_noise_floor(
                 raise ValueError(f"{run_id}: repeat {field} differs from the Dev baseline")
         baseline_correctness = optional_score(base, run_id)
         repeat_correctness = optional_score(repeat, run_id)
+        base_applicable = base.get("adaptation_applicable", True)
+        repeat_applicable = repeat.get("adaptation_applicable", True)
+        if type(base_applicable) is not bool or type(repeat_applicable) is not bool:
+            raise ValueError("adaptation_applicable must be a boolean")
+        adaptation_applicable = base_applicable and repeat_applicable
         baseline_adaptation = optional_float(base, "adaptation_criterion_pass_rate")
         repeat_adaptation = optional_float(repeat, "adaptation_criterion_pass_rate")
         baseline_passed = optional_bool(base, "adaptation_passed")
         repeat_passed = optional_bool(repeat, "adaptation_passed")
-        correctness_resolved = baseline_correctness is not None and repeat_correctness is not None
+        correctness_state = classify(True, baseline_correctness, repeat_correctness)
+        adaptation_state = classify(
+            adaptation_applicable, baseline_adaptation, repeat_adaptation
+        )
+        pass_state = classify(
+            adaptation_applicable and adaptation_threshold_frozen,
+            baseline_passed,
+            repeat_passed,
+        )
         paired.append(
             {
                 "run_id": run_id,
@@ -373,54 +413,57 @@ def paired_generation_noise_floor(
                 "condition": repeat["condition"],
                 "baseline_correctness": baseline_correctness,
                 "repeat_correctness": repeat_correctness,
+                "correctness_state": correctness_state,
+                "adaptation_state": adaptation_state,
+                "adaptation_pass_state": pass_state,
                 "correctness_difference": (
-                    repeat_correctness - baseline_correctness if correctness_resolved else None
+                    repeat_correctness - baseline_correctness
+                    if correctness_state == "evaluated"
+                    else None
                 ),
                 "adaptation_difference": (
                     repeat_adaptation - baseline_adaptation
-                    if baseline_adaptation is not None and repeat_adaptation is not None
+                    if adaptation_state == "evaluated"
                     else None
                 ),
                 "correct_flip": (
                     (repeat_correctness == 2) != (baseline_correctness == 2)
-                    if correctness_resolved
+                    if correctness_state == "evaluated"
                     else None
                 ),
                 "adaptation_pass_flip": (
-                    repeat_passed != baseline_passed
-                    if baseline_passed is not None and repeat_passed is not None
-                    else None
+                    repeat_passed != baseline_passed if pass_state == "evaluated" else None
                 ),
             }
         )
 
-    def flips(rows: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
-        resolved = [row[field] for row in rows if row[field] is not None]
-        count = sum(bool(value) for value in resolved)
+    def state_counts(rows: Sequence[Mapping[str, Any]], field: str) -> dict[str, int]:
         return {
-            "count": count,
-            "rate": count / len(resolved) if resolved else None,
-            "resolved_pair_count": len(resolved),
-            "unresolved_pair_count": len(rows) - len(resolved),
+            state: sum(row[field] == state for row in rows)
+            for state in ("evaluated", "not_evaluated", "not_applicable")
         }
 
-    def strict_rate(rows: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
+    def correct_flip_rate(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+        """Bounded flip rate: unresolved pairs count as unknown, never dropped."""
+
         denominator = len(rows)
-        correct = sum(row[field] == 2 for row in rows)
-        unresolved = sum(row[field] is None for row in rows)
-        lower = correct / denominator if denominator else None
-        upper = (correct + unresolved) / denominator if denominator else None
+        flips = sum(row["correct_flip"] is True for row in rows)
+        unresolved = sum(row["correctness_state"] != "evaluated" for row in rows)
+        lower = flips / denominator if denominator else None
+        upper = (flips + unresolved) / denominator if denominator else None
         return {
             "denominator": denominator,
-            "strict_correct_count": correct,
+            "flip_count": flips,
             "unresolved_count": unresolved,
-            "strict_correct_rate": lower if unresolved == 0 else None,
-            "strict_correct_rate_bounds": [lower, upper],
+            "rate": lower if unresolved == 0 else None,
+            "rate_bounds": [lower, upper],
         }
 
+    def rate_over_evaluated(rows: Sequence[Mapping[str, Any]], field: str) -> float | None:
+        values = [row[field] for row in rows if row[field] is not None]
+        return sum(bool(value) for value in values) / len(values) if values else None
+
     def summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-        correct_flips = flips(rows, "correct_flip")
-        adaptation_flips = flips(rows, "adaptation_pass_flip")
         return {
             "pair_count": len(rows),
             "correctness_score_difference": _difference_distribution(
@@ -437,12 +480,16 @@ def paired_generation_noise_floor(
                     if row["adaptation_difference"] is not None
                 ]
             ),
-            "correct_flip_count": correct_flips["count"],
-            "correct_flip_rate": correct_flips["rate"],
-            "adaptation_pass_flip_count": adaptation_flips["count"],
-            "adaptation_pass_flip_rate": adaptation_flips["rate"],
-            "unresolved_correctness_pair_count": correct_flips["unresolved_pair_count"],
-            "unresolved_adaptation_pair_count": adaptation_flips["unresolved_pair_count"],
+            "correct_flip_count": sum(row["correct_flip"] is True for row in rows),
+            "correct_flip_rate": correct_flip_rate(rows)["rate"],
+            "correct_flip_rate_bounds": correct_flip_rate(rows)["rate_bounds"],
+            "adaptation_pass_flip_count": sum(
+                row["adaptation_pass_flip"] is True for row in rows
+            ),
+            "adaptation_pass_flip_rate": rate_over_evaluated(rows, "adaptation_pass_flip"),
+            "correctness_pairs": state_counts(rows, "correctness_state"),
+            "adaptation_pairs": state_counts(rows, "adaptation_state"),
+            "adaptation_pass_pairs": state_counts(rows, "adaptation_pass_state"),
         }
 
     grouped = []
@@ -458,76 +505,132 @@ def paired_generation_noise_floor(
                 {"condition": condition.value, "target_level": level.value, **summary(rows)}
             )
 
-    by_condition = []
+    by_condition: dict[str, dict[str, Any]] = {}
     for condition in ExperimentArm:
         rows = [row for row in paired if row["condition"] == condition.value]
-        baseline_rate = strict_rate(rows, "baseline_correctness")
-        repeat_rate = strict_rate(rows, "repeat_correctness")
-        complete = (
-            baseline_rate["strict_correct_rate"] is not None
-            and repeat_rate["strict_correct_rate"] is not None
-        )
-        difference = (
-            repeat_rate["strict_correct_rate"] - baseline_rate["strict_correct_rate"]
+        evaluated = [row for row in rows if row["correctness_state"] == "evaluated"]
+        complete = len(evaluated) == len(rows) and bool(rows)
+        baseline_rate = (
+            sum(row["baseline_correctness"] == 2 for row in rows) / len(rows)
             if complete
             else None
         )
-        by_condition.append(
-            {
-                "condition": condition.value,
-                "baseline": baseline_rate,
-                "repeat": repeat_rate,
-                "strict_correct_rate_difference": difference,
-                "absolute_strict_correct_rate_difference": (
-                    abs(difference) if difference is not None else None
-                ),
-                "correct_flip_rate": flips(rows, "correct_flip")["rate"],
-            }
+        repeat_rate = (
+            sum(row["repeat_correctness"] == 2 for row in rows) / len(rows)
+            if complete
+            else None
         )
+        by_condition[condition.value] = {
+            "condition": condition.value,
+            "correct_flip_rate": correct_flip_rate(rows),
+            "baseline_strict_correct_rate": baseline_rate,
+            "repeat_strict_correct_rate": repeat_rate,
+            "strict_correct_rate_difference": (
+                repeat_rate - baseline_rate if complete else None
+            ),
+        }
 
-    absolute_differences = [
-        row["absolute_strict_correct_rate_difference"] for row in by_condition
+    comparison = dict(main_comparison) if main_comparison is not None else None
+    if correctness_delta is not None and (
+        not math.isfinite(correctness_delta) or not 0.0 <= correctness_delta <= 1.0
+    ):
+        raise ValueError("correctness_delta must be finite and between zero and one")
+    comparison_conditions = [
+        str(value) for value in (comparison or {}).get("conditions") or []
     ]
-    noise_floor = (
-        max(absolute_differences)
-        if all(value is not None for value in absolute_differences)
-        else None
+    unknown = [value for value in comparison_conditions if value not in by_condition]
+    if unknown:
+        raise ValueError(f"main comparison names unknown conditions: {unknown}")
+    if comparison_conditions and (
+        len(comparison_conditions) != 2 or len(set(comparison_conditions)) != 2
+    ):
+        raise ValueError("main comparison must contain two distinct conditions")
+    flip_rows = (
+        [row for row in paired if row["condition"] in comparison_conditions]
+        if comparison_conditions
+        else paired
     )
-    overall = summary(paired)
-    unresolved_count = (
-        overall["unresolved_correctness_pair_count"]
-        + overall["unresolved_adaptation_pair_count"]
+    # Every condition has the same 90 paired cells, so pooling the two arms' cells gives
+    # the mean of their flip rates.
+    flip = correct_flip_rate(flip_rows)
+    flip_source = (
+        f"pooled over main contrast conditions {comparison_conditions}"
+        if comparison_conditions
+        else "pooled over all four conditions (no registered main contrast)"
     )
+    raw_cell_count = (comparison or {}).get("paired_cell_count")
+    if raw_cell_count is not None and (
+        type(raw_cell_count) is not int or raw_cell_count <= 0
+    ):
+        raise ValueError("main comparison paired_cell_count must be a positive integer")
+    cell_count = raw_cell_count
+    if cell_count is None:
+        floor_status = "awaiting_main_comparison"
+        floor_value = None
+        floor_bounds = [None, None]
+    else:
+        lower_rate, upper_rate = flip["rate_bounds"]
+        floor_bounds = [
+            math.sqrt(lower_rate / cell_count) if lower_rate is not None else None,
+            math.sqrt(upper_rate / cell_count) if upper_rate is not None else None,
+        ]
+        floor_value = (
+            math.sqrt(flip["rate"] / cell_count) if flip["rate"] is not None else None
+        )
+        floor_status = "complete" if floor_value is not None else "incomplete"
+
+    adaptation_counts = state_counts(paired, "adaptation_state")
+    pass_counts = state_counts(paired, "adaptation_pass_state")
+    if adaptation_counts["not_evaluated"] or (
+        adaptation_threshold_frozen and pass_counts["not_evaluated"]
+    ):
+        adaptation_status = "incomplete"
+    elif not adaptation_threshold_frozen:
+        adaptation_status = "threshold_not_frozen"
+    else:
+        adaptation_status = "complete"
+
     return {
-        "status": "complete" if unresolved_count == 0 else "incomplete",
+        "status": floor_status,
         "method": "paired_by_run_id_on_30_question_dev_repeat_batch",
         "question_count": len(repeat_questions),
         "pair_count": len(paired),
-        "overall": overall,
+        "overall": summary(paired),
         "by_condition_and_level": grouped,
+        "by_condition": list(by_condition.values()),
         "strict_correct_noise_floor": {
-            "statistic": (
-                "largest absolute per-condition difference in strict-correct rate "
-                "(repeat minus Dev baseline) over the paired cells"
-            ),
-            "value": noise_floor,
-            "by_condition": by_condition,
-            "status": "complete" if noise_floor is not None else "incomplete",
+            "statistic": "sqrt(strict-correct flip rate / main comparison paired cells)",
+            "status": floor_status,
+            "value": floor_value,
+            "bounds": floor_bounds,
+            "flip_rate": flip,
+            "flip_rate_source": flip_source,
+            "main_comparison": comparison,
+        },
+        "adaptation": {
+            "status": adaptation_status,
+            "threshold_frozen": adaptation_threshold_frozen,
+            "criterion_rate_pairs": adaptation_counts,
+            "pass_pairs": pass_counts,
         },
         "correctness_noninferiority_delta": correctness_delta,
         "delta_exceeds_strict_correct_noise_floor": (
-            correctness_delta > noise_floor
-            if correctness_delta is not None and noise_floor is not None
+            correctness_delta > floor_value
+            if correctness_delta is not None and floor_value is not None
             else None
         ),
         "interpretation": (
             "The correctness non-inferiority margin delta must exceed this paired "
-            "generation noise floor, measured on the same strict-correct rate scale. "
-            "Within each condition the correct-flip rate bounds the absolute rate "
-            "difference from above and is reported for context. Unresolved outcomes stay in the "
-            "denominator; the floor and its comparison are withheld until they are scored. "
-            "Judge repeat agreement measures judge variability and cannot replace this "
-            "comparison."
+            "generation noise floor. The floor is sqrt(flip rate / n): the standard "
+            "deviation generation noise adds to the main strict-correct comparison, where "
+            "the flip rate counts every cell whose strict-correct outcome changes between "
+            "runs, so changes in opposite directions do not cancel, and n is the main "
+            "comparison's paired cell count. Using the Dev cell count is conservative for "
+            "a larger Test set. Unresolved correctness stays in the denominator; the floor "
+            "is then reported only as bounds and not compared with delta. Not-applicable "
+            "adaptation pairs (abstained or failed answers, or no frozen threshold) are "
+            "counted separately from unevaluated ones. Judge repeat agreement measures "
+            "judge variability and cannot replace this comparison."
         ),
     }
 
@@ -834,7 +937,7 @@ def _markdown(report: Mapping[str, Any]) -> str:
                 "",
                 "## Generation noise floor",
                 "",
-                "The correctness non-inferiority margin δ must exceed the paired "
+                "The correctness non-inferiority margin delta must exceed the paired "
                 "repeated-generation noise floor below. Judge repeat agreement measures "
                 "only judge variability and cannot replace it.",
                 "",

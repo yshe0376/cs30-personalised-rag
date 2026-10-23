@@ -809,3 +809,55 @@ def test_validity_cli_derives_semantic_repeat_order_and_second_judge_pairs(
     assert checks["second_judge_consistency"]["coverage_complete"] is True
     assert checks["position_order_consistency"]["consistency_rate"] == 1.0
     assert checks["second_judge_consistency"]["consistency_rate"] == 1.0
+
+
+def _repeat_provenance(**overrides: object) -> dict[str, object]:
+    provenance: dict[str, object] = {
+        "evaluation_inputs_sha256": "repeat-inputs",
+        "source_run_sha256": "repeat-run",
+        "judge_configuration_sha256": "config",
+        "judge_config_version": "judge-v1",
+        "profile_package_sha256": "profiles",
+        "reverse_adaptation_criteria": False,
+    }
+    provenance.update(overrides)
+    return provenance
+
+
+def test_generation_repeat_accepts_the_baseline_judge_setup() -> None:
+    from cs30.evaluation.v2_generation_cli import _validate_generation_repeat_judge
+
+    _validate_generation_repeat_judge(
+        _repeat_provenance(evaluation_inputs_sha256="dev", source_run_sha256="dev-run"),
+        _repeat_provenance(),
+        repeat_inputs_hash="repeat-inputs",
+        repeat_source_run="repeat-run",
+    )
+
+
+@pytest.mark.parametrize(
+    ("baseline", "repeat", "message"),
+    [
+        ({}, {"profile_package_sha256": "edited-profiles"}, "profile_package_sha256"),
+        ({"profile_package_sha256": None}, {}, "profile_package_sha256"),
+        ({}, {"judge_configuration_sha256": "other"}, "judge_configuration_sha256"),
+        ({}, {"reverse_adaptation_criteria": True}, "registered checklist order"),
+        ({"reverse_adaptation_criteria": True}, {}, "registered checklist order"),
+        ({"reverse_adaptation_criteria": None}, {}, "registered checklist order"),
+        ({}, {"reverse_adaptation_criteria": None}, "registered checklist order"),
+        ({}, {"evaluation_inputs_sha256": "other"}, "different inputs"),
+        ({}, {"source_run_sha256": "other"}, "different source run"),
+    ],
+)
+def test_generation_repeat_rejects_a_changed_judge_setup(
+    baseline: dict[str, object], repeat: dict[str, object], message: str
+) -> None:
+    from cs30.evaluation.v2_generation_cli import _validate_generation_repeat_judge
+
+    with pytest.raises(ValueError, match=message):
+        _validate_generation_repeat_judge(
+            _repeat_provenance(**baseline),
+            _repeat_provenance(**repeat),
+            repeat_inputs_hash="repeat-inputs",
+            repeat_source_run="repeat-run",
+        )
