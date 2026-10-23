@@ -13,6 +13,10 @@
 The two ZIPs are intentionally not committed. Place them in this directory, or
 set their paths explicitly:
 
+The M5 ZIP, para-v1 input, and strict Qwen3 Top-20 M7 handoff are available in
+the development prerelease
+[`m6-w6-qwen3-hybrid-dev-v1`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/m6-w6-qwen3-hybrid-dev-v1).
+
 ```powershell
 $env:CS30_M6_CORPUS_ZIP = "C:\path\to\M4_to_M5_four_book_corpus_a1fe99e.zip"
 $env:CS30_M6_INDEX_ZIP = "C:\path\to\M5_to_M6_four_book_2026-10-21.zip"

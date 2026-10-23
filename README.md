@@ -27,6 +27,9 @@ provenance manifest are under
 [`docs/results/m6_w6_v2_four_book_gold_v0_1_3/`](docs/results/m6_w6_v2_four_book_gold_v0_1_3/).
 Exact input names, hashes, and setup instructions are documented in
 [`eval_inputs/m6_v2/README.md`](eval_inputs/m6_v2/README.md).
+The M5 index handoff and strict Qwen3 v2 candidate file are published in the
+development prerelease
+[`m6-w6-qwen3-hybrid-dev-v1`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/m6-w6-qwen3-hybrid-dev-v1).
 
 These results are diagnostic, not formally reportable: the supplied corpus is
 marked `reportable=false`, Golden Evidence annotations are `draft`, and the

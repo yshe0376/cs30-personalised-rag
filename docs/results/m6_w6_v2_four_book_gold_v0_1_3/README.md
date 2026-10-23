@@ -54,4 +54,7 @@ Files:
 - `run_manifest.json`: hashes, Git state, model revisions, and method provenance.
 
 Large per-question metrics, candidate hits, indexes, and source ZIPs are kept
-outside Git. No `proposed_test_all_*` output is generated.
+outside Git. The strict Qwen3 Top-20 candidate JSONL, its manifest, and the M5
+index ZIP are published in the development prerelease
+[`m6-w6-qwen3-hybrid-dev-v1`](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/m6-w6-qwen3-hybrid-dev-v1).
+No `proposed_test_all_*` output is generated.
