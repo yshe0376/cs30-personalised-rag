@@ -50,7 +50,10 @@ python -m cs30.v2.experiment_cli convert-gold \
 
 取得 M6 的**原生 V2 FrozenRetrieval JSONL** 后，先核对交付摘要，再设置 `M7_RETRIEVAL`。
 必须是全部 341 题的 BGE-M3 Dense 0.10 / BM25 0.90、top-20 候选。
-`--require-retrieval` 防止遗漏参数时静默回落到 BM25；manifest 记录候选文件 SHA-256。
+`--require-retrieval` 在 prepare 阶段提前检查；manifest 记录候选文件 SHA-256。
+API 的 `run --provider openai-compatible` 还会**强制拒绝**缺少 `source_retrieval_sha256` 的
+准备目录，即使 prepare 时两个参数都忘记，也不会把隐式 BM25 当成正式候选运行。
+此保护同时适用于 CLI、直接 Python 调用和 `--resume`，在创建输出目录/读取密钥前检查。
 这里的模型变量必须填写提供方实际支持的固定模型 ID，不沿用 Ollama 的 `gpt-oss:20b`。
 
 ```bash
@@ -86,15 +89,20 @@ RRF 分数分布已变，旧 λ=0.2 不可直接沿用。保存的选择文件�
 密钥只从 `--api-key-env` 指定的**环境变量名**读取；不会自动加载 `.env`。
 `--provider-name` 记录托管平台，`--model-version` 记录平台承诺的固定权重/部署版本；
 同时记录响应实际 model、system_fingerprint（若有）、请求 ID、completion ID、token 用量。
+`--extra-body` 接受平台参数 JSON 对象；参数原文内容（规范化 JSON）进入 client manifest、
+请求 payload 和缓存身份，`--resume` 必须完全一致。不能覆盖 model/messages/temperature/
+max_tokens/seed/response_format 等受控字段，不能在这里传认证信息。
 平台只提供可漂移别名时，要如实说明版本不可验证，不能填一个自创版本号冒充固定版本。
 
-先核对提供方实时输入/输出价格；以冒烟实测平均输入 token 估算费用，输出取 token 上限：
+先核对提供方实时输入/输出价格；以冒烟实测平均输入 token 估算费用，输出取 token 上限。
+`M7_MAX_OUTPUT_TOKENS` 必须先按模型、推理强度和截断率冒烟确定；gpt-oss 的推理 token 也会
+占输出预算，不能默认 2048 足够。提高 token 预算后须重新估费，并在提供方设置金额上限：
 
 ```bash
 python -m cs30.v2.experiment_cli estimate \
   --prepared-dir artifacts/m7-api-dev-final \
   --input-usd-per-million "$M7_INPUT_PRICE" --output-usd-per-million "$M7_OUTPUT_PRICE" \
-  --mean-input-tokens "$M7_MEAN_INPUT_TOKENS" --max-output-tokens 2048 \
+  --mean-input-tokens "$M7_MEAN_INPUT_TOKENS" --max-output-tokens "$M7_MAX_OUTPUT_TOKENS" \
   --max-api-requests "$M7_APPROVED_REQUEST_CAP" --output artifacts/m7-api-cost-plan.json
 ```
 
@@ -112,27 +120,55 @@ python -m cs30.v2.experiment_cli run \
   --prepared-dir artifacts/m7-api-dev-final --output-dir artifacts/m7-api-dev-run \
   --provider openai-compatible --base-url "$M7_BASE_URL" \
   --provider-name "$M7_PROVIDER" --model-version "$M7_MODEL_VERSION" \
-  --api-key-env M7_GENERATION_API_KEY --structured-output auto \
-  --timeout 120 --max-output-tokens 2048 --transport-retries 3 \
+  --api-key-env M7_GENERATION_API_KEY --extra-body "$M7_EXTRA_BODY" \
+  --structured-output "$M7_OUTPUT_FORMAT" \
+  --timeout 120 --max-output-tokens "$M7_MAX_OUTPUT_TOKENS" --transport-retries 3 \
   --concurrency 3 --max-api-requests "$M7_APPROVED_REQUEST_CAP" --stop-after-errors 3
 ```
 
 上例是**批准预算后的完整 Dev 命令**，1,848 个单元；冒烟需替换 prepared/output 目录和请求上限。
+正式运行前，`M7_OUTPUT_FORMAT` **必须**填写冒烟验证通过的固定值
+`json_schema` / `json_object` / `text`，不能使用 `auto`；`M7_EXTRA_BODY` 和 token 预算也同时冻结。
+例如平台的 JSON Object 冒烟成功后可设 `M7_OUTPUT_FORMAT=json_object`。
+`auto` 仅用于探索平台能力，会逐单元重复发送不支持的 Schema 探测请求，这些 400 也计入请求预算。
+不能用一个已开始的 `auto` 批次改参数续跑：固定设置后新建正式 run 目录。
 同模型支持 3–5 并发，每个模型独立进程和输出目录，同一目录受单写者锁保护。
 温度固定为 0；只有提供方支持时才加 `--api-seed`，默认不发送 seed。
 本轮只用 API。旧 `openai` Responses / `ollama` 入口供历史兼容，不用于新实验。
 
-`auto` 先用 JSON Schema；只有明确返回不支持 response_format 的 400/422 才降到 JSON Object，
-再降到普通文本。也可在冒烟后固定 `json_schema` / `json_object` / `text`。
+模型特有参数也须先冒烟验证，平台确认支持后再使用。例如：
+
+```bash
+# 支持 reasoning_effort 的 gpt-oss API：固定推理强度，不能仅依赖平台默认值。
+export M7_EXTRA_BODY='{"reasoning_effort":"low"}'
+# Qwen3 8B 的 vLLM 兼容端点：若平台支持该开关，关闭 thinking 后再验证严格 JSON。
+export M7_EXTRA_BODY='{"chat_template_kwargs":{"enable_thinking":false}}'
+```
+
+这两行是**不同模型的独立示例**，按实际平台选其一或使用其文档指定的 JSON；不承诺所有
+托管商都支持相同字段。[Groq reasoning 文档](https://console.groq.com/docs/reasoning) 说明
+其 gpt-oss 的 reasoning_effort；[Qwen vLLM 文档](https://qwen.readthedocs.io/en/latest/deployment/vllm.html)
+说明 chat_template_kwargs/enable_thinking。平台若采用顶层 `enable_thinking`，就按其文档传入。
+Qwen 若仍把 `<think>…</think>` 放进 content，冒烟应判为未通过，核对 thinking 开关/提供方；
+不静默删除任意思考文本或放宽答案契约。单独的 reasoning 字段留在原始响应缓存中，不当成答案。
+
+冒烟时的 `auto` 先用 JSON Schema；只有明确返回不支持 response_format 的 400/422 才降到
+JSON Object，再降到普通文本。正式运行固定冒烟确认的模式。
+manifest 的 `client.structured_output` 记录请求策略；`api_audit.http_attempts_by_format` 和
+`successful_responses_by_format` 记录实际发送/收到 2xx 的模式及数量，原始响应缓存也保存
+`format_mode`；2xx 表示平台接受请求，答案是否通过本地 schema 校验仍以单元状态为准。
 普通文本仍需满足严格 JSON 契约，仅容忍整个输出包在 JSON 代码围栏中。
 不接受任意说明文字、不放松必填字段/引用约束；非法输出进入原有有界修复。
 429/临时 5xx/连接故障执行有界退避，尊重 `Retry-After`；等待超过 60 秒预算时停止该调用，稍后恢复。
 `finish_reason=length` 单独记为 `output_truncated`，含空内容。
+401/403/404 会在保存原始错误后**直接终止整批**，不进入生成层重试，也不再处理后续题目。
+并发中已发送的请求可能结束并落检查点；共享的致命错误状态阻止其余 worker 再发新请求。
+修正密钥/权限后用原参数 `--resume`；模型或 endpoint 要改则建立新批次，不能混入旧批。
 
 ## 中断、断线与恢复
 
 重用完整原运行命令，追加 `--resume`。恢复前核验冻结输入、代码、提供方、endpoint、
-模型版本、温度、seed、输出格式、token 上限；不同模型或配置不能混入同批。
+模型版本、温度、seed、extra-body、输出格式、token 上限；不同模型或配置不能混入同批。
 并发数可调整，密钥可轮换但仍使用原环境变量名。
 
 每个单元有原子检查点；HTTP 请求在发送前持久化，返回在解析前持久化。
@@ -149,7 +185,7 @@ python -m cs30.v2.experiment_cli run \
 `run_manifest.json` 的 `api_audit` 汇总全部 HTTP 尝试及平台返回的 token 用量（含被替代失败），
 缺失用量不代表免费。退出码：0 完成；3 完成但有失败/截断；2 配置/预算/服务停机错误。
 
-## 实测噪声底与 Test
+## Dev 重复生成诊断、M8 评分噪声底与 Test
 
 已固定 [30 题 Dev 重复样本](results/m7_api_readiness_20261023/noise_question_ids.json)，
 从排序后的 154 Dev ID 以 seed=20261023 抽样；这是抽样 seed，不是 API seed。
@@ -170,8 +206,19 @@ python -m cs30.v2.experiment_cli noise-floor \
 
 报告校验输出哈希、检查点、来源、模型版本、prompt 和证据一致性。
 以成功配对数为不一致率分母，另外列出技术失败配对数、final_choice 变化和引用集合变化。
-完整结构化答案精确相等是文本噪声诊断，不是语义正确性或 judge 分数；后两者归 M8。
-报告须明确“API 温度为 0 或提供 seed 仍不能保证逐字复现”，并填入这次实测数据，不能用历史本地结果代替。
+整段答案逐字不一致率在 API 上可能接近 100%，仅作文本复现诊断；final_choice 和引用集合
+变化用于解释可观察的答案/证据差异，它们也不能直接代替评分指标或用于设定 δ。
+命令名 `noise-floor` 保留兼容，输出明确标记 `diagnostic_only=true`、
+`scoring_noise_floor_status=pending_m8_scoring`，不会宣称评分噪声底已经完成。
+
+**360 个重复单元必须连同基线中对应的 360 个单元交给 M8 评分**。交接前与 M8 确认：
+沿用同一冻结 judge、rubric、评分参数及失败分母政策；两批答案的缓存/结果分别绑定
+“run 目录 + manifest/答案哈希”，避免重复 run_id 误复用旧评分。
+M8 在两批配对的正确性、适配和其他登记指标上估计波动，并报告评分层面的噪声及不确定性；
+δ 与主要比较仍由 Leader 预先登记，不能从文本不一致率推导。
+M7 交付重复答案和证据，M8 接管评分；本次没有运行或变更 M8 judge，也没有实测评分噪声值。
+报告须明确“API 温度为 0 或提供 seed 仍不能保证逐字复现”，分别列出文本诊断和 M8 的评分噪声结果，
+不能用历史本地结果代替。
 
 Test 只在 M8 冻结 judge、Leader 登记 δ/主要比较及对比模型抽样方案后运行一次。
 主模型 187 × 12 = 2,244 单元；对比模型规模由 Leader 决定，不能擅自按原 60 × 6 开跑。
@@ -179,7 +226,7 @@ Test 只在 M8 冻结 judge、Leader 登记 δ/主要比较及对比模型抽样
 
 ## 交付 M8
 
-交付完整 prepared/run 目录及独立噪声报告，包含：
+交付完整基线与重复批次的 prepared/run 目录、文本诊断报告及上述 M8 评分交接项，包含：
 `input_manifest.json`、`expected_experiment.json`、`saved_answers.jsonl`、
 `generation_records.jsonl`、`generation_summary.json`、`generation_report.md`、
 `run_manifest.json`、全部 `checkpoints/` 和 `api_cache/`。

@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from cs30.generation.client import LLMClient, TokenUsage
 from cs30.generation.exceptions import (
     LLMCacheIntegrityError,
+    LLMFatalProviderError,
     LLMOutputValidationError,
     LLMRequestBudgetExceeded,
     LLMRetryLater,
@@ -169,7 +170,12 @@ class V2AnswerGenerator:
             started = perf_counter()
             try:
                 response = self.client.complete(prompt, openai_text_format())
-            except (LLMRequestBudgetExceeded, LLMCacheIntegrityError, LLMRetryLater):
+            except (
+                LLMRequestBudgetExceeded,
+                LLMCacheIntegrityError,
+                LLMRetryLater,
+                LLMFatalProviderError,
+            ):
                 raise
             except Exception as exc:
                 records.append(

@@ -50,6 +50,9 @@ def test_noise_floor_measures_answer_changes_and_reports_failures_separately(tmp
     assert result["expected_pairs"] == 12 and result["successful_pairs"] == 11
     assert result["paired_technical_failures"] == 1 and result["answer_mismatch_rate"] == 1
     assert result["final_choice_changes"] == result["citation_set_changes"] == 0
+    assert result["diagnostic_only"] is True
+    assert result["scoring_noise_floor_status"] == "pending_m8_scoring"
+    assert result["m8_handoff"]["repeat_cells"] == result["expected_pairs"]
     with pytest.raises(ValueError, match="independent repeat"):
         noise_floor_report(first, first)
     answers = repeat / "saved_answers.jsonl"

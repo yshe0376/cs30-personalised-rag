@@ -27,6 +27,7 @@ from cs30.generation.client import LLMClient
 from cs30.generation.conditions import GenerationCondition
 from cs30.generation.exceptions import (
     LLMCacheIntegrityError,
+    LLMFatalProviderError,
     LLMRequestBudgetExceeded,
     LLMRetryLater,
 )
@@ -714,7 +715,11 @@ def run_experiment(
         raise ValueError("output directory already exists; use --resume or a new directory")
     if resume and not output_dir.is_dir():
         raise ValueError("resume requires an existing experiment directory")
-    _, config, matrix, *_ = load_prepared(prepared_dir)
+    manifest, config, matrix, *_ = load_prepared(prepared_dir)
+    if provider == "openai-compatible" and not manifest.get("source_retrieval_sha256"):
+        raise ValueError(
+            "openai-compatible requires explicit saved retrieval; re-prepare with --retrieval"
+        )
     if config.lambda_weight == 0 and any("R1" in c.condition_id for c in matrix.cases):
         raise ValueError("lambda_weight == 0 cannot run an R1 matrix; select a positive Dev lambda")
     if client.model != config.generator_model:
@@ -892,7 +897,12 @@ def _run_experiment(
             result = V2BatchResult(answer, generator.last_trace)
         except V2GenerationFailure as exc:
             result = V2BatchResult(None, exc.trace, str(exc))
-        except (LLMRequestBudgetExceeded, LLMCacheIntegrityError, LLMRetryLater):
+        except (
+            LLMRequestBudgetExceeded,
+            LLMCacheIntegrityError,
+            LLMRetryLater,
+            LLMFatalProviderError,
+        ):
             raise
         except Exception as exc:
             # Malformed provider response objects must not discard later cells.
@@ -1017,7 +1027,9 @@ def _run_experiment(
             f"{g['output_truncated']} | {g['model_calls']} |\n"
             for g in groups
         )
-        + "\nAPI 温度为 0 或传入 seed 仍不能保证逐字复现；噪声底需独立 Dev 重复生成后报告。"
+        + "\nAPI 温度为 0 或传入 seed 仍不能保证逐字复现；文本复现诊断需独立 Dev 重复生成。"
+        "评分噪声底需将重复单元和基线配对交 M8，使用同一冻结 judge/rubric 评分；"
+        "文本变化率不能代替 δ。"
         "API 原始请求与返回见 api_cache/，逐次 HTTP 用量与请求数见 run_manifest.json 的 api_audit。"
         "\n耗时、用量及引用数量见 generation_summary.json；完整证据和原始模型输出见 "
         "generation_records.jsonl。引用 ID 有效不等于证据语义支持；"

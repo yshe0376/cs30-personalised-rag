@@ -111,9 +111,24 @@ def noise_floor_report(baseline_dir: Path, repeat_dir: Path) -> dict:
         "answer_mismatch_rate": mismatches / paired if paired else None,
         "final_choice_changes": choice_changes,
         "citation_set_changes": citation_changes,
+        "diagnostic_only": True,
+        "scoring_noise_floor_status": "pending_m8_scoring",
+        "m8_handoff": {
+            "baseline_paired_cells": len(repeat),
+            "repeat_cells": len(repeat),
+            "required_inputs": [
+                "expected_experiment.json",
+                "saved_answers.jsonl",
+                "generation_records.jsonl",
+                "run_manifest.json",
+            ],
+            "policy": "Score all repeat cells and their baseline counterparts using the same "
+            "frozen M8 judge and rubric, bound to each run directory and answer hash. "
+            "Compare paired evaluation metrics; text mismatch rates cannot set delta.",
+        },
         "baseline_manifest_sha256": sha256_bytes((baseline_dir / "run_manifest.json").read_bytes()),
         "repeat_manifest_sha256": sha256_bytes((repeat_dir / "run_manifest.json").read_bytes()),
         "policy": "Compare complete structured answers exactly on independently generated Dev "
         "pairs with identical inputs. Failures reported separately; no semantic or "
-        "judge score is inferred. API output is not reproducible verbatim.",
+        "judge score or scoring noise floor is inferred. API output is not reproducible verbatim.",
     }

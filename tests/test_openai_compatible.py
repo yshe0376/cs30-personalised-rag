@@ -7,7 +7,8 @@ from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-from test_v2_experiment import Client, prepare
+from test_v2_experiment import Client
+from test_v2_experiment import prepare as prepare_bm25
 
 from cs30.generation.compatible import OpenAICompatibleClient
 from cs30.generation.exceptions import (
@@ -16,11 +17,26 @@ from cs30.generation.exceptions import (
     LLMRequestBudgetExceeded,
 )
 from cs30.generation.schema import openai_text_format, parse_answer_payload
-from cs30.v2.experiment import run_experiment
+from cs30.v2.experiment import ExperimentConfig, prepare_experiment, run_experiment
 from cs30.v2.experiment_cli import main
 
 SECRET = "unit-test-secret-never-persist"
 ANSWER = {"final_choice": None, "explanation": "Force and motion.", "citations": ["E1"]}
+
+
+def prepare(tmp_path, *, max_retries=0):
+    """Freeze an explicit saved synthetic candidate file for API runner tests."""
+    original = prepare_bm25(tmp_path)
+    config = ExperimentConfig.model_validate_json((original / "config.json").read_bytes())
+    target = tmp_path / "api-prepared"
+    prepare_experiment(
+        corpus_dir=next(tmp_path.glob("artifacts/v2/textbooks/records")),
+        gold_path=original / "gold.jsonl",
+        output_dir=target,
+        retrieval_path=original / "retrieval.jsonl",
+        config=config.model_copy(update={"max_retries": max_retries}),
+    )
+    return target
 
 
 @contextmanager
@@ -289,9 +305,12 @@ def test_cli_wires_compatible_provider_budget_and_concurrency(tmp_path, monkeypa
             "12",
             "--concurrency",
             "3",
+            "--extra-body",
+            '{"reasoning_effort":"low"}',
         ]
         assert main(args) == main(args + ["--resume"]) == 0
         assert len(state["requests"]) == 12
+        assert all(p["reasoning_effort"] == "low" for _, p, _ in state["requests"])
 
 
 def test_cached_response_tampering_is_rejected_before_network(tmp_path, monkeypatch):
@@ -355,3 +374,174 @@ def test_malformed_wire_envelope_can_recover_on_resume(tmp_path, monkeypatch):
         )
         assert all(r.status == "answered" for r in recovered)
         assert len(state["requests"]) == 13
+
+
+def test_extra_body_reaches_wire_cache_and_manifest_without_mutable_aliases(tmp_path, monkeypatch):
+    prepared = prepare(tmp_path)
+    options = {"reasoning_effort": "low", "chat_template_kwargs": {"enable_thinking": False}}
+    with server() as (url, state):
+        api = client(url, monkeypatch, extra_body=options, max_output_tokens=8192)
+        options["chat_template_kwargs"]["enable_thinking"] = True
+        exposed = api.runtime_identity()
+        exposed["extra_body"]["reasoning_effort"] = "high"
+        run_experiment(prepared, tmp_path / "run", api, provider="openai-compatible")
+        for _, payload, _ in state["requests"]:
+            assert payload["reasoning_effort"] == "low"
+            assert payload["chat_template_kwargs"] == {"enable_thinking": False}
+            assert payload["max_tokens"] == 8192
+    manifest = json.loads((tmp_path / "run/run_manifest.json").read_bytes())
+    assert manifest["client"]["extra_body"]["reasoning_effort"] == "low"
+    assert manifest["client"]["extra_body"]["chat_template_kwargs"]["enable_thinking"] is False
+    events = [
+        json.loads(p.read_bytes())
+        for p in (tmp_path / "run/api_cache").rglob("*.json")
+        if p.name != "response.json"
+    ]
+    assert all(e["request"]["reasoning_effort"] == "low" for e in events)
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "[]",
+        "null",
+        '{"x": NaN}',
+        '{"x": 1e400}',
+        '{"x":1,"x":2}',
+        '{"model":"override"}',
+        '{"temperature":1}',
+        '{"max_tokens":100}',
+        '{"max_completion_tokens":100}',
+        '{"stream":true}',
+        '{"provider":{"api_key":"secret"}}',
+    ],
+)
+def test_extra_body_rejects_invalid_json_core_overrides_and_credentials(raw):
+    from cs30.generation.compatible import parse_extra_body
+
+    with pytest.raises(ValueError):
+        parse_extra_body(raw)
+
+
+def test_extra_body_changes_cache_identity_and_refuses_resume(tmp_path, monkeypatch):
+    prepared = prepare(tmp_path)
+    output = tmp_path / "run"
+    with server() as (url, state):
+        run_experiment(
+            prepared,
+            output,
+            client(url, monkeypatch, extra_body={"reasoning_effort": "low"}),
+            provider="openai-compatible",
+        )
+        with pytest.raises(ValueError, match="resume client"):
+            run_experiment(
+                prepared,
+                output,
+                client(url, monkeypatch, extra_body={"reasoning_effort": "high"}),
+                provider="openai-compatible",
+                resume=True,
+            )
+        assert len(state["requests"]) == 12
+        first = client(url, monkeypatch, extra_body={"reasoning_effort": "low"}).for_cell(
+            "x", tmp_path / "cache"
+        )
+        first.complete("q", {})
+        changed = client(url, monkeypatch, extra_body={"reasoning_effort": "high"}).for_cell(
+            "x", tmp_path / "cache"
+        )
+        changed.complete("q", {})
+        assert len(state["requests"]) == 14
+
+
+def test_api_runner_refuses_implicit_bm25_before_creating_output_or_reading_key(
+    tmp_path, monkeypatch
+):
+    prepared = prepare_bm25(tmp_path)
+    output = tmp_path / "run"
+    monkeypatch.delenv("MISSING_KEY", raising=False)
+    assert (
+        main(
+            [
+                "run",
+                "--prepared-dir",
+                str(prepared),
+                "--output-dir",
+                str(output),
+                "--provider",
+                "openai-compatible",
+                "--api-key-env",
+                "MISSING_KEY",
+            ]
+        )
+        == 2
+    )
+    assert not output.exists()
+    with pytest.raises(ValueError, match="explicit saved retrieval"):
+        run_experiment(prepared, output, Client(), provider="openai-compatible")
+    assert not output.exists()
+    run_experiment(prepared, output, Client(), provider="synthetic")
+    original = (output / "run_manifest.json").read_bytes()
+    with pytest.raises(ValueError, match="explicit saved retrieval"):
+        run_experiment(prepared, output, Client(), provider="openai-compatible", resume=True)
+    assert (output / "run_manifest.json").read_bytes() == original
+
+
+@pytest.mark.parametrize("status", [401, 403, 404])
+def test_fatal_http_stops_outer_retries_and_next_cells_then_can_resume(
+    tmp_path, monkeypatch, status
+):
+    from cs30.generation.exceptions import LLMFatalProviderError
+
+    prepared = prepare(tmp_path, max_retries=2)
+    output = tmp_path / "run"
+    with server([(status, {"error": "credentials/model misconfigured"}, {})]) as (url, state):
+        with pytest.raises(LLMFatalProviderError, match=f"HTTP {status}"):
+            run_experiment(prepared, output, client(url, monkeypatch), provider="openai-compatible")
+        assert len(state["requests"]) == 1
+        assert not list((output / "checkpoints").glob("*.json"))
+        assert json.loads((output / "run_manifest.json").read_bytes())["status"] == "interrupted"
+        runs = run_experiment(
+            prepared, output, client(url, monkeypatch), provider="openai-compatible", resume=True
+        )
+        assert len(state["requests"]) == 13 and all(r.status == "answered" for r in runs)
+
+
+def test_fatal_http_is_shared_by_concurrent_cell_clients(tmp_path, monkeypatch):
+    from cs30.generation.exceptions import LLMFatalProviderError
+
+    with server([(403, {}, {})]) as (url, state):
+        api = client(url, monkeypatch)
+        first, next_cell = api.for_cell("first", tmp_path), api.for_cell("next", tmp_path)
+        with pytest.raises(LLMFatalProviderError):
+            first.complete("q", {})
+        with pytest.raises(LLMFatalProviderError):
+            next_cell.complete("q", {})
+        assert len(state["requests"]) == 1
+
+
+def test_manifest_records_actual_auto_fallback_and_explicit_format_skips_probe(
+    tmp_path, monkeypatch
+):
+    prepared = prepare(tmp_path)
+    with server([(400, {"error": "json_schema not supported"}, {})]) as (url, state):
+        # Only the first cell probes Schema in this artificial server; audit must show both modes.
+        run_experiment(
+            prepared, tmp_path / "auto", client(url, monkeypatch), provider="openai-compatible"
+        )
+        audit = json.loads((tmp_path / "auto/run_manifest.json").read_bytes())["api_audit"]
+        assert audit["http_attempts_by_format"] == {"json_schema": 12, "json_object": 1}
+        assert audit["successful_responses_by_format"] == {"json_schema": 11, "json_object": 1}
+        assert len(state["requests"]) == 13
+        run_experiment(
+            prepared,
+            tmp_path / "fixed",
+            client(url, monkeypatch, structured_output="json_object"),
+            provider="openai-compatible",
+        )
+        fixed = json.loads((tmp_path / "fixed/run_manifest.json").read_bytes())["api_audit"]
+        assert (
+            fixed["http_attempts_by_format"]
+            == fixed["successful_responses_by_format"]
+            == {"json_object": 12}
+        )
+        assert len(state["requests"]) == 25

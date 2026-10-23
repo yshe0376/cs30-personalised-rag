@@ -29,3 +29,7 @@ class LLMCacheIntegrityError(ValueError):
 
 class LLMRetryLater(LLMProviderError, ValueError):
     """The rate-limit wait/retry budget is exhausted; do not retry immediately."""
+
+
+class LLMFatalProviderError(LLMProviderError, ValueError):
+    """Invalid credentials, permissions or endpoint/model; stop the whole batch."""

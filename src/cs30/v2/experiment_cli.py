@@ -11,7 +11,7 @@ from datetime import date
 from pathlib import Path
 
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
-from cs30.generation.compatible import OpenAICompatibleClient
+from cs30.generation.compatible import OpenAICompatibleClient, parse_extra_body
 from cs30.generation.reranking import EvidenceRole
 from cs30.v2.corpus import load_corpus_records
 from cs30.v2.errors import V2Error
@@ -100,6 +100,12 @@ def parser() -> argparse.ArgumentParser:
     run.add_argument("--provider-name", help="fixed hosting provider identity")
     run.add_argument("--model-version", help="fixed upstream model revision/deployment")
     run.add_argument("--api-key-env", default="LLM_API_KEY")
+    run.add_argument(
+        "--extra-body",
+        type=parse_extra_body,
+        default={},
+        help="provider JSON options, frozen into manifest and request cache identity",
+    )
     run.add_argument("--api-seed", type=int, help="send only if the provider supports seed")
     run.add_argument(
         "--structured-output",
@@ -256,6 +262,11 @@ def main(argv: list[str] | None = None) -> int:
             if config.lambda_weight == 0:
                 raise ValueError("lambda_weight == 0 cannot run an R1 matrix")
             if args.provider == "openai-compatible":
+                if not manifest.get("source_retrieval_sha256"):
+                    raise ValueError(
+                        "openai-compatible requires explicit saved retrieval; "
+                        "re-prepare with --retrieval"
+                    )
                 if not all((args.base_url, args.provider_name, args.model_version)):
                     raise ValueError(
                         "compatible provider requires base-url, provider-name and model-version"
@@ -276,6 +287,7 @@ def main(argv: list[str] | None = None) -> int:
                     timeout_seconds=args.timeout,
                     max_output_tokens=args.max_output_tokens,
                     max_api_requests=args.max_api_requests,
+                    extra_body=args.extra_body,
                 )
             else:
                 client = _client(

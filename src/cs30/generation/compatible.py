@@ -26,11 +26,61 @@ from pathlib import Path
 from .client import LLMResponse, TokenUsage
 from .exceptions import (
     LLMCacheIntegrityError,
+    LLMFatalProviderError,
     LLMProviderError,
     LLMRequestBudgetExceeded,
     LLMRetryLater,
     LLMTimeoutError,
 )
+
+
+def parse_extra_body(raw: str) -> dict:
+    """Parse provider options without replacing governed fields or credentials."""
+
+    def unique_pairs(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("extra-body contains a duplicate JSON key")
+            value[key] = item
+        return value
+
+    def invalid_constant(value):
+        raise ValueError("extra-body requires finite JSON values")
+
+    value = json.loads(raw, object_pairs_hook=unique_pairs, parse_constant=invalid_constant)
+    if not isinstance(value, dict):
+        raise ValueError("extra-body must be a JSON object")
+    reserved = {
+        "model",
+        "messages",
+        "temperature",
+        "max_tokens",
+        "max_completion_tokens",
+        "seed",
+        "stream",
+        "response_format",
+    }
+    if reserved & value.keys():
+        raise ValueError("extra-body cannot override governed request fields")
+
+    def check_credentials(item):
+        if isinstance(item, dict):
+            if any(
+                key.lower() in {"api_key", "authorization", "access_token", "headers"}
+                for key in item
+            ):
+                raise ValueError("extra-body cannot contain credential fields; use api-key-env")
+            for nested in item.values():
+                check_credentials(nested)
+        elif isinstance(item, list):
+            for nested in item:
+                check_credentials(nested)
+
+    check_credentials(value)
+    # json.loads accepts overflow such as 1e400; a strict round trip rejects it.
+    json.dumps(value, allow_nan=False)
+    return value
 
 
 def _hash(value) -> str:
@@ -84,6 +134,7 @@ class OpenAICompatibleClient:
         transport_retries: int = 3,
         max_retry_delay: float = 60,
         max_api_requests: int | None = None,
+        extra_body: dict | None = None,
     ):
         parsed = urllib.parse.urlsplit(base_url)
         if (
@@ -132,6 +183,13 @@ class OpenAICompatibleClient:
         if max_api_requests is not None and max_api_requests < 1:
             raise ValueError("max_api_requests must be positive")
         self.max_api_requests = max_api_requests
+        self._extra_body_json = json.dumps(
+            parse_extra_body(
+                json.dumps(extra_body if extra_body is not None else {}, allow_nan=False)
+            ),
+            sort_keys=True,
+            allow_nan=False,
+        )
         self._budget_lock = threading.Lock()
         self._budget_state = {"used": 0}
         self.cache_dir: Path | None = None
@@ -144,6 +202,7 @@ class OpenAICompatibleClient:
         self._budget_state["used"] = sum(
             path.name != "response.json" for path in root.glob("*/*.json")
         )
+        self._budget_state.pop("fatal_error", None)
 
     def audit_summary(self, output_dir: Path) -> dict:
         events = [
@@ -152,7 +211,13 @@ class OpenAICompatibleClient:
             if path.name != "response.json"
         ]
         input_tokens, output_tokens = 0, 0
+        attempts_by_format, successes_by_format = {}, {}
         for event in events:
+            mode = event["format_mode"]
+            attempts_by_format[mode] = attempts_by_format.get(mode, 0) + 1
+            status = event.get("status")
+            if isinstance(status, int) and 200 <= status < 300:
+                successes_by_format[mode] = successes_by_format.get(mode, 0) + 1
             try:
                 usage = json.loads(event.get("response_text", "")).get("usage") or {}
                 input_tokens += int(usage.get("prompt_tokens") or 0)
@@ -164,6 +229,8 @@ class OpenAICompatibleClient:
             "pending_attempts_charge_unknown": sum(e.get("status") == "pending" for e in events),
             "reported_input_tokens": input_tokens,
             "reported_output_tokens": output_tokens,
+            "http_attempts_by_format": dict(sorted(attempts_by_format.items())),
+            "successful_responses_by_format": dict(sorted(successes_by_format.items())),
             "policy": "All wire attempts, including superseded failures; absent provider "
             "usage is unknown and must be reconciled with provider billing.",
         }
@@ -184,6 +251,7 @@ class OpenAICompatibleClient:
             "structured_output": self.structured_output,
             "transport_retries": self.transport_retries,
             "max_retry_delay": self.max_retry_delay,
+            "extra_body": json.loads(self._extra_body_json),
             "seed_reproducibility": "best effort only; API output is not reproducible verbatim",
         }
 
@@ -243,6 +311,7 @@ class OpenAICompatibleClient:
                 "temperature": 0,
                 "max_tokens": self.max_output_tokens,
                 "stream": False,
+                **json.loads(self._extra_body_json),
             }
             if self.seed is not None:
                 payload["seed"] = self.seed
@@ -271,6 +340,8 @@ class OpenAICompatibleClient:
                     "format_mode": mode,
                 }
                 with self._budget_lock:
+                    if self._budget_state.get("fatal_error"):
+                        raise LLMFatalProviderError(self._budget_state["fatal_error"])
                     if (
                         self.max_api_requests is not None
                         and self._budget_state["used"] >= self.max_api_requests
@@ -337,9 +408,18 @@ class OpenAICompatibleClient:
                                 "body_sha256": _hash(body),
                                 "request_id": request_id,
                                 "latency_ms": elapsed,
+                                "format_mode": mode,
                             },
                         )
                     return decoded
+                if status in {401, 403, 404}:
+                    message = (
+                        f"{self.provider_name} HTTP {status}; "
+                        "fix credentials/model/endpoint before resume"
+                    )
+                    with self._budget_lock:
+                        self._budget_state["fatal_error"] = message
+                    raise LLMFatalProviderError(message)
                 unsupported = (
                     status in {400, 422}
                     and mode != "text"
