@@ -36,6 +36,10 @@ class LLMResponse:
     response_id: str | None
     latency_ms: float
     done_reason: str | None = None
+    request_id: str | None = None
+    provider: str | None = None
+    model_version: str | None = None
+    system_fingerprint: str | None = None
 
 
 class LLMClient(Protocol):
