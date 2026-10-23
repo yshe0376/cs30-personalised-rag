@@ -11,6 +11,7 @@ from datetime import date
 from pathlib import Path
 
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
+from cs30.generation.compatible import OpenAICompatibleClient
 from cs30.generation.reranking import EvidenceRole
 from cs30.v2.corpus import load_corpus_records
 from cs30.v2.errors import V2Error
@@ -41,7 +42,7 @@ def parser() -> argparse.ArgumentParser:
     convert.add_argument(
         "--split-map",
         type=Path,
-        help="explicit JSON provisional-label to Dev/Test mapping, recorded in audit",
+        help="JSON question-ID map (exact coverage) or legacy label map; hashed in audit",
     )
     prepare = commands.add_parser("prepare", help="freeze and validate the complete experiment")
     for name in ("corpus-dir", "gold", "output-dir"):
@@ -61,6 +62,16 @@ def parser() -> argparse.ArgumentParser:
     )
     prepare.add_argument(
         "--retrieval", type=Path, help="native V2 saved candidates; otherwise BM25"
+    )
+    prepare.add_argument(
+        "--require-retrieval",
+        action="store_true",
+        help="refuse implicit BM25 fallback in the API experiment workflow",
+    )
+    prepare.add_argument(
+        "--question-ids",
+        type=Path,
+        help="frozen JSON list of Dev question IDs for noise-floor repeats",
     )
     prepare.add_argument("--candidate-k", type=int, default=20)
     prepare.add_argument("--evidence-k", type=int, default=5)
@@ -84,7 +95,22 @@ def parser() -> argparse.ArgumentParser:
     run = commands.add_parser("run", help="generate answers and traces for independent M8 scoring")
     run.add_argument("--prepared-dir", type=Path, required=True)
     run.add_argument("--output-dir", type=Path, required=True)
-    run.add_argument("--provider", choices=("ollama", "openai"), required=True)
+    run.add_argument("--provider", choices=("ollama", "openai", "openai-compatible"), required=True)
+    run.add_argument("--base-url", help="provider API root, including /v1 when required")
+    run.add_argument("--provider-name", help="fixed hosting provider identity")
+    run.add_argument("--model-version", help="fixed upstream model revision/deployment")
+    run.add_argument("--api-key-env", default="LLM_API_KEY")
+    run.add_argument("--api-seed", type=int, help="send only if the provider supports seed")
+    run.add_argument(
+        "--structured-output",
+        choices=("auto", "json_schema", "json_object", "text"),
+        default="auto",
+    )
+    run.add_argument("--transport-retries", type=int, default=3)
+    run.add_argument("--concurrency", type=int, default=1)
+    run.add_argument(
+        "--max-api-requests", type=int, help="hard cumulative HTTP attempt cap, including resume"
+    )
     run.add_argument("--timeout", type=float, default=120.0)
     run.add_argument("--max-output-tokens", type=int, default=2048)
     run.add_argument("--context-window", type=int, help="explicit Ollama context token capacity")
@@ -98,6 +124,18 @@ def parser() -> argparse.ArgumentParser:
         help="stop after this many consecutive new technical failures; zero disables",
     )
     run.add_argument("--seed", type=int, default=0, help="pinned Ollama random seed")
+    estimate = commands.add_parser("estimate", help="plan API cost with supplied current prices")
+    estimate.add_argument("--prepared-dir", type=Path, required=True)
+    estimate.add_argument("--input-usd-per-million", type=float, required=True)
+    estimate.add_argument("--output-usd-per-million", type=float, required=True)
+    estimate.add_argument("--mean-input-tokens", type=int, required=True)
+    estimate.add_argument("--max-output-tokens", type=int, default=2048)
+    estimate.add_argument("--max-api-requests", type=int, required=True)
+    estimate.add_argument("--output", type=Path, required=True)
+    noise = commands.add_parser("noise-floor", help="compare independent Dev repeat answers")
+    noise.add_argument("--baseline-dir", type=Path, required=True)
+    noise.add_argument("--repeat-dir", type=Path, required=True)
+    noise.add_argument("--output", type=Path, required=True)
     roles = commands.add_parser("role-template", help="export candidate chunks with blank Roles")
     roles.add_argument("--corpus-dir", type=Path, required=True)
     roles.add_argument("--gold", type=Path, required=True)
@@ -126,13 +164,32 @@ def _client(provider: str, model: str, timeout: float, max_tokens: int):
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
+        if args.command in {"estimate", "noise-floor"}:
+            from cs30.v2.experiment_planning import estimate_api_cost, noise_floor_report
+
+            if args.command == "estimate":
+                summary = estimate_api_cost(
+                    args.prepared_dir,
+                    input_price=args.input_usd_per_million,
+                    output_price=args.output_usd_per_million,
+                    mean_input_tokens=args.mean_input_tokens,
+                    max_output_tokens=args.max_output_tokens,
+                    max_api_requests=args.max_api_requests,
+                )
+            else:
+                summary = noise_floor_report(args.baseline_dir, args.repeat_dir)
+            _new_file(
+                args.output, (json.dumps(summary, ensure_ascii=False, indent=2) + "\n").encode()
+            )
+            print(json.dumps(summary, ensure_ascii=False))
+            return 0
         if args.command == "convert-gold":
             summary = convert_m3_gold(
                 args.gold,
                 args.corpus_dir,
                 args.output_dir,
                 source_schema=args.source_schema,
-                split_mapping=json.loads(args.split_map.read_bytes()) if args.split_map else None,
+                split_map_path=args.split_map,
             )
             print(json.dumps(summary, ensure_ascii=False))
             return 0
@@ -142,6 +199,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Dev-selected lambda: {selection.lambda_weight}; development result only.")
             return 0
         if args.command == "prepare":
+            if args.require_retrieval and args.retrieval is None:
+                raise ValueError("require-retrieval needs the explicit M6 candidates file")
             selection = (
                 LambdaSelection.model_validate_json(args.selected_lambda.read_bytes())
                 if args.selected_lambda
@@ -166,6 +225,7 @@ def main(argv: list[str] | None = None) -> int:
                 role_manifest=args.role_manifest,
                 retrieval_path=args.retrieval,
                 question_limit=args.limit,
+                question_ids_path=args.question_ids,
                 selected_lambda_path=args.selected_lambda,
                 conversion_manifest_path=args.gold_conversion_manifest,
             )
@@ -195,9 +255,32 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("timeout and token limit must be finite and positive")
             if config.lambda_weight == 0:
                 raise ValueError("lambda_weight == 0 cannot run an R1 matrix")
-            client = _client(
-                args.provider, config.generator_model, args.timeout, args.max_output_tokens
-            )
+            if args.provider == "openai-compatible":
+                if not all((args.base_url, args.provider_name, args.model_version)):
+                    raise ValueError(
+                        "compatible provider requires base-url, provider-name and model-version"
+                    )
+                if args.max_api_requests is None or args.max_api_requests < 1:
+                    raise ValueError(
+                        "compatible provider requires a positive max-api-requests budget"
+                    )
+                client = OpenAICompatibleClient(
+                    config.generator_model,
+                    base_url=args.base_url,
+                    provider_name=args.provider_name,
+                    model_version=args.model_version,
+                    api_key_env=args.api_key_env,
+                    seed=args.api_seed,
+                    structured_output=args.structured_output,
+                    transport_retries=args.transport_retries,
+                    timeout_seconds=args.timeout,
+                    max_output_tokens=args.max_output_tokens,
+                    max_api_requests=args.max_api_requests,
+                )
+            else:
+                client = _client(
+                    args.provider, config.generator_model, args.timeout, args.max_output_tokens
+                )
             if args.context_window is not None:
                 if args.provider != "ollama" or args.context_window <= args.max_output_tokens + 512:
                     raise ValueError("context-window requires Ollama and room for output/framing")
@@ -227,6 +310,7 @@ def main(argv: list[str] | None = None) -> int:
                 client,
                 provider=args.provider,
                 resume=args.resume,
+                concurrency=args.concurrency,
                 progress=progress,
             )
             print(f"Saved {len(runs)} V2 cells to {args.output_dir}; hand off to M8 for scoring.")

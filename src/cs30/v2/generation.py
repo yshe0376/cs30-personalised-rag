@@ -9,7 +9,12 @@ from time import perf_counter
 from pydantic import ValidationError
 
 from cs30.generation.client import LLMClient, TokenUsage
-from cs30.generation.exceptions import LLMOutputValidationError
+from cs30.generation.exceptions import (
+    LLMCacheIntegrityError,
+    LLMOutputValidationError,
+    LLMRequestBudgetExceeded,
+    LLMRetryLater,
+)
 from cs30.generation.schema import openai_text_format, parse_answer_payload
 from cs30.v2.contracts import (
     EvidenceBundle,
@@ -37,6 +42,11 @@ class V2GenerationAttempt:
     response_id: str | None = None
     provider_latency_ms: float | None = None
     done_reason: str | None = None
+    request_id: str | None = None
+    provider: str | None = None
+    model_version: str | None = None
+    response_model: str | None = None
+    system_fingerprint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -159,6 +169,8 @@ class V2AnswerGenerator:
             started = perf_counter()
             try:
                 response = self.client.complete(prompt, openai_text_format())
+            except (LLMRequestBudgetExceeded, LLMCacheIntegrityError, LLMRetryLater):
+                raise
             except Exception as exc:
                 records.append(
                     V2GenerationAttempt(
@@ -178,7 +190,9 @@ class V2AnswerGenerator:
             try:
                 if getattr(response, "done_reason", None) == "length":
                     raise V2OutputTruncated("provider exhausted the output token budget")
-                payload = parse_answer_payload(raw)
+                payload = parse_answer_payload(
+                    raw, allow_json_fence=getattr(self.client, "allow_json_fence", False)
+                )
                 if not set(payload.citations).issubset(allowed):
                     raise V2CitationFailure("answer cited an ID outside the input evidence E1-En")
                 if request.kind == "multiple_choice" and payload.final_choice is None:
@@ -200,6 +214,11 @@ class V2AnswerGenerator:
                         provider_latency_ms=response.latency_ms,
                         response_id=response.response_id,
                         done_reason=getattr(response, "done_reason", None),
+                        request_id=getattr(response, "request_id", None),
+                        provider=getattr(response, "provider", None),
+                        model_version=getattr(response, "model_version", None),
+                        response_model=response.model,
+                        system_fingerprint=getattr(response, "system_fingerprint", None),
                     )
                 )
                 self.last_trace = trace(tuple(records), prompt_sha256=prompt_hash)
@@ -229,6 +248,11 @@ class V2AnswerGenerator:
                         provider_latency_ms=response.latency_ms,
                         response_id=response.response_id,
                         done_reason=getattr(response, "done_reason", None),
+                        request_id=getattr(response, "request_id", None),
+                        provider=getattr(response, "provider", None),
+                        model_version=getattr(response, "model_version", None),
+                        response_model=response.model,
+                        system_fingerprint=getattr(response, "system_fingerprint", None),
                     )
                 )
                 if number <= self.max_retries:
