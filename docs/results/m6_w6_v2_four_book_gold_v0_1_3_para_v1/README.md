@@ -10,10 +10,12 @@ The para-v1 Gold file is pinned to SHA-256
 It changes 336 question strings and leaves all non-question Gold fields aligned
 with the original query set.
 
-System selection is based on the combined original-plus-para-v1 Dev Complete
-Hit@5, with question-count-weighted mean MRR as a tie-breaker. BGE-M3 Hybrid
-with Dense 0.10 / BM25 0.90 is the selected system retriever. BM25 remains the
-historical reference baseline; no statistical-superiority claim is made.
+The joint ranking uses combined original-plus-para-v1 Dev Complete Hit@5, with
+question-count-weighted mean MRR as a tie-breaker. Qwen3 Hybrid Dense 0.10 /
+BM25 0.90 ranks first with 400/546 Complete Hit@5. BGE-M3 Hybrid Dense 0.10 /
+BM25 0.90 ranks second with 399/546 and remains the team-selected system
+retriever for the M7 handoff. BM25 remains the historical reference; no metric
+or statistical-superiority claim is made for the operational BGE-M3 choice.
 
 The 68-question split is already exposed and is therefore a diagnostic holdout,
 not a clean final Test. Only BM25 and the selected BGE-M3 system retriever are

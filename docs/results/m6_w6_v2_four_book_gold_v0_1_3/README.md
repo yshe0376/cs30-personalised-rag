@@ -6,11 +6,11 @@ The run uses `cs30.pipeline.build_real_retrieval_deps`, all nine pinned model
 revisions, `rrf_input_top_k=20`, and the Qwen3 `query` prompt.
 
 The original-query 64-configuration Dev sweep's metric winner is reported
-separately from the system retriever. BGE-M3 Hybrid with Dense 0.10 / BM25 0.90
-is the system retriever selected by the joint original-query and para-v1 Dev
-robustness rule: combined Complete Hit@5 is the primary metric and mean MRR is
-the tie-breaker. This is a documented system choice, not a claim of statistical
-superiority over BM25.
+separately from the system retriever. The clean joint rerun ranks Qwen3 Hybrid
+Dense 0.10 / BM25 0.90 first with 400/546 Complete Hit@5. BGE-M3 Hybrid Dense
+0.10 / BM25 0.90 ranks second with 399/546 and remains the team-selected system
+retriever for the M7 handoff. This is a documented operational choice, not a
+claim of metric or statistical superiority.
 
 The earlier per-query-set baseline-replacement check remains as a descriptive
 comparison. Against original-query BM25 (215/273 complete Hit@5, MRR 0.5750),

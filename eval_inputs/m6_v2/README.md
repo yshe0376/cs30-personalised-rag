@@ -41,10 +41,11 @@ python scripts/run_m6_w6_notebook.py --run-models --device cuda --timeout 7200 `
 ```
 
 The notebook asserts that para-v1 has the same 341 question IDs and identical
-non-question Gold fields as the original set. Model selection uses the combined
-original-plus-para-v1 Dev Complete Hit@5, with mean MRR only as a tie-breaker.
-The exposed 68-question holdout is limited to BM25 and the selected BGE-M3
-Dense 0.10 / BM25 0.90 system retriever.
+non-question Gold fields as the original set. The joint metric ranking uses
+combined original-plus-para-v1 Dev Complete Hit@5, with mean MRR only as a
+tie-breaker. The notebook records that ranking separately from the team's
+operational BGE-M3 Dense 0.10 / BM25 0.90 system choice. The exposed
+68-question holdout is limited to BM25 and that BGE-M3 system retriever.
 
 Run `python scripts/run_m6_w6_notebook.py` without `--run-models` for the
 lightweight provenance and saved-result preflight.

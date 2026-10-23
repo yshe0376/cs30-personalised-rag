@@ -32,7 +32,8 @@ def test_notebook_records_joint_rule_and_limited_exposed_holdout() -> None:
 
     assert 'SYSTEM_RETRIEVER_MODEL = "bge_m3"' in source
     assert 'SYSTEM_RETRIEVER_MODE = "hybrid_d0.10_b0.90"' in source
-    assert "selected_by_joint_robustness_rule" in source
+    assert "selected_by_team_after_joint_robustness_review" in source
+    assert "rule1_metric_winner" in source
     assert "dev_rule1_selection.csv" in source
     assert "dev_paired_bm25_vs_bge_m3_questions.csv" in source
     assert '"diagnostic_holdout_configuration_count": 2' in source
