@@ -79,13 +79,36 @@ def convert_m3_gold(
     *,
     source_schema: str = "0.1",
     split_mapping: dict[str, str] | None = None,
+    split_map_path: Path | None = None,
 ) -> dict:
     """Convert only by explicit request, preserving reference answers and annotations."""
     if output_dir.exists() or source_schema not in {"0.1", "0.2"}:
         raise ValueError("conversion needs a new output and supported explicit M3 source schema")
+    if split_mapping is not None and split_map_path is not None:
+        raise ValueError("provide split_mapping or split_map_path, not both")
+    split_bytes = split_map_path.read_bytes() if split_map_path else None
+    if split_bytes is not None:
+
+        def unique_pairs(pairs):
+            result = {}
+            for key, value in pairs:
+                if key in result:
+                    raise ValueError(f"duplicate split-map question/label: {key}")
+                result[key] = value
+            return result
+
+        split_mapping = json.loads(split_bytes, object_pairs_hook=unique_pairs)
+    if split_mapping is not None and not isinstance(split_mapping, dict):
+        raise ValueError("split map must be a JSON object")
+    if split_bytes is not None and not split_mapping:
+        raise ValueError("split map must not be empty")
     split_mapping = dict(split_mapping or {})
+    label_keys = {"pending", "proposed_test", "dev", "test"}
+    per_question = bool(set(split_mapping) - label_keys)
     if any(
-        value not in {"dev", "test"} or (key in {"dev", "test"} and key != value)
+        not isinstance(value, str)
+        or value not in {"dev", "test"}
+        or (not per_question and key in {"dev", "test"} and key != value)
         for key, value in split_mapping.items()
     ):
         raise ValueError("split mapping may explicitly assign provisional labels to Dev/Test only")
@@ -94,6 +117,14 @@ def convert_m3_gold(
     raw_rows = read_jsonl(source, source_bytes)
     if not raw_rows:
         raise ValueError("M3 Gold must not be empty")
+    if per_question:
+        ids = [row.get("question_id") for row in raw_rows]
+        if len(set(ids)) != len(ids):
+            raise ValueError("duplicate M3 question ID")
+        if set(split_mapping) != set(ids):
+            raise ValueError(
+                "per-question split map must cover every Gold ID exactly once, no extras"
+            )
     converted, original_splits = {}, {}
     for row in raw_rows:
         if row.get("schema_version", source_schema) != source_schema:
@@ -156,7 +187,11 @@ def convert_m3_gold(
             and hasattr(sample, name)
         }
         payload["source_corpus_version"] = sample.source_corpus_version or sample.corpus_version
-        payload["split"] = split_mapping.get(sample.split.value, sample.split.value)
+        payload["split"] = (
+            split_mapping[sample.question_id]
+            if per_question
+            else split_mapping.get(sample.split.value, sample.split.value)
+        )
         question = GoldQuestion(
             **payload,
             corpus_version=corpus.manifest.corpus_version,
@@ -181,6 +216,12 @@ def convert_m3_gold(
         "question_count": len(converted),
         "binding_count": len(bindings),
         "split_mapping": split_mapping,
+        "split_mapping_mode": "question_id" if per_question else "label",
+        "split_map_sha256": sha256_bytes(split_bytes) if split_bytes is not None else None,
+        "split_counts": {
+            split: sum(q.split.value == split for q in converted.values())
+            for split in sorted({q.split.value for q in converted.values()})
+        },
         "original_evaluation_splits": original_splits,
         "policy": "preserve reference answers, original chapter offsets and annotation status; "
         "derive target textbook only from unique exact chapter/block/text matches; "
