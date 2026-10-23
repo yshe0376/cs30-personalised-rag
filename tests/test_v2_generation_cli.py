@@ -215,6 +215,100 @@ def test_run_judge_requests_calls_provider_and_records_fresh_response(
     assert len(cache.read_text(encoding="utf-8").splitlines()) == 1
 
 
+def test_run_judge_requests_can_select_gemini_provider(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    request_id = "discrimination-gemini-1"
+    configuration = JudgeConfiguration(
+        config_version="gemini-judge-v1",
+        provider="gemini",
+        model_family="gemini",
+        model_revision="gemini-3.1-flash-lite",
+        temperature=0,
+        seed=5703,
+        prompt_version="prompt-v1",
+        output_schema_version="1.0",
+        local_model=False,
+        data_approval="approved",
+    )
+    requests = tmp_path / "requests.jsonl"
+    requests.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "task": "discrimination",
+                "request_id": request_id,
+                "input_sha256": "a" * 64,
+                "config_sha256": configuration_sha256(configuration),
+                "system_instruction": "Return the required structured JSON.",
+                "payload": {
+                    "answer": "A net force causes acceleration.",
+                    "required_output": {},
+                },
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    config = tmp_path / "judge-config.json"
+    config.write_text(configuration.model_dump_json(), encoding="utf-8")
+    created: dict[str, object] = {}
+
+    class Client:
+        def complete(self, _prompt: str, _text_format: dict) -> LLMResponse:
+            return LLMResponse(
+                text=json.dumps(
+                    {
+                        "schema_version": "1.0",
+                        "request_id": request_id,
+                        "predicted_level": "beginner",
+                        "exact_quote": "A net force causes acceleration",
+                        "reason": "The answer states the relation directly.",
+                    }
+                ),
+                model="gemini-3.1-flash-lite",
+                usage=TokenUsage(input_tokens=12, output_tokens=9, total_tokens=21),
+                response_id="gemini-response-1",
+                latency_ms=1.0,
+            )
+
+    def client_factory(*_args: object, **kwargs: object) -> Client:
+        created.update(kwargs)
+        return Client()
+
+    monkeypatch.setattr(
+        "cs30.evaluation.v2_generation_cli.GeminiJudgeClient",
+        client_factory,
+    )
+    output = tmp_path / "results.jsonl"
+    assert (
+        main(
+            [
+                "run-judge-requests",
+                "--requests",
+                str(requests),
+                "--judge-config",
+                str(config),
+                "--cache",
+                str(tmp_path / "cache.jsonl"),
+                "--output",
+                str(output),
+                "--judge-execution-id",
+                "gemini-execution",
+            ]
+        )
+        == 0
+    )
+    envelope = json.loads(output.read_text(encoding="utf-8"))
+    assert envelope["provider_response_id"] == "gemini-response-1"
+    assert envelope["reported_model"] == "gemini-3.1-flash-lite"
+    assert envelope["judge_execution_id"] == "gemini-execution"
+    assert envelope["model_digest"] is None
+    assert envelope["context_window"] is None
+    assert created["seed"] == 5703
+
+
 def test_repeat_comparison_rejects_reused_provider_responses() -> None:
     shared = {
         "evaluation_inputs_sha256": "a" * 64,

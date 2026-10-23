@@ -105,6 +105,20 @@ def test_cli_live_adapter_passes_strict_judge_schema(tmp_path, monkeypatch):
     assert read_jsonl(output / "open_answer_scores.jsonl")[0]["score"] == 2
 
 
+def test_cli_can_select_gemini_for_open_answer_judging(tmp_path, monkeypatch):
+    args, output = inputs(tmp_path, answer="slowing down")
+    client = JudgeClient(assessment())
+    monkeypatch.setattr(
+        "cs30.evaluation.open_answer_cli.GeminiJudgeClient", lambda *a, **kw: client
+    )
+
+    assert main(args + ["--provider", "gemini", "--model", "gemini-test"]) == 0
+
+    assert len(client.prompts) == 1
+    manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["provider"] == "gemini"
+
+
 @pytest.mark.parametrize("change", ["gold", "rubrics"])
 def test_cli_rejects_changed_input_before_calling_provider(tmp_path, monkeypatch, change):
     args, output = inputs(tmp_path)

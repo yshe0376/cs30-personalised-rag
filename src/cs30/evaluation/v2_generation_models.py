@@ -34,6 +34,8 @@ def canonical_model_family(value: str) -> str:
     """Normalize model revisions and size suffixes before family comparisons."""
 
     family = value.strip().casefold().rsplit("/", 1)[-1].split(":", 1)[0]
+    if family == "gemini" or family.startswith("gemini-"):
+        return "gemini"
     family = _MODEL_SIZE_SUFFIX.sub("", family).rstrip("-_:")
     return family
 

@@ -21,6 +21,7 @@ from .evaluation_audit import (
     prepare_calibration_and_audit,
 )
 from .evidence_support import build_evidence_support_request
+from .gemini_judge_client import GeminiJudgeClient
 from .judge_results import (
     assemble_judge_results,
     grouped_mean,
@@ -415,8 +416,18 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
             timeout_seconds=args.timeout,
             max_output_tokens=args.max_output_tokens,
         )
+    elif provider_name == "gemini":
+        if args.context_window is not None:
+            raise ValueError("--context-window is only supported by the Ollama judge")
+        client = GeminiJudgeClient(
+            configuration.model_revision,
+            temperature=configuration.temperature,
+            timeout_seconds=args.timeout,
+            max_output_tokens=args.max_output_tokens,
+            seed=configuration.seed,
+        )
     else:
-        raise ValueError("judge configuration provider must be 'ollama' or 'openai'")
+        raise ValueError("judge configuration provider must be 'ollama', 'openai' or 'gemini'")
     provider = StructuredJsonJudgeProvider(client)
     runner = CachedJudgeRunner(
         args.cache,

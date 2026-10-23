@@ -20,7 +20,14 @@ from cs30.evaluation.v2_generation_models import (
     GenerationEvaluationInput,
     JudgeConfiguration,
     PersonalisationEligibility,
+    canonical_model_family,
 )
+
+
+def test_gemini_revisions_share_one_model_family() -> None:
+    assert canonical_model_family("gemini") == "gemini"
+    assert canonical_model_family("models/gemini-3.1-flash-lite") == "gemini"
+    assert canonical_model_family("gemini-3.8-pro") == "gemini"
 
 
 def _profile(level: str) -> dict[str, object]:

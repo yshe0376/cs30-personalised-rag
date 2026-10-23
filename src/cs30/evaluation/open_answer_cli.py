@@ -14,6 +14,7 @@ from cs30.evaluation.models import GoldSample
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 from cs30.v2.contracts import GoldQuestion
 
+from .gemini_judge_client import GeminiJudgeClient
 from .open_answer_models import (
     HumanDecision,
     HumanRating,
@@ -82,7 +83,9 @@ def _parser() -> argparse.ArgumentParser:
     score = commands.add_parser("score", help="score an explicit matrix of saved answers")
     for name in ("gold", "rubrics", "runs", "expected-manifest", "output-dir"):
         score.add_argument(f"--{name}", type=Path, required=True)
-    score.add_argument("--provider", choices=("none", "ollama", "openai"), default="none")
+    score.add_argument(
+        "--provider", choices=("none", "ollama", "openai", "gemini"), default="none"
+    )
     score.add_argument(
         "--model", help="independent judge model identifier, preferably version-pinned"
     )
@@ -143,9 +146,12 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("--model requires a live judge provider")
             client = None
             if args.provider != "none":
-                client_type = (
-                    OllamaChatClient if args.provider == "ollama" else OpenAIResponsesClient
-                )
+                client_types = {
+                    "ollama": OllamaChatClient,
+                    "openai": OpenAIResponsesClient,
+                    "gemini": GeminiJudgeClient,
+                }
+                client_type = client_types[args.provider]
                 client = client_type(
                     args.model,
                     timeout_seconds=args.timeout,
