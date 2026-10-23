@@ -42,6 +42,9 @@ def test_download_extract_and_verified_reuse(tmp_path, monkeypatch):
     assert len(calls) == len(module.ASSETS) and manifest["reportable"] is False
     assert manifest["corpus_dir"] == module.CORPUS_FOLDER
     assert (tmp_path / module.ROLE_MANIFEST).is_file()
+    assert manifest["retrieval"] == module.RETRIEVAL
+    assert (tmp_path / module.RETRIEVAL).is_file()
+    assert (tmp_path / module.RETRIEVAL_MANIFEST).is_file()
     assert (tmp_path / module.CORPUS_FOLDER / "records.jsonl").read_text(
         encoding="utf-8"
     ) == "synthetic records"

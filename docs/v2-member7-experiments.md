@@ -7,7 +7,7 @@ M7 负责固定候选上的个性化重排、Dev λ 选择、四条件生成及�
 2026-10-23 已完成真实 Gold 转换与输入审计：341 题、154 Dev / 187 Test、352 条精确
 证据绑定，四教材 6,184 个 chunk 的 Role 标签全部覆盖。
 见 [readiness](results/m7_api_readiness_20261023/README.md)。
-M6 新候选尚未发布；API 提供方、固定模型版本和预算尚未指定。新 λ、真实 API 冒烟、
+M6 候选已发布（见下文「M6 候选」）；API 提供方、固定模型版本和预算尚未指定。新 λ、真实 API 冒烟、
 全量生成和实测噪声底均未完成。没有生成 Test 答案，也没有调用付费 API。
 
 [旧 1,944 条 Ollama Dev 答案](results/m7_v2_dev_20261017_lambda02/README.md)
@@ -26,6 +26,9 @@ M6 新候选尚未发布；API 提供方、固定模型版本和预算尚未指�
 - Gold v0.1.3 的 Release 尚待 M3 发布。本次读取的是 [#199 固定提交中的文件](https://github.com/yshe0376/cs30-personalised-rag/blob/7dc50ab329c1acc75b00a7a6592148c610ed26f0/m3_gold/final_v0_1_1/gold_v0_1_3.jsonl)，
   SHA-256 为 `7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8`。
   M3 发布后必须核对相同字节；若有变更，重新转换和审计。
+
+`python scripts/fetch_v2_experiment_inputs.py --output-dir <新目录>` 会一次下载上面三项
+和下文的 M6 候选，逐字节核验固定的 SHA-256 并解压语料；若用它，把下面的变量改指该目录。
 
 下面变量指向已校验的本地文件；所有输出目录必须是新目录：
 
@@ -49,7 +52,9 @@ python -m cs30.v2.experiment_cli convert-gold \
 ## M6 候选、5 题准备冒烟与 Dev λ
 
 取得 M6 的**原生 V2 FrozenRetrieval JSONL** 后，先核对交付摘要，再设置 `M7_RETRIEVAL`。
-必须是全部 341 题的 BGE-M3 Dense 0.10 / BM25 0.90、top-20 候选。
+必须是 M6 发布的 [Qwen3 候选](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/m6-w6-qwen3-hybrid-dev-v1)
+`m7_qwen3_d0.10_b0.90_original_top20.jsonl`（SHA-256 `1bb7e491b6506ad8cdabcf6831db83baac06128b9392f5df973e183c54d65ca9`），
+即全部 341 题的 Qwen3-Embedding-0.6B Dense 0.10 / BM25 0.90、top-20 候选，与决策表 2026-10-23 的系统检索器一致。
 `--require-retrieval` 在 prepare 阶段提前检查；manifest 记录候选文件 SHA-256。
 API 的 `run --provider openai-compatible` 还会**强制拒绝**缺少 `source_retrieval_sha256` 的
 准备目录，即使 prepare 时两个参数都忘记，也不会把隐式 BM25 当成正式候选运行。
