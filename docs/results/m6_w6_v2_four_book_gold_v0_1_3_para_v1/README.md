@@ -18,7 +18,9 @@ no statistical-superiority claim is made from the exposed holdout.
 
 The 68-question split is already exposed and is therefore a diagnostic holdout,
 not a clean final Test. Only BM25 and the selected Qwen3 system retriever are
-evaluated on it.
+evaluated on it. BM25 reaches 45/68 complete Hit@5 with MRR 0.3896; Qwen3
+reaches 42/68 with MRR 0.4023. These values are diagnostic-only and cannot
+change the Dev selection.
 
 Files:
 

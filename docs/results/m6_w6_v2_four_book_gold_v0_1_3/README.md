@@ -13,8 +13,10 @@ Dev selection, not a claim of statistical superiority on a clean final Test.
 The earlier per-query-set baseline-replacement check remains as a descriptive
 comparison. Against original-query BM25 (215/273 complete Hit@5, MRR 0.5750),
 BGE Base has exact paired McNemar `p=0.25` and lower MRR. The separate Qwen3
-comparison is descriptive; system selection is controlled by the joint Dev
-robustness table. Both descriptive rows remain in `dev_baseline_comparison.csv`.
+comparison is descriptive: Qwen3 records 216/273 complete Hit@5 versus BM25's
+215/273, with MRR 0.5565 versus 0.5750 and exact McNemar `p=1.0`. System
+selection is controlled by the joint Dev robustness table. Both descriptive
+rows remain in `dev_baseline_comparison.csv`.
 
 With `rrf_k=60` and `rrf_input_top_k=20`, all tested Hybrid configurations with
 Dense weight at most 0.25 satisfy `dense_weight / 61 < bm25_weight / 80`. When
@@ -25,8 +27,10 @@ BM25 top-20 candidate set rather than introduce new Dense-only chunks.
 The 68-question holdout was exposed to all configurations in a superseded run,
 so it is diagnostic rather than a clean final Test. This corrected run evaluates
 only BM25 and the Qwen3 system retriever there. The exact rerun values are in
-`diagnostic_holdout_summary.csv`; they cannot be used to select or retune the
-model. A final paper result requires a new, team-approved untouched Test split.
+`diagnostic_holdout_summary.csv`: BM25 reaches 51/68 complete Hit@5 with MRR
+0.4846; Qwen3 reaches 49/68 with MRR 0.4673. They cannot be used to select or
+retune the model. A final paper result requires a new, team-approved untouched
+Test split.
 
 Files:
 
@@ -45,6 +49,8 @@ Files:
 - `truncation_diagnostics.csv`: tokenizer-length diagnostics for all nine models.
 - `evaluation_split_assignments.jsonl`: deterministic 273/68 assignments.
 - `gold_span_bindings.jsonl`: 352 verified evidence-to-chunk bindings.
+- `m7_qwen3_d0.10_b0.90_original_top20_manifest.json`: manifest and hashes for
+  the strict v2 M7 candidate-file release asset.
 - `run_manifest.json`: hashes, Git state, model revisions, and method provenance.
 
 Large per-question metrics, candidate hits, indexes, and source ZIPs are kept
