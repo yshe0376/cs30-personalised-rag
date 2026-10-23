@@ -96,7 +96,12 @@ def _parser() -> argparse.ArgumentParser:
         type=int,
         help="provider output limit; defaults to 8192 for Gemini and 2048 otherwise",
     )
-    score.add_argument("--temperature", type=float, default=1.0)
+    score.add_argument(
+        "--temperature",
+        type=float,
+        help="judge sampling temperature; defaults to 1.0 for Gemini (Google's Gemini 3 "
+        "guidance) and 0.0 otherwise",
+    )
     score.add_argument(
         "--thinking-level",
         choices=("minimal", "low", "medium", "high"),
@@ -135,8 +140,10 @@ def main(argv: list[str] | None = None) -> int:
                 not math.isfinite(args.timeout)
                 or args.timeout <= 0
                 or (args.max_output_tokens is not None and args.max_output_tokens <= 0)
-                or not math.isfinite(args.temperature)
-                or args.temperature < 0
+                or (
+                    args.temperature is not None
+                    and (not math.isfinite(args.temperature) or args.temperature < 0)
+                )
             ):
                 raise ValueError(
                     "judge timeout/output limit must be positive and temperature nonnegative"
@@ -183,7 +190,11 @@ def main(argv: list[str] | None = None) -> int:
                     args.model,
                     timeout_seconds=args.timeout,
                     max_output_tokens=max_output_tokens,
-                    temperature=args.temperature,
+                    temperature=(
+                        args.temperature
+                        if args.temperature is not None
+                        else (1.0 if args.provider == "gemini" else 0.0)
+                    ),
                     **provider_options,
                 )
             scorer = OpenAnswerScorer(

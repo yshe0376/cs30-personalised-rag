@@ -1,6 +1,7 @@
 """Gemini adapter tests without paid or network calls."""
 
-from types import SimpleNamespace
+import sys
+from types import ModuleType, SimpleNamespace
 
 import pytest
 
@@ -152,10 +153,43 @@ def test_constructor_and_schema_validation_fail_before_network(monkeypatch) -> N
     assert models.calls == []
 
 
-def test_constructor_configures_sdk_retry_policy(monkeypatch) -> None:
-    from google import genai
+def fake_genai_modules(monkeypatch, captured: dict) -> None:
+    """Install a stand-in google.genai so CI needs neither the SDK nor network access."""
 
-    captured = {}
+    def client_factory(**kwargs):
+        captured.update(kwargs)
+        return sdk(RecordingModels(response()))
+
+    types = ModuleType("google.genai.types")
+    types.HttpOptions = lambda **kwargs: SimpleNamespace(**kwargs)
+    types.HttpRetryOptions = lambda **kwargs: SimpleNamespace(**kwargs)
+    genai = ModuleType("google.genai")
+    genai.Client = client_factory
+    genai.types = types
+    google = ModuleType("google")
+    google.genai = genai
+    monkeypatch.setitem(sys.modules, "google", google)
+    monkeypatch.setitem(sys.modules, "google.genai", genai)
+    monkeypatch.setitem(sys.modules, "google.genai.types", types)
+
+
+def test_constructor_configures_sdk_retry_policy(monkeypatch) -> None:
+    captured: dict = {}
+    fake_genai_modules(monkeypatch, captured)
+    GeminiJudgeClient("gemini-test", api_key="not-a-real-key")
+
+    options = captured["http_options"]
+    assert options.timeout == 120000
+    assert options.retry_options.attempts == 5
+    assert {408, 429, 500, 599} <= set(options.retry_options.http_status_codes)
+
+
+
+def test_retry_policy_is_accepted_by_installed_sdk(monkeypatch) -> None:
+    """When google-genai is installed, its real option types must accept our settings."""
+
+    genai = pytest.importorskip("google.genai")
+    captured: dict = {}
 
     def client_factory(**kwargs):
         captured.update(kwargs)
@@ -164,11 +198,7 @@ def test_constructor_configures_sdk_retry_policy(monkeypatch) -> None:
     monkeypatch.setattr(genai, "Client", client_factory)
     GeminiJudgeClient("gemini-test", api_key="not-a-real-key")
 
-    options = captured["http_options"]
-    assert options.timeout == 120000
-    assert options.retry_options.attempts == 5
-    assert {408, 429, 500, 599} <= set(options.retry_options.http_status_codes)
-
+    assert captured["http_options"].retry_options.attempts == 5
 
 def test_defaults_follow_frozen_gemini_judge_policy() -> None:
     client = GeminiJudgeClient("gemini-test", sdk_client=sdk(RecordingModels(response())))
