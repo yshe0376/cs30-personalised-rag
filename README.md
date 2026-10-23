@@ -20,7 +20,9 @@ exposed 68-question diagnostic holdout. Model and Hybrid-weight selection uses
 Dev only. Retrieval runs through `build_real_retrieval_deps()` with pinned model
 revisions, the project BM25 tokenizer, `rrf_input_top_k=20`, and the Qwen3
 `query` prompt. The holdout is not a clean final Test set and is never swept
-across all configurations. Lightweight result tables and the clean-run
+across all configurations. The preregistered joint original/para-v1 Dev rule
+selects Qwen3 Hybrid Dense 0.10 / BM25 0.90 as the system retriever for the M7
+handoff. Lightweight result tables and the clean-run
 provenance manifest are under
 [`docs/results/m6_w6_v2_four_book_gold_v0_1_3/`](docs/results/m6_w6_v2_four_book_gold_v0_1_3/).
 Exact input names, hashes, and setup instructions are documented in

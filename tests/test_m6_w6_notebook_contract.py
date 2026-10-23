@@ -30,12 +30,12 @@ def test_notebook_uses_one_shared_retriever_for_both_query_sets() -> None:
 def test_notebook_records_joint_rule_and_limited_exposed_holdout() -> None:
     source = _source()
 
-    assert 'SYSTEM_RETRIEVER_MODEL = "bge_m3"' in source
+    assert 'SYSTEM_RETRIEVER_MODEL = "qwen3"' in source
     assert 'SYSTEM_RETRIEVER_MODE = "hybrid_d0.10_b0.90"' in source
-    assert "selected_by_team_after_joint_robustness_review" in source
+    assert "selected_by_preregistered_joint_dev_rule" in source
     assert "rule1_metric_winner" in source
     assert "dev_rule1_selection.csv" in source
-    assert "dev_paired_bm25_vs_bge_m3_questions.csv" in source
+    assert "dev_paired_bm25_vs_qwen3_questions.csv" in source
     assert '"diagnostic_holdout_configuration_count": 2' in source
     assert "team-selected provisional" not in source
 
@@ -43,8 +43,11 @@ def test_notebook_records_joint_rule_and_limited_exposed_holdout() -> None:
 def test_notebook_exports_original_query_top20_for_member_7() -> None:
     source = _source()
 
-    assert "m7_bge_m3_d0.10_b0.90_original_top20.jsonl" in source
+    assert "m7_qwen3_d0.10_b0.90_original_top20.jsonl" in source
     assert 'm7_retriever.retrieve(question["question"], RRF_INPUT_TOP_K)' in source
+    assert "freeze_v2_retrieval" in source
+    assert 'assert set(payload) == {"question_id", "retrieval"}' in source
+    assert "FrozenRetrieval.model_validate(payload)" in source
     for field in (
         "provider",
         "textbook_id",

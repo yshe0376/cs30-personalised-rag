@@ -18,7 +18,7 @@ final evaluation.
 | A5 | Medium | `rrf_k` | `60` | Validation-set alternatives | Hybrid | Recall@K, MRR | Configuration available |
 | A6 | Medium | `rrf_input_top_k` | `20` | Validation-set alternatives | Hybrid | Recall@K, MRR and latency | Configuration available |
 | A7 | Low | Final returned `top_k` | Configured default | Candidate values such as 3, 5 and 10 | All modes | Hit@K, Recall@K, MRR and latency | Configuration available |
-| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | BGE Base Dense 0.05 / BM25 0.95 is the Dev metric winner; the team selected BGE-M3 Dense 0.10 / BM25 0.90 provisionally for downstream generator evaluation; low-Dense settings mainly rerank BM25 candidates; neither changes the formal BM25 baseline |
+| A8 | Medium | Weighted RRF | BM25 | Dense weights `0.05`, `0.10`, `0.20`, `0.25`, `0.50`, `0.75` | Hybrid | Hit@K, Recall@K and MRR | The preregistered joint original/para-v1 Dev rule selects Qwen3 Dense 0.10 / BM25 0.90 for downstream generation; low-Dense settings mainly rerank BM25 candidates; the separate strict baseline-replacement gate still retains BM25 |
 | A9 | High | Embedding model | BM25 | Nine pinned dense models, including M5 BGE-M3, GTE-ModernBERT and Qwen3 | Dense and Hybrid | Hit@K, Recall@K, MRR, truncation diagnostics | Full revisions are passed to the shared loader; Jina/Nomic remote code is pinned; Qwen3 uses the `query` prompt |
 
 ## Dense Similarity Threshold
@@ -67,8 +67,9 @@ overlap. Model and weight comparisons use Dev only.
 
 The 68-question holdout was exposed to all 64 configurations in a superseded
 run. It is therefore no longer a clean final Test set. The corrected notebook
-runs only BM25 and the team-selected provisional BGE-M3 Hybrid configuration on
-that holdout, marks the result diagnostic, and does not use it for selection. A
+runs only BM25 and the Dev-selected Qwen3 Dense 0.10 / BM25 0.90 Hybrid
+configuration on that holdout, marks the result diagnostic, and does not use it
+for selection. A
 final paper result requires a new team-approved untouched split.
 
 The baseline replacement rule remains strict: replace BM25 only if the Dev
@@ -78,11 +79,13 @@ Base Hybrid with Dense 0.05 / BM25 0.95 as that metric winner. It improves
 complete Hit@5 from 215/273 to 218/273, but MRR falls from 0.5750 to 0.5696 and
 the exact McNemar result is `p=0.25`; BM25 therefore remains the baseline.
 
-The team separately selected BGE-M3 Dense 0.10 / BM25 0.90 as a provisional
-candidate for the downstream generator experiment. Its paired comparison with
-BM25 is reported separately (`p=0.7539`) and does not control the formal baseline
-decision. Superseded scores from the former notebook-local BM25/RRF
-implementation remain withdrawn.
+For the downstream generator experiment, the preregistered joint robustness
+rule ranks all configurations by combined original-plus-para-v1 Dev Complete
+Hit@5 and uses question-count-weighted mean MRR as the tie-breaker. That rule
+selects Qwen3 Dense 0.10 / BM25 0.90. Its paired comparison with BM25 is
+reported separately and does not change the strict baseline-replacement gate.
+Superseded scores from the former notebook-local BM25/RRF implementation remain
+withdrawn.
 
 The four-book corpus remains `reportable=false`, Golden Evidence annotations
 remain `draft`, and the derived 273/68 split is reproducible but not an approved

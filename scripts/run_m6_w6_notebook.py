@@ -62,6 +62,10 @@ def main() -> None:
         os.environ["CS30_M6_WORK_DIR"] = str(args.work_dir.resolve())
 
     notebook = nbformat.read(source, as_version=4)
+    for cell in notebook.cells:
+        if cell.cell_type == "code":
+            cell.outputs = []
+            cell.execution_count = None
     client = NotebookClient(
         notebook,
         timeout=args.timeout,
