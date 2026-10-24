@@ -1,0 +1,119 @@
+{
+  "draft_only": true,
+  "profile_frozen": false,
+  "questions": 341,
+  "batches": 18,
+  "eligibility_counts": {
+    "endpoint_only": 232,
+    "none": 107,
+    "full": 2
+  },
+  "by_split": {
+    "dev": {
+      "none": 48,
+      "full": 2,
+      "endpoint_only": 104
+    },
+    "test": {
+      "endpoint_only": 128,
+      "none": 59
+    }
+  },
+  "question_demand_counts": {
+    "identify_or_name": 334,
+    "explain_why_or_how": 6,
+    "calculate": 1
+  },
+  "needs_review_count": 48,
+  "gold_answer_concern_ids": [
+    "sciq-train-09014",
+    "sciq-train-04188",
+    "sciq-train-00438",
+    "sciq-train-06124",
+    "sciq-train-04312",
+    "sciq-train-00591",
+    "sciq-train-01327",
+    "sciq-test-00432",
+    "sciq-train-02656",
+    "sciq-train-00702",
+    "sciq-train-05989",
+    "sciq-train-05754",
+    "sciq-train-09968",
+    "sciq-train-00059",
+    "sciq-train-06500",
+    "sciq-train-10980",
+    "sciq-validation-00761",
+    "sciq-train-09931",
+    "sciq-train-07717",
+    "sciq-train-06843",
+    "sciq-train-11310",
+    "sciq-train-03426",
+    "sciq-train-07732",
+    "sciq-train-02528",
+    "sciq-train-08706",
+    "sciq-train-02393",
+    "sciq-train-06030",
+    "sciq-train-07169",
+    "sciq-train-05012",
+    "sciq-train-00412",
+    "sciq-train-04746",
+    "sciq-train-07238",
+    "sciq-train-01081",
+    "sciq-train-10961",
+    "sciq-validation-00342",
+    "sciq-train-06209",
+    "sciq-train-02251",
+    "sciq-train-08506",
+    "sciq-train-02371",
+    "sciq-train-04590",
+    "sciq-train-10243",
+    "sciq-train-05409",
+    "sciq-train-07191",
+    "sciq-train-09086",
+    "sciq-train-00056",
+    "sciq-train-10989"
+  ],
+  "uncertain_ids": [
+    "sciq-train-04256",
+    "sciq-train-11373"
+  ],
+  "dev20_subset_count": 20,
+  "command_count": 18,
+  "command_review_status": "passed",
+  "observed_event_item_types": [
+    "agent_message",
+    "command_execution",
+    "file_change"
+  ],
+  "output_sha256": {
+    "all_annotations.jsonl": "3a087f85a7bdf45b6fbac8c7b4dfc482f45a081101620171910da6900226a5c6",
+    "eligibility_sidecar.jsonl": "ab585f05c02ec896889bae174475493f954eee1d4bb2dda32fc111fe4ef54c42",
+    "needs_review.jsonl": "797a8340857312fcba0933fdbe0a35e5cd91adfe8ae6eb022a623046f6777797",
+    "dev20_subset_annotations.jsonl": "12d6452a72a8f9bad024cd2ddc6ae5d27f8dbd4b210548e0db1aba9845bc3e94"
+  },
+  "dev20_eligibility_counts_by_stratum": {
+    "everyday_answer": {
+      "none": 8
+    },
+    "explicit_why_or_how": {
+      "endpoint_only": 2
+    },
+    "demand_and_term_boundaries": {
+      "none": 1,
+      "endpoint_only": 9
+    }
+  },
+  "dev20_calculation_coverage_gap": true,
+  "full_ids": [
+    "sciq-train-00056",
+    "sciq-train-09086"
+  ],
+  "priority_review_full_ids": [
+    "sciq-train-00056",
+    "sciq-train-09086"
+  ],
+  "gold_answer_concern_count": 46,
+  "uncertain_count": 2,
+  "run_status": "complete",
+  "failed_attempts_retained": 2
+}
