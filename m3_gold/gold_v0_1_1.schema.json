@@ -8,8 +8,6 @@
     "question_id",
     "source_split",
     "question",
-    "options",
-    "gold_answer",
     "gold_answer_text",
     "answerable",
     "gold_core_evidence_sets",
@@ -44,39 +42,6 @@
       "type": "string",
       "minLength": 1
     },
-    "options": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "A",
-        "B",
-        "C",
-        "D"
-      ],
-      "properties": {
-        "A": {
-          "$ref": "#/$defs/option"
-        },
-        "B": {
-          "$ref": "#/$defs/option"
-        },
-        "C": {
-          "$ref": "#/$defs/option"
-        },
-        "D": {
-          "$ref": "#/$defs/option"
-        }
-      }
-    },
-    "gold_answer": {
-      "type": "string",
-      "enum": [
-        "A",
-        "B",
-        "C",
-        "D"
-      ]
-    },
     "gold_answer_text": {
       "type": "string",
       "minLength": 1
@@ -92,6 +57,13 @@
         "items": {
           "$ref": "#/$defs/evidence_span"
         }
+      }
+    },
+    "accepted_evidence_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
       }
     },
     "partial_evidence": {
@@ -196,22 +168,6 @@
     }
   },
   "$defs": {
-    "option": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "text",
-        "source_field"
-      ],
-      "properties": {
-        "text": {
-          "type": "string"
-        },
-        "source_field": {
-          "type": "string"
-        }
-      }
-    },
     "evidence_span": {
       "type": "object",
       "additionalProperties": false,
