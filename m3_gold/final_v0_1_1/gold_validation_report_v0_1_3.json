@@ -1,0 +1,1143 @@
+{
+  "input_row_count_by_source": {
+    "candidate_pool_strong_v1_3_2.csv": 316,
+    "candidate_pool_multi_v1_3_2.csv": 140
+  },
+  "total_candidate_rows": 456,
+  "unique_question_count": 445,
+  "reviewed_candidate_count": 456,
+  "accepted_single_count": 353,
+  "accepted_multi_count": 11,
+  "partial_count": 44,
+  "reject_count": 48,
+  "pending_count": 0,
+  "duplicate_count": 11,
+  "conflict_count": 11,
+  "schema_validation_failures": 0,
+  "evidence_provenance_failures": 0,
+  "canonicalized_block_id_count": 270,
+  "unchanged_block_id_count": 82,
+  "regenerated_span_id_count": 352,
+  "duplicate_span_id_count": 0,
+  "missing_final_block_id_count": 0,
+  "successfully_exported_gold_count": 341,
+  "by_difficulty": {
+    "easy": 209,
+    "medium": 116,
+    "hard": 16
+  },
+  "by_question_type": {
+    "identification": 108,
+    "application": 25,
+    "causal": 85,
+    "definition": 109,
+    "comparison": 8,
+    "calculation": 6
+  },
+  "by_concept_group": {
+    "Chemical energy and bonding": 1,
+    "Buoyancy and density": 1,
+    "Kinetic energy and friction": 1,
+    "Phase changes and heat transfer": 2,
+    "Electromagnetism": 2,
+    "Wave propagation": 1,
+    "Optical fibers and refraction": 1,
+    "Acceleration and deceleration": 1,
+    "Electric charge": 6,
+    "Magnetism": 2,
+    "Thermal expansion": 2,
+    "Electric charge conservation": 1,
+    "Gravitational motion": 3,
+    "Nuclear physics": 1,
+    "Temperature scales": 4,
+    "Volcanic activity": 1,
+    "Kinetic theory and temperature": 2,
+    "Heat transfer and insulation": 1,
+    "Electric potential and voltage": 2,
+    "Electric potential energy": 1,
+    "Gas laws": 2,
+    "Electric charge polarization": 1,
+    "Diffraction and interference": 1,
+    "Electric current and electric fields": 1,
+    "Motion and velocity": 1,
+    "Alternating-current circuits": 1,
+    "Tidal forces and black holes": 1,
+    "Atomic structure": 1,
+    "Wave intensity": 1,
+    "Momentum and collisions": 1,
+    "Simple pendulum motion": 1,
+    "Superconductivity": 1,
+    "Cardiac electrophysiology": 1,
+    "Electric current": 3,
+    "Kinetic theory of gases": 2,
+    "Electric fields and equipotential lines": 1,
+    "Musculoskeletal system": 1,
+    "Geometric optics": 3,
+    "Solar system": 1,
+    "Simple machines": 3,
+    "Radiation therapy": 1,
+    "Wave motion": 1,
+    "Thermal radiation": 1,
+    "Magnetic force and motion": 1,
+    "Mass spectrometry": 1,
+    "Wave properties": 1,
+    "Wave-particle duality": 1,
+    "Stellar nucleosynthesis": 1,
+    "Gravitational force": 2,
+    "Atomic clocks and time measurement": 1,
+    "Neutrinos and particle physics": 1,
+    "Nuclear fusion": 1,
+    "Atomic structure and isotopes": 1,
+    "Radioactive dating": 2,
+    "Atomic models": 1,
+    "Particle physics": 4,
+    "Light scattering": 1,
+    "Work-energy theorem": 1,
+    "Wave diffraction": 1,
+    "Torque and rotational motion": 1,
+    "Thermodynamics and metabolism": 1,
+    "Electrical measurement": 1,
+    "Linear momentum": 1,
+    "Radioactive decay": 2,
+    "Force and dynamics": 1,
+    "Planetary motion": 1,
+    "Pressure": 1,
+    "Seismic waves": 1,
+    "Temperature measurement": 1,
+    "Light momentum": 1,
+    "Gravitational lensing": 1,
+    "Distance and displacement": 1,
+    "Atmospheric pressure": 2,
+    "Wave types": 1,
+    "Internal energy": 1,
+    "Two-dimensional motion": 1,
+    "Inductance": 1,
+    "Blood pressure": 1,
+    "Rotational dynamics": 1,
+    "Wave energy": 1,
+    "Rotational kinetic energy": 1,
+    "Fluid transport in plants": 1,
+    "Wave interference": 4,
+    "Sound intensity": 1,
+    "Capacitance": 4,
+    "physics and unification": 1,
+    "photosynthesis": 1,
+    "pendulum and harmonic motion": 1,
+    "nuclear binding": 1,
+    "ultrasound imaging": 1,
+    "plant turgor": 1,
+    "circuits and energy conservation": 1,
+    "kinematics and acceleration": 1,
+    "microscopy and resolution": 1,
+    "drift velocity": 1,
+    "electromagnetic waves": 2,
+    "capacitors and filtering": 1,
+    "comet tails": 1,
+    "thermal radiation": 1,
+    "radiation belts": 1,
+    "quantum probability": 1,
+    "battery resistance": 1,
+    "speed and time": 1,
+    "carbon atomic structure": 1,
+    "resonance": 1,
+    "nuclear fusion": 1,
+    "vector addition": 1,
+    "rotational dynamics": 1,
+    "respiratory system": 1,
+    "electromagnetic radiation": 1,
+    "phase changes": 2,
+    "magnetic separation": 1,
+    "stable equilibrium": 1,
+    "visible light": 1,
+    "nuclear fission": 1,
+    "atomic number": 1,
+    "internal energy": 1,
+    "Newton laws": 1,
+    "gyroscope and angular momentum": 1,
+    "material strength": 1,
+    "impulse and momentum": 1,
+    "pion and mass-energy": 1,
+    "light dispersion": 1,
+    "centripetal force": 1,
+    "electromagnetic spectrum": 2,
+    "periodic motion": 1,
+    "cyclotrons and magnetic fields": 1,
+    "bow waves": 1,
+    "electrical resistance": 1,
+    "gas exchange": 1,
+    "eye and optic nerve": 1,
+    "resonance and instruments": 1,
+    "metabolic rate": 1,
+    "temperature scales": 1,
+    "atomic physics": 1,
+    "compound microscope": 1,
+    "centrifugation and inertia": 1,
+    "rainbow formation": 1,
+    "matter and quanta": 1,
+    "gluons and color charge": 1,
+    "ionizing radiation": 1,
+    "Newton second law": 1,
+    "electron spin": 1,
+    "simple circuits": 1,
+    "relative velocity": 1,
+    "light and photosynthesis": 1,
+    "power and energy transfer": 1,
+    "inelastic collisions": 1,
+    "laminar and turbulent flow": 1,
+    "tornadoes": 1,
+    "electric polarization": 1,
+    "central nervous system": 1,
+    "magnetic torque": 1,
+    "aging and elasticity": 1,
+    "light-year distance": 1,
+    "Linear graphs and slope": 1,
+    "Kinetic energy and motion": 1,
+    "Wave motion and frequency": 1,
+    "States of matter": 2,
+    "Nuclear reactor control": 1,
+    "Materials and alloys": 1,
+    "Polarization and optics": 1,
+    "Humidity": 1,
+    "Cosmology and universal expansion": 1,
+    "Galaxies and astronomy": 1,
+    "Batteries and electrochemistry": 1,
+    "Hearing and ear anatomy": 1,
+    "Torque": 2,
+    "Geometric optics and lenses": 1,
+    "Wave speed and harmonic oscillators": 1,
+    "Longitudinal waves": 1,
+    "Mirrors and reflection": 2,
+    "Frequency and hertz": 3,
+    "Net torque": 2,
+    "Simple harmonic motion": 1,
+    "Weight and gravity": 2,
+    "Geometric optics and images": 1,
+    "Angular velocity": 1,
+    "Total internal reflection": 1,
+    "Electric fields and potential difference": 1,
+    "Magnetic force": 1,
+    "Voltage drop": 1,
+    "Isobaric processes": 1,
+    "Newton laws and net force": 1,
+    "Magnification": 1,
+    "External forces": 1,
+    "Acceleration": 1,
+    "Work and gas pressure": 1,
+    "Sound waves and wavelength": 1,
+    "Harmonic motion": 2,
+    "Rayleigh scattering": 1,
+    "Displacement": 1,
+    "Kinetic energy": 1,
+    "Centripetal force": 1,
+    "Angular momentum": 1,
+    "Momentum": 1,
+    "Radioactive decay and elements": 1,
+    "Mirrors and virtual images": 1,
+    "Diverging lenses and mirrors": 1,
+    "Magnetic fields and Tesla": 1,
+    "Food energy and calories": 1,
+    "Light-years": 1,
+    "Electrical energy and power": 1,
+    "Electromagnetic waves": 2,
+    "Power": 1,
+    "Conservation of energy": 2,
+    "Kinetic friction": 1,
+    "Momentum conservation": 1,
+    "Real images and photography": 1,
+    "Electromagnetic radiation": 2,
+    "Heat capacity": 1,
+    "Radioactive half-life": 1,
+    "Electrical energy": 1,
+    "Isotopes": 2,
+    "Wave amplitude": 1,
+    "Physics units and notation": 1,
+    "Nuclear fission": 2,
+    "Newton laws and inertia": 1,
+    "Fermat principle and light": 1,
+    "Unified theories in physics": 1,
+    "Angular momentum conservation": 1,
+    "Speed and motion": 1,
+    "Isobaric and isothermal processes": 1,
+    "Coulomb electric force": 1,
+    "Density": 1,
+    "Thermodynamics": 1,
+    "Virtual images and lenses": 1,
+    "Water waves": 1,
+    "atomic structure": 1,
+    "vision and optics": 1,
+    "black holes and astronomy": 1,
+    "scientific models": 1,
+    "capillary action": 1,
+    "photoelectric effect": 1,
+    "sound properties": 1,
+    "net force": 1,
+    "refraction and optics": 1,
+    "FM radio noise rejection": 1,
+    "Milky Way galaxy": 1,
+    "Steam turbines and electricity generation": 1,
+    "Climate change and greenhouse gases": 1,
+    "Torque and angular acceleration": 1,
+    "Vectors": 1,
+    "Electromagnetic spectrum": 2,
+    "Impulse and momentum": 1,
+    "Electric circuits and current": 1,
+    "Physical properties of matter": 1,
+    "Static electricity and lightning": 1,
+    "Diffraction": 1,
+    "Forms of energy": 1,
+    "Simple pendulum": 1,
+    "Significant figures and measurement precision": 1,
+    "DNA double helix": 1,
+    "Ultrasound": 1,
+    "Atomic theory": 1,
+    "Photosynthesis": 1,
+    "Electromagnets": 1,
+    "Osmosis": 2,
+    "Radiative heat transfer": 1,
+    "Atomic theory and matter": 1,
+    "Vectors and acceleration": 1,
+    "Black holes": 1,
+    "Fossil fuels": 1,
+    "Electric current and voltage": 1,
+    "Acceleration and velocity": 1,
+    "Gas pressure and molecular collisions": 1,
+    "Wave interactions and diffraction": 1,
+    "Scientific notation and powers of ten": 1,
+    "Electromagnetic induction and alternating current": 1,
+    "Electrical resistance and current": 1,
+    "Longitudinal and transverse waves": 1,
+    "Noise-induced hearing loss": 1,
+    "Breathing and lung pressure": 1,
+    "Chemistry": 1,
+    "SONAR and underwater echolocation": 1,
+    "Electromagnetic radiation from the Sun": 1,
+    "Transformers and power transmission": 1,
+    "States of matter and intermolecular forces": 1,
+    "Gamma decay": 1,
+    "Quarks and hadrons": 1,
+    "Pitch and sound frequency": 1,
+    "Parallel circuits": 1,
+    "Vectors and displacement": 1,
+    "Diffusion across cell membranes": 1,
+    "Average speed and velocity": 1,
+    "De Broglie matter waves": 1
+  },
+  "by_final_split": {
+    "proposed_test": 30,
+    "pending": 311
+  },
+  "excluded_records": [
+    {
+      "question_id": "sciq-test-00151",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00818",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00170",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00170",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00276",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00569",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00769",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01662",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01662",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01777",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02330",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02354",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02354",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02728",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02728",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02775",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02852",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02912",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03125",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03125",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03277",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03277",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03462",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04099",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04748",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04748",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04773",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04773",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04934",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05232",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05576",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05999",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06641",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06683",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-07347",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-07521",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-09201",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-11043",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-11228",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-validation-00239",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-validation-00699",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-validation-00752",
+      "status": "excluded",
+      "errors": [
+        "release_exclusion: The accepted evidence comes from an AP edition Chapter 9 figure annotation, associated with a block ID ending in _ch09_p0434_b002. This evidence block is unavailable in the M4 corpus."
+      ]
+    },
+    {
+      "question_id": "sciq-train-00516",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00516",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01792",
+      "status": "excluded",
+      "errors": [
+        "release_exclusion: The accepted evidence comes from the CK-12 Problem Solving 1 subsection, associated with a block ID ending in _p0092_b800. The M4 corpus does not include this exercise subsection."
+      ]
+    },
+    {
+      "question_id": "sciq-train-04561",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04561",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05705",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05705",
+      "status": "conflict",
+      "errors": [
+        "conflicting_duplicate"
+      ]
+    },
+    {
+      "question_id": "sciq-train-07669",
+      "status": "excluded",
+      "errors": [
+        "release_exclusion: The accepted evidence also comes from the CK-12 Problem Solving 1 subsection, associated with a block ID ending in _p0092_b800. The M4 corpus does not include this exercise subsection."
+      ]
+    },
+    {
+      "question_id": "sciq-train-08024",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-10850",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00050",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00288",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00330",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00417",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00476",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00662",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00665",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00726",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00811",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-test-00968",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00186",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00203",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-00807",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01004",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01162",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01188",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01296",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01436",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01496",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01539",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01656",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01938",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-01972",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02014",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02022",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02088",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02122",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02214",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02469",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02497",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02518",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02617",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02690",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-02851",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03038",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03351",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03502",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03547",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03576",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03725",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03809",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03831",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03880",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-03979",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04063",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04407",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04451",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04635",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04675",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04751",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04950",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-04998",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05414",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05417",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05424",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-05915",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06143",
+      "status": "excluded",
+      "errors": [
+        "manual_review=partial"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06235",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06236",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06575",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06654",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06790",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    },
+    {
+      "question_id": "sciq-train-06855",
+      "status": "excluded",
+      "errors": [
+        "manual_review=reject"
+      ]
+    }
+  ],
+  "gold_annotation_version": "m3_gold_v0.1.3",
+  "gold_output_filename": "gold_v0_1_3.jsonl",
+  "release_excluded_question_ids": [
+    "sciq-train-01792",
+    "sciq-train-07669",
+    "sciq-validation-00752"
+  ]
+}

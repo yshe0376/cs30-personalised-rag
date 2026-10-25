@@ -1,17 +1,25 @@
-# M3 Gold Evidence v0.1.1
+# M3 Gold Dataset v0.1.3
 
-This directory contains the W5 M3 Gold Evidence handoff. It supersedes the
-removed v0.1 draft files.
+This directory contains the final M3 Gold v0.1.3 delivery: reviewed Strong and
+Multi candidate pools, the integrated Gold JSONL, its schema, and the scripts
+used to build and screen the dataset.
 
 ## Files
 
-- `gold_v0_1_1.jsonl`: final M3 Gold v0.1.1 JSONL for this W5 package.
-- `gold_v0_1_1.schema.json`: JSON Schema for one JSONL record.
-- `candidate_pool_v0_1_1.review_labeled.csv`: M3 manual review record for accepted candidates.
-- `dev_test_split_plan_v0_1_1.md`: deterministic proposed Dev/Test split plan.
-- `personalisation_candidate_list_v0_1_1.csv`: provisional M3 personalisation candidate screen.
-- `personalisation_candidate_list_v0_1_1.md`: narrative summary of the personalisation screen.
-- `validate_gold.py`: validator that uses the shared main evaluation loader and, when supplied, the shared prepared corpus loader.
+- `final_v0_1_1/gold_v0_1_3.jsonl`: authoritative final Gold JSONL.
+- `final_v0_1_1/CHANGELOG_v0_1_3.md`: release notes and validation summary.
+- `final_v0_1_1/gold_review_audit_v0_1_3.jsonl`: integration audit.
+- `final_v0_1_1/gold_integration_conflicts_v0_1_3.csv`: conflict report.
+- `final_v0_1_1/gold_validation_report_v0_1_3.json`: validation report.
+- `gold_v0_1_1.schema.json`: unchanged legacy v0.1.1 JSON Schema.
+- `gold_v0_1_3.schema.json`: schema for the final v0.1.3 JSONL contract.
+- `candidate_pool_strong_v1_3_2.csv`: reviewed Strong candidate pool.
+- `candidate_pool_multi_v1_3_2.csv`: reviewed Multi-evidence candidate pool.
+- `build_final_gold_dataset.py`: reproducible Gold integration script.
+- `screen_strong_single_evidence.py`: Strong candidate screener.
+- `screen_multi_evidence.py`: Multi-evidence candidate screener.
+- `candidate_screening_common.py`: shared screening and CSV-schema utilities.
+- `validate_gold.py`: standalone schema validation, with optional prepared-corpus replay.
 
 ## Evidence Semantics
 
@@ -34,28 +42,54 @@ Evidence is restricted by the shared W5 policy to `body`, `equation`, `example`,
 `summary`, `learning_objective`, `problem`, or another excluded block type, the
 item should be replaced with allowed evidence or moved to unresolved review.
 
-`annotation_status` is `m3_initial` for this package.
-`personalisation_eligibility` remains `pending` until M1 finalises the A3
-taxonomy.
+The final release uses Gold annotation version `m3_gold_v0.1.3`, corpus version
+`2.0.0-dev.m4-structure-v2-main-3553825`, and parser version `1.3.2` for the
+exported records. The final JSONL intentionally retains `annotation_status:
+draft` and pending personalisation fields: the completed CSV
+`manual_review` decisions are the authoritative source for evidence acceptance,
+while those Gold-level fields belong to a later annotation-status contract.
 
 ## Validation
 
-Schema and contract validation without the large corpus:
-
-```sh
-python3 m3_gold/validate_gold.py m3_gold/gold_v0_1_1.jsonl
-```
-
-Full span replay requires the shared M4 prepared corpus directory and uses
-`load_prepared_corpus()` from the main evaluation package. This mode also
-resolves every span against the prepared evidence block index and reports
-`resolved`, `stale`, and `ambiguous` counts:
+Validate the final JSONL without regenerating it:
 
 ```sh
 python3 m3_gold/validate_gold.py \
-  --prepared-corpus-root m3_unified_source_corpus/source_corpus \
+  --schema m3_gold/gold_v0_1_3.schema.json \
+  m3_gold/final_v0_1_1/gold_v0_1_3.jsonl
+```
+
+Validate a legacy v0.1.1 file with the unchanged legacy schema:
+
+```sh
+python3 m3_gold/validate_gold.py \
+  --schema m3_gold/gold_v0_1_1.schema.json \
   m3_gold/gold_v0_1_1.jsonl
 ```
 
-The prepared corpus itself is not committed. Rebuild it with
-`cs30-evaluate prepare-corpus` as documented in `m3_unified_source_corpus/README.md`.
+To reproduce the final Gold integration, provide the external evidence inputs:
+
+```sh
+python3 m3_gold/build_final_gold_dataset.py \
+  --strong m3_gold/candidate_pool_strong_v1_3_2.csv \
+  --multi m3_gold/candidate_pool_multi_v1_3_2.csv \
+  --schema m3_gold/gold_v0_1_3.schema.json \
+  --blocks <openstax-m3-evidence>/combined/evidence_source_blocks.jsonl \
+  --manifest <openstax-m3-evidence>/combined/corpus_manifest.json \
+  --ck12-blocks <ck12-m3-adapter>/evidence_source_blocks.jsonl \
+  --ck12-manifest <ck12-m3-adapter>/corpus_manifest.json \
+  --output-dir m3_gold/final_v0_1_1
+```
+
+OpenStax inputs originate from the OpenStax parser v1.3.2 and must use the
+combined evidence-block manifest. CK-12 inputs originate from the CK-12 M3
+adapter. In this checkout the available CK-12 manifest identifies
+`ck12-people-physics-2016-09-09` / `ck12-1.1.0` and supports the 82 CK-12
+spans. The review target
+`2.0.0-dev.m4-four-book-main-a1fe99e` is not present in this repository, so
+four-book M4 alignment remains an external follow-up and is not claimed as
+verified here.
+
+The parser corpora, caches, and local environments are intentionally not
+committed. The upstream OpenStax parser and CK-12 adapter outputs must be
+available at the paths supplied above when reproducing the integration.

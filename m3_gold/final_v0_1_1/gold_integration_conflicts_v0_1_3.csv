@@ -1,0 +1,23 @@
+question_id,conflict_type,source_file,row_number,manual_review,details
+sciq-train-00170,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,24,accept_single,duplicate records differ
+sciq-train-00170,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,23,accept_single,duplicate records differ
+sciq-train-01662,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,52,accept_single,duplicate records differ
+sciq-train-01662,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,49,accept_single,duplicate records differ
+sciq-train-02354,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,60,accept_single,duplicate records differ
+sciq-train-02354,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,64,accept_single,duplicate records differ
+sciq-train-02728,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,70,accept_single,duplicate records differ
+sciq-train-02728,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,76,accept_single,duplicate records differ
+sciq-train-03125,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,78,accept_single,duplicate records differ
+sciq-train-03125,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,80,accept_single,duplicate records differ
+sciq-train-03277,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,81,accept_single,duplicate records differ
+sciq-train-03277,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,82,accept_single,duplicate records differ
+sciq-train-04748,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,107,accept_single,duplicate records differ
+sciq-train-04748,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,110,accept_single,duplicate records differ
+sciq-train-04773,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,108,accept_single,duplicate records differ
+sciq-train-04773,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,112,partial,duplicate records differ
+sciq-train-00516,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,235,accept_single,duplicate records differ
+sciq-train-00516,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,32,accept_single,duplicate records differ
+sciq-train-04561,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,262,accept_single,duplicate records differ
+sciq-train-04561,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,106,accept_single,duplicate records differ
+sciq-train-05705,conflicting_duplicate,m3_gold/candidate_pool_strong_v1_3_2.csv,271,accept_single,duplicate records differ
+sciq-train-05705,conflicting_duplicate,m3_gold/candidate_pool_multi_v1_3_2.csv,123,partial,duplicate records differ
