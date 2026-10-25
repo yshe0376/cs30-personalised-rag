@@ -8,5 +8,7 @@
   "reportable": false,
   "file_count": 22117,
   "uncompressed_bytes": 775691307,
-  "file_inventory_sha256": "15b44ae3e31e3a8f5e13a5ef91c6dc9a06b435800c70b9309635d59783900346"
+  "file_inventory_sha256": "15b44ae3e31e3a8f5e13a5ef91c6dc9a06b435800c70b9309635d59783900346",
+  "publication_status": "pending_explicit_public_raw_data_approval",
+  "published": false
 }

@@ -229,8 +229,9 @@ The [2026-10-26 hosted API Dev delivery](docs/results/m7_api_dev_20261026/README
 contains gpt-oss-20b, Gemma 3 12B and Llama 3.1 8B against the four-book inputs
 with Dev-selected lambda=0.1. All 6,624 Dev/repeat cells were executed:
 6,540 answered and 84 retained Llama format failures, with zero final truncations.
-The pre-release includes the full frozen inputs, answers, traces, checkpoints
-and request/response caches. Independent M8 scoring and formal Test remain pending;
+The full frozen inputs, answers, traces, checkpoints and request/response caches
+are packaged and verified locally; public raw-archive upload awaits explicit approval.
+Independent M8 scoring and formal Test remain pending;
 the results are non-reportable development outputs.
 
 The [complete 2026-10-17 Dev run with lambda=0.2](docs/results/m7_v2_dev_20261017_lambda02/README.md)
