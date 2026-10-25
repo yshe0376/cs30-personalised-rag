@@ -104,6 +104,24 @@ chunks = BlockAwareChunker(strategy=candidate.strategy).chunk(document)
 The Team Lead supplies the instance through `BuildDeps.chunker`; shared
 contracts, ports, and pipeline orchestration do not change.
 
+## V2 shared evidence-span binding
+
+Gold conversion and Concept Check publication use the same M4-owned resolver:
+
+```python
+from cs30.chunking import bind_concept_check_question, resolve_evidence_span
+```
+
+`resolve_evidence_span()` applies the frozen matching order: parser `block_id`,
+verified chapter-local offsets, then a unique verbatim match within the same
+textbook and chapter. A span may bind to several chunks when it crosses a
+chunk boundary. Missing or repeated evidence is returned as `stale` or
+`ambiguous`; the resolver never publishes a first-match guess.
+
+`bind_concept_check_question()` applies that resolver to every durable anchor
+in a practice question. The existing release contract remains responsible for
+rejecting any question whose current-corpus binding is not fully resolved.
+
 ## Tokenizer hand-off
 
 `UnicodeWordPunctTokenCounter` is a deterministic provisional counter for
