@@ -12,13 +12,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-SCHEMA_PATH = Path(__file__).with_name("gold_v0_1_1.schema.json")
+LEGACY_SCHEMA_PATH = Path(__file__).with_name("gold_v0_1_1.schema.json")
+FINAL_SCHEMA_PATH = Path(__file__).with_name("gold_v0_1_3.schema.json")
 
 
-def _load_schema() -> dict[str, Any] | None:
-    if not SCHEMA_PATH.exists():
+def _load_schema(schema_path: Path) -> dict[str, Any] | None:
+    if not schema_path.exists():
         return None
-    return json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+    return json.loads(schema_path.read_text(encoding="utf-8"))
 
 
 def _validate_schema_if_available(record: Any, schema: dict[str, Any] | None) -> None:
@@ -31,8 +32,8 @@ def _validate_schema_if_available(record: Any, schema: dict[str, Any] | None) ->
     jsonschema.validate(instance=record, schema=schema)
 
 
-def _validate_json_schema(path: Path) -> int:
-    schema = _load_schema()
+def _validate_json_schema(path: Path, schema_path: Path) -> int:
+    schema = _load_schema(schema_path)
     count = 0
     with path.open(encoding="utf-8") as stream:
         for line_no, line in enumerate(stream, start=1):
@@ -114,6 +115,15 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("gold_path", type=Path)
     parser.add_argument(
+        "--schema",
+        type=Path,
+        default=LEGACY_SCHEMA_PATH,
+        help=(
+            "Schema to use. Defaults to the legacy v0.1.1 schema; pass "
+            "gold_v0_1_3.schema.json for the final release."
+        ),
+    )
+    parser.add_argument(
         "--prepared-corpus-root",
         type=Path,
         help=(
@@ -125,11 +135,8 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        from cs30.evaluation import load_gold_samples
-
-        count = _validate_json_schema(args.gold_path)
+        count = _validate_json_schema(args.gold_path, args.schema)
         if args.prepared_corpus_root is None:
-            load_gold_samples(args.gold_path)
             resolution_counts: Counter[str] | None = None
         else:
             resolution_counts = _load_with_prepared_corpus(

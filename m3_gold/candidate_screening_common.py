@@ -6,31 +6,86 @@ import csv
 import json
 import math
 import re
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATA = ROOT / "standardized"
-DEFAULT_BLOCKS = ROOT / "m3_unified_source_corpus" / "source_corpus" / "evidence_source_blocks.jsonl"
+DEFAULT_BLOCKS = (
+    ROOT / "m3_unified_source_corpus" / "source_corpus" / "evidence_source_blocks.jsonl"
+)
 
 TOKEN_RE = re.compile(r"[a-z0-9]+")
 STOPWORDS = {
-    "about", "after", "again", "also", "because", "being", "between", "could",
-    "does", "from", "have", "into", "more", "most", "other", "over", "same",
-    "such", "than", "that", "their", "there", "these", "they", "this", "those",
-    "through", "under", "what", "when", "where", "which", "while", "with", "would",
-    "your", "will", "were", "been", "each", "how", "whose",
+    "about",
+    "after",
+    "again",
+    "also",
+    "because",
+    "being",
+    "between",
+    "could",
+    "does",
+    "from",
+    "have",
+    "into",
+    "more",
+    "most",
+    "other",
+    "over",
+    "same",
+    "such",
+    "than",
+    "that",
+    "their",
+    "there",
+    "these",
+    "they",
+    "this",
+    "those",
+    "through",
+    "under",
+    "what",
+    "when",
+    "where",
+    "which",
+    "while",
+    "with",
+    "would",
+    "your",
+    "will",
+    "were",
+    "been",
+    "each",
+    "how",
+    "whose",
 }
 ALLOWED_TYPES = {"body", "example", "figure_caption", "glossary", "table", "equation"}
 
 STATE_VERSION = 1
 SCHEMA_FIELDS = [
-    "question_id", "source_split", "question", "gold_answer_text", "answerable",
-    "gold_core_evidence_sets", "partial_evidence",
-    "question_difficulty", "question_type", "concept_group",
-    "personalisation_eligibility", "eligibility_reason", "split", "corpus_version",
-    "parser_version", "gold_annotation_version", "annotation_status",
-    "review_record_id", "source", "manual_review", "accepted_evidence_ids",
+    "question_id",
+    "source_split",
+    "question",
+    "gold_answer_text",
+    "answerable",
+    "gold_core_evidence_sets",
+    "partial_evidence",
+    "question_difficulty",
+    "question_type",
+    "concept_group",
+    "personalisation_eligibility",
+    "eligibility_reason",
+    "split",
+    "corpus_version",
+    "parser_version",
+    "gold_annotation_version",
+    "annotation_status",
+    "review_record_id",
+    "source",
+    "manual_review",
+    "accepted_evidence_ids",
 ]
 
 
@@ -107,8 +162,12 @@ def retrieve(
     for index in candidate_ids:
         block = blocks[index]
         score, overlap, answer_exact = score_block(block, query, answer)
-        ranked.append({"block": block, "score": score, "overlap": overlap, "answer_exact": answer_exact})
-    ranked.sort(key=lambda item: (item["score"], item["overlap"], item["answer_exact"]), reverse=True)
+        ranked.append(
+            {"block": block, "score": score, "overlap": overlap, "answer_exact": answer_exact}
+        )
+    ranked.sort(
+        key=lambda item: (item["score"], item["overlap"], item["answer_exact"]), reverse=True
+    )
     if limit >= 30:
         return ranked[:limit]
     deduplicated: list[dict[str, Any]] = []
@@ -117,10 +176,9 @@ def retrieve(
         duplicate = False
         for previous in deduplicated:
             other = previous["block"]
-            if (
-                str(block.get("document_id", "")) != str(other.get("document_id", ""))
-                or str(block["chapter_id"]) != str(other["chapter_id"])
-            ):
+            if str(block.get("document_id", "")) != str(other.get("document_id", "")) or str(
+                block["chapter_id"]
+            ) != str(other["chapter_id"]):
                 continue
             start = max(int(block["chapter_char_start"]), int(other["chapter_char_start"]))
             end = min(int(block["chapter_char_end"]), int(other["chapter_char_end"]))
@@ -150,10 +208,9 @@ def best_pair(
         for right in ranked[left_index + 1 : 15]:
             a = left["block"]
             b = right["block"]
-            if (
-                str(a.get("document_id", "")) != str(b.get("document_id", ""))
-                or str(a["chapter_id"]) != str(b["chapter_id"])
-            ):
+            if str(a.get("document_id", "")) != str(b.get("document_id", "")) or str(
+                a["chapter_id"]
+            ) != str(b["chapter_id"]):
                 continue
             distance = abs(int(a["chapter_char_start"]) - int(b["chapter_char_end"]))
             if distance > 1800:
@@ -210,10 +267,12 @@ def make_candidate(question: dict[str, Any], ranked: list[dict[str, Any]]) -> di
         "top_char_end": ";".join(str(block["chapter_char_end"]) for block in blocks),
         "top_preview_text": " || ".join(preview(block["text"]) for block in blocks),
         "support_token_overlap": f"{top['overlap']:.4f}",
-        "evidence_char_length": str(sum(
-            int(block["chapter_char_end"]) - int(block["chapter_char_start"])
-            for block in blocks
-        )),
+        "evidence_char_length": str(
+            sum(
+                int(block["chapter_char_end"]) - int(block["chapter_char_start"])
+                for block in blocks
+            )
+        ),
         "evidence_path": path,
         "multi_block_candidate": str(len(blocks) > 1),
         "manual_review_status": "pending",
@@ -240,21 +299,23 @@ def schema_csv_row(
         end = int(block.get("char_end", block["chapter_char_end"]))
         chapter_start = int(block.get("chapter_char_start", start))
         chapter_end = int(block.get("chapter_char_end", end))
-        spans.append({
-            "span_id": f"{block['block_id']}_gold_candidate",
-            "document_id": block.get(
-                "document_id", manifest.get("document_id", _document_id(block["block_id"]))
-            ),
-            "chapter_id": str(block["chapter_id"]),
-            "char_start": start,
-            "char_end": end,
-            "verbatim_text": block["text"],
-            "sufficiency": "joint_core" if joint else "core_sufficient",
-            "annotation_note": "Automatically retrieved candidate; manual review required.",
-            "block_id": block["block_id"],
-            "chapter_char_start": chapter_start,
-            "chapter_char_end": chapter_end,
-        })
+        spans.append(
+            {
+                "span_id": f"{block['block_id']}_gold_candidate",
+                "document_id": block.get(
+                    "document_id", manifest.get("document_id", _document_id(block["block_id"]))
+                ),
+                "chapter_id": str(block["chapter_id"]),
+                "char_start": start,
+                "char_end": end,
+                "verbatim_text": block["text"],
+                "sufficiency": "joint_core" if joint else "core_sufficient",
+                "annotation_note": "Automatically retrieved candidate; manual review required.",
+                "block_id": block["block_id"],
+                "chapter_char_start": chapter_start,
+                "chapter_char_end": chapter_end,
+            }
+        )
 
     schema_row: dict[str, Any] = {
         "question_id": candidate["question_id"],
@@ -286,7 +347,9 @@ def schema_csv_row(
     return {
         key: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
         if isinstance(value, (dict, list))
-        else str(value).lower() if isinstance(value, bool) else str(value)
+        else str(value).lower()
+        if isinstance(value, bool)
+        else str(value)
         for key, value in schema_row.items()
     }
 
@@ -309,10 +372,18 @@ def add_full_evidence(row: dict[str, Any], blocks: dict[str, dict[str, Any]]) ->
                 "text": block["text"],
             }
         else:
-            values = {key: "" for key in (
-                "block_id", "content_type", "chapter_id", "char_start",
-                "char_end", "section_title", "text",
-            )}
+            values = {
+                key: ""
+                for key in (
+                    "block_id",
+                    "content_type",
+                    "chapter_id",
+                    "char_start",
+                    "char_end",
+                    "section_title",
+                    "text",
+                )
+            }
         for key, value in values.items():
             result[prefix + key] = value
     return result
@@ -357,7 +428,10 @@ def screen(
     max_questions: int | None = None,
     data_dir: Path = DEFAULT_DATA,
     blocks_path: Path = DEFAULT_BLOCKS,
-    quality_evaluator: Callable[[dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]], dict[str, Any]] | None = None,
+    quality_evaluator: Callable[
+        [dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]], dict[str, Any]
+    ]
+    | None = None,
     retrieval_limit: int = 30,
 ) -> None:
     if reset:

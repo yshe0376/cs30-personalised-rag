@@ -10,24 +10,25 @@ import re
 import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Iterable
-
-from jsonschema import Draft202012Validator
+from typing import Any
 
 from candidate_screening_common import SCHEMA_FIELDS
+from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[1]
 M3_ROOT = Path(__file__).resolve().parent
 DEFAULT_STRONG = M3_ROOT / "candidate_pool_strong_v1_3_2.csv"
 DEFAULT_MULTI = M3_ROOT / "candidate_pool_multi_v1_3_2.csv"
-DEFAULT_SCHEMA = M3_ROOT / "gold_v0_1_1.schema.json"
+DEFAULT_SCHEMA = M3_ROOT / "gold_v0_1_3.schema.json"
 DEFAULT_BLOCKS = (
-    M3_ROOT / "openstax_parser_v1_3_2" / "m3_evidence" / "combined"
-    / "evidence_source_blocks.jsonl"
+    M3_ROOT / "openstax_parser_v1_3_2" / "m3_evidence" / "combined" / "evidence_source_blocks.jsonl"
 )
 DEFAULT_MANIFEST = DEFAULT_BLOCKS.with_name("corpus_manifest.json")
 DEFAULT_CK12_BLOCKS = (
-    M3_ROOT / "ck12_parser_v1_1_0" / "ck12_output_without_chapter_21" / "m3_adapter"
+    M3_ROOT
+    / "ck12_parser_v1_1_0"
+    / "ck12_output_without_chapter_21"
+    / "m3_adapter"
     / "evidence_source_blocks.jsonl"
 )
 DEFAULT_CK12_MANIFEST = DEFAULT_CK12_BLOCKS.with_name("corpus_manifest.json")
@@ -107,8 +108,7 @@ def load_blocks(path: Path) -> dict[str, dict[str, Any]]:
 def canonical_block_id(block_id: str, blocks: dict[str, dict[str, Any]]) -> str:
     """Resolve the parser-version-tagged candidate ID to the corpus ID."""
     canonical_matches = [
-        item for item in blocks.values()
-        if item.get("parser_block_id") == block_id
+        item for item in blocks.values() if item.get("parser_block_id") == block_id
     ]
     if len(canonical_matches) == 1:
         return block_id
@@ -122,7 +122,8 @@ def canonical_block_id(block_id: str, blocks: dict[str, dict[str, Any]]) -> str:
         raise IntegrationError(f"unknown evidence block ID {block_id}")
     candidate = f"{match.group('prefix')}_{match.group('suffix')}"
     matches = [
-        item for item in blocks.values()
+        item
+        for item in blocks.values()
         if item.get("parser_block_id") == candidate or item.get("block_id") == candidate
     ]
     if len(matches) != 1:
@@ -151,7 +152,8 @@ def validate_evidence(
     row: dict[str, str],
     blocks: dict[str, dict[str, Any]],
     manifest: dict[str, Any],
-    corpus_sources: dict[tuple[str, str], tuple[dict[str, dict[str, Any]], dict[str, Any]]] | None = None,
+    corpus_sources: dict[tuple[str, str], tuple[dict[str, dict[str, Any]], dict[str, Any]]]
+    | None = None,
 ) -> tuple[list[list[dict[str, Any]]], list[str]]:
     if corpus_sources is not None:
         source_key = (row["corpus_version"], row["parser_version"])
@@ -162,11 +164,17 @@ def validate_evidence(
                 f"{row['question_id']}: no evidence corpus configured for {source_key}"
             ) from exc
     question_id = row["question_id"]
-    core_sets = parse_json_cell(row["gold_core_evidence_sets"], "gold_core_evidence_sets", question_id)
-    accepted_ids = parse_json_cell(row["accepted_evidence_ids"], "accepted_evidence_ids", question_id)
+    core_sets = parse_json_cell(
+        row["gold_core_evidence_sets"], "gold_core_evidence_sets", question_id
+    )
+    accepted_ids = parse_json_cell(
+        row["accepted_evidence_ids"], "accepted_evidence_ids", question_id
+    )
     if not isinstance(core_sets, list) or not all(isinstance(item, list) for item in core_sets):
         raise IntegrationError(f"{question_id}: gold_core_evidence_sets must be an array of arrays")
-    if not isinstance(accepted_ids, list) or not all(isinstance(item, str) for item in accepted_ids):
+    if not isinstance(accepted_ids, list) or not all(
+        isinstance(item, str) for item in accepted_ids
+    ):
         raise IntegrationError(f"{question_id}: accepted_evidence_ids must be an array of strings")
     candidate_spans = [span for group in core_sets for span in group]
     if not accepted_ids:
@@ -176,7 +184,8 @@ def validate_evidence(
     for block_id in accepted_ids:
         canonical_id = canonical_block_id(block_id, blocks)
         matches = [
-            span for span in candidate_spans
+            span
+            for span in candidate_spans
             if canonical_block_id(str(span.get("block_id", "")), blocks) == canonical_id
         ]
         if len(matches) != 1:
@@ -194,8 +203,13 @@ def validate_evidence(
             raise IntegrationError(f"{question_id}: accept_single requires exactly one span and ID")
         selected_spans[0]["sufficiency"] = "core_sufficient"
     elif decision == "accept_multi":
-        if len(canonical_accepted_ids) != 2 or canonical_accepted_ids[0] == canonical_accepted_ids[1]:
-            raise IntegrationError(f"{question_id}: accept_multi requires two distinct spans and IDs")
+        if (
+            len(canonical_accepted_ids) != 2
+            or canonical_accepted_ids[0] == canonical_accepted_ids[1]
+        ):
+            raise IntegrationError(
+                f"{question_id}: accept_multi requires two distinct spans and IDs"
+            )
         for span in selected_spans:
             span["sufficiency"] = "joint_core"
         if selected_spans[0].get("document_id") != selected_spans[1].get("document_id"):
@@ -234,14 +248,19 @@ def validate_evidence(
                 raise IntegrationError(f"{question_id}: {field} mismatch for {block_id}")
         if span.get("verbatim_text") != block.get("text"):
             raise IntegrationError(f"{question_id}: verbatim_text mismatch for {block_id}")
-        if _int(span["char_start"], "char_start", question_id) > _int(span["char_end"], "char_end", question_id):
+        if _int(span["char_start"], "char_start", question_id) > _int(
+            span["char_end"], "char_end", question_id
+        ):
             raise IntegrationError(f"{question_id}: invalid character interval")
     return [selected_spans], canonical_accepted_ids
 
 
 def normalize_accepted(
-    row: dict[str, str], blocks: dict[str, dict[str, Any]], manifest: dict[str, Any],
-    corpus_sources: dict[tuple[str, str], tuple[dict[str, dict[str, Any]], dict[str, Any]]] | None = None,
+    row: dict[str, str],
+    blocks: dict[str, dict[str, Any]],
+    manifest: dict[str, Any],
+    corpus_sources: dict[tuple[str, str], tuple[dict[str, dict[str, Any]], dict[str, Any]]]
+    | None = None,
 ) -> dict[str, Any]:
     question_id = row["question_id"]
     core_sets, _accepted_ids = validate_evidence(row, blocks, manifest, corpus_sources)
@@ -304,7 +323,8 @@ def integrate(
         ck12_blocks = load_blocks(ck12_blocks_path)
         ck12_manifest = json.loads(ck12_manifest_path.read_text(encoding="utf-8"))
         corpus_sources[(ck12_manifest["corpus_version"], ck12_manifest["parser_version"])] = (
-            ck12_blocks, ck12_manifest
+            ck12_blocks,
+            ck12_manifest,
         )
         blocks_for_summary = {**blocks, **ck12_blocks}
     else:
@@ -328,9 +348,11 @@ def integrate(
     for question_id, group in grouped.items():
         if question_id in RELEASE_EXCLUSIONS:
             for item in group:
-                audit.append(_audit_item(item, "excluded", [
-                    f"release_exclusion: {RELEASE_EXCLUSIONS[question_id]}"
-                ]))
+                audit.append(
+                    _audit_item(
+                        item, "excluded", [f"release_exclusion: {RELEASE_EXCLUSIONS[question_id]}"]
+                    )
+                )
             continue
         duplicate = len(group) > 1
         if duplicate:
@@ -340,14 +362,18 @@ def integrate(
             if not identical:
                 conflict_question_ids.add(question_id)
             for item in group:
-                conflicts.append({
-                    "question_id": question_id,
-                    "conflict_type": conflict_type,
-                    "source_file": item["source_file"],
-                    "row_number": str(item["row_number"]),
-                    "manual_review": item["row"]["manual_review"],
-                    "details": "duplicate records are identical" if identical else "duplicate records differ",
-                })
+                conflicts.append(
+                    {
+                        "question_id": question_id,
+                        "conflict_type": conflict_type,
+                        "source_file": item["source_file"],
+                        "row_number": str(item["row_number"]),
+                        "manual_review": item["row"]["manual_review"],
+                        "details": "duplicate records are identical"
+                        if identical
+                        else "duplicate records differ",
+                    }
+                )
         if question_id in conflict_question_ids:
             for item in group:
                 audit.append(_audit_item(item, "conflict", ["conflicting_duplicate"]))
@@ -371,9 +397,11 @@ def integrate(
                 audit.append(_audit_item(item, "excluded", errors))
                 continue
             records.append(record)
-            original_ids = parse_json_cell(row["accepted_evidence_ids"], "accepted_evidence_ids", question_id)
+            original_ids = parse_json_cell(
+                row["accepted_evidence_ids"], "accepted_evidence_ids", question_id
+            )
             final_spans = [span for group in record["gold_core_evidence_sets"] for span in group]
-            for original_id, span in zip(original_ids, final_spans):
+            for original_id, span in zip(original_ids, final_spans, strict=True):
                 if original_id == span["block_id"]:
                     unchanged_block_count += 1
                 else:
@@ -385,9 +413,17 @@ def integrate(
             audit.append(_audit_item(item, "excluded", [str(exc)]))
 
     stats = summarize(
-        envelopes, grouped, audit, records, duplicate_extra_count,
-        len(conflict_question_ids), schema_failures, provenance_failures,
-        canonicalized_block_count, unchanged_block_count, regenerated_span_count,
+        envelopes,
+        grouped,
+        audit,
+        records,
+        duplicate_extra_count,
+        len(conflict_question_ids),
+        schema_failures,
+        provenance_failures,
+        canonicalized_block_count,
+        unchanged_block_count,
+        regenerated_span_count,
         blocks_for_summary,
     )
     return records, audit, conflicts, stats
@@ -406,11 +442,18 @@ def _audit_item(item: dict[str, Any], status: str, errors: list[str]) -> dict[st
 
 
 def summarize(
-    envelopes: list[dict[str, Any]], grouped: dict[str, list[dict[str, Any]]],
-    audit: list[dict[str, Any]], records: list[dict[str, Any]], duplicate_count: int,
-    conflict_count: int, schema_failures: int, provenance_failures: int,
-    canonicalized_block_count: int, unchanged_block_count: int,
-    regenerated_span_count: int, blocks: dict[str, dict[str, Any]],
+    envelopes: list[dict[str, Any]],
+    grouped: dict[str, list[dict[str, Any]]],
+    audit: list[dict[str, Any]],
+    records: list[dict[str, Any]],
+    duplicate_count: int,
+    conflict_count: int,
+    schema_failures: int,
+    provenance_failures: int,
+    canonicalized_block_count: int,
+    unchanged_block_count: int,
+    regenerated_span_count: int,
+    blocks: dict[str, dict[str, Any]],
 ) -> dict[str, Any]:
     decisions = Counter(item["row"]["manual_review"] or "pending" for item in envelopes)
     valid_records = records
@@ -427,15 +470,20 @@ def summarize(
         for group in record["gold_core_evidence_sets"]
         for span in group
         if not any(
-            block.get("parser_block_id") == span["block_id"] or block.get("block_id") == span["block_id"]
+            block.get("parser_block_id") == span["block_id"]
+            or block.get("block_id") == span["block_id"]
             for block in blocks.values()
         )
     )
     return {
-        "input_row_count_by_source": dict(Counter(Path(item["source_file"]).name for item in envelopes)),
+        "input_row_count_by_source": dict(
+            Counter(Path(item["source_file"]).name for item in envelopes)
+        ),
         "total_candidate_rows": len(envelopes),
         "unique_question_count": len(grouped),
-        "reviewed_candidate_count": sum(decisions[d] for d in ACCEPTED_DECISIONS | {"partial", "reject"}),
+        "reviewed_candidate_count": sum(
+            decisions[d] for d in ACCEPTED_DECISIONS | {"partial", "reject"}
+        ),
         "accepted_single_count": decisions["accept_single"],
         "accepted_multi_count": decisions["accept_multi"],
         "partial_count": decisions["partial"],
@@ -457,7 +505,8 @@ def summarize(
         "by_final_split": dict(Counter(record["split"] for record in valid_records)),
         "excluded_records": [
             {"question_id": item["question_id"], "status": item["status"], "errors": item["errors"]}
-            for item in audit if item["status"] in {"excluded", "conflict"}
+            for item in audit
+            if item["status"] in {"excluded", "conflict"}
         ],
     }
 
@@ -476,6 +525,7 @@ def write_outputs(
     report["gold_annotation_version"] = OUTPUT_GOLD_ANNOTATION_VERSION
     report["gold_output_filename"] = gold_filename
     report["release_excluded_question_ids"] = sorted(RELEASE_EXCLUSIONS)
+
     def atomic_text(path: Path, text: str) -> None:
         fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
         try:
@@ -488,21 +538,38 @@ def write_outputs(
             if os.path.exists(temp_name):
                 os.unlink(temp_name)
 
-    gold_text = "".join(json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n" for record in records)
-    audit_text = "".join(json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n" for item in audit)
+    gold_text = "".join(
+        json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n" for record in records
+    )
+    audit_text = "".join(
+        json.dumps(item, ensure_ascii=False, separators=(",", ":")) + "\n" for item in audit
+    )
     atomic_text(output_dir / gold_filename, gold_text)
     atomic_text(output_dir / f"gold_review_audit_{artifact_version}.jsonl", audit_text)
-    conflict_fields = ["question_id", "conflict_type", "source_file", "row_number", "manual_review", "details"]
+    conflict_fields = [
+        "question_id",
+        "conflict_type",
+        "source_file",
+        "row_number",
+        "manual_review",
+        "details",
+    ]
     conflict_buffer = tempfile.SpooledTemporaryFile(mode="w+", encoding="utf-8", newline="")
     try:
         writer = csv.DictWriter(conflict_buffer, fieldnames=conflict_fields)
         writer.writeheader()
         writer.writerows(conflicts)
         conflict_buffer.seek(0)
-        atomic_text(output_dir / f"gold_integration_conflicts_{artifact_version}.csv", conflict_buffer.read())
+        atomic_text(
+            output_dir / f"gold_integration_conflicts_{artifact_version}.csv",
+            conflict_buffer.read(),
+        )
     finally:
         conflict_buffer.close()
-    atomic_text(output_dir / f"gold_validation_report_{artifact_version}.json", json.dumps(report, ensure_ascii=False, indent=2) + "\n")
+    atomic_text(
+        output_dir / f"gold_validation_report_{artifact_version}.json",
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n",
+    )
 
 
 def main() -> int:
@@ -519,10 +586,23 @@ def main() -> int:
     parser.add_argument("--artifact-version", default="v0_1_3")
     args = parser.parse_args()
     records, audit, conflicts, report = integrate(
-        args.strong, args.multi, args.schema, args.blocks, args.manifest,
-        args.ck12_blocks, args.ck12_manifest,
+        args.strong,
+        args.multi,
+        args.schema,
+        args.blocks,
+        args.manifest,
+        args.ck12_blocks,
+        args.ck12_manifest,
     )
-    write_outputs(args.output_dir, records, audit, conflicts, report, args.gold_filename, args.artifact_version)
+    write_outputs(
+        args.output_dir,
+        records,
+        audit,
+        conflicts,
+        report,
+        args.gold_filename,
+        args.artifact_version,
+    )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     print(f"output_dir={args.output_dir}")
     return 0
