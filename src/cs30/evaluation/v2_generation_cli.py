@@ -775,6 +775,62 @@ def _validate_generation_repeat_judge(
         raise ValueError("generation baseline and repeat must use the registered checklist order")
 
 
+def _validate_generation_repeat_rubrics(
+    baseline_scores: dict[str, Any],
+    repeat_scores: dict[str, Any],
+    baseline_items: list[GenerationEvaluationInput],
+    repeat_items: list[GenerationEvaluationInput],
+) -> None:
+    """Require the repeat subset to use its matching Dev per-question rubrics."""
+
+    repeat_question_ids = {item.question_id for item in repeat_items}
+    baseline_question_ids = {item.question_id for item in baseline_items}
+    missing_from_baseline = sorted(repeat_question_ids - baseline_question_ids)
+    if missing_from_baseline:
+        raise ValueError(
+            "generation repeat contains questions missing from the Dev baseline: "
+            + ", ".join(missing_from_baseline)
+        )
+
+    def rubric_by_question(
+        item_scores: dict[str, Any],
+        *,
+        label: str,
+    ) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for score in item_scores.values():
+            if (
+                score.question_id not in repeat_question_ids
+                or score.run_status != GenerationRunStatus.ANSWERED.value
+            ):
+                continue
+            if score.rubric_sha256 is None:
+                raise ValueError(
+                    f"{label} question {score.question_id} has an answered score without a rubric"
+                )
+            previous = result.setdefault(score.question_id, score.rubric_sha256)
+            if previous != score.rubric_sha256:
+                raise ValueError(
+                    f"{label} question {score.question_id} uses conflicting correctness rubrics"
+                )
+        missing = sorted(repeat_question_ids - set(result))
+        if missing:
+            raise ValueError(
+                f"{label} has no answered score to establish the correctness rubric for: "
+                + ", ".join(missing)
+            )
+        return result
+
+    baseline_rubrics = rubric_by_question(baseline_scores, label="Dev baseline")
+    repeat_rubrics = rubric_by_question(repeat_scores, label="generation repeat")
+    for question_id in sorted(repeat_question_ids):
+        if baseline_rubrics[question_id] != repeat_rubrics[question_id]:
+            raise ValueError(
+                f"generation baseline and repeat use different correctness rubrics for "
+                f"question {question_id}"
+            )
+
+
 def _load_json_object(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, dict):
@@ -1641,8 +1697,12 @@ def _development_report(args: argparse.Namespace) -> int:
             binding_path=args.generation_repeat_correctness_score_binding,
             evaluation_inputs_sha256=repeat_inputs_hash,
         )
-        if correctness_rubric_set_sha256(repeat_scores.values()) != rubric_set_sha256:
-            raise ValueError("generation baseline and repeat must use the same correctness rubrics")
+        _validate_generation_repeat_rubrics(
+            scores,
+            repeat_scores,
+            items,
+            repeat_items,
+        )
         baseline_correctness_configs = {
             score.judge_config_sha256
             for score in scores.values()
