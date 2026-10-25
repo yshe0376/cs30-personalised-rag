@@ -15,12 +15,13 @@ from pydantic import ValidationError
 from cs30.contracts import StudentLevel
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 
-from .condition_statistics import MetricObservation, paired_condition_contrasts
+from .condition_statistics import CONTRASTS, MetricObservation, paired_condition_contrasts
 from .evaluation_audit import (
     load_bound_human_audit,
     prepare_calibration_and_audit,
 )
 from .evidence_support import build_evidence_support_request
+from .gemini_judge_client import GeminiJudgeClient
 from .judge_results import (
     assemble_judge_results,
     grouped_mean,
@@ -80,6 +81,7 @@ from .v2_generation_reporting import (
     build_v2_generation_report,
     generation_noise_floor,
     joint_correct_and_adapted_summary,
+    paired_generation_noise_floor,
     preferred_role_share,
     strict_correctness_summary,
     write_v2_generation_report,
@@ -206,7 +208,11 @@ def _parser() -> argparse.ArgumentParser:
         help="stable audited ID reused only when resuming the same judge execution",
     )
     run_judges.add_argument("--timeout", type=float, default=120.0)
-    run_judges.add_argument("--max-output-tokens", type=int, default=2048)
+    run_judges.add_argument(
+        "--max-output-tokens",
+        type=int,
+        help="provider output limit; defaults to 8192 for Gemini and 2048 otherwise",
+    )
     run_judges.add_argument(
         "--context-window",
         type=int,
@@ -304,6 +310,11 @@ def _parser() -> argparse.ArgumentParser:
     development.add_argument("--correctness-scores", type=Path)
     development.add_argument("--correctness-score-binding", type=Path)
     development.add_argument("--judge-evaluation-dir", type=Path)
+    development.add_argument("--generation-repeat-inputs", type=Path)
+    development.add_argument("--generation-repeat-adapter-manifest", type=Path)
+    development.add_argument("--generation-repeat-correctness-scores", type=Path)
+    development.add_argument("--generation-repeat-correctness-score-binding", type=Path)
+    development.add_argument("--generation-repeat-judge-evaluation-dir", type=Path)
     development.add_argument("--validity-report", type=Path)
     development.add_argument("--input-validation", type=Path)
     development.add_argument("--human-audit-ratings", type=Path)
@@ -369,8 +380,10 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
     judge_execution_id = args.judge_execution_id.strip()
     if not judge_execution_id:
         raise ValueError("judge execution ID must not be empty")
-    if args.timeout <= 0 or args.max_output_tokens <= 0 or args.max_attempts <= 0:
-        raise ValueError("judge timeout, output limit, and attempts must be positive")
+    if args.timeout <= 0 or (args.max_output_tokens is not None and args.max_output_tokens <= 0):
+        raise ValueError("judge timeout and output limit must be positive")
+    if args.max_attempts <= 0:
+        raise ValueError("judge attempts must be positive")
     try:
         configuration = JudgeConfiguration.model_validate_json(
             args.judge_config.read_text(encoding="utf-8")
@@ -383,12 +396,13 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
         raise ValueError("judge request file must contain unique nonempty request IDs")
 
     provider_name = configuration.provider.casefold()
+    max_output_tokens = args.max_output_tokens or (8192 if provider_name == "gemini" else 2048)
     model_digest: str | None = None
     context_window: int | None = None
     if provider_name == "ollama":
         if (
             args.context_window is None
-            or args.context_window <= args.max_output_tokens + 512
+            or args.context_window <= max_output_tokens + 512
         ):
             raise ValueError(
                 "Ollama judge requires --context-window with room for output and framing"
@@ -397,7 +411,7 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
             configuration.model_revision,
             temperature=configuration.temperature,
             timeout_seconds=args.timeout,
-            max_output_tokens=args.max_output_tokens,
+            max_output_tokens=max_output_tokens,
             context_window=args.context_window,
             seed=configuration.seed or 0,
         )
@@ -413,10 +427,21 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
             configuration.model_revision,
             temperature=configuration.temperature,
             timeout_seconds=args.timeout,
-            max_output_tokens=args.max_output_tokens,
+            max_output_tokens=max_output_tokens,
+        )
+    elif provider_name == "gemini":
+        if args.context_window is not None:
+            raise ValueError("--context-window is only supported by the Ollama judge")
+        client = GeminiJudgeClient(
+            configuration.model_revision,
+            temperature=configuration.temperature,
+            timeout_seconds=args.timeout,
+            max_output_tokens=max_output_tokens,
+            seed=configuration.seed,
+            thinking_level=configuration.thinking_level or "high",
         )
     else:
-        raise ValueError("judge configuration provider must be 'ollama' or 'openai'")
+        raise ValueError("judge configuration provider must be 'ollama', 'openai' or 'gemini'")
     provider = StructuredJsonJudgeProvider(client)
     runner = CachedJudgeRunner(
         args.cache,
@@ -713,6 +738,94 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
         },
     )
     return 0
+
+
+def _validate_generation_repeat_judge(
+    baseline_provenance: dict[str, Any],
+    repeat_provenance: dict[str, Any],
+    *,
+    repeat_inputs_hash: str,
+    repeat_source_run: str,
+) -> None:
+    """Bind the repeat batch's judge run to the Dev baseline's frozen judge setup.
+
+    Mirrors the efficacy-comparison checks: a different profile package or a reversed
+    checklist would mix judge-side changes into the generation noise floor.
+    """
+
+    if repeat_provenance.get("evaluation_inputs_sha256") != repeat_inputs_hash:
+        raise ValueError("repeat judge evaluation is bound to different inputs")
+    if repeat_provenance.get("source_run_sha256") != repeat_source_run:
+        raise ValueError("repeat judge evaluation is bound to a different source run")
+    for field in (
+        "judge_configuration_sha256",
+        "judge_config_version",
+        "profile_package_sha256",
+    ):
+        if not baseline_provenance.get(field) or baseline_provenance.get(
+            field
+        ) != repeat_provenance.get(field):
+            raise ValueError(
+                f"generation baseline and repeat must use the same frozen judge {field}"
+            )
+    if (
+        baseline_provenance.get("reverse_adaptation_criteria") is not False
+        or repeat_provenance.get("reverse_adaptation_criteria") is not False
+    ):
+        raise ValueError("generation baseline and repeat must use the registered checklist order")
+
+
+def _validate_generation_repeat_rubrics(
+    baseline_scores: dict[str, Any],
+    repeat_scores: dict[str, Any],
+    baseline_items: list[GenerationEvaluationInput],
+    repeat_items: list[GenerationEvaluationInput],
+) -> None:
+    """Require the repeat subset to use its matching Dev per-question rubrics."""
+
+    repeat_question_ids = {item.question_id for item in repeat_items}
+    baseline_question_ids = {item.question_id for item in baseline_items}
+    missing_from_baseline = sorted(repeat_question_ids - baseline_question_ids)
+    if missing_from_baseline:
+        raise ValueError(
+            "generation repeat contains questions missing from the Dev baseline: "
+            + ", ".join(missing_from_baseline)
+        )
+
+    def rubric_by_question(
+        item_scores: dict[str, Any],
+        *,
+        label: str,
+    ) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for score in item_scores.values():
+            if score.question_id not in repeat_question_ids:
+                continue
+            if score.rubric_sha256 is None:
+                raise ValueError(
+                    f"{label} question {score.question_id} has a score without a rubric"
+                )
+            previous = result.setdefault(score.question_id, score.rubric_sha256)
+            if previous != score.rubric_sha256:
+                raise ValueError(
+                    f"{label} question {score.question_id} uses conflicting correctness rubrics"
+                )
+        missing = sorted(repeat_question_ids - set(result))
+        if missing:
+            raise ValueError(
+                f"{label} has no score to establish the correctness rubric for: "
+                + ", ".join(missing)
+            )
+        return result
+
+    baseline_rubrics = rubric_by_question(baseline_scores, label="Dev baseline")
+    repeat_rubrics = rubric_by_question(repeat_scores, label="generation repeat")
+    for question_id in sorted(repeat_question_ids):
+        if baseline_rubrics[question_id] != repeat_rubrics[question_id]:
+            raise ValueError(
+                f"generation baseline and repeat use different correctness rubrics for "
+                f"question {question_id}"
+            )
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -1526,6 +1639,180 @@ def _development_report(args: argparse.Namespace) -> int:
         }
         for item in items
     ]
+    repeat_paths = (
+        args.generation_repeat_inputs,
+        args.generation_repeat_adapter_manifest,
+        args.generation_repeat_correctness_scores,
+        args.generation_repeat_correctness_score_binding,
+        args.generation_repeat_judge_evaluation_dir,
+    )
+    if any(path is not None for path in repeat_paths) and not all(
+        path is not None for path in repeat_paths
+    ):
+        raise ValueError(
+            "generation repeat comparison requires inputs, adapter manifest, correctness "
+            "scores, score binding, and judge evaluation directory together"
+        )
+    paired_noise: dict[str, Any] = {
+        "status": "not_supplied",
+        "interpretation": (
+            "A 30-question repeated generation batch is required to estimate generation noise; "
+            "judge repeat agreement measures only judge variability."
+        ),
+    }
+    repeat_provenance: dict[str, Any] | None = None
+    if args.generation_repeat_inputs is not None:
+        if not scores or judge_data is None:
+            raise ValueError(
+                "generation repeat comparison requires baseline correctness and judge outputs"
+            )
+        repeat_items = _load_inputs(args.generation_repeat_inputs)
+        repeat_manifest = _load_json_object(args.generation_repeat_adapter_manifest)
+        repeat_inputs_hash = hashlib.sha256(args.generation_repeat_inputs.read_bytes()).hexdigest()
+        if (
+            repeat_manifest.get("output_sha256", {}).get("generation_evaluation_inputs")
+            != repeat_inputs_hash
+        ):
+            raise ValueError("repeat inputs do not match the repeat adapter manifest hash")
+        repeat_source_run = repeat_manifest.get("source_run_sha256")
+        if repeat_source_run == source_run_hash:
+            raise ValueError("generation repeat batch must come from a distinct source run")
+        if repeat_source_run is None or any(
+            item.source_run_sha256 != repeat_source_run for item in repeat_items
+        ):
+            raise ValueError("repeat inputs do not match the repeat adapter source run")
+        if repeat_manifest.get("gold_sha256") != manifest.get("gold_sha256"):
+            raise ValueError("generation baseline and repeat must use the same Gold bytes")
+        if repeat_manifest.get("input_sha256", {}).get("lambda_selection") != manifest.get(
+            "input_sha256", {}
+        ).get("lambda_selection"):
+            raise ValueError("generation baseline and repeat must use the same frozen lambda")
+        repeat_scores = load_open_answer_scores(
+            args.generation_repeat_correctness_scores,
+            repeat_items,
+            gold_sha256=str(repeat_manifest["gold_sha256"]),
+            binding_path=args.generation_repeat_correctness_score_binding,
+            evaluation_inputs_sha256=repeat_inputs_hash,
+        )
+        _validate_generation_repeat_rubrics(
+            scores,
+            repeat_scores,
+            items,
+            repeat_items,
+        )
+        baseline_correctness_configs = {
+            score.judge_config_sha256
+            for score in scores.values()
+            if score.judge_config_sha256 is not None
+        }
+        repeat_correctness_configs = {
+            score.judge_config_sha256
+            for score in repeat_scores.values()
+            if score.judge_config_sha256 is not None
+        }
+        if len(baseline_correctness_configs) > 1 or len(repeat_correctness_configs) > 1:
+            raise ValueError("each generation batch must use one frozen correctness judge")
+        if repeat_correctness_configs != baseline_correctness_configs:
+            raise ValueError("generation baseline and repeat must use the same correctness judge")
+        repeat_judge = load_judge_evaluation_outputs(
+            args.generation_repeat_judge_evaluation_dir
+        )
+        _validate_generation_repeat_judge(
+            judge_data["manifest"].get("provenance", {}),
+            repeat_judge["manifest"].get("provenance", {}),
+            repeat_inputs_hash=repeat_inputs_hash,
+            repeat_source_run=str(repeat_source_run),
+        )
+        repeat_adaptation_records = list(repeat_judge["adaptation"])
+        if decision_config.adaptation_pass_threshold is not None:
+            repeat_adaptation_records = [
+                apply_adaptation_threshold(
+                    record, threshold=decision_config.adaptation_pass_threshold
+                )
+                for record in repeat_adaptation_records
+            ]
+        repeat_target_adaptation = {
+            str(record["evaluation_id"]): record
+            for record in repeat_adaptation_records
+            if record.get("is_target_level_evaluation")
+        }
+
+        def paired_row(
+            item: GenerationEvaluationInput,
+            item_scores: dict[str, Any],
+            item_adaptation: dict[str, dict[str, Any]],
+        ) -> dict[str, Any]:
+            score = item_scores.get(item.evaluation_id)
+            numeric = (
+                0
+                if item.source_status is not GenerationRunStatus.ANSWERED
+                else (score.score if score and score.score_status == "scored" else None)
+            )
+            adaptation = item_adaptation.get(item.evaluation_id, {})
+            return {
+                "adaptation_applicable": not item.technical_failure and not item.abstained,
+                "run_id": item.run_id,
+                "question_id": item.question_id,
+                "target_level": item.target_level.value,
+                "condition": item.condition.value,
+                "generation_model_family": item.generation_model_family,
+                "generation_model_revision": item.generation_model_revision,
+                "correctness_score": numeric,
+                "adaptation_criterion_pass_rate": adaptation.get("criterion_pass_rate"),
+                "adaptation_passed": adaptation.get("adaptation_passed"),
+            }
+
+        strict_contrasts = {
+            str(row["contrast"]): row
+            for row in contrasts
+            if row.get("metric") == "strict_correct"
+            and int(row.get("paired_question_level_count", 0) or 0) > 0
+        }
+        main_comparison: dict[str, Any] | None = None
+        primary_contrast = decision_config.primary_contrast
+        if primary_contrast is not None and primary_contrast in strict_contrasts:
+            treatment, control = CONTRASTS[primary_contrast]
+            main_comparison = {
+                "contrast": primary_contrast,
+                "conditions": [treatment.value, control.value],
+                "paired_cell_count": int(
+                    strict_contrasts[primary_contrast]["paired_question_level_count"]
+                ),
+                "cell_count_source": "registered primary strict_correct contrast on Dev",
+            }
+        elif primary_contrast is None and strict_contrasts:
+            main_comparison = {
+                "contrast": None,
+                "conditions": [],
+                "paired_cell_count": min(
+                    int(row["paired_question_level_count"])
+                    for row in strict_contrasts.values()
+                ),
+                "cell_count_source": (
+                    "smallest strict_correct contrast on Dev (no registered primary contrast)"
+                ),
+            }
+        paired_noise = paired_generation_noise_floor(
+            [paired_row(item, scores, target_adaptation) for item in items],
+            [
+                paired_row(item, repeat_scores, repeat_target_adaptation)
+                for item in repeat_items
+            ],
+            correctness_delta=decision_config.correctness_noninferiority_delta,
+            main_comparison=main_comparison,
+            adaptation_threshold_frozen=decision_config.adaptation_pass_threshold is not None,
+        )
+        repeat_provenance = {
+            "adapter_manifest": repeat_manifest,
+            "evaluation_inputs_sha256": repeat_inputs_hash,
+            "correctness_scores_sha256": hashlib.sha256(
+                args.generation_repeat_correctness_scores.read_bytes()
+            ).hexdigest(),
+            "correctness_score_binding_sha256": hashlib.sha256(
+                args.generation_repeat_correctness_score_binding.read_bytes()
+            ).hexdigest(),
+            "judge_evaluation_manifest": repeat_judge["manifest"],
+        }
     report = build_v2_generation_report(
         mode=EvaluationMode.DEVELOPMENT,
         decision_config=decision_config,
@@ -1556,7 +1843,10 @@ def _development_report(args: argparse.Namespace) -> int:
         human_audit=human_audit,
         condition_contrasts=contrasts,
         lambda_evaluation=manifest.get("lambda_selection"),
-        generation_noise=generation_noise_floor(items),
+        generation_noise={
+            "paired_repeat_batch": paired_noise,
+            "same_prompt_answer_mismatch_diagnostic": generation_noise_floor(items),
+        },
         applicability_summary=_applicability_summary(items, correctness_by_id, adaptation_by_id),
         joint_correct_and_adapted=joint_correct_and_adapted_summary(joint_rows),
         unresolved_items=unresolved,
@@ -1591,6 +1881,7 @@ def _development_report(args: argparse.Namespace) -> int:
             "judge_evaluation_manifest": (
                 judge_data["manifest"] if judge_data is not None else None
             ),
+            "generation_repeat": repeat_provenance,
             "input_validation": input_validation,
             "input_validation_sha256": (
                 hashlib.sha256(args.input_validation.read_bytes()).hexdigest()

@@ -34,6 +34,8 @@ def canonical_model_family(value: str) -> str:
     """Normalize model revisions and size suffixes before family comparisons."""
 
     family = value.strip().casefold().rsplit("/", 1)[-1].split(":", 1)[0]
+    if family == "gemini" or family.startswith("gemini-"):
+        return "gemini"
     family = _MODEL_SIZE_SUFFIX.sub("", family).rstrip("-_:")
     return family
 
@@ -341,6 +343,7 @@ class JudgeConfiguration(ContractModel):
     model_revision: Identifier
     temperature: float = Field(ge=0.0)
     seed: int | None = None
+    thinking_level: Literal["minimal", "low", "medium", "high"] | None = None
     prompt_version: Identifier
     output_schema_version: Identifier
     local_model: bool
@@ -351,6 +354,8 @@ class JudgeConfiguration(ContractModel):
 
     @model_validator(mode="after")
     def validate_role_label_overlap(self) -> JudgeConfiguration:
+        if self.provider.casefold() == "gemini" and self.thinking_level is None:
+            raise ValueError("Gemini judge configurations must freeze thinking_level")
         overlap = canonical_model_family(self.model_family) in {
             canonical_model_family(family) for family in self.role_label_model_families
         }
@@ -468,6 +473,7 @@ class JudgeResultEnvelope(ContractModel):
     reported_model: NonEmptyText | None = None
     input_tokens: int = Field(default=0, ge=0)
     output_tokens: int = Field(default=0, ge=0)
+    thought_tokens: int = Field(default=0, ge=0)
     cache_hit: bool = False
 
     @model_validator(mode="after")

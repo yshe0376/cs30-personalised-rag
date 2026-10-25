@@ -160,6 +160,7 @@ class JudgeAttempt(ScoringModel):
     reported_model: str | None = None
     input_tokens: int = Field(default=0, ge=0)
     output_tokens: int = Field(default=0, ge=0)
+    thought_tokens: int = Field(default=0, ge=0)
 
 
 class OpenAnswerScore(ExpectedAnswer):

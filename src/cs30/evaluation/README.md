@@ -560,3 +560,58 @@ unknown, duplicate, unanswered, or missing selected cases, and still enforces
 the configured minimum counts and required level/condition coverage. Omitting a
 selector means that the corresponding comparison must cover every answered
 evaluation.
+
+### Gemini judge configuration
+
+`run-judge-requests` reads the judge identity from a frozen JSON configuration. A Gemini
+judge must also freeze `thinking_level`; the configuration is rejected without
+it, and the level is part of the configuration hash. The model ID below is a
+placeholder: pin the exact Gemini model chosen during Dev calibration.
+
+```json
+{
+  "schema_version": "1.0",
+  "config_version": "gemini-judge-v1",
+  "provider": "gemini",
+  "model_family": "gemini",
+  "model_revision": "REPLACE-with-pinned-gemini-model-id",
+  "temperature": 1.0,
+  "seed": 5703,
+  "thinking_level": "high",
+  "prompt_version": "prompt-v1",
+  "output_schema_version": "1.0",
+  "local_model": false,
+  "data_approval": "approved"
+}
+```
+
+`temperature` 1.0 follows Google's Gemini 3 guidance. The client sends
+`thinkingConfig`, retries 408/429/5xx up to five times with exponential backoff,
+and defaults `--max-output-tokens` to 8192 because the limit includes thinking
+tokens. Recorded `output_tokens` already include thinking tokens;
+`thought_tokens` is a breakdown of that figure and must not be added to it again.
+Set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and install the optional SDK with
+`python -m pip install -e ".[topic-llm]"`.
+
+### Paired generation noise floor
+
+`development-report` accepts M7's repeated generation batch (30 Dev questions x
+12 cells) through `--generation-repeat-inputs`,
+`--generation-repeat-adapter-manifest`, `--generation-repeat-correctness-scores`,
+`--generation-repeat-correctness-score-binding` and
+`--generation-repeat-judge-evaluation-dir`, supplied together. The repeat must
+come from a distinct source run with the same Gold, frozen lambda, correctness
+rubrics, correctness judge, judge configuration, profile package and registered
+checklist order as the Dev baseline. Rows are paired by `run_id`.
+
+The correctness noise floor is `sqrt(flip_rate / n)`: the standard deviation
+that generation noise adds to the main strict-correct comparison. `flip_rate` is
+the share of paired cells whose strict-correct outcome changes between the runs,
+so changes in opposite directions do not cancel; `n` is the paired cell count of
+the registered primary `strict_correct` contrast on Dev. The correctness
+non-inferiority margin delta must exceed this floor. Judge repeat agreement
+measures only judge variability and cannot replace it. Unresolved correctness
+stays in the denominator, so the floor is reported only as bounds until every
+pair is scored. Adaptation pairs that are not applicable (abstained or failed
+answers, or no frozen threshold) are counted separately from unevaluated ones
+and do not affect the correctness status.

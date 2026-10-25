@@ -222,6 +222,35 @@ def test_adapter_preserves_statuses_hashes_and_chunk_citations(tmp_path: Path) -
     )
 
 
+def test_adapter_accepts_a_question_subset_with_shared_eligibility_rows(tmp_path: Path) -> None:
+    paths = _bundle(tmp_path)
+    _write_jsonl(
+        paths["eligibility"],
+        [
+            {"question_id": "q1", "eligibility": "full"},
+            {"question_id": "another-dev-question", "eligibility": "full"},
+        ],
+    )
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["prepared_inputs"]["input_sha256"]["eligibility.jsonl"] = _sha(
+        paths["eligibility"]
+    )
+    _write_json(paths["manifest"], manifest)
+
+    items, adapter_manifest = adapt_m7_generation_artifacts(
+        expected_path=paths["expected"],
+        records_path=paths["records"],
+        answers_path=paths["answers"],
+        run_manifest_path=paths["manifest"],
+        gold_path=paths["gold"],
+        eligibility_path=paths["eligibility"],
+        lambda_selection_path=paths["lambda"],
+    )
+
+    assert {item.question_id for item in items} == {"q1"}
+    assert adapter_manifest["question_count"] == 1
+
+
 def test_lambda_case_count_uses_experiment_questions_not_all_gold_rows(
     tmp_path: Path,
 ) -> None:

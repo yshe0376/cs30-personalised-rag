@@ -171,6 +171,11 @@ class OpenAnswerScorer:
             "max_retries": max_retries,
             "max_output_tokens": getattr(client, "max_output_tokens", None),
         }
+        # Only Gemini has a reasoning level; adding the key only when set keeps every
+        # earlier non-Gemini judge hash, and the score caches bound to it, valid.
+        thinking_level = getattr(client, "thinking_level", None)
+        if thinking_level is not None:
+            self.judge_config["thinking_level"] = thinking_level
         self.judge_config_sha256 = canonical_hash(self.judge_config)
 
     def score(
@@ -329,6 +334,7 @@ class OpenAnswerScorer:
                     usage = {
                         "input_tokens": response.usage.input_tokens,
                         "output_tokens": response.usage.output_tokens,
+                        "thought_tokens": int(getattr(response, "thought_tokens", 0)),
                     }
                     candidate = JudgeAssessment.model_validate_json(raw)
                     validate_assessment(candidate, rubric, answer)

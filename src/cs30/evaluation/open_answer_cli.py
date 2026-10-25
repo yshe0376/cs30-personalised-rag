@@ -14,6 +14,7 @@ from cs30.evaluation.models import GoldSample
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 from cs30.v2.contracts import GoldQuestion
 
+from .gemini_judge_client import GeminiJudgeClient
 from .open_answer_models import (
     HumanDecision,
     HumanRating,
@@ -82,13 +83,31 @@ def _parser() -> argparse.ArgumentParser:
     score = commands.add_parser("score", help="score an explicit matrix of saved answers")
     for name in ("gold", "rubrics", "runs", "expected-manifest", "output-dir"):
         score.add_argument(f"--{name}", type=Path, required=True)
-    score.add_argument("--provider", choices=("none", "ollama", "openai"), default="none")
+    score.add_argument(
+        "--provider", choices=("none", "ollama", "openai", "gemini"), default="none"
+    )
     score.add_argument(
         "--model", help="independent judge model identifier, preferably version-pinned"
     )
     score.add_argument("--cache-dir", type=Path)
     score.add_argument("--timeout", type=float, default=120.0)
-    score.add_argument("--max-output-tokens", type=int, default=2048)
+    score.add_argument(
+        "--max-output-tokens",
+        type=int,
+        help="provider output limit; defaults to 8192 for Gemini and 2048 otherwise",
+    )
+    score.add_argument(
+        "--temperature",
+        type=float,
+        help="judge sampling temperature; defaults to 1.0 for Gemini (Google's Gemini 3 "
+        "guidance) and 0.0 otherwise",
+    )
+    score.add_argument(
+        "--thinking-level",
+        choices=("minimal", "low", "medium", "high"),
+        default="high",
+        help="fixed Gemini reasoning level recorded in the judge configuration",
+    )
     score.add_argument("--max-retries", type=int, default=1)
     score.add_argument(
         "--allow-self-judge",
@@ -117,8 +136,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.output_dir.exists():
             raise ValueError("output directory already exists; keep original reports immutable")
         if args.command == "score":
-            if not math.isfinite(args.timeout) or args.timeout <= 0 or args.max_output_tokens <= 0:
-                raise ValueError("judge timeout and output token limit must be finite and positive")
+            if (
+                not math.isfinite(args.timeout)
+                or args.timeout <= 0
+                or (args.max_output_tokens is not None and args.max_output_tokens <= 0)
+                or (
+                    args.temperature is not None
+                    and (not math.isfinite(args.temperature) or args.temperature < 0)
+                )
+            ):
+                raise ValueError(
+                    "judge timeout/output limit must be positive and temperature nonnegative"
+                )
             snapshots = {
                 name: getattr(args, name).read_bytes()
                 for name in ("gold", "rubrics", "runs", "expected_manifest")
@@ -143,14 +172,30 @@ def main(argv: list[str] | None = None) -> int:
                 raise ValueError("--model requires a live judge provider")
             client = None
             if args.provider != "none":
-                client_type = (
-                    OllamaChatClient if args.provider == "ollama" else OpenAIResponsesClient
+                client_types = {
+                    "ollama": OllamaChatClient,
+                    "openai": OpenAIResponsesClient,
+                    "gemini": GeminiJudgeClient,
+                }
+                client_type = client_types[args.provider]
+                max_output_tokens = args.max_output_tokens or (
+                    8192 if args.provider == "gemini" else 2048
+                )
+                provider_options = (
+                    {"thinking_level": args.thinking_level}
+                    if args.provider == "gemini"
+                    else {}
                 )
                 client = client_type(
                     args.model,
                     timeout_seconds=args.timeout,
-                    max_output_tokens=args.max_output_tokens,
-                    temperature=0.0,
+                    max_output_tokens=max_output_tokens,
+                    temperature=(
+                        args.temperature
+                        if args.temperature is not None
+                        else (1.0 if args.provider == "gemini" else 0.0)
+                    ),
+                    **provider_options,
                 )
             scorer = OpenAnswerScorer(
                 client,
