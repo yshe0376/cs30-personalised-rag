@@ -799,14 +799,11 @@ def _validate_generation_repeat_rubrics(
     ) -> dict[str, str]:
         result: dict[str, str] = {}
         for score in item_scores.values():
-            if (
-                score.question_id not in repeat_question_ids
-                or score.run_status != GenerationRunStatus.ANSWERED.value
-            ):
+            if score.question_id not in repeat_question_ids:
                 continue
             if score.rubric_sha256 is None:
                 raise ValueError(
-                    f"{label} question {score.question_id} has an answered score without a rubric"
+                    f"{label} question {score.question_id} has a score without a rubric"
                 )
             previous = result.setdefault(score.question_id, score.rubric_sha256)
             if previous != score.rubric_sha256:
@@ -816,7 +813,7 @@ def _validate_generation_repeat_rubrics(
         missing = sorted(repeat_question_ids - set(result))
         if missing:
             raise ValueError(
-                f"{label} has no answered score to establish the correctness rubric for: "
+                f"{label} has no score to establish the correctness rubric for: "
                 + ", ".join(missing)
             )
         return result

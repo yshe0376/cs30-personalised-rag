@@ -17,6 +17,7 @@ from cs30.evaluation.v2_generation_cli import main
 from cs30.evaluation.v2_generation_models import (
     ExperimentArm,
     GenerationEvaluationInput,
+    GenerationRunStatus,
 )
 
 GOLD_SHA256 = "a" * 64
@@ -43,6 +44,7 @@ def _inputs(
     *,
     label: str,
     source_run_sha256: str,
+    nonanswered_status: GenerationRunStatus | None = None,
 ) -> list[GenerationEvaluationInput]:
     result = []
     for question_index in range(question_count):
@@ -51,6 +53,13 @@ def _inputs(
             for condition in ExperimentArm:
                 run_id = f"run-{question_id}-{level.value}-{condition.value}"
                 answer = f"{label} answer for {run_id}"
+                status = (
+                    nonanswered_status
+                    if question_id == "q-07" and nonanswered_status is not None
+                    else GenerationRunStatus.ANSWERED
+                )
+                if status.is_technical_failure:
+                    answer = None
                 result.append(
                     GenerationEvaluationInput(
                         evaluation_id=f"{label}-{run_id}",
@@ -67,7 +76,13 @@ def _inputs(
                         eligibility="full",
                         source_artifact_sha256="1" * 64,
                         source_run_sha256=source_run_sha256,
-                        answer_sha256=_sha256_text(answer),
+                        answer_sha256=_sha256_text(answer) if answer is not None else None,
+                        source_status=status,
+                        abstained=status is GenerationRunStatus.ABSTAINED,
+                        technical_failure=status.is_technical_failure,
+                        failure_reason="fixture technical failure"
+                        if status.is_technical_failure
+                        else None,
                     )
                 )
     return result
@@ -109,6 +124,7 @@ def _write_scores_and_binding(
     *,
     inputs_sha256: str,
     changed_rubric_question: str | None = None,
+    invalid_failure_rubric: str | None = None,
 ) -> tuple[Path, Path]:
     score_path = path / "open_answer_scores.jsonl"
     rows = []
@@ -118,6 +134,16 @@ def _write_scores_and_binding(
             if item.question_id == changed_rubric_question
             else f"rubric:{item.question_id}"
         )
+        rubric_hash = _sha256_text(rubric_source)
+        if item.question_id == "q-07" and invalid_failure_rubric == "missing":
+            rubric_hash = None
+        elif (
+            item.question_id == "q-07"
+            and invalid_failure_rubric == "conflicting"
+            and item.target_level is StudentLevel.BEGINNER
+        ):
+            rubric_hash = _sha256_text("conflicting-rubric")
+        answered = item.source_status is GenerationRunStatus.ANSWERED
         rows.append(
             {
                 "run_id": item.run_id,
@@ -129,16 +155,16 @@ def _write_scores_and_binding(
                 ),
                 "split": item.source_split,
                 "gold_sha256": GOLD_SHA256,
-                "rubric_sha256": _sha256_text(rubric_source),
+                "rubric_sha256": rubric_hash,
                 "rubric_version": "correctness-v1",
                 "answer_sha256": item.answer_sha256,
-                "run_status": "answered",
+                "run_status": item.source_status.value,
                 "score_status": "scored",
-                "score": 2,
-                "scoring_source": "judge",
+                "score": 2 if answered else 0,
+                "scoring_source": "judge" if answered else "system",
                 "reason": "fixture score",
-                "judge_model": "gemini-3.1-flash-lite",
-                "judge_config_sha256": JUDGE_CONFIG_SHA256,
+                "judge_model": "gemini-3.1-flash-lite" if answered else None,
+                "judge_config_sha256": JUDGE_CONFIG_SHA256 if answered else None,
             }
         )
     _write_jsonl(score_path, rows)
@@ -197,9 +223,22 @@ def _development_report_args(
     tmp_path: Path,
     *,
     changed_repeat_rubric_question: str | None = None,
+    nonanswered_batch: str | None = None,
+    nonanswered_status: GenerationRunStatus = GenerationRunStatus.GENERATION_ERROR,
+    invalid_failure_rubric: str | None = None,
 ) -> tuple[list[str], Path]:
-    baseline_items = _inputs(31, label="baseline", source_run_sha256=BASELINE_SOURCE_RUN)
-    repeat_items = _inputs(30, label="repeat", source_run_sha256=REPEAT_SOURCE_RUN)
+    baseline_items = _inputs(
+        31,
+        label="baseline",
+        source_run_sha256=BASELINE_SOURCE_RUN,
+        nonanswered_status=nonanswered_status if nonanswered_batch == "baseline" else None,
+    )
+    repeat_items = _inputs(
+        30,
+        label="repeat",
+        source_run_sha256=REPEAT_SOURCE_RUN,
+        nonanswered_status=nonanswered_status if nonanswered_batch == "repeat" else None,
+    )
     baseline_dir = tmp_path / "baseline"
     repeat_dir = tmp_path / "repeat"
     baseline_inputs, baseline_manifest, baseline_hash = _write_input_bundle(
@@ -216,12 +255,14 @@ def _development_report_args(
         baseline_dir,
         baseline_items,
         inputs_sha256=baseline_hash,
+        invalid_failure_rubric=invalid_failure_rubric if nonanswered_batch == "baseline" else None,
     )
     repeat_scores, repeat_binding = _write_scores_and_binding(
         repeat_dir,
         repeat_items,
         inputs_sha256=repeat_hash,
         changed_rubric_question=changed_repeat_rubric_question,
+        invalid_failure_rubric=invalid_failure_rubric if nonanswered_batch == "repeat" else None,
     )
     baseline_judge = _write_empty_judge_evaluation(
         baseline_dir / "judge",
@@ -273,9 +314,7 @@ def test_development_report_accepts_a_thirty_question_repeat_subset(
 
     assert main(args) == 0
 
-    report = json.loads(
-        (output_dir / "v2_generation_evaluation.json").read_text(encoding="utf-8")
-    )
+    report = json.loads((output_dir / "v2_generation_evaluation.json").read_text(encoding="utf-8"))
     paired = report["diagnostics"]["generation_noise_floor"]["paired_repeat_batch"]
     assert paired["status"] == "complete"
     assert paired["question_count"] == 30
@@ -296,3 +335,64 @@ def test_development_report_rejects_a_changed_repeat_question_rubric(
 
     assert exc_info.value.code == 2
     assert "different correctness rubrics for question q-07" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("batch", ["baseline", "repeat"])
+@pytest.mark.parametrize(
+    "status", [GenerationRunStatus.ABSTAINED, GenerationRunStatus.GENERATION_ERROR]
+)
+def test_development_report_preserves_all_twelve_nonanswered_cells(
+    tmp_path: Path, batch: str, status: GenerationRunStatus
+) -> None:
+    args, output_dir = _development_report_args(
+        tmp_path, nonanswered_batch=batch, nonanswered_status=status
+    )
+
+    assert main(args) == 0
+
+    report = json.loads((output_dir / "v2_generation_evaluation.json").read_text(encoding="utf-8"))
+    paired = report["diagnostics"]["generation_noise_floor"]["paired_repeat_batch"]
+    assert paired["status"] == "complete"
+    assert paired["question_count"] == 30
+    assert paired["pair_count"] == 360
+    assert paired["overall"]["correctness_pairs"]["evaluated"] == 360
+    assert paired["overall"]["correct_flip_count"] == 12
+    assert paired["overall"]["adaptation_pairs"]["not_applicable"] == 12
+    for row in paired["by_condition"]:
+        zero_side = "baseline" if batch == "baseline" else "repeat"
+        assert row[f"{zero_side}_strict_correct_rate"] == pytest.approx(29 / 30)
+
+
+@pytest.mark.parametrize("batch", ["baseline", "repeat"])
+def test_development_report_rejects_mismatched_rubric_with_no_answered_cells(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], batch: str
+) -> None:
+    args, _ = _development_report_args(
+        tmp_path, nonanswered_batch=batch, changed_repeat_rubric_question="q-07"
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(args)
+
+    assert exc_info.value.code == 2
+    assert "different correctness rubrics for question q-07" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("batch", ["baseline", "repeat"])
+@pytest.mark.parametrize("invalid_rubric", ["missing", "conflicting"])
+def test_development_report_rejects_invalid_rubrics_on_failed_cells(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], batch: str, invalid_rubric: str
+) -> None:
+    args, _ = _development_report_args(
+        tmp_path, nonanswered_batch=batch, invalid_failure_rubric=invalid_rubric
+    )
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(args)
+
+    assert exc_info.value.code == 2
+    message = capsys.readouterr().err
+    assert "q-07" in message
+    assert (
+        "without a rubric" if invalid_rubric == "missing" else "conflicting correctness rubrics"
+    ) in message
