@@ -21,7 +21,11 @@ def _corpus_with_chapter_base(tmp_path) -> LoadedCorpus:
     chunks = tuple(
         chunk.model_copy(
             update={
-                "metadata": chunk.metadata | {"parent_char_start": str(first.spans[0].char_start)}
+                "metadata": chunk.metadata
+                | {
+                    "parent_char_start": str(first.spans[0].char_start),
+                    "parent_scope": "chapter",
+                }
             }
         )
         if (chunk.textbook_id, chunk.chapter_id, chunk.document_id)
@@ -111,7 +115,8 @@ def test_chapter_offset_can_bind_across_a_chunk_boundary(tmp_path):
         update={
             "chunk_id": f"{original.chunk_id}-right",
             "text": original.text[boundary - original.char_start :],
-            "char_start": boundary,
+            "char_start": boundary + 2,
+            "char_end": original.char_end + 2,
             "spans": (),
         }
     )
@@ -120,7 +125,13 @@ def test_chapter_offset_can_bind_across_a_chunk_boundary(tmp_path):
         chunks=(left, right, *corpus.chunks[1:]),
     )
     start = boundary - 3
-    text = original.text[start - original.char_start : start - original.char_start + 6]
+    text = (
+        original.text[start - original.char_start : boundary - original.char_start]
+        + "\n\n"
+        + original.text[
+            boundary - original.char_start : boundary - original.char_start + 3
+        ]
+    )
     chapter_start = int(original.metadata["parent_char_start"])
 
     binding = resolve_evidence_span(
@@ -136,6 +147,47 @@ def test_chapter_offset_can_bind_across_a_chunk_boundary(tmp_path):
     assert binding.resolution_status is SpanResolutionStatus.RESOLVED
     assert binding.resolution_method is SpanResolutionMethod.CHAPTER_OFFSET
     assert binding.chunk_ids == (left.chunk_id, right.chunk_id)
+
+
+def test_section_parent_start_is_not_guessed_as_chapter_start(tmp_path):
+    corpus = _corpus_with_chapter_base(tmp_path)
+    original = corpus.chunks[0]
+    text = "repeated evidence"
+    first = original.model_copy(
+        update={
+            "chunk_id": f"{original.chunk_id}-section-a",
+            "text": text,
+            "char_start": 100,
+            "char_end": 100 + len(text),
+            "spans": (),
+            "metadata": original.metadata
+            | {"parent_scope": "section", "parent_char_start": "80"},
+        }
+    )
+    second = original.model_copy(
+        update={
+            "chunk_id": f"{original.chunk_id}-section-b",
+            "text": text,
+            "char_start": 200,
+            "char_end": 200 + len(text),
+            "spans": (),
+            "metadata": original.metadata
+            | {"parent_scope": "section", "parent_char_start": "180"},
+        }
+    )
+    section_only_corpus = LoadedCorpus(
+        manifest=corpus.manifest,
+        chunks=(first, second, *corpus.chunks[1:]),
+    )
+
+    binding = resolve_evidence_span(
+        _span(section_only_corpus, start=20, text=text, block_id=None),
+        section_only_corpus,
+    )
+
+    assert binding.resolution_status is SpanResolutionStatus.AMBIGUOUS
+    assert binding.resolution_method is None
+    assert binding.chunk_ids == ()
 
 
 def test_repeated_or_missing_text_is_never_guessed(tmp_path):
