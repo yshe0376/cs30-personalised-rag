@@ -9,6 +9,9 @@
   "file_count": 22117,
   "uncompressed_bytes": 775691307,
   "file_inventory_sha256": "15b44ae3e31e3a8f5e13a5ef91c6dc9a06b435800c70b9309635d59783900346",
-  "publication_status": "pending_explicit_public_raw_data_approval",
-  "published": false
+  "publication_status": "published_verified",
+  "published": true,
+  "release_id": 423499856,
+  "release_target_commit": "9f2ffa8553484b006ef3529b8e1438ee5cb1f105",
+  "remote_sha256_verified": true
 }

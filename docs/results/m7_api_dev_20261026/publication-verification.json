@@ -17,5 +17,11 @@
     "failed": 0,
     "local_fake_http_server_permitted": true,
     "paid_api_calls": 0
+  },
+  "public_release_verification": {
+    "anonymous_download_sha256_verified": true,
+    "bytes": 94871526,
+    "sha256": "4020a9a984f759cf1948d1cd9140cf66aab4679b7f3c04a65ab4e41f686ba7ee",
+    "asset_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-dev-20261026/m7_api_dev_20261026.tar.gz"
   }
 }

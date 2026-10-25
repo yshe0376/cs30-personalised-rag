@@ -230,7 +230,8 @@ contains gpt-oss-20b, Gemma 3 12B and Llama 3.1 8B against the four-book inputs
 with Dev-selected lambda=0.1. All 6,624 Dev/repeat cells were executed:
 6,540 answered and 84 retained Llama format failures, with zero final truncations.
 The full frozen inputs, answers, traces, checkpoints and request/response caches
-are packaged and verified locally; public raw-archive upload awaits explicit approval.
+are published in a development pre-release after explicit user authorization,
+with the uploaded SHA-256 digest verified against the local archive.
 Independent M8 scoring and formal Test remain pending;
 the results are non-reportable development outputs.
 

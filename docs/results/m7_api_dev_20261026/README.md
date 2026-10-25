@@ -33,8 +33,8 @@ DeepInfra 对 Llama JSON Schema 的旧错误、Gemma 旧格式失败和已停用
 
 ## M8 接手方式
 
-本机已准备并验证完整包，包含每模型 Dev 与重复的 prepared/run 目录、历史真实探索、全部 checkpoints/api_cache、输入来源与哈希、λ 选择结果和本报告。
-**公开原始附件尚待用户明确确认，当前 GitHub 仅提供结果汇总、核验记录和复现工具。** 包内可能包含完整教材证据和 API 提示词/返回；附件链接在发布前不可下载。
+已发布并验证完整包，包含每模型 Dev 与重复的 prepared/run 目录、历史真实探索、全部 checkpoints/api_cache、输入来源与哈希、λ 选择结果和本报告。
+**用户明确确认公开上传后，完整原始包已发布为 GitHub 开发版 Release。** 包内保留答案、教材证据及 API 提示词/返回，密钥与账户资料已排除。
 同名 run_id 可能跨批次复用；评分结果和缓存必须绑定 **run 目录 + manifest/答案哈希**，不能只按 run_id 合并。
 每个重复单元须与基线的对应单元一起交给同一冻结 judge/rubric 评分；失败保留在原有分母，不把缺失答案当成功。
 
@@ -65,10 +65,10 @@ M8 的评分噪声底仍待实际评分；δ 不可从文本变化率推导。
 发布包不含 API 密钥、本机 .env 配置、账户截图或账单资料。教材与 Gold 依各原来源许可使用，打包不改变其许可。
 上传结果供团队交接，不等于 M8 已确认接收或冻结方案。后续范围为交接确认及满足前置条件后的 Test 生成。
 
-## 预定附件与校验（尚未发布）
+## 已发布附件与校验
 
-- 待授权发布的 [GitHub 开发结果 Release](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-api-dev-20261026)
-- 待授权上传的 [完整结果包](https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-dev-20261026/m7_api_dev_20261026.tar.gz)（90.5 MiB，22117 个文件）
+- [GitHub 开发结果 Release](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-api-dev-20261026)
+- [完整结果包](https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-dev-20261026/m7_api_dev_20261026.tar.gz)（90.5 MiB，22117 个文件）
 - SHA-256：`4020a9a984f759cf1948d1cd9140cf66aab4679b7f3c04a65ab4e41f686ba7ee`
 - [发布元数据](release_asset.json)
 
@@ -80,3 +80,5 @@ tar -xzf m7_api_dev_20261026.tar.gz
 ## 发布验证
 
 完整包解压后离线核验通过（22116 个证据文件，另含清单本身）；全仓回归 **1214 passed / 3 skipped**，启动器专项 **7 passed**，静态检查与差异空白检查通过。测试允许本机模拟 HTTP 服务，没有调用真实付费 API。见 [publication-verification.json](publication-verification.json)。
+
+发布后通过无登录公开链接重新下载完整包，94,871,526 字节与 SHA-256 均匹配本地归档；GitHub 返回的附件 SHA-256 也一致。
