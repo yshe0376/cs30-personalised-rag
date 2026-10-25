@@ -5,58 +5,29 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from cs30.chunking.v2_span_resolver import resolve_evidence_span
 from cs30.evaluation.models import GoldSample
-from cs30.v2.contracts import EvidenceSpan, EvidenceSpanBinding, GoldQuestion
+from cs30.v2.contracts import (
+    EvidenceSpan,
+    EvidenceSpanBinding,
+    GoldQuestion,
+    SpanResolutionStatus,
+)
 from cs30.v2.corpus import LoadedCorpus, load_corpus_records
 from cs30.v2.io import read_jsonl, sha256_bytes
 
 
 def bind_span(span: EvidenceSpan, corpus: LoadedCorpus) -> EvidenceSpanBinding:
-    """Verify one unique exact location; never infer chapter offsets from chunks.
+    """Require the shared M4 resolver to produce one current-corpus binding."""
 
-    This intentionally narrow adapter handles spans contained in a published
-    chunk. Spans crossing chunks or stale block IDs require upstream resolution,
-    rather than whitespace normalization, first-match guesses or changed Gold.
-    """
-    candidates = [
-        c
-        for c in corpus.chunks
-        if c.textbook_id == span.textbook_id and c.chapter_id == span.chapter_id
-    ]
-    if span.block_id is not None:
-        candidates = [c for c in candidates if any(s.block_id == span.block_id for s in c.spans)]
-    matches = {}
-    for chunk in candidates:
-        offset = 0
-        while (found := chunk.text.find(span.verbatim_text, offset)) >= 0:
-            start = chunk.char_start + found
-            end = start + len(span.verbatim_text)
-            if span.block_id is not None and not any(
-                s.block_id == span.block_id and s.char_start <= start and end <= s.char_end
-                for s in chunk.spans
-            ):
-                offset = found + 1
-                continue
-            matches.setdefault((chunk.document_id, start, end), []).append(chunk.chunk_id)
-            offset = found + 1
-    if len(matches) != 1:
+    binding = resolve_evidence_span(span, corpus)
+    if binding.resolution_status is not SpanResolutionStatus.RESOLVED:
         raise ValueError(
-            f"Gold span {span.span_id!r} has {len(matches)} exact locations in its "
-            "textbook/chapter/block; obtain a resolved M4 anchor instead of guessing"
+            f"Gold span {span.span_id!r} has no unique exact locations "
+            f"({binding.resolution_status.value}); obtain a resolved M4 anchor "
+            "instead of guessing"
         )
-    (document_id, start, end), chunk_ids = next(iter(matches.items()))
-    return EvidenceSpanBinding(
-        span_id=span.span_id,
-        textbook_id=span.textbook_id,
-        corpus_version=corpus.manifest.corpus_version,
-        corpus_hash=corpus.manifest.corpus_hash,
-        resolution_status="resolved",
-        resolution_method="block_id" if span.block_id else "verbatim_unique",
-        document_id=document_id,
-        char_start=start,
-        char_end=end,
-        chunk_ids=tuple(sorted(set(chunk_ids))),
-    )
+    return binding
 
 
 def bind_questions(gold: dict[str, GoldQuestion], corpus: LoadedCorpus) -> list[dict]:
