@@ -115,8 +115,12 @@ from cs30.chunking import bind_concept_check_question, resolve_evidence_span
 `resolve_evidence_span()` applies the frozen matching order: parser `block_id`,
 verified chapter-local offsets, then a unique verbatim match within the same
 textbook and chapter. A span may bind to several chunks when it crosses a
-chunk boundary. Missing or repeated evidence is returned as `stale` or
-`ambiguous`; the resolver never publishes a first-match guess.
+chunk boundary; the resolver preserves the parser's `\n\n` separator between
+adjacent source blocks while replaying such evidence. Chapter offsets are used
+only when the corpus carries an explicit, unambiguous chapter-scoped parent
+start—section starts are never guessed to be chapter starts. Missing or
+repeated evidence is returned as `stale` or `ambiguous`; the resolver never
+publishes a first-match guess.
 
 `bind_concept_check_question()` applies that resolver to every durable anchor
 in a practice question. The existing release contract remains responsible for

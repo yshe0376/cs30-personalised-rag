@@ -109,6 +109,7 @@ def bind_concept_check_question(
 
 
 Location = tuple[str, int, int, tuple[str, ...]]
+_CHUNK_SEPARATOR = "\n\n"
 
 
 def _block_locations(span: EvidenceSpan, chunks: Sequence[Chunk]) -> set[Location]:
@@ -168,16 +169,19 @@ def _chapter_offset_locations(span: EvidenceSpan, chunks: Sequence[Chunk]) -> se
 
 
 def _chapter_start(chunks: Sequence[Chunk]) -> int | None:
-    """Read the chapter base retained by the production M4 chunk metadata.
+    """Read an explicitly chapter-scoped base from M4 chunk metadata.
 
-    ``parent_char_start`` may describe a section for an individual chunk, but
-    the minimum value over a chapter is its parent chapter start in the frozen
-    production corpus.  Corpora without that provenance skip offset matching
-    and fall back to the exact verbatim rule; no base is guessed.
+    Production chunks may carry section-scoped ``parent_char_start`` values.
+    Their minimum is not necessarily the chapter start when earlier material
+    was filtered out, so section metadata must never be promoted to a chapter
+    coordinate.  Corpora without one unambiguous chapter-scoped base skip
+    offset matching and fall back to the guarded verbatim rule.
     """
 
     starts: list[int] = []
     for chunk in chunks:
+        if chunk.metadata.get("parent_scope") != "chapter":
+            continue
         raw = chunk.metadata.get("parent_char_start")
         if raw is None:
             continue
@@ -187,7 +191,8 @@ def _chapter_start(chunks: Sequence[Chunk]) -> int | None:
             continue
         if 0 <= value <= chunk.char_start:
             starts.append(value)
-    return min(starts) if starts else None
+    unique_starts = set(starts)
+    return next(iter(unique_starts)) if len(unique_starts) == 1 else None
 
 
 def _verbatim_locations(span: EvidenceSpan, chunks: Sequence[Chunk]) -> set[Location]:
@@ -214,7 +219,10 @@ def _contiguous_runs(
         ordered = sorted(document_chunks, key=lambda item: (item.char_start, item.chunk_id))
         run: list[Chunk] = []
         for chunk in ordered:
-            if run and chunk.char_start != run[-1].char_end:
+            if run and chunk.char_start - run[-1].char_end not in {
+                0,
+                len(_CHUNK_SEPARATOR),
+            }:
                 yield _run(document_id, run)
                 run = []
             run.append(chunk)
@@ -223,7 +231,12 @@ def _contiguous_runs(
 
 
 def _run(document_id: str, chunks: Sequence[Chunk]) -> tuple[str, int, str, tuple[Chunk, ...]]:
-    return document_id, chunks[0].char_start, "".join(chunk.text for chunk in chunks), tuple(chunks)
+    pieces = [chunks[0].text]
+    for previous, current in zip(chunks, chunks[1:], strict=False):
+        if current.char_start - previous.char_end == len(_CHUNK_SEPARATOR):
+            pieces.append(_CHUNK_SEPARATOR)
+        pieces.append(current.text)
+    return document_id, chunks[0].char_start, "".join(pieces), tuple(chunks)
 
 
 def _location_for_interval(
@@ -246,7 +259,9 @@ def _location_for_interval(
     covered_end = start
     for chunk in overlapping:
         if chunk.char_start > covered_end:
-            return None
+            if chunk.char_start - covered_end != len(_CHUNK_SEPARATOR):
+                return None
+            covered_end = chunk.char_start
         covered_end = max(covered_end, min(end, chunk.char_end))
         if covered_end >= end:
             break
@@ -264,7 +279,10 @@ def _text_for_interval(chunks: Sequence[Chunk], start: int, end: int) -> str | N
         if overlap_start >= overlap_end:
             continue
         if overlap_start != cursor:
-            return None
+            if overlap_start - cursor != len(_CHUNK_SEPARATOR):
+                return None
+            pieces.append(_CHUNK_SEPARATOR)
+            cursor = overlap_start
         pieces.append(chunk.text[overlap_start - chunk.char_start : overlap_end - chunk.char_start])
         cursor = overlap_end
         if cursor == end:
