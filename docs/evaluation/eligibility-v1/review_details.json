@@ -1,0 +1,342 @@
+[
+  {
+    "question_id": "sciq-test-00432",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The malformed wording leaves it ambiguous whether the question asks for the phenomenon or the tube; the reference identifies the tube.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-00056",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question asks for an angle, whose name is the angle of refraction; refraction names the bending process, and the evidence explicitly distinguishes these.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-00059",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "FM is a modulation method, not a particular radio frequency; the evidence supports FM rather than AM as the intended choice.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-00412",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Evenly spaced lines is not a general grating result: equal diffraction orders are equally spaced in the sine of the angle, with approximately equal angular or screen spacing only near the centre for a single wavelength.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-00438",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The Kelvin identification is correct, but the evidence reverses the Celsius conversion; the exact offset is +273.15, with +273 only an approximation.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-00591",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Hertz is the correct frequency unit but is a derived SI unit, so the question's 'base unit' wording is technically inaccurate.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-00702",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question and evidence incorrectly state that the restoring force always opposes velocity; it opposes displacement from equilibrium and can point along the velocity.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-01081",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "A thermodynamically closed system can exchange energy; constant total energy requires an energetically isolated system, so the reference needs a nonstandard meaning of closed.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-01327",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference describes total internal reflection but omits the necessary critical-angle condition; ordinary internal reflection is not restricted to the stated speed ordering.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-02251",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question and reference omit that the forces must act on the same object with no other unbalanced force.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-02371",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference answer names magnification but omits the value 2 specified in the evidence.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-02393",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question asks for a Greek word, but machine is the English word; the evidence says it derives from a Greek word rather than supplying that Greek word.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-02528",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference and evidence broadly present supernovas as the source of elements heavier than iron, although other sources include neutron-star mergers and neutron capture in evolved stars.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-02656",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Although the evidence repeats 'Sun', the familiar Newton apple account connects terrestrial gravity with the Moon's orbit, making this historical reference questionable.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-03426",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Returning after a fixed period defines periodic motion; harmonic motion is a more restricted sinusoidal motion, which the question and evidence do not establish.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-04188",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question asks 'what cycle' rather than which unit; hertz is the frequency unit corresponding to cycles per second, not a type of cycle.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-04256",
+    "split": "dev",
+    "gold_answer_concern": false,
+    "gold_answer_concern_note": null,
+    "uncertain_criteria": [
+      "B1"
+    ]
+  },
+  {
+    "question_id": "sciq-train-04312",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The momentum answer is supported by radiation pressure on the dust tail, but the plural-tail premise is overbroad because the ion tail points away mainly through interaction with the solar wind.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-04590",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question omits the textbook context; the evidence's 'first noted' refers to an earlier section, not historical priority.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-04746",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The evidence supports high-noise exposure as a hearing hazard but establishes neither hair-cell damage nor the implied claim that noise is the most common cause of adult hearing loss.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-05012",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Radius times linear momentum gives a particle's angular-momentum magnitude only for perpendicular motion; a general spinning object's total angular momentum is not its total linear momentum times a radius.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-05409",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The answer is physically correct, but the supplied excerpt does not establish that electrons carry negative charge.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-05754",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The condition does not uniquely identify a solid: particles in liquids also remain bound by attractive interactions, so the question lacks a condition distinguishing solids from liquids.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-05989",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The premise overgeneralizes the link between abundance and binding: hydrogen is most abundant, while peak binding energy per nucleon occurs near iron and nickel.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-06030",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The wording could also refer to timbre; the evidence makes pitch the intended answer but the question alone does not distinguish these qualities.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-06124",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question must mean diverging reflected rays; diverging incident rays alone do not determine whether a mirror forms a real or virtual image.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-06209",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference assumes the convention that real focal lengths are positive; other sign conventions can assign different signs, and the question does not specify one.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-06500",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Many free charges alone do not establish negligible drift velocity; the reference needs the evidence's fixed-current context and a charge density rather than merely a total count.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-06843",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The evidence describes electron wave behavior but does not establish that electrons were the first massive particles directly confirmed to show it.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-07169",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Dust recoil alone is incomplete for both tails, and 'always point away' is too absolute because dust tails can curve; the evidence distinguishes photon-driven dust from gas driven by solar particles.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-07191",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference and evidence overgeneralise from visible color: radiative heat transfer depends on spectral absorptivity and emissivity, temperatures and geometry, and visible color need not indicate thermal-infrared behavior.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-07238",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Constant speed alone does not determine frequency without a wavelength, and electromagnetic speed is not universally constant across media, so the wording is underspecified.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-07717",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "In standard thermodynamics a closed system can exchange energy, so its total energy need not remain constant; the evidence uses closed to mean no energy transfer, making the question ambiguous.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-07732",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question leaves the frame of motion unspecified: kinetic friction opposes relative sliding of contacting surfaces and can act along an object's motion in another frame.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-08506",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question and evidence conflate tensile strength with yield stress: permanent deformation can begin below the maximum tensile stress.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-08706",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question and evidence misdefine heat capacity as stored internal energy; heat capacity is energy required per unit temperature rise, not an energy amount.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-09014",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The supplied definition is restrictive: vapor generally refers to a gas below its critical temperature and can exist above its boiling temperature at a given pressure.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-09086",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The evidence incorrectly treats virtual pion exchange as a temporary violation of mass-energy conservation; energy-time uncertainty does not permit such violations, and real pions can be created with sufficient conserved energy.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-09931",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The wording includes compounds, whose smallest independent units are molecules or formula units, whereas atomic physics specifically studies atoms; the evidence repeats this overbroad attribution.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-09968",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference needs a symbol-only qualification, and the evidence incorrectly capitalizes spelled-out unit names: newton stays lowercase, while N is capitalized.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-10243",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question and evidence generalise massive quanta as the smallest units of matter, although massive quanta can be composite.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-10961",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Returning after a fixed period establishes periodic motion, which need not be harmonic; the reference and evidence omit the additional sinusoidal-motion restriction.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-10980",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference's 'third conservation law' is a source-specific ordering, not one of Newton's three laws of motion; angular momentum conservation requires zero net external torque.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-10989",
+    "split": "dev",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The reference answer is ambiguous because 'opposite' has no comparator in the question; the evidence supplies comparison with a positive object.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-11310",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The question does not uniquely select kinetic energy: mass and speed also determine momentum magnitude, so other answers satisfy its wording.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-train-11373",
+    "split": "test",
+    "gold_answer_concern": false,
+    "gold_answer_concern_note": null,
+    "uncertain_criteria": [
+      "B1"
+    ]
+  },
+  {
+    "question_id": "sciq-validation-00342",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "Divergence behind a lens is ambiguous unless it means rays emerging directly from the lens; rays also diverge after crossing at a real image.",
+    "uncertain_criteria": []
+  },
+  {
+    "question_id": "sciq-validation-00761",
+    "split": "test",
+    "gold_answer_concern": true,
+    "gold_answer_concern_note": "The evidence's definition assumes a matter-only cosmological model; critical density does not generally determine whether expansion halts when dark energy is present.",
+    "uncertain_criteria": []
+  }
+]

@@ -17,3 +17,19 @@ class LLMEmptyResponseError(LLMProviderError):
 
 class LLMOutputValidationError(GenerationError):
     """The model output did not match the fixed answer schema."""
+
+
+class LLMRequestBudgetExceeded(ValueError):
+    """The cumulative HTTP request budget has been exhausted; resume after review."""
+
+
+class LLMCacheIntegrityError(ValueError):
+    """A saved API response changed; stop before overwriting or making paid calls."""
+
+
+class LLMRetryLater(LLMProviderError, ValueError):
+    """The rate-limit wait/retry budget is exhausted; do not retry immediately."""
+
+
+class LLMFatalProviderError(LLMProviderError, ValueError):
+    """Invalid credentials, permissions or endpoint/model; stop the whole batch."""

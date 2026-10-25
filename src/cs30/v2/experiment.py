@@ -10,6 +10,7 @@ import json
 import math
 import tempfile
 from collections.abc import Callable, Mapping
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import asdict
 from importlib.resources import files
 from pathlib import Path
@@ -24,6 +25,12 @@ from cs30.contracts import StudentProfile as LegacyProfile
 from cs30.evaluation.open_answer_models import ExpectedAnswer
 from cs30.generation.client import LLMClient
 from cs30.generation.conditions import GenerationCondition
+from cs30.generation.exceptions import (
+    LLMCacheIntegrityError,
+    LLMFatalProviderError,
+    LLMRequestBudgetExceeded,
+    LLMRetryLater,
+)
 from cs30.generation.lambda_search import load_role_label_package
 from cs30.generation.reranking import LevelAwareReranker, RerankConfig, RoleLabel
 from cs30.retrieval.real import BM25Retriever
@@ -92,6 +99,7 @@ class LambdaSelection(ExperimentModel):
     candidate_k: int = Field(ge=1)
     evidence_k: int = Field(ge=1)
     source_prepared_sha256: str
+    source_retrieval_sha256: str | None = None
     objective: Literal["largest_positive_lambda_within_1pt_of_baseline"]
     noninferiority_margin: Literal[0.01] = 0.01
     metrics: list[dict]
@@ -266,6 +274,7 @@ def prepare_experiment(
     role_manifest: Path | None = None,
     retrieval_path: Path | None = None,
     question_limit: int | None = None,
+    question_ids_path: Path | None = None,
     selected_lambda_path: Path | None = None,
     conversion_manifest_path: Path | None = None,
 ) -> dict:
@@ -284,6 +293,20 @@ def prepare_experiment(
             raise ValueError("Gold conversion audit differs from the supplied Gold bytes")
     all_gold = load_v2_gold(gold_path, gold_bytes)
     chosen = [q for q in all_gold.values() if q.split.value == config.split]
+    question_ids_bytes = question_ids_path.read_bytes() if question_ids_path else None
+    if question_ids_bytes is not None:
+        ids = json.loads(question_ids_bytes)
+        if (
+            config.split != "dev"
+            or question_limit is not None
+            or not isinstance(ids, list)
+            or not ids
+            or not all(isinstance(key, str) for key in ids)
+            or len(set(ids)) != len(ids)
+            or not set(ids) <= {q.question_id for q in chosen}
+        ):
+            raise ValueError("question-ids must be unique known Dev IDs; cannot combine with limit")
+        chosen = [all_gold[key] for key in ids]
     if question_limit:
         chosen = sorted(chosen, key=lambda q: q.question_id)[:question_limit]
     if not chosen:
@@ -345,6 +368,8 @@ def prepare_experiment(
             or role_provenance is None
             or role_provenance["labels_sha256"] != selection.role_labels_sha256
             or missing_roles
+            or selection.source_retrieval_sha256
+            != (sha256_bytes(retrieval_bytes) if retrieval_bytes is not None else None)
         ):
             raise ValueError("selected Dev lambda differs from corpus, Gold, Roles or run settings")
     elif config.lambda_policy == "dev_selected":
@@ -396,6 +421,7 @@ def prepare_experiment(
         "selected_question_ids": list(gold),
         "input_sha256": {name: sha256_bytes(data) for name, data in payloads.items()},
         "source_retrieval_sha256": sha256_bytes(retrieval_bytes) if retrieval_bytes else None,
+        "question_ids_sha256": sha256_bytes(question_ids_bytes) if question_ids_bytes else None,
         "role_provenance": role_provenance,
         "missing_role_chunk_ids": missing_roles,
         "candidate_unique_chunks": len(candidate_ids),
@@ -640,6 +666,7 @@ def select_dev_lambda(prepared_dir: Path, candidates: list[float]) -> LambdaSele
         candidate_k=config.candidate_k,
         evidence_k=config.evidence_k,
         source_prepared_sha256=canonical_hash(manifest),
+        source_retrieval_sha256=manifest.get("source_retrieval_sha256"),
         objective="largest_positive_lambda_within_1pt_of_baseline",
         metrics=metrics,
     )
@@ -678,12 +705,21 @@ def run_experiment(
     provider: str,
     progress: Callable[[int, int, GenerationRun, dict], None] | None = None,
     resume: bool = False,
+    concurrency: int = 1,
 ) -> list[GenerationRun]:
+    if concurrency < 1 or concurrency > 32:
+        raise ValueError("concurrency must be between 1 and 32")
+    if concurrency > 1 and not callable(getattr(client, "for_cell", None)):
+        raise ValueError("concurrency requires a client with isolated per-cell state")
     if output_dir.exists() and not resume:
         raise ValueError("output directory already exists; use --resume or a new directory")
     if resume and not output_dir.is_dir():
         raise ValueError("resume requires an existing experiment directory")
-    _, config, matrix, *_ = load_prepared(prepared_dir)
+    manifest, config, matrix, *_ = load_prepared(prepared_dir)
+    if provider == "openai-compatible" and not manifest.get("source_retrieval_sha256"):
+        raise ValueError(
+            "openai-compatible requires explicit saved retrieval; re-prepare with --retrieval"
+        )
     if config.lambda_weight == 0 and any("R1" in c.condition_id for c in matrix.cases):
         raise ValueError("lambda_weight == 0 cannot run an R1 matrix; select a positive Dev lambda")
     if client.model != config.generator_model:
@@ -700,6 +736,7 @@ def run_experiment(
                 provider=provider,
                 progress=progress,
                 resume=resume,
+                concurrency=concurrency,
             )
         except BaseException as exc:
             if manifest_path.exists() and manifest_path.read_bytes() != original_manifest:
@@ -710,6 +747,8 @@ def run_experiment(
                     interruption_reason=str(exc)[:500],
                     checkpoint_count=len(list((output_dir / "checkpoints").glob("*.json"))),
                 )
+                if callable(getattr(client, "audit_summary", None)):
+                    state["api_audit"] = client.audit_summary(output_dir)
                 atomic_json(manifest_path, state)
             raise
 
@@ -722,6 +761,7 @@ def _run_experiment(
     provider: str,
     progress: Callable[[int, int, GenerationRun, dict], None] | None = None,
     resume: bool = False,
+    concurrency: int = 1,
 ) -> list[GenerationRun]:
     """Checkpoint every cell. Failures remain records in the expected denominator."""
     manifest, config, matrix, gold, retrieval, labels = load_prepared(prepared_dir)
@@ -739,6 +779,8 @@ def _run_experiment(
             "v2/generation_prompt.py",
             "v2/evidence.py",
             "generation/client.py",
+            "generation/compatible.py",
+            "generation/schema.py",
             "generation/prompt.py",
             "generation/reranking.py",
             "retrieval/real.py",
@@ -770,6 +812,10 @@ def _run_experiment(
         timeout_seconds=getattr(client, "timeout_seconds", None),
         seed=getattr(client, "seed", None),
     )
+    if callable(getattr(client, "runtime_identity", None)):
+        requested_manifest["client"].update(client.runtime_identity())
+    requested_manifest["concurrency"] = concurrency
+    requested_manifest["max_api_requests"] = getattr(client, "max_api_requests", None)
     checkpoint_dir = output_dir / "checkpoints"
     if resume:
         existing = json.loads((output_dir / "run_manifest.json").read_bytes())
@@ -784,6 +830,16 @@ def _run_experiment(
                 raise ValueError(f"resume {field} differs from the original run")
         if json.loads(expected_path.read_bytes()) != matrix.model_dump(mode="json"):
             raise ValueError("resume expected matrix differs from the original run")
+        prior_budget = existing.get("max_api_requests")
+        new_budget = requested_manifest["max_api_requests"]
+        if prior_budget is not None and (new_budget is None or new_budget < prior_budget):
+            raise ValueError("resume request cap may only be explicitly increased")
+        requested_manifest["budget_history"] = existing.get("budget_history", [])
+        if prior_budget != new_budget:
+            requested_manifest["budget_history"] = [
+                *requested_manifest["budget_history"],
+                {"previous": prior_budget, "new": new_budget},
+            ]
         completed = load_cells(checkpoint_dir, matrix.cases)
         for run_id, (record, details) in list(completed.items()):
             if retryable_provider_failure(record, details):
@@ -797,76 +853,120 @@ def _run_experiment(
         atomic_json(expected_path, matrix.model_dump(mode="json"))
         completed = {}
         requested_manifest["resume_count"] = 0
+    if callable(getattr(client, "configure_run", None)):
+        client.configure_run(output_dir)
     atomic_json(output_dir / "run_manifest.json", requested_manifest)
-    generator = V2AnswerGenerator(client, max_retries=config.max_retries)
     conditions = {item.condition_id: item for item in GenerationCondition}
+
+    def generate_cell(cell):
+        cell_client = (
+            client.for_cell(cell.run_id, output_dir / "api_cache")
+            if callable(getattr(client, "for_cell", None))
+            else client
+        )
+        generator = V2AnswerGenerator(cell_client, max_retries=config.max_retries)
+        profile = StudentProfile(
+            profile_id="controlled-" + cell.student_level.value,
+            level=cell.student_level,
+            confidence=config.profile_confidence,
+        )
+        condition = conditions[cell.condition_id]
+        original = retrieval[cell.question_id].retrieval
+        selected, rerank_trace = original, None
+        if condition.reranking:
+            selected, rerank_trace = rerank_retrieval(
+                original,
+                profile,
+                labels,
+                config.lambda_weight,
+                parameter_source="dev" if config.lambda_policy == "dev_selected" else "fixture",
+                taxonomy_version=manifest["role_provenance"]["role_taxonomy_version"]
+                if manifest["role_provenance"]
+                else "unavailable-role-taxonomy",
+            )
+        selected = selected.model_copy(update={"hits": selected.hits[: config.evidence_k]})
+        bundle = EvidenceBundleAdapter().build(selected)
+        try:
+            answer = generator.generate(
+                gold[cell.question_id],
+                profile,
+                bundle,
+                personalise_prompt=condition.prompt_personalisation,
+            )
+            assert generator.last_trace is not None
+            result = V2BatchResult(answer, generator.last_trace)
+        except V2GenerationFailure as exc:
+            result = V2BatchResult(None, exc.trace, str(exc))
+        except (
+            LLMRequestBudgetExceeded,
+            LLMCacheIntegrityError,
+            LLMRetryLater,
+            LLMFatalProviderError,
+        ):
+            raise
+        except Exception as exc:
+            # Malformed provider response objects must not discard later cells.
+            result = None
+            record = GenerationRun(
+                **cell.model_dump(),
+                status="generation_error",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+        if result is not None:
+            record = GenerationRun.from_v2_result(cell, result)
+        generation_trace = result.trace if result else generator.last_trace
+        details = {
+            **cell.model_dump(mode="json"),
+            "profile": profile.model_dump(mode="json"),
+            "input_candidate_ids": [h.chunk_id for h in original.hits],
+            "selected_candidate_ids": [h.chunk_id for h in selected.hits],
+            "evidence": bundle.model_dump(mode="json"),
+            "rerank_trace": rerank_trace,
+            "generation_trace": asdict(generation_trace) if generation_trace else None,
+            "status": record.status,
+            "error": record.error,
+            "answer": record.answer.model_dump(mode="json") if record.answer else None,
+        }
+        save_cell(checkpoint_dir, record, details)
+        return record, details
+
     records, runtime_rows = [], []
     with (
         (output_dir / "saved_answers.jsonl").open("w", encoding="utf-8") as answer_file,
         (output_dir / "generation_records.jsonl").open("w", encoding="utf-8") as trace_file,
     ):
+        if concurrency > 1:
+            pending_cells = iter(c for c in matrix.cases if c.run_id not in completed)
+            with ThreadPoolExecutor(max_workers=concurrency) as pool:
+                futures = {}
+
+                def submit_next():
+                    cell = next(pending_cells, None)
+                    if cell is not None:
+                        futures[pool.submit(generate_cell, cell)] = cell
+
+                for _ in range(concurrency):
+                    submit_next()
+                done_count = len(completed)
+                try:
+                    while futures:
+                        ready, _ = wait(futures, return_when=FIRST_COMPLETED)
+                        for future in ready:
+                            cell = futures.pop(future)
+                            record, details = future.result()
+                            completed[cell.run_id] = (record, details)
+                            done_count += 1
+                            if progress:
+                                progress(done_count, len(matrix.cases), record, details)
+                            submit_next()
+                finally:
+                    for future in futures:
+                        future.cancel()
         for cell in matrix.cases:
             if cell.run_id in completed:
                 record, details = completed[cell.run_id]
             else:
-                profile = StudentProfile(
-                    profile_id="controlled-" + cell.student_level.value,
-                    level=cell.student_level,
-                    confidence=config.profile_confidence,
-                )
-                condition = conditions[cell.condition_id]
-                original = retrieval[cell.question_id].retrieval
-                selected, rerank_trace = original, None
-                if condition.reranking:
-                    selected, rerank_trace = rerank_retrieval(
-                        original,
-                        profile,
-                        labels,
-                        config.lambda_weight,
-                        parameter_source="dev"
-                        if config.lambda_policy == "dev_selected"
-                        else "fixture",
-                        taxonomy_version=manifest["role_provenance"]["role_taxonomy_version"]
-                        if manifest["role_provenance"]
-                        else "unavailable-role-taxonomy",
-                    )
-                selected = selected.model_copy(update={"hits": selected.hits[: config.evidence_k]})
-                bundle = EvidenceBundleAdapter().build(selected)
-                try:
-                    answer = generator.generate(
-                        gold[cell.question_id],
-                        profile,
-                        bundle,
-                        personalise_prompt=condition.prompt_personalisation,
-                    )
-                    assert generator.last_trace is not None
-                    result = V2BatchResult(answer, generator.last_trace)
-                except V2GenerationFailure as exc:
-                    result = V2BatchResult(None, exc.trace, str(exc))
-                except Exception as exc:
-                    # Malformed provider response objects must not discard later cells.
-                    result = None
-                    record = GenerationRun(
-                        **cell.model_dump(),
-                        status="generation_error",
-                        error=f"{type(exc).__name__}: {exc}",
-                    )
-                if result is not None:
-                    record = GenerationRun.from_v2_result(cell, result)
-                generation_trace = result.trace if result else generator.last_trace
-                details = {
-                    **cell.model_dump(mode="json"),
-                    "profile": profile.model_dump(mode="json"),
-                    "input_candidate_ids": [h.chunk_id for h in original.hits],
-                    "selected_candidate_ids": [h.chunk_id for h in selected.hits],
-                    "evidence": bundle.model_dump(mode="json"),
-                    "rerank_trace": rerank_trace,
-                    "generation_trace": asdict(generation_trace) if generation_trace else None,
-                    "status": record.status,
-                    "error": record.error,
-                    "answer": record.answer.model_dump(mode="json") if record.answer else None,
-                }
-                save_cell(checkpoint_dir, record, details)
+                record, details = generate_cell(cell)
             records.append(record)
             runtime_rows.append(_runtime_row(record, details))
             # The durable detail row precedes its lightweight scoring view.
@@ -927,7 +1027,11 @@ def _run_experiment(
             f"{g['output_truncated']} | {g['model_calls']} |\n"
             for g in groups
         )
-        + "\n耗时、用量及引用数量见 generation_summary.json；完整证据和原始模型输出见 "
+        + "\nAPI 温度为 0 或传入 seed 仍不能保证逐字复现；文本复现诊断需独立 Dev 重复生成。"
+        "评分噪声底需将重复单元和基线配对交 M8，使用同一冻结 judge/rubric 评分；"
+        "文本变化率不能代替 δ。"
+        "API 原始请求与返回见 api_cache/，逐次 HTTP 用量与请求数见 run_manifest.json 的 api_audit。"
+        "\n耗时、用量及引用数量见 generation_summary.json；完整证据和原始模型输出见 "
         "generation_records.jsonl。引用 ID 有效不等于证据语义支持；"
         "本报告不测量学生等级适配质量，也不自动批准正式结论。\n",
         encoding="utf-8",
@@ -952,5 +1056,7 @@ def _run_experiment(
             },
         }
     )
+    if callable(getattr(client, "audit_summary", None)):
+        run_manifest["api_audit"] = client.audit_summary(output_dir)
     atomic_json(run_path, run_manifest)
     return records

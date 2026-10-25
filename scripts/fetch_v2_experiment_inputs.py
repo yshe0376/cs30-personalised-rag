@@ -1,8 +1,10 @@
-"""Fetch the pinned M3/M4 V2 development release assets, verifying every byte.
+"""Fetch the pinned V2 development inputs, verifying every byte.
 
-This is an explicit network operation. It downloads no models and supplies no
-Role annotations or formal evaluation approval. Reuse already verified files;
-refuse changed files and never overwrite an existing extracted corpus.
+The inputs are M3's Gold, M4's four-book corpus, the four-book Role labels and
+M6's system-retriever candidates. This is an explicit network operation. It
+downloads no models and implies no formal evaluation approval. Reuse already
+verified files; refuse changed files and never overwrite an existing extracted
+corpus.
 """
 
 from __future__ import annotations
@@ -18,18 +20,43 @@ import zipfile
 from pathlib import Path, PurePosixPath
 
 BASE = "https://github.com/yshe0376/cs30-personalised-rag/releases/download/"
+# M3 has not published a Gold v0.1.3 release yet. PR #199 holds the same bytes
+# at this commit; the SHA-256 below is what binds the input, not the URL.
+GOLD_COMMIT = "7dc50ab329c1acc75b00a7a6592148c610ed26f0"
+RAW = "https://raw.githubusercontent.com/yshe0376/cs30-personalised-rag/"
+CORPUS_ARCHIVE = "M4_to_M5_four_book_corpus_a1fe99e.zip"
+# The archive holds a single folder named after the corpus version; that folder
+# is the --corpus-dir for convert-gold and prepare.
+CORPUS_FOLDER = "2.0.0-dev.m4-four-book-main-a1fe99e"
+ROLE_MANIFEST = "role_labels_v2_provenance_manifest.json"
+# M6's system retriever (Qwen3-Embedding-0.6B Dense 0.10 / BM25 0.90), top 20
+# FrozenRetrieval candidates for all 341 questions; pass as prepare --retrieval.
+RETRIEVAL = "m7_qwen3_d0.10_b0.90_original_top20.jsonl"
+RETRIEVAL_MANIFEST = "m7_qwen3_d0.10_b0.90_original_top20_manifest.json"
 ASSETS = {
-    "gold_v0_1_1_integrated.jsonl": (
-        BASE + "v2-m3-gold-v0.1.2-dev-v1/gold_v0_1_1_integrated.jsonl",
-        "5875c2edc35195d475ea8d2980d7d9793cdfc8b83c12d12386049f13d1b69e6e",
+    "gold_v0_1_3.jsonl": (
+        RAW + GOLD_COMMIT + "/m3_gold/final_v0_1_1/gold_v0_1_3.jsonl",
+        "7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8",
     ),
-    "SHA256SUMS.txt": (
-        BASE + "v2-m3-gold-v0.1.2-dev-v1/SHA256SUMS.txt",
-        "aa9d2168cc20afd7c4888dbd800650d3ff74f93b8890cc468c583ee9b491e273",
+    CORPUS_ARCHIVE: (
+        BASE + "v2-m4-four-book-dev-v1/" + CORPUS_ARCHIVE,
+        "074ff89686fe3649089329f7858505f7a68d228d0284a83394a0c0b5a547a592",
     ),
-    "v2_structure_aware_corpus_3book_dev_main_3553825.zip": (
-        BASE + "v2-m4-structure-v2-dev-v1/v2_structure_aware_corpus_3book_dev_main_3553825.zip",
-        "9a10c86aad93d866d888f14d8360d6dde81e70e1970fcab67c7a128227f19976",
+    "role_labels_v2.jsonl": (
+        BASE + "v2-role-labels-v2-four-book-dev-v1/role_labels_v2.jsonl",
+        "d0f74c2ec9f49ed568ba7a922758357c09f4885648b3bdecfa22b7ab2643c59d",
+    ),
+    ROLE_MANIFEST: (
+        BASE + "v2-role-labels-v2-four-book-dev-v1/" + ROLE_MANIFEST,
+        "a02a52249a5e19a98b3928d14d9e143386e5306b9ee9d460b849535b841e3e63",
+    ),
+    RETRIEVAL: (
+        BASE + "m6-w6-qwen3-hybrid-dev-v1/" + RETRIEVAL,
+        "1bb7e491b6506ad8cdabcf6831db83baac06128b9392f5df973e183c54d65ca9",
+    ),
+    RETRIEVAL_MANIFEST: (
+        BASE + "m6-w6-qwen3-hybrid-dev-v1/" + RETRIEVAL_MANIFEST,
+        "842289decec37c5bf562e2fe94b9776a6161a4441f5edd9cc4a95a26d4d5e443",
     ),
 }
 
@@ -55,8 +82,8 @@ def fetch(root: Path) -> dict:
                 os.link(temporary, path)
         if not path.is_file() or file_hash(path) != expected:
             raise ValueError(f"existing asset SHA-256 mismatch: {name}")
-    target = root / "corpus-release"
-    archive_path = root / "v2_structure_aware_corpus_3book_dev_main_3553825.zip"
+    target = root / CORPUS_FOLDER
+    archive_path = root / CORPUS_ARCHIVE
     with zipfile.ZipFile(archive_path) as archive:
         names = set()
         for entry in archive.infolist():
@@ -70,29 +97,41 @@ def fetch(root: Path) -> dict:
                 or entry.filename in names
             ):
                 raise ValueError("release archive contains an unsafe or duplicate path")
+            if relative.parts[0] != CORPUS_FOLDER:
+                raise ValueError(f"release archive entry outside {CORPUS_FOLDER}/")
             names.add(entry.filename)
         if len(names) > 100 or sum(e.file_size for e in archive.infolist()) > 200 * 1024 * 1024:
             raise ValueError("unexpected release archive size")
         if target.exists():
             for entry in archive.infolist():
-                if not entry.is_dir() and (target / entry.filename).read_bytes() != archive.read(
-                    entry
+                extracted = root / entry.filename
+                if not entry.is_dir() and (
+                    not extracted.is_file() or extracted.read_bytes() != archive.read(entry)
                 ):
                     raise ValueError("existing extracted corpus differs from pinned archive")
         else:
             with tempfile.TemporaryDirectory(dir=root, prefix="extract-") as temporary_dir:
-                staging = Path(temporary_dir) / "corpus-release"
-                staging.mkdir()
-                archive.extractall(staging)
-                staging.rename(target)
+                archive.extractall(temporary_dir)
+                (Path(temporary_dir) / CORPUS_FOLDER).rename(target)
     provenance = {
         "schema_version": "0.1",
         "reportable": False,
         "assets": {name: {"url": url, "sha256": digest} for name, (url, digest) in ASSETS.items()},
+        "corpus_dir": CORPUS_FOLDER,
+        "role_manifest": ROLE_MANIFEST,
+        "retrieval": RETRIEVAL,
+        "retrieval_manifest": RETRIEVAL_MANIFEST,
         "limitations": [
-            "Draft three-textbook Gold: 162 pending and 26 proposed_test questions.",
-            "The 26-question Test set was previously exposed in M6 diagnostics.",
-            "No matching V2 Role annotations are supplied by these releases.",
+            "Draft Gold m3_gold_v0.1.3 (341 questions), read from PR #199 commit "
+            f"{GOLD_COMMIT[:7]} because M3 has not published its release; "
+            "82 questions cite CK-12 and need the four-textbook corpus.",
+            "The generation split is 154 Dev / 187 Test "
+            "(docs/examples/v2-generation-split-dev154-test187.json). All 341 questions "
+            "were used in M6 retrieval evaluation, so the 187 Test questions are unseen "
+            "only by generation-side tuning.",
+            "Role labels are mostly model-assigned and have no independent human validation.",
+            "M6 candidates are a development handoff (reportable=false) for the "
+            "original question wording.",
             "No split promotion, annotation review or formal approval is implied.",
         ],
     }
@@ -110,6 +149,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         fetch(args.output_dir)
         print(f"Verified pinned V2 development inputs in {args.output_dir}")
+        print(f"Corpus: {args.output_dir / CORPUS_FOLDER}")
+        print(f"Role manifest: {args.output_dir / ROLE_MANIFEST}")
+        print(f"Retrieval candidates: {args.output_dir / RETRIEVAL}")
         return 0
     except (OSError, ValueError, zipfile.BadZipFile) as exc:
         parser.exit(2, f"V2 input download failed: {exc}\n")

@@ -1,0 +1,45 @@
+{
+  "schema_version": "0.1",
+  "result_type": "m7_api_readiness",
+  "reportable": false,
+  "gold_source": {
+    "pull_request": "https://github.com/yshe0376/cs30-personalised-rag/pull/199",
+    "commit": "7dc50ab329c1acc75b00a7a6592148c610ed26f0",
+    "path": "m3_gold/final_v0_1_1/gold_v0_1_3.jsonl",
+    "sha256": "7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8"
+  },
+  "corpus_archive_sha256": "074ff89686fe3649089329f7858505f7a68d228d0284a83394a0c0b5a547a592",
+  "corpus_version": "2.0.0-dev.m4-four-book-main-a1fe99e",
+  "corpus_hash": "sha256:1af6489539026b115db6d9d2e8bc143161e0cd3832d01fe0c9706fc53b77d205",
+  "corpus_chunks": 6184,
+  "role_labels_sha256": "d0f74c2ec9f49ed568ba7a922758357c09f4885648b3bdecfa22b7ab2643c59d",
+  "role_manifest_sha256": "a02a52249a5e19a98b3928d14d9e143386e5306b9ee9d460b849535b841e3e63",
+  "role_coverage": 6184,
+  "question_count": 341,
+  "split_counts": {
+    "test": 187,
+    "dev": 154
+  },
+  "proposed_test_questions_all_in_test": 30,
+  "ck12_questions_all_in_test": 82,
+  "split_map_sha256": "991d9a68d0fa256b5d418549ffa62c331c6f31c0aacbc144f064f507bfd100fb",
+  "converted_gold_sha256": "235c92a15c14ef0416ac2ad262628c5876b9ebdde03c7f51438d10536a2509d5",
+  "bindings_sha256": "665a19494ea9a53d38c97cb5add44d7301428f5b575e7e4487d54e7673fe0f2d",
+  "conversion_manifest_sha256": "3ccf202df676f637e5c3b04b975dff1d2dc46804f25823085db26c7783f003a0",
+  "binding_count": 352,
+  "noise_sample": {
+    "questions": 30,
+    "seed": 20261023,
+    "ids_sha256": "90c6458119721c656380b8c0f0e8c1bbc7ad8442d621f9eee24985aebc85a595",
+    "generated": false
+  },
+  "api_calls": 0,
+  "test_generated": false,
+  "lambda_selection": "pending M6 saved BGE-M3 0.10/BM25 0.90 top-20 candidates",
+  "blockers": [
+    "M6 saved native candidates for all 341 questions not published in inspected releases/branch",
+    "API hosting provider, base_url, fixed upstream model version and key environment not specified",
+    "Leader API budget not approved",
+    "Test requires M8 frozen judge and Leader comparison/delta registration"
+  ]
+}

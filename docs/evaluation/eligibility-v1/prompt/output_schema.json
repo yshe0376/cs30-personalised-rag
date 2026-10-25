@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EligibilityAnnotationV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "question_id",
+    "question_demand",
+    "intermediate_reference_answer",
+    "intermediate_check",
+    "beginner_criteria",
+    "advanced_criteria",
+    "gold_answer_concern",
+    "gold_answer_concern_note",
+    "reason"
+  ],
+  "properties": {
+    "question_id": {"type": "string"},
+    "question_demand": {
+      "type": "string",
+      "enum": ["identify_or_name", "explain_why_or_how", "calculate", "other"]
+    },
+    "intermediate_reference_answer": {"type": "string", "minLength": 1},
+    "intermediate_check": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/intermediate_judgement"}
+    },
+    "beginner_criteria": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/beginner_judgement"}
+    },
+    "advanced_criteria": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {"$ref": "#/$defs/advanced_judgement"}
+    },
+    "gold_answer_concern": {"type": "boolean"},
+    "gold_answer_concern_note": {"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]},
+    "reason": {"type": "string", "minLength": 1}
+  },
+  "$defs": {
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "fail", "not_applicable", "uncertain"]
+    },
+    "intermediate_judgement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "note", "verdict"],
+      "properties": {
+        "criterion_id": {"type": "string", "enum": ["I1", "I2", "I3"]},
+        "note": {"type": "string", "minLength": 1},
+        "verdict": {"type": "string", "enum": ["pass", "not_applicable"]}
+      }
+    },
+    "beginner_judgement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "note", "verdict"],
+      "properties": {
+        "criterion_id": {"type": "string", "enum": ["B1", "B2", "B3", "B4"]},
+        "note": {"type": "string", "minLength": 1},
+        "verdict": {"$ref": "#/$defs/verdict"}
+      }
+    },
+    "advanced_judgement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["criterion_id", "note", "verdict"],
+      "properties": {
+        "criterion_id": {"type": "string", "enum": ["A1", "A2", "A3", "A4"]},
+        "note": {"type": "string", "minLength": 1},
+        "verdict": {"$ref": "#/$defs/verdict"}
+      }
+    }
+  }
+}
