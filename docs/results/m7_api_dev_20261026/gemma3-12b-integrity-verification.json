@@ -1,0 +1,59 @@
+{
+  "reportable": false,
+  "alias": "gemma3-12b",
+  "model": "google/gemma-3-12b-it",
+  "checks": [
+    {
+      "batch": "dev",
+      "expected_cells": 1848,
+      "actual_cells": 1848,
+      "statuses": {
+        "answered": 1848
+      },
+      "retained_failure_cells": 0,
+      "failure_types_by_cell": {},
+      "output_truncated_cells": 0,
+      "input_hashes": "passed",
+      "output_hashes": "passed",
+      "matrix_saved_answers_traces": "passed",
+      "checkpoint_citation_membership": "passed",
+      "prepared_dir": "artifacts/m7-readiness-20261026/dev-4abc260aaf58-prepared",
+      "run_dir": "artifacts/m7-readiness-20261026/dev-4abc260aaf58-schema-run",
+      "run_manifest_sha256": "494543292602e249667829678a4945a25446d97f9c8b7d1243ff88d255920236"
+    },
+    {
+      "batch": "repeat",
+      "expected_cells": 360,
+      "actual_cells": 360,
+      "statuses": {
+        "answered": 360
+      },
+      "retained_failure_cells": 0,
+      "failure_types_by_cell": {},
+      "output_truncated_cells": 0,
+      "input_hashes": "passed",
+      "output_hashes": "passed",
+      "matrix_saved_answers_traces": "passed",
+      "checkpoint_citation_membership": "passed",
+      "prepared_dir": "artifacts/m7-readiness-20261026/repeat-4abc260aaf58-prepared",
+      "run_dir": "artifacts/m7-readiness-20261026/repeat-4abc260aaf58-schema-run",
+      "run_manifest_sha256": "9f2392b56afd34541f03aecae30c0231f1d27ebe1a9ef5bff99d2e0462800980"
+    }
+  ],
+  "reported_token_cost_usd_including_historical_attempts": 0.4107431,
+  "http_attempts_including_historical": 2496,
+  "successful_http_with_missing_usage": 0,
+  "error_http_without_usage": 0,
+  "text_repeat_diagnostic": {
+    "expected_pairs": 360,
+    "successful_pairs": 360,
+    "paired_technical_failures": 0,
+    "answer_mismatches": 119,
+    "answer_mismatch_rate": 0.33055555555555555,
+    "final_choice_changes": 8,
+    "citation_set_changes": 42,
+    "scoring_noise_floor_status": "pending_m8_scoring"
+  },
+  "m8_scoring": "pending",
+  "test_generated": false
+}

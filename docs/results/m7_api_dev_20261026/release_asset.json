@@ -1,0 +1,12 @@
+{
+  "release": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-api-dev-20261026",
+  "asset": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-dev-20261026/m7_api_dev_20261026.tar.gz",
+  "sha256": "4020a9a984f759cf1948d1cd9140cf66aab4679b7f3c04a65ab4e41f686ba7ee",
+  "size": 94871526,
+  "prerelease": true,
+  "generation_source_commit": "17cb2f3c25ac70b4b602f2b415a38761214b6110",
+  "reportable": false,
+  "file_count": 22117,
+  "uncompressed_bytes": 775691307,
+  "file_inventory_sha256": "15b44ae3e31e3a8f5e13a5ef91c6dc9a06b435800c70b9309635d59783900346"
+}

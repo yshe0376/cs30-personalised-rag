@@ -1,0 +1,5 @@
+{
+  "http_status": 429,
+  "body": "{\"code\":50602,\"message\":\"Request was rejected due to rate limiting. Details: TPM limit reached.\",\"data\":null}",
+  "response_headers": {}
+}

@@ -1,0 +1,6 @@
+{
+  "qwen3-8b": {
+    "reason": "User requested replacement on 2026-10-26",
+    "replacement": "llama31-8b"
+  }
+}

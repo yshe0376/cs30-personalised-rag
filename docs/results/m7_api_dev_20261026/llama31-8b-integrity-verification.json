@@ -1,0 +1,65 @@
+{
+  "reportable": false,
+  "alias": "llama31-8b",
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+  "checks": [
+    {
+      "batch": "dev",
+      "expected_cells": 1848,
+      "actual_cells": 1848,
+      "statuses": {
+        "answered": 1773,
+        "generation_error": 75
+      },
+      "retained_failure_cells": 75,
+      "failure_types_by_cell": {
+        "LLMOutputValidationError": 75
+      },
+      "output_truncated_cells": 0,
+      "input_hashes": "passed",
+      "output_hashes": "passed",
+      "matrix_saved_answers_traces": "passed",
+      "checkpoint_citation_membership": "passed",
+      "prepared_dir": "artifacts/m7-readiness-20261026/dev-8ab0fdcd4d62-prepared",
+      "run_dir": "artifacts/m7-readiness-20261026/dev-8ab0fdcd4d62-json-run",
+      "run_manifest_sha256": "1dc788503fb48d6fd078a744294d067aa7a26898310b2b985677396d08edfd55"
+    },
+    {
+      "batch": "repeat",
+      "expected_cells": 360,
+      "actual_cells": 360,
+      "statuses": {
+        "answered": 351,
+        "generation_error": 9
+      },
+      "retained_failure_cells": 9,
+      "failure_types_by_cell": {
+        "LLMOutputValidationError": 9
+      },
+      "output_truncated_cells": 0,
+      "input_hashes": "passed",
+      "output_hashes": "passed",
+      "matrix_saved_answers_traces": "passed",
+      "checkpoint_citation_membership": "passed",
+      "prepared_dir": "artifacts/m7-readiness-20261026/repeat-8ab0fdcd4d62-prepared",
+      "run_dir": "artifacts/m7-readiness-20261026/repeat-8ab0fdcd4d62-json-run",
+      "run_manifest_sha256": "ba866083a5d880d50a6de2a01b05a014bdba468a7a7c48bde3e49c75285d7ce2"
+    }
+  ],
+  "reported_token_cost_usd_including_historical_attempts": 0.15015858,
+  "http_attempts_including_historical": 2443,
+  "successful_http_with_missing_usage": 0,
+  "error_http_without_usage": 10,
+  "text_repeat_diagnostic": {
+    "expected_pairs": 360,
+    "successful_pairs": 349,
+    "paired_technical_failures": 11,
+    "answer_mismatches": 157,
+    "answer_mismatch_rate": 0.4498567335243553,
+    "final_choice_changes": 51,
+    "citation_set_changes": 79,
+    "scoring_noise_floor_status": "pending_m8_scoring"
+  },
+  "m8_scoring": "pending",
+  "test_generated": false
+}
