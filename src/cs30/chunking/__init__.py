@@ -16,6 +16,7 @@ from .official import W5_CHUNKING_STRATEGY, W5_CONFIG_ID, W5_EMBEDDING_MODEL
 from .reporting import build_chunk_statistics, build_traceability_samples
 from .strategy import BlockChunkingStrategy
 from .traceback import resolve_small_to_big
+from .v2_span_resolver import bind_concept_check_question, resolve_evidence_span
 
 __all__ = [
     "BlockAwareChunker",
@@ -31,12 +32,14 @@ __all__ = [
     "build_evaluation_mapping",
     "build_chunk_statistics",
     "build_traceability_samples",
+    "bind_concept_check_question",
     "export_retrieval_corpus",
     "get_chunking_candidate",
     "load_retrieval_corpus",
     "load_normalized_gold_spans",
     "map_gold_spans_to_chunks",
     "resolve_small_to_big",
+    "resolve_evidence_span",
     "validate_chunk_source_blocks",
     "verify_mapping_identity",
 ]
