@@ -70,9 +70,11 @@ The authoritative content remains
 and its [human-readable explanation](../../docs/evaluation/level-profile-v1/README.md).
 This branch does not change or duplicate that content.
 
-`profile-review-v1/review_record.pending.json` is a working review form bound to
-content hash `2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e`.
-Both reviews deliberately remain pending.
+Use the existing
+[`review_record.template.json`](../../docs/evaluation/level-profile-v1/review_record.template.json)
+from #197 as the single review template. This branch keeps no duplicate form.
+The level-adaptation and level-discrimination judges require a reviewed, frozen
+profile/checklist package; they cannot run while this input remains a draft.
 
 The Leader checks the intended learner levels, the applicability rules and agreement
 with the project plan. A distinct physics reviewer checks physical correctness,
@@ -91,8 +93,9 @@ python -m cs30.evaluation.profile_authoring `
   --output artifacts/evaluation/level-profile-v1.frozen.json
 ```
 
-First copy the working form into the ignored local `artifacts/` directory and fill
-it from the actual reviews. Do not pass the pending form as if it were approved.
+First copy the existing #197 template into the ignored local `artifacts/` directory
+and fill it from the actual reviews, binding it to the current draft hash.
+Do not pass the pending template as if it were approved.
 The exporter rejects pending, stale or duplicate-identity approvals and writes a
 hash-bound frozen package plus review receipt. No fake frozen package is provided.
 Packaging the real review is an operational step; the user does not replace either

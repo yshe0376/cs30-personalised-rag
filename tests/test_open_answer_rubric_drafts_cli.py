@@ -172,11 +172,11 @@ def test_committed_dev_review_bundle_is_hash_bound_and_unapproved():
         assert by_question[rubric.question_id]["review_status"] == "pending"
 
 
-def test_committed_profile_form_cannot_freeze_the_upstream_draft():
+def test_upstream_profile_template_cannot_freeze_the_unapproved_draft():
     repository = Path(__file__).resolve().parents[1]
     draft = load_draft(repository / "docs/evaluation/level-profile-v1/profile_checklist.draft.json")
     record = ProfileReviewRecord.model_validate_json(
-        (repository / "eval_inputs/m8/profile-review-v1/review_record.pending.json").read_bytes()
+        (repository / "docs/evaluation/level-profile-v1/review_record.template.json").read_bytes()
     )
     assert record.draft_package_sha256 == draft.package_sha256
     assert all(review.status == "pending" for review in record.reviews)
