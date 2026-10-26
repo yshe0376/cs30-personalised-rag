@@ -144,7 +144,9 @@ def test_none_summary_keeps_scores_and_separates_missing_na_and_failed_answers()
     assert none["adaptation_not_applicable_count"] == 1
     assert none["adaptation_unresolved_count"] == 1
     assert none["main_adaptation_answer_count"] == 0
-    assert any(row["eligibility"] == "all" for row in summary)
+    aggregate = next(row for row in summary if row["subset"] == "all")
+    assert aggregate["eligibility"] is None
+    assert all(row["eligibility"] == row["subset"] for row in summary if row["subset"] == "none")
     failed = items[2].model_copy(update={"technical_failure": True})
     failed_summary = _applicability_summary(
         [failed], {failed.evaluation_id: 0}, {failed.evaluation_id: 1.0}

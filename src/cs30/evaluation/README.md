@@ -639,8 +639,34 @@ They are exported to JSON, Markdown and
 Diagnostic subset rows cannot replace the registered main contrast.
 
 `applicability_subsets` retains target-checklist adaptation scores for `none` and
-all questions. It reports scored, unresolved and genuinely not-applicable counts;
-technical failures and abstentions do not receive adaptation scores. A missing
-question's paired scores remain explicitly missing even when no condition was
-scored. This supports plan sections 4.2 and 12.1 item 7; it does not freeze profiles,
+all questions. Each row has a `subset` field (`all`, `full_and_endpoint_only` or a
+label); `eligibility` holds the real label and is `null` for the two aggregate
+subsets. It reports scored, unresolved and genuinely not-applicable counts;
+technical failures and abstentions do not receive adaptation scores.
+
+**Not applicable versus missing** (Leader decision, 2026-10-26). In the
+adaptation, `bundle_faithfulness` and `citation_support` contrasts, a question ×
+level pair is *not applicable* when the answer in either arm abstained, failed
+technically, or had nothing evaluable for that metric (no applicable checklist
+criterion for adaptation; no evaluable claim for an evidence metric). Such pairs
+are left out of pairing, are never scored zero and do not count as missing. Only
+answered-but-unscored pairs and judge errors stay missing and keep the formal
+missing-pairs gate closed. Each contrast row reports `not_applicable_pair_count`,
+`treatment_not_applicable` and `control_not_applicable`. A metric whose cells are
+all not applicable still appears with its counts rather than disappearing, and
+not-applicable cells are restricted to each eligibility subset before pairing.
+When a judge-evaluation directory is supplied, both evidence metrics remain in
+the report even if no request succeeded: answered cells without scores are missing,
+while non-answers are not applicable. Without that directory, evidence contrasts
+are omitted. This follows the existing assembled output's three-task scope; it
+does not require an API call for non-answers. Because exclusion can
+introduce selection bias, the report adds `primary_not_applicable` next to the
+registered primary result, with per-condition counts, rates and their difference;
+a warning threshold for that difference is left to the Leader. `strict_correct`
+is unchanged and keeps system zeros, and the joint correct-and-adapted result
+keeps treating non-answers as failures. The paired repeat noise floor applies the
+same adaptation scope: only `full + endpoint_only` answers with an applicable
+checklist criterion.
+
+This supports plan sections 4.2 and 12.1 item 7; it does not freeze profiles,
 approve eligibility labels, calibrate Gemini or authorize formal conclusions.

@@ -7,6 +7,7 @@ import hashlib
 import json
 import sys
 from collections import defaultdict
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -1335,11 +1336,21 @@ def _eligibility_condition_contrasts(
     *,
     bootstrap_draws: int,
     bootstrap_seed: int,
+    not_applicable_cells: dict[str, set[tuple[str, StudentLevel, ExperimentArm]]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Keep the main adaptation scope separate from all-question diagnostics."""
+    """Keep the main adaptation scope separate from all-question diagnostics.
+
+    Not-applicable cells (abstentions, technical failures and answers with nothing
+    evaluable for a quality metric) are excluded from pairing rather than counted as
+    missing; see ``_quality_not_applicable_cells``.
+    """
 
     adaptation_metric = "adaptation_criterion_pass_rate"
-    metrics = {row.metric for row in observations} | {"strict_correct", adaptation_metric}
+    base_metrics = (
+        {row.metric for row in observations}
+        | {"strict_correct", adaptation_metric}
+        | set(not_applicable_cells or {})
+    )
     main_rows = []
     subset_rows = []
     for subset, rows in _eligibility_groups(items).items():
@@ -1349,12 +1360,19 @@ def _eligibility_condition_contrasts(
             for row in observations
             if (row.question_id, row.target_level, row.condition) in cells
         ]
+        # Restrict not-applicable cells to this subset so exclusions from other
+        # eligibility labels never leak into its counts.
+        subset_not_applicable = {
+            metric: metric_cells & cells
+            for metric, metric_cells in (not_applicable_cells or {}).items()
+        }
         expected = {(item.question_id, item.target_level) for item in rows}
         contrasts = paired_condition_contrasts(
             selected,
             bootstrap_draws=bootstrap_draws,
             bootstrap_seed=bootstrap_seed,
-            expected_question_levels={metric: expected for metric in metrics},
+            expected_question_levels={metric: expected for metric in base_metrics},
+            not_applicable_cells=subset_not_applicable,
         )
         for contrast in contrasts:
             row = {**contrast, "eligibility_subset": subset}
@@ -1364,6 +1382,79 @@ def _eligibility_condition_contrasts(
             ):
                 main_rows.append(row)
     return main_rows, subset_rows
+
+
+def _quality_not_applicable_cells(
+    items: list[GenerationEvaluationInput],
+    *,
+    adaptation_not_applicable_ids: frozenset[str],
+    evidence_rows: list[dict[str, Any]],
+    evidence_expected: bool = False,
+) -> dict[str, set[tuple[str, StudentLevel, ExperimentArm]]]:
+    """Cells that cannot receive a quality score for the saved answer.
+
+    Abstentions and technical failures are not applicable to adaptation, bundle
+    faithfulness and citation support, and never receive a quality score of zero.
+    An answered cell is also not applicable to a metric when nothing in it was
+    evaluable: no applicable checklist criterion for adaptation, or no evaluable claim
+    for an evidence metric. Correctness is unaffected and keeps its system zeros.
+    ``evidence_expected`` declares the task even when it produced no successful rows;
+    an empty metric set then still identifies answered cells as missing downstream.
+    """
+
+    cell_by_id = {
+        item.evaluation_id: (item.question_id, item.target_level, item.condition)
+        for item in items
+    }
+    non_answers = {
+        cell_by_id[item.evaluation_id]
+        for item in items
+        if item.technical_failure or item.abstained
+    }
+    cells = {
+        "adaptation_criterion_pass_rate": non_answers
+        | {cell_by_id[eid] for eid in adaptation_not_applicable_ids if eid in cell_by_id},
+    }
+    if not evidence_expected and not evidence_rows:
+        # No evidence evaluation was supplied. Empty successful output alone cannot
+        # establish this: all requests may instead be unresolved or not applicable.
+        return cells
+    cells["bundle_faithfulness"] = set(non_answers)
+    cells["citation_support"] = set(non_answers)
+    evaluable_fields = {
+        "bundle_faithfulness": "evaluable_bundle_claim_count",
+        "citation_support": "evaluable_citation_claim_count",
+    }
+    for row in evidence_rows:
+        cell = cell_by_id.get(str(row.get("evaluation_id")))
+        if cell is None:
+            continue
+        for metric, field in evaluable_fields.items():
+            if row.get(metric) is None and row.get(field) == 0:
+                cells[metric].add(cell)
+    return cells
+
+
+def _noise_floor_adaptation_applicable(
+    item: GenerationEvaluationInput,
+    adaptation: Mapping[str, Any],
+) -> bool:
+    """Match the main adaptation scope in the paired repeat comparison.
+
+    Only full + endpoint_only questions enter, and never abstentions, technical
+    failures or answers with no applicable checklist criterion.
+    """
+
+    nothing_evaluable = (
+        adaptation.get("criterion_pass_rate") is None
+        and adaptation.get("evaluable_criterion_count") == 0
+    )
+    return (
+        not item.technical_failure
+        and not item.abstained
+        and item.target_level in eligible_levels(item.eligibility)
+        and not nothing_evaluable
+    )
 
 
 def _applicability_summary(
@@ -1378,7 +1469,8 @@ def _applicability_summary(
         for item in subset_items:
             groups[(subset, item.condition.value)].append(item)
     result = []
-    for (eligibility, condition), rows in sorted(groups.items()):
+    labels = {value.value for value in PersonalisationEligibility}
+    for (subset, condition), rows in sorted(groups.items()):
         correctness_values = [correctness_by_id.get(item.evaluation_id) for item in rows]
         correctness = [value for value in correctness_values if value is not None]
         strict_correct_count = sum(score == 2 for score in correctness)
@@ -1400,7 +1492,8 @@ def _applicability_summary(
         adaptation_unresolved = adaptation_expected - len(adaptation) - not_applicable
         result.append(
             {
-                "eligibility": eligibility,
+                "subset": subset,
+                "eligibility": subset if subset in labels else None,
                 "condition": condition,
                 "answer_count": len(rows),
                 "technical_failure_count": sum(item.technical_failure for item in rows),
@@ -1636,6 +1729,14 @@ def _development_report(args: argparse.Namespace) -> int:
         observations,
         bootstrap_draws=args.bootstrap_draws,
         bootstrap_seed=args.bootstrap_seed,
+        not_applicable_cells=_quality_not_applicable_cells(
+            items,
+            adaptation_not_applicable_ids=adaptation_not_applicable_ids,
+            evidence_rows=evidence_rows,
+            # The assembled judge directory covers all three tasks, including
+            # unresolved requests and non-answers that require no judge call.
+            evidence_expected=judge_data is not None,
+        ),
     )
     validity = (
         _load_json_object(args.validity_report)
@@ -1818,7 +1919,9 @@ def _development_report(args: argparse.Namespace) -> int:
             )
             adaptation = item_adaptation.get(item.evaluation_id, {})
             return {
-                "adaptation_applicable": not item.technical_failure and not item.abstained,
+                "adaptation_applicable": _noise_floor_adaptation_applicable(
+                    item, adaptation
+                ),
                 "run_id": item.run_id,
                 "question_id": item.question_id,
                 "target_level": item.target_level.value,

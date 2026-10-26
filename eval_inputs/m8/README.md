@@ -36,6 +36,10 @@ two-criterion draft with audit sampling. Refine calculation or multi-step questi
 individually. Wording/type flags identify seven candidates for closer inspection;
 they are hints, not a complete semantic classifier or approval.
 
+**Current status:** all 154 drafts still use the uniform two-criterion template. No
+per-question refinement has been done yet, including for the flagged calculation or
+multi-step candidates; that refinement is part of the pending review.
+
 Also consult the already committed, unreviewed concerns in
 [`review_details.json`](../../docs/evaluation/eligibility-v1/review_details.json).
 Eighteen of its Gold-answer concerns overlap this Dev set. In particular,

@@ -93,8 +93,17 @@ def paired_condition_contrasts(
     bootstrap_seed: int = 5703,
     confidence: float = 0.95,
     expected_question_levels: Mapping[str, Iterable[tuple[str, StudentLevel]]] | None = None,
+    not_applicable_cells: (
+        Mapping[str, Iterable[tuple[str, StudentLevel, ExperimentArm]]] | None
+    ) = None,
 ) -> list[dict[str, Any]]:
-    """Pair by question and level, retaining declared but unscored pairs as missing."""
+    """Pair by question and level, retaining declared but unscored pairs as missing.
+
+    ``not_applicable_cells`` lists, per metric, cells that can never be scored (for
+    example abstentions or technical failures for a quality metric). A pair with such a
+    cell in either arm is left out of pairing and is not counted as missing, so only
+    answered-but-unscored pairs remain missing.
+    """
 
     by_metric: dict[str, dict[tuple[str, StudentLevel, ExperimentArm], float]] = defaultdict(dict)
     for observation in observations:
@@ -110,19 +119,39 @@ def paired_condition_contrasts(
     expected = {
         metric: set(pairs) for metric, pairs in (expected_question_levels or {}).items()
     }
-    for metric in sorted(set(by_metric) | set(expected)):
+    inapplicable = {
+        metric: set(cells) for metric, cells in (not_applicable_cells or {}).items()
+    }
+    # A metric whose cells are all not applicable still gets rows, so its exclusions
+    # are disclosed instead of the metric silently disappearing.
+    reported_metrics = set(by_metric) | set(expected) | {
+        metric for metric, cells in inapplicable.items() if cells
+    }
+    for metric in sorted(reported_metrics):
         values = by_metric[metric]
         for contrast_name, (treatment, control) in CONTRASTS.items():
             differences: dict[str, list[float]] = defaultdict(list)
             all_question_levels = sorted(
                 {(question_id, level) for question_id, level, _ in values}
-                | expected.get(metric, set()),
+                | expected.get(metric, set())
+                | {(question_id, level) for question_id, level, _ in inapplicable.get(metric, ())},
                 key=lambda item: (item[0], item[1].value),
             )
             missing: list[dict[str, str]] = []
+            metric_inapplicable = inapplicable.get(metric, set())
+            not_applicable_pairs = 0
+            treatment_not_applicable = 0
+            control_not_applicable = 0
             for question_id, level in all_question_levels:
                 treatment_key = (question_id, level, treatment)
                 control_key = (question_id, level, control)
+                treatment_na = treatment_key in metric_inapplicable
+                control_na = control_key in metric_inapplicable
+                if treatment_na or control_na:
+                    not_applicable_pairs += 1
+                    treatment_not_applicable += int(treatment_na)
+                    control_not_applicable += int(control_na)
+                    continue
                 if treatment_key not in values or control_key not in values:
                     missing.append({"question_id": question_id, "target_level": level.value})
                     continue
@@ -150,6 +179,9 @@ def paired_condition_contrasts(
                     "question_cluster_count": len(differences),
                     "missing_pair_count": len(missing),
                     "missing_pairs": missing,
+                    "not_applicable_pair_count": not_applicable_pairs,
+                    "treatment_not_applicable": treatment_not_applicable,
+                    "control_not_applicable": control_not_applicable,
                     "cluster_bootstrap": interval,
                 }
             )

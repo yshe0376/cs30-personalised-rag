@@ -870,6 +870,7 @@ def build_v2_generation_report(
             "primary_contrast": decision_config.primary_contrast,
             "multiplicity_policy": decision_config.multiplicity_policy,
             "primary_result": dict(primary_row) if primary_row is not None else None,
+            "primary_not_applicable": _not_applicable_disclosure(primary_row),
             "correctness_noninferiority": correctness_noninferiority_result,
         },
         "provenance": dict(provenance),
@@ -904,7 +905,58 @@ def build_v2_generation_report(
             "Main adaptation uses full + endpoint_only questions at all three levels. "
             "All-question and none-subset adaptation results are separate diagnostics; "
             "correctness retains all questions, abstentions and technical failures.",
+            "In adaptation, bundle-faithfulness and citation-support contrasts, a pair is "
+            "not applicable when either arm abstained, failed technically or had nothing "
+            "evaluable; such pairs are excluded rather than scored zero and do not count "
+            "as missing. Only answered-but-unscored pairs remain missing and block the "
+            "formal gate. Exclusion can introduce selection bias, so the registered "
+            "primary contrast discloses not-applicable counts and rates per condition.",
+            "A supplied judge-evaluation directory covers all three tasks. Evidence "
+            "contrasts remain visible even with no successful evidence results: "
+            "answered cells stay missing and non-answers stay not applicable. "
+            "Without a judge-evaluation directory, evidence contrasts are omitted.",
         ],
+    }
+
+
+def _not_applicable_disclosure(row: Mapping[str, Any] | None) -> dict[str, Any] | None:
+    """Per-condition not-applicable counts for the registered primary contrast.
+
+    Excluding non-answers can bias a contrast when the arms differ, so the counts and
+    rates are reported next to the primary result. A warning threshold for the
+    difference between arms is left to the Leader and is not applied here.
+    """
+
+    if row is None or "not_applicable_pair_count" not in row:
+        return None
+    pairs = int(row.get("not_applicable_pair_count", 0) or 0)
+    total = (
+        int(row.get("paired_question_level_count", 0) or 0)
+        + int(row.get("missing_pair_count", 0) or 0)
+        + pairs
+    )
+
+    def rate(count: int) -> float | None:
+        return count / total if total else None
+
+    treatment = int(row.get("treatment_not_applicable", 0) or 0)
+    control = int(row.get("control_not_applicable", 0) or 0)
+    return {
+        "metric": row.get("metric"),
+        "contrast": row.get("contrast"),
+        "question_level_count": total,
+        "not_applicable_pair_count": pairs,
+        "not_applicable_pair_rate": rate(pairs),
+        "treatment": row.get("treatment"),
+        "treatment_not_applicable": treatment,
+        "treatment_not_applicable_rate": rate(treatment),
+        "control": row.get("control"),
+        "control_not_applicable": control,
+        "control_not_applicable_rate": rate(control),
+        "rate_difference": (
+            treatment / total - control / total if total else None
+        ),
+        "warning_threshold": None,
     }
 
 
@@ -979,6 +1031,9 @@ def write_v2_generation_report(report: Mapping[str, Any], output_dir: Path) -> d
         "paired_question_level_count",
         "question_cluster_count",
         "missing_pair_count",
+        "not_applicable_pair_count",
+        "treatment_not_applicable",
+        "control_not_applicable",
         "ci_lower",
         "ci_upper",
     ]
