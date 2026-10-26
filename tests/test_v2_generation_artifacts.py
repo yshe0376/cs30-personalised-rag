@@ -251,6 +251,33 @@ def test_adapter_accepts_a_question_subset_with_shared_eligibility_rows(tmp_path
     assert adapter_manifest["question_count"] == 1
 
 
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_adapter_eligibility_superset_still_rejects_missing_or_duplicate_labels(
+    tmp_path: Path, duplicate: bool
+) -> None:
+    paths = _bundle(tmp_path)
+    rows = [{"question_id": "unused-question", "eligibility": "full"}]
+    if duplicate:
+        rows += [{"question_id": "q1", "eligibility": "full"}] * 2
+    _write_jsonl(paths["eligibility"], rows)
+    manifest = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    manifest["prepared_inputs"]["input_sha256"]["eligibility.jsonl"] = _sha(
+        paths["eligibility"]
+    )
+    _write_json(paths["manifest"], manifest)
+    message = "duplicate question_id=q1" if duplicate else "missing expected questions"
+    with pytest.raises(ValueError, match=message):
+        adapt_m7_generation_artifacts(
+            expected_path=paths["expected"],
+            records_path=paths["records"],
+            answers_path=paths["answers"],
+            run_manifest_path=paths["manifest"],
+            gold_path=paths["gold"],
+            eligibility_path=paths["eligibility"],
+            lambda_selection_path=paths["lambda"],
+        )
+
+
 def test_lambda_case_count_uses_experiment_questions_not_all_gold_rows(
     tmp_path: Path,
 ) -> None:
