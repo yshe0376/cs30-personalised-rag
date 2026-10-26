@@ -92,8 +92,9 @@ def paired_condition_contrasts(
     bootstrap_draws: int = 2000,
     bootstrap_seed: int = 5703,
     confidence: float = 0.95,
+    expected_question_levels: Mapping[str, Iterable[tuple[str, StudentLevel]]] | None = None,
 ) -> list[dict[str, Any]]:
-    """Pair by question and level, then resample complete question clusters."""
+    """Pair by question and level, retaining declared but unscored pairs as missing."""
 
     by_metric: dict[str, dict[tuple[str, StudentLevel, ExperimentArm], float]] = defaultdict(dict)
     for observation in observations:
@@ -106,12 +107,16 @@ def paired_condition_contrasts(
         by_metric[observation.metric][key] = observation.value
 
     results: list[dict[str, Any]] = []
-    for metric in sorted(by_metric):
+    expected = {
+        metric: set(pairs) for metric, pairs in (expected_question_levels or {}).items()
+    }
+    for metric in sorted(set(by_metric) | set(expected)):
         values = by_metric[metric]
         for contrast_name, (treatment, control) in CONTRASTS.items():
             differences: dict[str, list[float]] = defaultdict(list)
             all_question_levels = sorted(
-                {(question_id, level) for question_id, level, _ in values},
+                {(question_id, level) for question_id, level, _ in values}
+                | expected.get(metric, set()),
                 key=lambda item: (item[0], item[1].value),
             )
             missing: list[dict[str, str]] = []

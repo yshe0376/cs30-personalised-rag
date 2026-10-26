@@ -726,6 +726,7 @@ def build_v2_generation_report(
     joint_correct_and_adapted: Mapping[str, Any],
     unresolved_items: Sequence[Mapping[str, Any]],
     provenance: Mapping[str, Any],
+    eligibility_condition_contrasts: Sequence[Mapping[str, Any]] = (),
 ) -> dict[str, Any]:
     """Build a report with separate dimensions and fail-closed formal gates."""
 
@@ -888,6 +889,7 @@ def build_v2_generation_report(
         "judge_validity": dict(validity),
         "human_audit": dict(human_audit) if human_audit is not None else None,
         "condition_contrasts": list(condition_contrasts),
+        "eligibility_condition_contrasts": list(eligibility_condition_contrasts),
         "lambda_evaluation": dict(lambda_evaluation) if lambda_evaluation else None,
         "unresolved_items": list(unresolved_items),
         "limitations": [
@@ -899,6 +901,9 @@ def build_v2_generation_report(
             "supplied.",
             "Judge repeat agreement measures judge variability and cannot substitute for the "
             "paired repeated-generation comparison.",
+            "Main adaptation uses full + endpoint_only questions at all three levels. "
+            "All-question and none-subset adaptation results are separate diagnostics; "
+            "correctness retains all questions, abstentions and technical failures.",
         ],
     }
 
@@ -924,11 +929,12 @@ def _markdown(report: Mapping[str, Any]) -> str:
         ("Judge validity", "judge_validity"),
         ("Human audit", "human_audit"),
         ("Condition contrasts", "condition_contrasts"),
+        ("Eligibility condition contrasts", "eligibility_condition_contrasts"),
         ("Lambda evaluation", "lambda_evaluation"),
         ("Unresolved items", "unresolved_items"),
         ("Limitations", "limitations"),
     ):
-        rendered = json.dumps(report[key], ensure_ascii=False, indent=2)
+        rendered = json.dumps(report.get(key, []), ensure_ascii=False, indent=2)
         lines.extend(["", f"## {heading}", "", "```json", rendered, "```"])
     noise = (report.get("diagnostics") or {}).get("generation_noise_floor")
     if noise is not None:
@@ -955,6 +961,7 @@ def write_v2_generation_report(report: Mapping[str, Any], output_dir: Path) -> d
         "json": output_dir / "v2_generation_evaluation.json",
         "markdown": output_dir / "v2_generation_evaluation.md",
         "contrasts_csv": output_dir / "v2_generation_condition_contrasts.csv",
+        "eligibility_contrasts_csv": output_dir / "v2_generation_eligibility_contrasts.csv",
         "manifest": output_dir / "v2_generation_evaluation_manifest.json",
     }
     paths["json"].write_text(
@@ -975,18 +982,26 @@ def write_v2_generation_report(report: Mapping[str, Any], output_dir: Path) -> d
         "ci_lower",
         "ci_upper",
     ]
-    with paths["contrasts_csv"].open("w", encoding="utf-8", newline="") as stream:
-        writer = csv.DictWriter(stream, fieldnames=fields)
-        writer.writeheader()
-        for row in contrast_rows:
-            interval = row.get("cluster_bootstrap") or {}
-            writer.writerow(
-                {
-                    **{field: row.get(field) for field in fields[:-2]},
-                    "ci_lower": interval.get("lower"),
-                    "ci_upper": interval.get("upper"),
-                }
-            )
+    for output, rows, columns in (
+        ("contrasts_csv", contrast_rows, fields),
+        (
+            "eligibility_contrasts_csv",
+            list(report.get("eligibility_condition_contrasts", [])),
+            ["eligibility_subset", *fields],
+        ),
+    ):
+        with paths[output].open("w", encoding="utf-8", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=columns)
+            writer.writeheader()
+            for row in rows:
+                interval = row.get("cluster_bootstrap") or {}
+                writer.writerow(
+                    {
+                        **{field: row.get(field) for field in columns[:-2]},
+                        "ci_lower": interval.get("lower"),
+                        "ci_upper": interval.get("upper"),
+                    }
+                )
     manifest = {
         "schema_version": "1.0",
         "reportable": report["reportable"],
@@ -994,7 +1009,7 @@ def write_v2_generation_report(report: Mapping[str, Any], output_dir: Path) -> d
         "provenance": report["provenance"],
         "output_sha256": {
             name: hashlib.sha256(paths[name].read_bytes()).hexdigest()
-            for name in ("json", "markdown", "contrasts_csv")
+            for name in ("json", "markdown", "contrasts_csv", "eligibility_contrasts_csv")
         },
     }
     paths["manifest"].write_text(

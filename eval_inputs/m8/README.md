@@ -120,3 +120,14 @@ Inspect disagreements and raw supporting quotes, not only an aggregate accuracy.
 Do not tune rubrics to favour a generator or label an offline validation as real
 Gemini calibration. This branch does not run paid scoring or prescribe new validity
 thresholds, delta, eligibility labels or comparison decisions.
+
+## Eligibility integration from PR #205
+
+The Evaluation code on this branch also implements plan section 12.1 item 7.
+The adapter's existing eligibility-superset support is retained and tested against
+missing/duplicate labels. Main adaptation uses `full + endpoint_only`; all-question
+and `none` adaptation diagnostics are preserved separately. Paired contrasts are
+also exported by eligibility subset without changing the all-question correctness
+denominator. See the Evaluation README's "Eligibility subsets in the development
+report" section for output files and coverage semantics. The committed labels and
+profile approvals remain drafts; this integration does not approve them.

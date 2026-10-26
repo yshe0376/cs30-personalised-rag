@@ -621,3 +621,26 @@ stays in the denominator, so the floor is reported only as bounds until every
 pair is scored. Adaptation pairs that are not applicable (abstained or failed
 answers, or no frozen threshold) are counted separately from unevaluated ones
 and do not affect the correctness status.
+
+### Eligibility subsets in the development report
+
+`adapt-m7-artifacts` accepts an eligibility sidecar covering more questions than
+the current run, so the same 341-question file can serve a 154-question Dev run
+and a 30-question repeat. Missing run questions and duplicate sidecar IDs still
+fail validation. This does not approve draft labels or change Gold bytes.
+
+The main adaptation summary, paired adaptation contrasts and joint
+correct-and-adapted result use `full + endpoint_only`, including all three learner
+levels. Correctness retains every question and system-zero non-answers. Separate
+`eligibility_condition_contrasts` report all questions, the combined main subset
+and each observed eligibility label using the same question-cluster bootstrap.
+They are exported to JSON, Markdown and
+`v2_generation_eligibility_contrasts.csv`, whose hash is in the report manifest.
+Diagnostic subset rows cannot replace the registered main contrast.
+
+`applicability_subsets` retains target-checklist adaptation scores for `none` and
+all questions. It reports scored, unresolved and genuinely not-applicable counts;
+technical failures and abstentions do not receive adaptation scores. A missing
+question's paired scores remain explicitly missing even when no condition was
+scored. This supports plan sections 4.2 and 12.1 item 7; it does not freeze profiles,
+approve eligibility labels, calibrate Gemini or authorize formal conclusions.

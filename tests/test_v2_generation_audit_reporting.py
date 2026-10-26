@@ -304,8 +304,9 @@ def test_applicability_summary_keeps_unresolved_scores_in_the_denominator() -> N
         {ineligible.evaluation_id: 2},
         {},
     )[0]
-    assert ineligible_summary["adaptation_expected_count"] == 0
-    assert ineligible_summary["adaptation_unresolved_count"] == 0
+    assert ineligible_summary["adaptation_expected_count"] == 1
+    assert ineligible_summary["adaptation_unresolved_count"] == 1
+    assert ineligible_summary["main_adaptation_answer_count"] == 0
 
 
 def test_development_report_separates_sections_and_reportable_mode_fails_closed(
