@@ -1,0 +1,8 @@
+{
+  "reportable": false,
+  "model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+  "cells": 120,
+  "retained_schema_failures": 3,
+  "decision": "Run the complete diagnostic matrix with unchanged strict validation; all failures stay in denominators. This is not a formal quality acceptance threshold.",
+  "prompt_or_parser_changed": false
+}

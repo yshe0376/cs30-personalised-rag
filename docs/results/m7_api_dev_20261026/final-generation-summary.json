@@ -1,0 +1,200 @@
+{
+  "checked_at_sydney": "2026-10-26T02:34:30.574634+11:00",
+  "reportable": false,
+  "generation_scope": "Dev plus independent repeat; no Test, no M8 judge calls",
+  "status": "generation_complete_integrity_verified",
+  "expected_primary_cells": 6624,
+  "actual_primary_cells": 6624,
+  "answered_primary_cells": 6540,
+  "retained_failure_cells": 84,
+  "models": [
+    {
+      "alias": "gpt-oss20b",
+      "model": "openai/gpt-oss-20b",
+      "checks": [
+        {
+          "batch": "dev",
+          "expected_cells": 1848,
+          "actual_cells": 1848,
+          "statuses": {
+            "answered": 1848
+          },
+          "retained_failure_cells": 0,
+          "failure_types_by_cell": {},
+          "output_truncated_cells": 0,
+          "input_hashes": "passed",
+          "output_hashes": "passed",
+          "matrix_saved_answers_traces": "passed",
+          "checkpoint_citation_membership": "passed",
+          "prepared_dir": "artifacts/m7-readiness-20261026/dev-a741d960ae90-prepared",
+          "run_dir": "artifacts/m7-readiness-20261026/dev-a741d960ae90-run",
+          "run_manifest_sha256": "c12aacada6ef6cfbb5a5219e9f1bb3cb334e0b874b86289b35aa14dc4a541ac8"
+        },
+        {
+          "batch": "repeat",
+          "expected_cells": 360,
+          "actual_cells": 360,
+          "statuses": {
+            "answered": 360
+          },
+          "retained_failure_cells": 0,
+          "failure_types_by_cell": {},
+          "output_truncated_cells": 0,
+          "input_hashes": "passed",
+          "output_hashes": "passed",
+          "matrix_saved_answers_traces": "passed",
+          "checkpoint_citation_membership": "passed",
+          "prepared_dir": "artifacts/m7-readiness-20261026/repeat-a741d960ae90-prepared",
+          "run_dir": "artifacts/m7-readiness-20261026/repeat-a741d960ae90-run",
+          "run_manifest_sha256": "3ec564f3c55ac3cb9f593e41df9f2add54c2cc3dd16c40f48bc311985e9a3b3d"
+        }
+      ],
+      "reported_token_cost_usd_including_historical_attempts": 0.24397569000000002,
+      "http_attempts_including_historical": 2360,
+      "successful_http_with_missing_usage": 0,
+      "error_http_without_usage": 0,
+      "text_repeat_diagnostic": {
+        "expected_pairs": 360,
+        "successful_pairs": 360,
+        "paired_technical_failures": 0,
+        "answer_mismatches": 267,
+        "answer_mismatch_rate": 0.7416666666666667,
+        "final_choice_changes": 88,
+        "citation_set_changes": 96,
+        "scoring_noise_floor_status": "pending_m8_scoring"
+      }
+    },
+    {
+      "alias": "gemma3-12b",
+      "model": "google/gemma-3-12b-it",
+      "checks": [
+        {
+          "batch": "dev",
+          "expected_cells": 1848,
+          "actual_cells": 1848,
+          "statuses": {
+            "answered": 1848
+          },
+          "retained_failure_cells": 0,
+          "failure_types_by_cell": {},
+          "output_truncated_cells": 0,
+          "input_hashes": "passed",
+          "output_hashes": "passed",
+          "matrix_saved_answers_traces": "passed",
+          "checkpoint_citation_membership": "passed",
+          "prepared_dir": "artifacts/m7-readiness-20261026/dev-4abc260aaf58-prepared",
+          "run_dir": "artifacts/m7-readiness-20261026/dev-4abc260aaf58-schema-run",
+          "run_manifest_sha256": "494543292602e249667829678a4945a25446d97f9c8b7d1243ff88d255920236"
+        },
+        {
+          "batch": "repeat",
+          "expected_cells": 360,
+          "actual_cells": 360,
+          "statuses": {
+            "answered": 360
+          },
+          "retained_failure_cells": 0,
+          "failure_types_by_cell": {},
+          "output_truncated_cells": 0,
+          "input_hashes": "passed",
+          "output_hashes": "passed",
+          "matrix_saved_answers_traces": "passed",
+          "checkpoint_citation_membership": "passed",
+          "prepared_dir": "artifacts/m7-readiness-20261026/repeat-4abc260aaf58-prepared",
+          "run_dir": "artifacts/m7-readiness-20261026/repeat-4abc260aaf58-schema-run",
+          "run_manifest_sha256": "9f2392b56afd34541f03aecae30c0231f1d27ebe1a9ef5bff99d2e0462800980"
+        }
+      ],
+      "reported_token_cost_usd_including_historical_attempts": 0.4107431,
+      "http_attempts_including_historical": 2496,
+      "successful_http_with_missing_usage": 0,
+      "error_http_without_usage": 0,
+      "text_repeat_diagnostic": {
+        "expected_pairs": 360,
+        "successful_pairs": 360,
+        "paired_technical_failures": 0,
+        "answer_mismatches": 119,
+        "answer_mismatch_rate": 0.33055555555555555,
+        "final_choice_changes": 8,
+        "citation_set_changes": 42,
+        "scoring_noise_floor_status": "pending_m8_scoring"
+      }
+    },
+    {
+      "alias": "llama31-8b",
+      "model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "checks": [
+        {
+          "batch": "dev",
+          "expected_cells": 1848,
+          "actual_cells": 1848,
+          "statuses": {
+            "answered": 1773,
+            "generation_error": 75
+          },
+          "retained_failure_cells": 75,
+          "failure_types_by_cell": {
+            "LLMOutputValidationError": 75
+          },
+          "output_truncated_cells": 0,
+          "input_hashes": "passed",
+          "output_hashes": "passed",
+          "matrix_saved_answers_traces": "passed",
+          "checkpoint_citation_membership": "passed",
+          "prepared_dir": "artifacts/m7-readiness-20261026/dev-8ab0fdcd4d62-prepared",
+          "run_dir": "artifacts/m7-readiness-20261026/dev-8ab0fdcd4d62-json-run",
+          "run_manifest_sha256": "1dc788503fb48d6fd078a744294d067aa7a26898310b2b985677396d08edfd55"
+        },
+        {
+          "batch": "repeat",
+          "expected_cells": 360,
+          "actual_cells": 360,
+          "statuses": {
+            "answered": 351,
+            "generation_error": 9
+          },
+          "retained_failure_cells": 9,
+          "failure_types_by_cell": {
+            "LLMOutputValidationError": 9
+          },
+          "output_truncated_cells": 0,
+          "input_hashes": "passed",
+          "output_hashes": "passed",
+          "matrix_saved_answers_traces": "passed",
+          "checkpoint_citation_membership": "passed",
+          "prepared_dir": "artifacts/m7-readiness-20261026/repeat-8ab0fdcd4d62-prepared",
+          "run_dir": "artifacts/m7-readiness-20261026/repeat-8ab0fdcd4d62-json-run",
+          "run_manifest_sha256": "ba866083a5d880d50a6de2a01b05a014bdba468a7a7c48bde3e49c75285d7ce2"
+        }
+      ],
+      "reported_token_cost_usd_including_historical_attempts": 0.15015858,
+      "http_attempts_including_historical": 2443,
+      "successful_http_with_missing_usage": 0,
+      "error_http_without_usage": 10,
+      "text_repeat_diagnostic": {
+        "expected_pairs": 360,
+        "successful_pairs": 349,
+        "paired_technical_failures": 11,
+        "answer_mismatches": 157,
+        "answer_mismatch_rate": 0.4498567335243553,
+        "final_choice_changes": 51,
+        "citation_set_changes": 79,
+        "scoring_noise_floor_status": "pending_m8_scoring"
+      }
+    }
+  ],
+  "historical_qwen": {
+    "status": "disabled_replaced_by_user",
+    "reported_token_cost_usd": 0.00207318,
+    "http_attempts": 49,
+    "short_32_token_diagnostic": "HTTP429, no reported usage"
+  },
+  "total_reported_token_cost_usd": 0.80695055,
+  "cost_caveat": "Includes reported token usage of all preserved real probes, smoke, baseline, repeat and superseded attempts. Error responses without usage do not establish zero billing; reconcile with provider bills. USD15 was prepaid across accounts, not consumed.",
+  "remaining_dependencies": [
+    "M8 independent scoring and scoring noise-floor assessment",
+    "Frozen judge, level profiles/checklists and personalisation eligibility",
+    "Leader preregistration of delta, primary comparisons and comparison sampling before any Test generation",
+    "Public model aliases are not verified immutable weight revisions"
+  ]
+}

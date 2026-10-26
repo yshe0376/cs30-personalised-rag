@@ -1,0 +1,59 @@
+{
+  "reportable": false,
+  "alias": "gpt-oss20b",
+  "model": "openai/gpt-oss-20b",
+  "checks": [
+    {
+      "batch": "dev",
+      "expected_cells": 1848,
+      "actual_cells": 1848,
+      "statuses": {
+        "answered": 1848
+      },
+      "retained_failure_cells": 0,
+      "failure_types_by_cell": {},
+      "output_truncated_cells": 0,
+      "input_hashes": "passed",
+      "output_hashes": "passed",
+      "matrix_saved_answers_traces": "passed",
+      "checkpoint_citation_membership": "passed",
+      "prepared_dir": "artifacts/m7-readiness-20261026/dev-a741d960ae90-prepared",
+      "run_dir": "artifacts/m7-readiness-20261026/dev-a741d960ae90-run",
+      "run_manifest_sha256": "c12aacada6ef6cfbb5a5219e9f1bb3cb334e0b874b86289b35aa14dc4a541ac8"
+    },
+    {
+      "batch": "repeat",
+      "expected_cells": 360,
+      "actual_cells": 360,
+      "statuses": {
+        "answered": 360
+      },
+      "retained_failure_cells": 0,
+      "failure_types_by_cell": {},
+      "output_truncated_cells": 0,
+      "input_hashes": "passed",
+      "output_hashes": "passed",
+      "matrix_saved_answers_traces": "passed",
+      "checkpoint_citation_membership": "passed",
+      "prepared_dir": "artifacts/m7-readiness-20261026/repeat-a741d960ae90-prepared",
+      "run_dir": "artifacts/m7-readiness-20261026/repeat-a741d960ae90-run",
+      "run_manifest_sha256": "3ec564f3c55ac3cb9f593e41df9f2add54c2cc3dd16c40f48bc311985e9a3b3d"
+    }
+  ],
+  "reported_token_cost_usd_including_historical_attempts": 0.24397569000000002,
+  "http_attempts_including_historical": 2360,
+  "successful_http_with_missing_usage": 0,
+  "error_http_without_usage": 0,
+  "text_repeat_diagnostic": {
+    "expected_pairs": 360,
+    "successful_pairs": 360,
+    "paired_technical_failures": 0,
+    "answer_mismatches": 267,
+    "answer_mismatch_rate": 0.7416666666666667,
+    "final_choice_changes": 88,
+    "citation_set_changes": 96,
+    "scoring_noise_floor_status": "pending_m8_scoring"
+  },
+  "m8_scoring": "pending",
+  "test_generated": false
+}

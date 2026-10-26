@@ -4,6 +4,13 @@
 M7 负责固定候选上的个性化重排、Dev λ 选择、四条件生成及交付；M8 负责 judge、
 校准、评分与评估报告。本文对应 2026-10-23 任务及 #201 的生成侧划分。
 
+**2026-10-26 执行更新：** [真实三模型 Dev 与独立重复结果及完整附件](results/m7_api_dev_20261026/README.md)
+已生成，λ 重选为 0.1；模型为 DeepInfra 的 gpt-oss-20b、Gemma 3 12B 与 Llama 3.1 8B。
+合计 6,624 个单元执行完成（6,540 answered、84 个 Llama 格式失败保留），无最终截断。
+Qwen 因限流按用户决定替换，历史记录和费用保留；不表示 Leader 已批准新的正式 Test 对比方案。
+结果仍为 `reportable=false`，未调用 M8 judge、未运行 Test。下文未注明日期的待执行说明
+是 2026-10-23 的准备快照，当前状态以新结果说明为准；Test 冻结要求仍有效。
+
 2026-10-23 已完成真实 Gold 转换与输入审计：341 题、154 Dev / 187 Test、352 条精确
 证据绑定，四教材 6,184 个 chunk 的 Role 标签全部覆盖。
 见 [readiness](results/m7_api_readiness_20261023/README.md)。

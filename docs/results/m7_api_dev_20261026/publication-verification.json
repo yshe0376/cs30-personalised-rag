@@ -1,0 +1,27 @@
+{
+  "archive_extracted_and_verified": true,
+  "verified_files": 22116,
+  "primary_cells": 6624,
+  "statuses": {
+    "answered": 6540,
+    "generation_error": 84
+  },
+  "reportable": false,
+  "api_calls": 0,
+  "launcher_tests": "7 passed",
+  "ruff": "passed",
+  "credential_scan": "No actual local API key values, GitHub token patterns or private-key markers in the selected artifact files. No .env, account screenshots or billing files included.",
+  "full_pytest": {
+    "passed": 1214,
+    "skipped": 3,
+    "failed": 0,
+    "local_fake_http_server_permitted": true,
+    "paid_api_calls": 0
+  },
+  "public_release_verification": {
+    "anonymous_download_sha256_verified": true,
+    "bytes": 94871526,
+    "sha256": "4020a9a984f759cf1948d1cd9140cf66aab4679b7f3c04a65ab4e41f686ba7ee",
+    "asset_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-dev-20261026/m7_api_dev_20261026.tar.gz"
+  }
+}

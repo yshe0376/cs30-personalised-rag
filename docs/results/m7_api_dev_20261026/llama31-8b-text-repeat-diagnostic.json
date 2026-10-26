@@ -1,0 +1,28 @@
+{
+  "schema_version": "0.1",
+  "reportable": false,
+  "repeat_questions": 30,
+  "expected_pairs": 360,
+  "successful_pairs": 349,
+  "paired_technical_failures": 11,
+  "answer_mismatches": 157,
+  "answer_mismatch_rate": 0.4498567335243553,
+  "final_choice_changes": 51,
+  "citation_set_changes": 79,
+  "diagnostic_only": true,
+  "scoring_noise_floor_status": "pending_m8_scoring",
+  "m8_handoff": {
+    "baseline_paired_cells": 360,
+    "repeat_cells": 360,
+    "required_inputs": [
+      "expected_experiment.json",
+      "saved_answers.jsonl",
+      "generation_records.jsonl",
+      "run_manifest.json"
+    ],
+    "policy": "Score all repeat cells and their baseline counterparts using the same frozen M8 judge and rubric, bound to each run directory and answer hash. Compare paired evaluation metrics; text mismatch rates cannot set delta."
+  },
+  "baseline_manifest_sha256": "1dc788503fb48d6fd078a744294d067aa7a26898310b2b985677396d08edfd55",
+  "repeat_manifest_sha256": "ba866083a5d880d50a6de2a01b05a014bdba468a7a7c48bde3e49c75285d7ce2",
+  "policy": "Compare complete structured answers exactly on independently generated Dev pairs with identical inputs. Failures reported separately; no semantic or judge score or scoring noise floor is inferred. API output is not reproducible verbatim."
+}
