@@ -22,13 +22,13 @@ def require(condition: bool, message: str) -> None:
 
 
 def verify(root: Path) -> dict:
-    inventory = json.loads((root / "handoff-file-inventory.json").read_text())
+    inventory = json.loads((root / "handoff-file-inventory.json").read_text(encoding="utf-8"))
     for name, expected in inventory["files"].items():
         path = root / name
         require(path.resolve().is_relative_to(root.resolve()), "unsafe inventory path")
         require(path.is_file(), f"missing: {name}")
         require(digest(path) == expected["sha256"], f"changed: {name}")
-    summary = json.loads((root / "final-generation-summary.json").read_text())
+    summary = json.loads((root / "final-generation-summary.json").read_text(encoding="utf-8"))
     totals = Counter()
     for model in summary["models"]:
         manifests = []
@@ -39,7 +39,7 @@ def verify(root: Path) -> dict:
             _, config, matrix, *_ = load_prepared(prepared)
             require(config.generator_model == model["model"], "model mismatch")
             require(config.split == "dev", "handoff must contain Dev only")
-            manifest = json.loads((output / "run_manifest.json").read_text())
+            manifest = json.loads((output / "run_manifest.json").read_text(encoding="utf-8"))
             require(manifest["status"] == "completed", "incomplete run")
             require(manifest["reportable"] is False, "unexpected formal-result flag")
             sha = digest(output / "run_manifest.json")
@@ -49,9 +49,11 @@ def verify(root: Path) -> dict:
                 require(digest(output / name) == expected, f"output changed: {name}")
             cells = load_cells(output / "checkpoints", matrix.cases)
             answers = [json.loads(line) for line in
-                       (output / "saved_answers.jsonl").read_text().splitlines() if line]
+                       (output / "saved_answers.jsonl").read_text(encoding="utf-8").splitlines()
+                       if line]
             traces = [json.loads(line) for line in
-                      (output / "generation_records.jsonl").read_text().splitlines() if line]
+                      (output / "generation_records.jsonl").read_text(encoding="utf-8").splitlines()
+                      if line]
             expected = batch["expected_cells"]
             require(len(cells) == len(answers) == len(traces) == expected, "cell count")
             require(len({r["run_id"] for r in answers}) == expected, "duplicate run ID")
@@ -66,7 +68,9 @@ def verify(root: Path) -> dict:
             statuses = Counter(r["status"] for r in answers)
             require(dict(statuses) == batch["statuses"], "status mismatch")
             totals.update(statuses)
-        noise = json.loads((root / f"{model['alias']}-text-repeat-diagnostic.json").read_text())
+        noise = json.loads(
+            (root / f"{model['alias']}-text-repeat-diagnostic.json").read_text(encoding="utf-8")
+        )
         require(noise["expected_pairs"] == 360, "repeat size mismatch")
         require(noise["baseline_manifest_sha256"] == manifests[0], "baseline binding")
         require(noise["repeat_manifest_sha256"] == manifests[1], "repeat binding")
