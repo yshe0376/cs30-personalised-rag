@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
@@ -28,6 +29,7 @@ from .open_answer_reporting import (
     calibration_report,
     write_open_answer_reports,
 )
+from .open_answer_rubrics import draft_rubrics
 from .open_answer_scoring import OpenAnswerScorer, sha256_bytes
 
 
@@ -77,15 +79,111 @@ def _fingerprint(path: Path) -> str:
     return sha256_bytes(path.read_bytes())
 
 
+def _draft_rubric_bundle(args: argparse.Namespace) -> int:
+    """Prepare reference-bound review material offline; never approve a draft."""
+    gold_bytes = args.gold.read_bytes()
+    gold_hash = sha256_bytes(gold_bytes)
+    gold = load_gold(args.gold, gold_bytes)
+    if any(not isinstance(question, GoldQuestion) for question in gold.values()):
+        raise ValueError("draft-rubrics requires V2 schema 2.0 Gold")
+    matrix_bytes = None
+    if args.expected_manifest is not None:
+        matrix_bytes = args.expected_manifest.read_bytes()
+        matrix = OpenAnswerExperiment.model_validate_json(matrix_bytes)
+        if matrix.gold_sha256 != gold_hash:
+            raise ValueError("Gold file hash differs from the expected experiment")
+        if matrix.rubrics_sha256 is not None:
+            raise ValueError("use an unbound generation matrix to prepare new rubric drafts")
+        selected = {case.question_id for case in matrix.cases}
+        unknown = selected - gold.keys()
+        if unknown:
+            raise ValueError(
+                "expected experiment contains unknown Gold questions: " + ", ".join(sorted(unknown))
+            )
+        gold = {key: value for key, value in gold.items() if key in selected}
+    rubrics = sorted(draft_rubrics(gold, gold_hash), key=lambda item: item.question_id)
+    if not rubrics:
+        raise ValueError("no answerable open-ended questions available for rubric drafts")
+    reviews = []
+    for rubric in rubrics:
+        question = gold[rubric.question_id]
+        flags = []
+        if question.question_type == "calculation":
+            flags.append("calculation_tag_requires_content_check")
+        if re.search(
+            r"\b(why|how|explain|derive|calculate|compute|justify)\b",
+            question.question,
+            re.IGNORECASE,
+        ):
+            flags.append("explicit_reasoning_or_calculation_wording")
+        reviews.append(
+            {
+                "question_id": question.question_id,
+                "question": question.question,
+                "reference_answer": question.gold_answer_text,
+                "question_type": question.question_type,
+                "reference_evidence": [
+                    {"span_id": evidence.span.span_id, "text": evidence.span.verbatim_text}
+                    for group in question.gold_core_evidence_sets
+                    for evidence in group
+                ],
+                "triage_flags": flags,
+                "review_status": "pending",
+                "review_record_id": None,
+            }
+        )
+
+    def jsonl(rows: list[dict]) -> bytes:
+        return "".join(
+            json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n" for row in rows
+        ).encode("utf-8")
+
+    outputs = {
+        "rubrics.draft.jsonl": jsonl([item.model_dump(mode="json") for item in rubrics]),
+        "rubric_review.jsonl": jsonl(reviews),
+    }
+    manifest = {
+        "schema_version": "1.0",
+        "command": "draft-rubrics",
+        "rubric_version": "reference-draft-0.1",
+        "review_status": "pending",
+        "reportable": False,
+        "api_calls": 0,
+        "input_sha256": {
+            "gold": gold_hash,
+            "expected_manifest": sha256_bytes(matrix_bytes) if matrix_bytes is not None else None,
+        },
+        "question_ids": [item.question_id for item in rubrics],
+        "rubric_count": len(rubrics),
+        "excluded_question_ids": sorted(set(gold) - {item.question_id for item in rubrics}),
+        "triage_flagged_question_ids": [
+            row["question_id"] for row in reviews if row["triage_flags"]
+        ],
+        "triage_flags_are_review_hints_only": True,
+        "output_sha256": {name: sha256_bytes(content) for name, content in outputs.items()},
+    }
+    args.output_dir.mkdir(parents=True, exist_ok=False)
+    for name, content in outputs.items():
+        (args.output_dir / name).write_bytes(content)
+    (args.output_dir / "rubric_manifest.json").write_bytes(
+        (json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8")
+    )
+    return 0
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    draft = commands.add_parser("draft-rubrics", help="prepare Gold-bound rubric drafts offline")
+    draft.add_argument("--gold", type=Path, required=True)
+    draft.add_argument(
+        "--expected-manifest", type=Path, help="select this generation batch's questions"
+    )
+    draft.add_argument("--output-dir", type=Path, required=True)
     score = commands.add_parser("score", help="score an explicit matrix of saved answers")
     for name in ("gold", "rubrics", "runs", "expected-manifest", "output-dir"):
         score.add_argument(f"--{name}", type=Path, required=True)
-    score.add_argument(
-        "--provider", choices=("none", "ollama", "openai", "gemini"), default="none"
-    )
+    score.add_argument("--provider", choices=("none", "ollama", "openai", "gemini"), default="none")
     score.add_argument(
         "--model", help="independent judge model identifier, preferably version-pinned"
     )
@@ -135,6 +233,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.output_dir.exists():
             raise ValueError("output directory already exists; keep original reports immutable")
+        if args.command == "draft-rubrics":
+            return _draft_rubric_bundle(args)
         if args.command == "score":
             if (
                 not math.isfinite(args.timeout)
@@ -182,9 +282,7 @@ def main(argv: list[str] | None = None) -> int:
                     8192 if args.provider == "gemini" else 2048
                 )
                 provider_options = (
-                    {"thinking_level": args.thinking_level}
-                    if args.provider == "gemini"
-                    else {}
+                    {"thinking_level": args.thinking_level} if args.provider == "gemini" else {}
                 )
                 client = client_type(
                     args.model,

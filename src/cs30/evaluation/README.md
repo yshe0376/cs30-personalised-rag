@@ -1,5 +1,11 @@
 # Evaluation contracts and offline scoring
 
+For offline Dev correctness rubric preparation and the existing level-profile review
+handoff, see [the Evaluation-owned review inputs](../../../eval_inputs/m8/README.md).
+The `cs30-score-open-answers draft-rubrics` command generates Gold-bound drafts,
+question/evidence review rows and file hashes without calling a model. It does not
+approve rubrics or freeze learner profiles.
+
 This package is the M1-owned boundary between M3 Gold data, the M1 batch
 runner, and M8 answer and citation scoring.
 
