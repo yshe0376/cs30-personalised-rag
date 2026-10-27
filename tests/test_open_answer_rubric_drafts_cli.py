@@ -180,5 +180,5 @@ def test_upstream_profile_template_cannot_freeze_the_unapproved_draft():
     )
     assert record.draft_package_sha256 == draft.package_sha256
     assert all(review.status == "pending" for review in record.reviews)
-    with pytest.raises(ValueError, match="must both be approved"):
+    with pytest.raises(ValueError, match="Leader must approve"):
         freeze_reviewed_draft(draft, record)

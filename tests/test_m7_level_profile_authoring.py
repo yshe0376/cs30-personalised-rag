@@ -73,7 +73,7 @@ def test_real_draft_is_complete_and_cannot_enter_m8_frozen_loader() -> None:
     )
     assert record.draft_package_sha256 == draft.package_sha256
     assert all(review.status == "pending" for review in record.reviews)
-    with pytest.raises(ValueError, match="must both be approved"):
+    with pytest.raises(ValueError, match="Leader must approve"):
         freeze_reviewed_draft(draft, record)
 
 
@@ -225,3 +225,80 @@ def test_cli_exports_hash_bound_m8_input_and_preserves_review_provenance(tmp_pat
             assert "P1R1_combined" not in json.dumps(payload)
             assert "gpt-oss" not in json.dumps(payload)
             assert "target_level" not in payload
+
+
+def _synthetic_waiver(draft: DraftProfileChecklistPackage) -> dict:
+    """Test-only Leader approval with a waived physics review."""
+    payload = _synthetic_review(draft)
+    payload["reviews"][1] = {
+        "role": "physics",
+        "reviewer_id": None,
+        "status": "waived",
+        "review_record_id": None,
+        "reviewed_at": None,
+        "notes": "Synthetic Leader waiver for an offline integration test only.",
+    }
+    return payload
+
+
+def test_leader_waiver_freezes_without_a_physics_reviewer(tmp_path: Path) -> None:
+    draft = load_draft(DRAFT_PATH)
+    review_path = _write(tmp_path / "synthetic-waiver.json", _synthetic_waiver(draft))
+    output = tmp_path / "frozen.json"
+    arguments = [
+        str(DRAFT_PATH), "--gold", str(GOLD), "--review-record", str(review_path),
+        "--output", str(output),
+    ]
+    assert main(arguments) == 0
+    package = load_profile_checklist_package(output)
+    assert package.physics_reviewer_ids == []
+    assert package.physics_review_waiver is not None
+    assert package.physics_review_waiver.waived_by == "synthetic-leader"
+    assert package.physics_review_waiver.decision_record == "synthetic-test-record-leader"
+    assert package.physics_review_waiver.reason.startswith("Synthetic Leader waiver")
+    assert package.author_ids == ["M7", "synthetic-leader"]
+
+
+@pytest.mark.parametrize("case", ["leader_pending", "named_reviewer", "no_reason", "leader_waived"])
+def test_waiver_requires_leader_approval_and_names_no_reviewer(case: str) -> None:
+    draft = load_draft(DRAFT_PATH)
+    payload = _synthetic_waiver(draft)
+    if case == "leader_pending":
+        payload["reviews"][0]["status"] = "pending"
+        record = ProfileReviewRecord.model_validate(payload)
+        with pytest.raises(ValueError, match="Leader must approve"):
+            freeze_reviewed_draft(draft, record)
+        return
+    if case == "named_reviewer":
+        payload["reviews"][1]["reviewer_id"] = "synthetic-physics"
+    elif case == "no_reason":
+        payload["reviews"][1]["notes"] = None
+    else:
+        payload["reviews"][0] = {**payload["reviews"][1], "role": "leader"}
+    with pytest.raises(ValueError):
+        ProfileReviewRecord.model_validate(payload)
+
+
+@pytest.mark.parametrize("case", ["neither", "both"])
+def test_frozen_contract_requires_exactly_one_physics_assurance(case: str) -> None:
+    draft = load_draft(DRAFT_PATH)
+    package = freeze_reviewed_draft(
+        draft, ProfileReviewRecord.model_validate(_synthetic_waiver(draft))
+    )
+    payload = package.model_dump(mode="json")
+    if case == "neither":
+        payload["physics_review_waiver"] = None
+    else:
+        payload["physics_reviewer_ids"] = ["synthetic-physics"]
+    payload["package_sha256"] = profile_package_content_sha256(payload)
+    with pytest.raises(ValueError, match="physics reviewer IDs or a Leader waiver"):
+        type(package).model_validate(payload)
+
+
+def test_waiver_field_leaves_existing_package_digests_unchanged() -> None:
+    draft = load_draft(DRAFT_PATH)
+    payload = draft.model_dump(mode="json")
+    assert payload["physics_review_waiver"] is None
+    raw = json.loads(DRAFT_PATH.read_text(encoding="utf-8"))
+    assert "physics_review_waiver" not in raw
+    assert profile_package_content_sha256(payload) == draft.package_sha256

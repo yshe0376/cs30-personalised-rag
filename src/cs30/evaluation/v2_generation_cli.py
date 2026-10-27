@@ -704,6 +704,7 @@ def _assemble_judge_results(args: argparse.Namespace) -> int:
             "evaluation_inputs_sha256": hashlib.sha256(args.inputs.read_bytes()).hexdigest(),
             "source_run_sha256": source_run_hash,
             "profile_package_sha256": package.package_sha256,
+            "profile_physics_review_waived": package.physics_review_waiver is not None,
             "judge_configuration_sha256": hashlib.sha256(
                 args.judge_config.read_bytes()
             ).hexdigest(),

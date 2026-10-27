@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0",
+  "draft_package_sha256": "2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e",
+  "reviews": [
+    {
+      "role": "leader",
+      "reviewer_id": "yshe0376",
+      "status": "approved",
+      "review_record_id": "leader-decision-2026-10-27-level-profile-v1",
+      "reviewed_at": "2026-10-27T15:11:17+11:00",
+      "notes": "Leader approves the level-profile-v1 draft 2c61590c as it stands, without content changes. Decided in the Leader's working session on 2026-10-27 and recorded in docs/构思与待定.md."
+    },
+    {
+      "role": "physics",
+      "reviewer_id": null,
+      "status": "waived",
+      "review_record_id": null,
+      "reviewed_at": null,
+      "notes": "Waived by the Leader on 2026-10-27: the draft is frozen without an independent M3 physics review. The three anchor answers were checked for physical correctness during the PR #197 code review, which is not a formal physics sign-off."
+    }
+  ]
+}

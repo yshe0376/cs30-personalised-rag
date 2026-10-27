@@ -312,6 +312,8 @@ python -m cs30.evaluation.profile_authoring \
 
 当前草稿内容哈希：`2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e`。
 
+**2026-10-27 已冻结。** Leader 批准草稿原样冻结，并豁免 M3 物理审核（见 `docs/构思与待定.md` 已定表）。冻结包是 [`profile_checklist.frozen.json`](profile_checklist.frozen.json)，内容哈希 `1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238`；审核记录是 [`review_record.leader-2026-10-27.json`](review_record.leader-2026-10-27.json)，导出来源记录是 [`profile_checklist.frozen.review.json`](profile_checklist.frozen.review.json)。包内 `physics_reviewer_ids` 为空，`physics_review_waiver` 记录豁免人、时间和理由；报告须写明画像未经独立物理审核。锚点与 Gold v0.1.3 全部 341 题的题号/规范化题干碰撞为 0。
+
 ## 本次 M7 自检记录
 
 - 专项核查：23 项通过，覆盖内容完整性、草稿禁止进入冻结加载器、旧哈希/缺审核拒绝、审核记录完整性、内存修改后的重新校验、Gold 碰撞、真实 M8 两类请求组装和导出来源记录。

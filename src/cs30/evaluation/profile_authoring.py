@@ -27,6 +27,8 @@ class DraftProfileChecklistPackage(ProfileChecklistPackage):
 
     @model_validator(mode="after")
     def validate_authoring_content(self) -> DraftProfileChecklistPackage:
+        if self.physics_review_waiver is not None:
+            raise ValueError("a draft package cannot carry a physics review waiver")
         questions: set[tuple[str, str]] | None = None
         for profile in self.profiles:
             anchors = {(item.anchor_id, item.question) for item in profile.anchor_examples}
@@ -45,7 +47,7 @@ class DraftProfileChecklistPackage(ProfileChecklistPackage):
 class ProfileReview(ContractModel):
     role: Literal["leader", "physics"]
     reviewer_id: Identifier | None
-    status: Literal["pending", "approved", "rejected"]
+    status: Literal["pending", "approved", "rejected", "waived"]
     review_record_id: Identifier | None
     reviewed_at: datetime | None
     notes: NonEmptyText | None
@@ -57,6 +59,14 @@ class ProfileReview(ContractModel):
                 raise ValueError("approved reviews require identity, record, timestamp, and notes")
             if self.reviewed_at is not None and self.reviewed_at.utcoffset() is None:
                 raise ValueError("approved review timestamps must include a timezone")
+        if self.status == "waived":
+            # A waiver names no physics reviewer; the Leader approval carries the decision.
+            if self.role != "physics":
+                raise ValueError("only the physics review can be waived")
+            if self.reviewer_id is not None or self.review_record_id is not None:
+                raise ValueError("a waived physics review must not name a reviewer or record")
+            if self.notes is None:
+                raise ValueError("a waived physics review requires the Leader's reason")
         return self
 
 
@@ -117,7 +127,11 @@ def check_non_gold_anchors(
 def freeze_reviewed_draft(
     draft: DraftProfileChecklistPackage, record: ProfileReviewRecord
 ) -> ProfileChecklistPackage:
-    """Export only after actual Leader and M3 records approve this exact draft."""
+    """Export only after actual Leader and M3 records approve this exact draft.
+
+    The Leader may instead waive the M3 physics review. The waiver is written into
+    the frozen package, so downstream reports can disclose it.
+    """
 
     # Shared contract models are mutable, including nested lists. Recheck at the
     # export boundary so an in-memory edit cannot reuse an earlier approval.
@@ -125,15 +139,30 @@ def freeze_reviewed_draft(
     record = ProfileReviewRecord.model_validate(record.model_dump(mode="json"))
     if record.draft_package_sha256 != draft.package_sha256:
         raise ValueError("review record is bound to a different draft hash")
-    if any(review.status != "approved" for review in record.reviews):
-        raise ValueError("Leader and M3 physics reviews must both be approved before freezing")
     reviews = {review.role: review for review in record.reviews}
-    if reviews["leader"].reviewer_id == reviews["physics"].reviewer_id:
-        raise ValueError("Leader and physics review must use distinct reviewer identities")
+    leader, physics = reviews["leader"], reviews["physics"]
+    if leader.status != "approved" or physics.status not in {"approved", "waived"}:
+        raise ValueError(
+            "the Leader must approve, and the M3 physics review must be approved or waived, "
+            "before freezing"
+        )
     payload = draft.model_dump(mode="json")
     payload["frozen"] = True
-    payload["author_ids"] = list(dict.fromkeys([*draft.author_ids, reviews["leader"].reviewer_id]))
-    payload["physics_reviewer_ids"] = [reviews["physics"].reviewer_id]
+    payload["author_ids"] = list(dict.fromkeys([*draft.author_ids, leader.reviewer_id]))
+    if physics.status == "approved":
+        if leader.reviewer_id == physics.reviewer_id:
+            raise ValueError("Leader and physics review must use distinct reviewer identities")
+        payload["physics_reviewer_ids"] = [physics.reviewer_id]
+        payload.pop("physics_review_waiver", None)
+    else:
+        payload["physics_reviewer_ids"] = []
+        payload["physics_review_waiver"] = {
+            "waived_by": leader.reviewer_id,
+            # Use the JSON form so the digest matches the serialized package.
+            "decided_at": leader.model_dump(mode="json")["reviewed_at"],
+            "reason": physics.notes,
+            "decision_record": leader.review_record_id,
+        }
     payload["package_sha256"] = profile_package_content_sha256(payload)
     return ProfileChecklistPackage.model_validate(payload)
 
