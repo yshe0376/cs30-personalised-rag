@@ -722,3 +722,18 @@ always-assessed wording preserve their existing fixture behavior.
 The original trial has 6/30 high and 5/30 low adaptation requests that would now be
 rejected, all for B4. See `docs/results/m8_adaptation_applicability_replay_20261028/`.
 Leader decision #212 selects low for all four tasks; full Dev still awaits budget approval.
+
+### Follow-up: attempt accounting and evidence retries
+
+The later [Leader decision on #210](https://github.com/yshe0376/cs30-personalised-rag/pull/210#issuecomment-6446282850)
+waives another paid six-request check and approves a conditional AUD 60 full-Dev cap (#213).
+Full Dev still waits for review/merge of its two code prerequisites and sufficient balance.
+
+`run-judge-requests` now writes a per-provider-attempt JSONL ledger, including rejected output
+and unresolved attempts. `--attempt-log` overrides its default `OUTPUT_STEM.attempts.jsonl`.
+Result token fields sum known usage across attempts; null ledger counters disclose missing
+usage, and cached results create no new attempt records. Evidence support requires at least
+two application attempts and its prompt explicitly requires quotes for every supporting ID.
+No API key is needed for the local stand-in tests. See
+[judge-attempt-accounting.md](../../../docs/evaluation/judge-attempt-accounting.md) for field
+semantics, cache/resume behavior, retry limits, offline checks and the pre-run gate.

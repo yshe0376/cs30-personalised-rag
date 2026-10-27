@@ -27,6 +27,12 @@ whether any supplied evidence supports it (bundle_support) and whether the evide
 actually cites support it (citation_support). Copy claim text exactly from the answer and copy
 supporting spans exactly from the evidence. Subjective or unverifiable statements are
 not_applicable, not supported by default. Do not use a Gold answer or outside knowledge.
+For each claim, list in supporting_evidence_ids only IDs for which you provide quotations.
+Give at least one evidence_quotes row for every listed supporting ID; do not list an ID
+without its quote. Each ellipsis-separated quote fragment must contain at least three words
+and appear in source order without overlap within that row. Separate quote rows are independent.
+Mark citation_support supported only if a listed supporting ID is also in the supplied
+citation_ids; support elsewhere in the evidence bundle alone does not establish citation support.
 Return only structured JSON.
 """
 

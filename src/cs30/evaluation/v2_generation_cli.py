@@ -222,6 +222,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     run_judges.add_argument("--max-attempts", type=int, default=2)
     run_judges.add_argument(
+        "--attempt-log",
+        type=Path,
+        help="append-only per-provider-attempt JSONL; defaults to OUTPUT_STEM.attempts.jsonl",
+    )
+    run_judges.add_argument(
         "--require-fresh-cache",
         action="store_true",
         help="refuse an existing nonempty cache for repeat or order-independence runs",
@@ -400,15 +405,19 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
     for request in requests:
         if request.task is JudgeTask.ADAPTATION:
             always_assessed_ids(request)
+        if request.task is JudgeTask.EVIDENCE_SUPPORT and args.max_attempts < 2:
+            raise ValueError("evidence support requires at least two application attempts")
+    attempt_log = args.attempt_log or args.output.with_suffix(".attempts.jsonl")
+    if attempt_log.resolve() in {
+        path.resolve() for path in (args.requests, args.judge_config, args.cache, args.output)
+    }:
+        raise ValueError("judge attempt log must be separate from inputs, cache and result output")
     provider_name = configuration.provider.casefold()
     max_output_tokens = args.max_output_tokens or (8192 if provider_name == "gemini" else 2048)
     model_digest: str | None = None
     context_window: int | None = None
     if provider_name == "ollama":
-        if (
-            args.context_window is None
-            or args.context_window <= max_output_tokens + 512
-        ):
+        if args.context_window is None or args.context_window <= max_output_tokens + 512:
             raise ValueError(
                 "Ollama judge requires --context-window with room for output and framing"
             )
@@ -455,6 +464,7 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
         context_window=context_window,
         max_attempts=args.max_attempts,
         require_current_execution_cache=args.require_fresh_cache,
+        attempt_log_path=attempt_log,
     )
     results: list[JudgeResultEnvelope] = []
     for request in requests:
