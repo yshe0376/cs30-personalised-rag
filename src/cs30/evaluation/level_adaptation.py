@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from cs30.contracts import StudentLevel
 
+from .adaptation_applicability import make_applicability_binding, validate_adaptation_applicability
 from .judge_runtime import make_judge_request
 from .level_profiles import eligible_levels
 from .v2_generation_models import (
@@ -23,6 +24,7 @@ from .v2_generation_models import (
     JudgeTask,
     LevelChecklist,
     LevelProfile,
+    ProfileChecklistPackage,
 )
 
 ADAPTATION_SYSTEM_INSTRUCTION = """You are an independent evaluation judge.
@@ -60,6 +62,7 @@ def build_adaptation_request(
     *,
     evaluated_level: StudentLevel | None = None,
     criterion_order: Sequence[str] | None = None,
+    profile_package: ProfileChecklistPackage | None = None,
     mode: EvaluationMode = EvaluationMode.DEVELOPMENT,
 ) -> JudgeRequest:
     """Build one blinded request without condition, lambda, or model identity."""
@@ -96,6 +99,10 @@ def build_adaptation_request(
             ],
         },
     }
+    if profile_package is not None:
+        binding = make_applicability_binding(profile_package, profile, checklist)
+        if binding is not None:
+            payload["applicability_policy"] = binding
     return make_judge_request(
         task=JudgeTask.ADAPTATION,
         payload=payload,
@@ -133,6 +140,7 @@ def validate_adaptation_output(
             raise ValueError(
                 f"criterion {judgement.criterion_id} quote is not an exact answer substring"
             )
+    validate_adaptation_applicability(request, output)
     return output
 
 

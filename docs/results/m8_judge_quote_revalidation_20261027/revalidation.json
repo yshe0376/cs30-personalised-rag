@@ -1,0 +1,1898 @@
+{
+  "api_calls": 0,
+  "new_cost_usd": 0,
+  "levels": {
+    "high": {
+      "requests": 20,
+      "previously_unresolved": 3,
+      "recovered_offline": 2,
+      "still_unresolved": 1,
+      "regressions": 0
+    },
+    "low": {
+      "requests": 20,
+      "previously_unresolved": 5,
+      "recovered_offline": 5,
+      "still_unresolved": 0,
+      "regressions": 0
+    }
+  },
+  "source_hashes": {
+    "thinking-high/evidence_support/gemma-results.jsonl": "037fb2d5ec42b2be6395f852df34e475a24cb6487ae522928be7c4f2158fad5f",
+    "thinking-high/evidence_support/gemma-requests.jsonl": "5f9b5779f2117728732f3d5070ddd53815aee698705edc6e11e19e033bdfb5a7",
+    "subset/gemma/inputs.jsonl": "446dfcab6c88e7a8a626d21a7b7a6a62b99528cb9742f174b286a69d03241413",
+    "thinking-high/evidence_support/gpt-oss-results.jsonl": "b6e3d479eddb461a6bedb6c0dd6a56e42a50e228b3b2c88787a19ec948f84b15",
+    "thinking-high/evidence_support/gpt-oss-requests.jsonl": "9a82dae43e41348d34094422db5e6a1907c67c5bcceeab6cd9efe87da92c523e",
+    "subset/gpt-oss/inputs.jsonl": "252a12eb3c5c48ee157ee67775969fad25713702b6e3caba994787e328783215",
+    "thinking-high/evidence_support/llama-results.jsonl": "404201b4b3e0d937b4aefbdcf54c9bf8704fabe9b8e2bb3c7155bbc69110cd0f",
+    "thinking-high/evidence_support/llama-requests.jsonl": "b81990250cade1682cc16976004e2fd81ea83cd0d7f77b3a20a92f90c5e9a59d",
+    "subset/llama/inputs.jsonl": "de85d00e00009481ad22485b9b2398ff341182f133f339431c305b6294cd8168",
+    "thinking-low/evidence_support/gemma-results.jsonl": "b834709a9a4a8ec8879c7e20f2a208a51e7c56c85e66915744395bc70b10026a",
+    "thinking-low/evidence_support/gemma-requests.jsonl": "63ee3c8fdd4518943fc8213bcf0d80fd29c876824f19661f6b1b1efdc9eb5d96",
+    "thinking-low/evidence_support/gpt-oss-results.jsonl": "d74e8ed49a169198c8d0ba987d97baebe4646cf4e17616a078180c23694baa31",
+    "thinking-low/evidence_support/gpt-oss-requests.jsonl": "2a9dff19f9a54239b9dfd18a45f99d0ef5cbae21ef1a70d016e1f65596085ebf",
+    "thinking-low/evidence_support/llama-results.jsonl": "e85a12c386120f3ddf5d131e769fc1465b57e7ab533840f5d12007a65b35122a",
+    "thinking-low/evidence_support/llama-requests.jsonl": "43e37f28223c1b336aa7e83845facd9f515912bf34cba5830160e426da50b566"
+  },
+  "results": [
+    {
+      "level": "high",
+      "generator": "gemma",
+      "request_id": "evidence_support-6aa6f7519f035e70ded0",
+      "question_id": "sciq-train-04946",
+      "original_unresolved": true,
+      "revalidated": false,
+      "error": "claim 1 requires one quote per supporting ID",
+      "output": null
+    },
+    {
+      "level": "high",
+      "generator": "gemma",
+      "request_id": "evidence_support-0bbdb54662a417df42e8",
+      "question_id": "sciq-train-04113",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-0bbdb54662a417df42e8",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Pressure is defined as the force divided by the area perpendicular to the force.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "Pressure is defined as the force divided by the area perpendicular to the force",
+              "E2": "Pressure is defined as the force divided by the area perpendicular to the force"
+            },
+            "reason": "Both E1 and E2 explicitly define pressure using this phrasing."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "This can be expressed as P = F/A.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "P = F / A",
+              "E2": "P = F / A"
+            },
+            "reason": "Both E1 and E2 provide the mathematical definition P = F/A."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gemma",
+      "request_id": "evidence_support-01a0739547953c192876",
+      "question_id": "sciq-train-05989",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-01a0739547953c192876",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The most common elements have the most tightly bound nuclei.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "The most common elements have the most tightly bound nuclei.",
+              "E2": "The most common elements have the most tightly bound nuclei."
+            },
+            "reason": "Both E1 and E2 explicitly state that the most common elements have the most tightly bound nuclei."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "A graph of average binding energy per nucleon shows that nuclei with a mass number (A) near 60 are the most tightly bound.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "The most tightly bound nuclei are those with [EQUATION: A] near 60",
+              "E2": "The most tightly bound nuclei are those with [EQUATION: A] near 60"
+            },
+            "reason": "The evidence confirms that nuclei with mass number A near 60 are the most tightly bound on the graph."
+          },
+          {
+            "claim_id": "c3",
+            "claim_text": "The spikes on the graph represent particularly tightly bound nuclei.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "There are some noticeable spikes on the [EQUATION: BE / A] graph, which represent particularly tightly bound nuclei.",
+              "E2": "There are some noticeable spikes on the [EQUATION: BE / A] graph, which represent particularly tightly bound nuclei."
+            },
+            "reason": "The evidence explicitly states that spikes on the graph represent particularly tightly bound nuclei."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gemma",
+      "request_id": "evidence_support-4905185ccfbbeba30cd7",
+      "question_id": "sciq-train-00056",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-4905185ccfbbeba30cd7",
+        "claims": [
+          {
+            "claim_id": "C1",
+            "claim_text": "The angle at which light bends when it enters a different medium is known as the angle of refraction.",
+            "bundle_support": "unsupported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [],
+            "evidence_quotes": {},
+            "reason": "The evidence defines the angle of refraction as a measurement relative to the normal, not as a description of the bending itself."
+          },
+          {
+            "claim_id": "C2",
+            "claim_text": "This phenomenon, called refraction, occurs because the speed of light changes as it moves from one medium to another.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "As the wave bends, it also changes its speed and wavelength upon entering the new medium."
+            },
+            "reason": "Evidence E1 states that waves change their speed and wavelength upon entering a new medium during refraction."
+          },
+          {
+            "claim_id": "C3",
+            "claim_text": "As stated in evidence E1, 'At the boundary between media, waves experience refraction\u2014they change their path of propagation.'",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "At the boundary between media, waves experience refraction\u2014they change their path of propagation."
+            },
+            "reason": "The claim directly cites and quotes evidence E1."
+          },
+          {
+            "claim_id": "C4",
+            "claim_text": "Evidence E5 further explains that the angle of refraction increases as the incident angle increases,",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "Now, imagine what happens as the incident angle is increased. This causes [EQUATION: theta_2] to increase as well."
+            },
+            "reason": "Evidence E5 confirms that an increase in the incident angle leads to an increase in the angle of refraction (theta_2)."
+          },
+          {
+            "claim_id": "C5",
+            "claim_text": "total internal reflection occurs when the incident angle exceeds the critical angle.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "If the incident angle, [EQUATION: theta_1], is greater than the critical angle, as shown in Figure 16.20 (c), then all the light is reflected back into medium 1, a condition called total internal reflection."
+            },
+            "reason": "Evidence E5 explicitly defines total internal reflection as occurring when the incident angle is greater than the critical angle."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gemma",
+      "request_id": "evidence_support-45de587e67f396f80527",
+      "question_id": "sciq-train-06774",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-45de587e67f396f80527",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "Electromagnetic radiation, or EMR, is a type of wave that consists of oscillating electric and magnetic fields.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "electromagnetic radiation (EMR) radiant energy that consists of oscillating electric and magnetic fields"
+            },
+            "reason": "Evidence E1 directly defines electromagnetic radiation as consisting of oscillating electric and magnetic fields."
+          },
+          {
+            "claim_id": "claim_2",
+            "claim_text": "Maxwell's equations describe how these fields combine to form EMR,",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "Maxwell\u2019s equations equations that describe the interrelationship between electric and magnetic fields, and how these fields combine to form electromagnetic radiation"
+            },
+            "reason": "Evidence E1 states that Maxwell's equations describe how electric and magnetic fields combine to form electromagnetic radiation."
+          },
+          {
+            "claim_id": "claim_3",
+            "claim_text": "and he predicted that these waves would travel at the speed of light.",
+            "bundle_support": "unsupported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [],
+            "evidence_quotes": {},
+            "reason": "The provided evidence discusses Maxwell calculating the speed of electromagnetic waves, but does not contain a specific statement that he predicted they would travel at the speed of light in the manner claimed."
+          },
+          {
+            "claim_id": "claim_4",
+            "claim_text": "Light is a form of EMR.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E4": "In fact, Maxwell concluded that light is an electromagnetic wave"
+            },
+            "reason": "Evidence E4 confirms that Maxwell concluded light is an electromagnetic wave, which matches the definition of EMR."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gemma",
+      "request_id": "evidence_support-5c1c0fd7c6787bec193e",
+      "question_id": "sciq-train-07765",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-5c1c0fd7c6787bec193e",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Electromagnetic radiation (EMR) is a form of energy generated by a moving electric charge.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "Electromagnetic radiation is generated by a moving electric charge"
+            },
+            "reason": "The evidence explicitly states that electromagnetic radiation is generated by a moving electric charge and classifies light (which it also identifies as electromagnetic radiation) as a form of energy."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "Light is a form of electromagnetic radiation.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "visible light occupies a narrow band in a broad range of types of electromagnetic radiation."
+            },
+            "reason": "The evidence identifies visible light as a type of electromagnetic radiation."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-0d5fa39cbec3ffa04957",
+      "question_id": "sciq-train-01983",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-0d5fa39cbec3ffa04957",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The sheet of paper rattle shows the sound wave moves the air in the direction of propagation, indicating a longitudinal wave.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "The sound wave rattles a sheet of paper in a direction that shows the sound wave is longitudinal."
+            },
+            "reason": "The evidence explicitly confirms that the rattling of the paper demonstrates the sound wave is longitudinal, which by definition involves particle motion in the direction of propagation."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-66a99212f1c0cc2abc71",
+      "question_id": "sciq-train-09640",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-66a99212f1c0cc2abc71",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The rate at which the body uses food energy to sustain life and to do different activities is called the metabolic rate.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "The rate at which the body uses food energy to sustain life and to do different activities is called the metabolic rate."
+            },
+            "reason": "The evidence explicitly provides this definition for the metabolic rate."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "It is the overall speed at which food energy is converted into heat and work by the body.",
+            "bundle_support": "unsupported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [],
+            "evidence_quotes": {},
+            "reason": "While the evidence mentions that basal metabolic rate (BMR) relates to energy conversion into heat and work, it does not define the general metabolic rate in these specific terms."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-93e29cf8bf3e42121f4a",
+      "question_id": "sciq-train-01144",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-93e29cf8bf3e42121f4a",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The terms \"direct\" and \"alternating\" refer to two types of electric current",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "This is called direct current \u2026 produce alternating current"
+            },
+            "reason": "Evidence E3 defines both direct and alternating current as types of current."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "electric current, which is the flow of electric charge in a conductor.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "As electrons move through a metal wire \u2026 the electric charge flows in only one direction"
+            },
+            "reason": "Evidence E3 explains that electric current involves the movement of electrons (charge) through a wire (conductor) and that the electric charge flows in one direction."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-c0c7beda22ff714bc1f2",
+      "question_id": "sciq-train-01435",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-c0c7beda22ff714bc1f2",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The most common two\u2011lens telescope, like the simple microscope, uses two convex lenses.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E1": "The most common two-lens telescope, like the simple microscope, uses two convex lenses",
+              "E2": "The most common two-lens telescope, like the simple microscope, uses two convex lenses",
+              "E4": "Most simple telescopes have two convex lenses."
+            },
+            "reason": "Evidence E1, E2, and E4 explicitly confirm that the most common or simple telescopes utilize two convex lenses."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-ee5401c073a1a3053800",
+      "question_id": "sciq-train-10243",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-ee5401c073a1a3053800",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "Massive quanta such as electrons are the smallest units of matter, so we expect them to behave like macroscopic particles.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "Massive quanta, like electrons, also act like macroscopic particles\u2014something we expect, because they are the smallest units of matter."
+            },
+            "reason": "The evidence explicitly confirms that massive quanta (like electrons) are the smallest units of matter and that this is why they are expected to act like macroscopic particles."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-ed5c42fb09d5008e0db2",
+      "question_id": "sciq-train-09217",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-ed5c42fb09d5008e0db2",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The motion that repeats itself at regular time intervals is called periodic motion.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "We define periodic motion to be a motion that repeats itself at regular time intervals",
+              "E3": "Periodic motion is a motion that repeats itself at regular time intervals"
+            },
+            "reason": "The claim matches the definition of periodic motion provided in both cited evidence sources."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-b82e1df4a1f1759921ce",
+      "question_id": "sciq-train-06027",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-b82e1df4a1f1759921ce",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The diagnostic technology that uses high\u2011frequency vibrations transmitted into any tissue in contact with the transducer is ultrasound imaging.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "When used for imaging, ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect (the expansion and contraction of a substance when a voltage is applied across it, causing a vibration of the crystal). These high-frequency vibrations are transmitted into any tissue in contact with the transducer.",
+              "E2": "When used for imaging, ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect (the expansion and contraction of a substance when a voltage is applied across it, causing a vibration of the crystal). These high-frequency vibrations are transmitted into any tissue in contact with the transducer."
+            },
+            "reason": "Evidence confirms that ultrasound imaging utilizes transducers emitting ultrasonic waves (high-frequency vibrations) into tissue."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "The text describes ultrasonic waves emitted from a piezoelectric transducer,",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect",
+              "E2": "ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect"
+            },
+            "reason": "The evidence explicitly describes ultrasonic waves originating from a piezoelectric transducer."
+          },
+          {
+            "claim_id": "c3",
+            "claim_text": "with the high\u2011frequency vibrations transmitted into tissue in contact with the transducer,",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "These high-frequency vibrations are transmitted into any tissue in contact with the transducer.",
+              "E2": "These high-frequency vibrations are transmitted into any tissue in contact with the transducer."
+            },
+            "reason": "The evidence matches the claim regarding the transmission of vibrations into contact tissue."
+          },
+          {
+            "claim_id": "c4",
+            "claim_text": "and the reflected waves used to construct an image.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "From the time between when the original signal is sent and when the reflections from various boundaries between media are received, (as well as a measure of the intensity loss of the signal), the nature and position of each boundary between tissues and organs may be deduced.",
+              "E2": "From the time between when the original signal is sent and when the reflections from various boundaries between media are received, (as well as a measure of the intensity loss of the signal), the nature and position of each boundary between tissues and organs may be deduced."
+            },
+            "reason": "The evidence explains that reflections from boundaries are used to deduce the position of boundaries, which supports constructing an image."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-018fc5b2762a972dc7b7",
+      "question_id": "sciq-train-00797",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-018fc5b2762a972dc7b7",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "The tidal forces near a black hole are so great they can actually tear matter from a companion star",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "The tidal forces created by the black hole are so great that it tears matter from the companion star.",
+              "E2": "The tidal forces created by the black hole are so great that it tears matter from the companion star.",
+              "E3": "the tidal effects tear matter apart, with matter closer to the hole being pulled in with much more force than that only slightly farther away. This can pull a companion star apart",
+              "E4": "the tidal effects tear matter apart, with matter closer to the hole being pulled in with much more force than that only slightly farther away. This can pull a companion star apart",
+              "E5": "The tidal forces near them are so great that they can actually tear matter from a companion star."
+            },
+            "reason": "All cited evidence confirms that the tidal forces of a black hole are strong enough to tear matter from a companion star."
+          },
+          {
+            "claim_id": "claim_2",
+            "claim_text": "due to the extreme gravitational force and rapid variation of the gravitational force near the black hole.",
+            "bundle_support": "supported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3",
+              "E4",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "The tidal forces created by the black hole are so great that it tears matter from the companion star.",
+              "E2": "The tidal forces created by the black hole are so great that it tears matter from the companion star.",
+              "E3": "Gravity increases so rapidly that, as you approach a black hole, the tidal effects tear matter apart, with matter closer to the hole being pulled in with much more force than that only slightly farther away.",
+              "E4": "Gravity increases so rapidly that, as you approach a black hole, the tidal effects tear matter apart, with matter closer to the hole being pulled in with much more force than that only slightly farther away.",
+              "E5": "The most extreme tides occur where the gravitational force is the strongest and varies most rapidly, such as near black holes"
+            },
+            "reason": "While evidence E3, E4, and E5 support that extreme, rapidly varying gravitational forces cause the tidal effects, evidence E1 and E2 do not contain this information, making the citation unsupported for these IDs."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-650aed7e8487de12bab0",
+      "question_id": "sciq-train-09086",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-650aed7e8487de12bab0",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The pion can only be created by violating the conservation of mass-energy",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "The pion has mass and can only be created by violating the conservation of mass-energy.",
+              "E2": "The pion has mass and can only be created by violating the conservation of mass-energy.",
+              "E5": "The pion, created through a temporary violation of conservation of mass-energy"
+            },
+            "reason": "Multiple evidence sources confirm that pion creation involves a temporary violation of mass-energy conservation."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "as explained by the Heisenberg uncertainty principle",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "This is allowed by the Heisenberg uncertainty principle if it occurs for a sufficiently short period of time.",
+              "E2": "This is allowed by the Heisenberg uncertainty principle if it occurs for a sufficiently short period of time.",
+              "E5": "the pion can exist for only the short time allowed by the Heisenberg uncertainty principle."
+            },
+            "reason": "Evidence explicitly links the temporary nature of the pion creation violation to the Heisenberg uncertainty principle."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-7d4fe3b5595cc378a864",
+      "question_id": "sciq-train-09248",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-7d4fe3b5595cc378a864",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Cyclotrons use a magnetic field to cause particles to move in circular orbits.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "Cyclotrons use a magnetic field to cause particles to move in circular orbits.",
+              "E2": "Cyclotrons use a magnetic field to cause particles to move in circular orbits.",
+              "E3": "Cyclotrons use a magnetic field to cause particles to move in circular orbits."
+            },
+            "reason": "Evidence sources E1, E2, and E3 explicitly confirm that cyclotrons utilize a magnetic field to facilitate the circular motion of particles."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-0847f9dac4cf3ee01122",
+      "question_id": "sciq-train-01931",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-0847f9dac4cf3ee01122",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation.",
+              "E2": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation.",
+              "E3": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation."
+            },
+            "reason": "The claim is explicitly stated in evidence sources E1, E2, and E3, and the citation IDs provided include these sources."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-74a3f2d77c09888a05f7",
+      "question_id": "sciq-train-05409",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-74a3f2d77c09888a05f7",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The governing principle is the law of conservation of charge, which states that the total amount of charge is always constant.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "In fact, in all situations the total amount of charge is always constant. This universally obeyed law of nature is called the law of conservation of charge."
+            },
+            "reason": "The evidence explicitly defines the law of conservation of charge and states that the total amount of charge is constant."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "The evidence shows that when charges are separated, existing charges are moved about, but no new charge is created or destroyed.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "No charge is actually created or destroyed when charges are separated as we have been discussing. Rather, existing charges are moved about."
+            },
+            "reason": "The evidence directly supports the claim that no charge is created or destroyed and that existing charges are merely moved."
+          },
+          {
+            "claim_id": "c3",
+            "claim_text": "This is demonstrated in the discussion of charging by friction, where the transfer of negative charge from one material to another results in the other material becoming positively charged.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "Some atoms and molecules have a greater affinity for electrons than others and will become negatively charged by close contact in rubbing, leaving the other material positively charged."
+            },
+            "reason": "The evidence describes charging by friction and how the transfer of electrons (negative charge) leaves one material positively charged."
+          },
+          {
+            "claim_id": "c4",
+            "claim_text": "The law of conservation of charge is universally obeyed and is a fundamental principle of physics.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "This universally obeyed law of nature is called the law of conservation of charge."
+            },
+            "reason": "The evidence confirms that this is a universally obeyed law of nature."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-de464c0f157a48ee04e2",
+      "question_id": "sciq-train-09217",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-de464c0f157a48ee04e2",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Periodic motion is a motion that repeats itself at regular time intervals, such as exhibited by a vibrating guitar string.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "We define periodic motion to be a motion that repeats itself at regular time intervals, such as exhibited by the guitar string",
+              "E2": "We define periodic motion to be a motion that repeats itself at regular time intervals, such as exhibited by the guitar string"
+            },
+            "reason": "Evidence E1 and E2 explicitly define periodic motion and provide the guitar string as an example."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "The time to complete one oscillation remains constant and is called the period T.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "The time to complete one oscillation remains constant and is called the period [EQUATION: T].",
+              "E2": "The time to complete one oscillation remains constant and is called the period [EQUATION: T].",
+              "E3": "The time to complete one oscillation (a complete cycle of motion) remains constant and is called the period T."
+            },
+            "reason": "Evidence E1, E2, and E3 all explicitly state this definition of the period."
+          },
+          {
+            "claim_id": "3",
+            "claim_text": "Its units are usually seconds, but may be any convenient unit of time.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "Its units are usually seconds, but may be any convenient unit of time.",
+              "E2": "Its units are usually seconds, but may be any convenient unit of time."
+            },
+            "reason": "Evidence E1 and E2 explicitly specify the units for the period."
+          }
+        ]
+      }
+    },
+    {
+      "level": "high",
+      "generator": "llama",
+      "request_id": "evidence_support-ad948959ff6919387538",
+      "question_id": "sciq-train-09476",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-ad948959ff6919387538",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "In gas exchange, oxygen flows into the blood",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E2",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E2": "replenishment of oxygen",
+              "E4": "replenishment of oxygen"
+            },
+            "reason": "Evidence explicitly describes the replenishment of oxygen during gas exchange in the lungs."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "carbon dioxide flows out",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E2",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E2": "disposal of carbon dioxide from the blood",
+              "E4": "disposal of carbon dioxide from the blood"
+            },
+            "reason": "Evidence explicitly describes the disposal of carbon dioxide from the blood during gas exchange in the lungs."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gemma",
+      "request_id": "evidence_support-6aa6f7519f035e70ded0",
+      "question_id": "sciq-train-04946",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-6aa6f7519f035e70ded0",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "Mercury manometers are often used to measure arterial blood pressure.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "Mercury manometers are often used to measure arterial blood pressure.",
+              "E2": "Mercury manometers are often used to measure arterial blood pressure."
+            },
+            "reason": "The claim is directly stated in both E1 and E2."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "The height of the mercury column is related to the pressure by the equation P_g = h rho g, where h is the height of the fluid, rho is the density of the fluid, and g is the acceleration due to gravity.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E2",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E2": "[EQUATION: P_g = h rho g]",
+              "E5": "The gauge pressure is [EQUATION: P_g = h rho g] and is found by measuring [EQUATION: h]. ... [EQUATION: rho] is the density of the fluid in the manometer."
+            },
+            "reason": "Evidence E5 provides the gauge pressure equation P_g = h rho g and defines rho as the density of the fluid and h as the height of the fluid. While 'g' for gravity is standard physics notation present in the equation provided in the evidence, the explicit text confirms the relationship and definitions."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gemma",
+      "request_id": "evidence_support-0bbdb54662a417df42e8",
+      "question_id": "sciq-train-04113",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-0bbdb54662a417df42e8",
+        "claims": [
+          {
+            "claim_id": "0",
+            "claim_text": "Pressure is defined as the force divided by the area perpendicular to the force.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "Pressure is defined as the force divided by the area perpendicular to the force",
+              "E2": "Pressure is defined as the force divided by the area perpendicular to the force"
+            },
+            "reason": "The evidence explicitly provides this definition of pressure."
+          },
+          {
+            "claim_id": "1",
+            "claim_text": "This can be expressed as P = F/A.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "P = F / A.",
+              "E2": "P = F / A."
+            },
+            "reason": "The evidence provides this exact mathematical equation for pressure."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gemma",
+      "request_id": "evidence_support-01a0739547953c192876",
+      "question_id": "sciq-train-05989",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-01a0739547953c192876",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The most common elements have the most tightly bound nuclei.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "The most common elements have the most tightly bound nuclei.",
+              "E2": "The most common elements have the most tightly bound nuclei."
+            },
+            "reason": "The claim is explicitly stated in both E1 and E2."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "A graph of average binding energy per nucleon shows that nuclei with a mass number (A) near 60 are the most tightly bound.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "A graph of average binding energy per nucleon ... for stable nuclei. The most tightly bound nuclei are those with [EQUATION: A] near 60",
+              "E2": "A graph of average binding energy per nucleon ... for stable nuclei. The most tightly bound nuclei are those with [EQUATION: A] near 60"
+            },
+            "reason": "The evidence explicitly confirms that the graph shows nuclei with A near 60 are the most tightly bound."
+          },
+          {
+            "claim_id": "c3",
+            "claim_text": "The spikes on the graph represent particularly tightly bound nuclei.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "There are some noticeable spikes on the [EQUATION: BE / A] graph, which represent particularly tightly bound nuclei.",
+              "E2": "There are some noticeable spikes on the [EQUATION: BE / A] graph, which represent particularly tightly bound nuclei."
+            },
+            "reason": "The evidence directly confirms that spikes on the BE/A graph represent particularly tightly bound nuclei."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gemma",
+      "request_id": "evidence_support-4905185ccfbbeba30cd7",
+      "question_id": "sciq-train-00056",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-4905185ccfbbeba30cd7",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The angle at which light bends when it enters a different medium is known as the angle of refraction.",
+            "bundle_support": "unsupported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [],
+            "evidence_quotes": {},
+            "reason": "The evidence defines the angle of refraction as the angle the refracted ray makes with the normal, not as the angle of the bend itself."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "This phenomenon, called refraction, occurs because the speed of light changes as it moves from one medium to another.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "At the boundary between media, waves experience refraction\u2014they change their path of propagation. As the wave bends, it also changes its speed and wavelength upon entering the new medium."
+            },
+            "reason": "The evidence confirms that refraction involves a change in path and a change in speed when entering a new medium."
+          },
+          {
+            "claim_id": "3",
+            "claim_text": "As stated in evidence E1, 'At the boundary between media, waves experience refraction\u2014they change their path of propagation.'",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "At the boundary between media, waves experience refraction\u2014they change their path of propagation."
+            },
+            "reason": "The citation correctly quotes the evidence provided."
+          },
+          {
+            "claim_id": "4",
+            "claim_text": "Evidence E5 further explains that the angle of refraction increases as the incident angle increases,",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "Now, imagine what happens as the incident angle is increased. This causes [EQUATION: theta_2] to increase as well."
+            },
+            "reason": "The evidence explicitly states that increasing the incident angle causes the angle of refraction to increase."
+          },
+          {
+            "claim_id": "5",
+            "claim_text": "and total internal reflection occurs when the incident angle exceeds the critical angle.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "If the incident angle, [EQUATION: theta_1], is greater than the critical angle, as shown in Figure 16.20 (c), then all the light is reflected back into medium 1, a condition called total internal reflection."
+            },
+            "reason": "The evidence confirms that exceeding the critical angle results in total internal reflection."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gemma",
+      "request_id": "evidence_support-45de587e67f396f80527",
+      "question_id": "sciq-train-06774",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-45de587e67f396f80527",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Electromagnetic radiation, or EMR, is a type of wave that consists of oscillating electric and magnetic fields.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "electromagnetic radiation (EMR) radiant energy that consists of oscillating electric and magnetic fields"
+            },
+            "reason": "Evidence E1 explicitly defines electromagnetic radiation as radiant energy consisting of oscillating electric and magnetic fields."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "Maxwell's equations describe how these fields combine to form EMR",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "Maxwell\u2019s equations equations that describe the interrelationship between electric and magnetic fields, and how these fields combine to form electromagnetic radiation"
+            },
+            "reason": "Evidence E1 directly states this in its key terms definition."
+          },
+          {
+            "claim_id": "3",
+            "claim_text": "and he predicted that these waves would travel at the speed of light.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E4": "Maxwell calculated that electromagnetic waves would propagate at a speed given by the equation... which is the speed of light."
+            },
+            "reason": "Evidence E4 confirms that Maxwell calculated the propagation speed of electromagnetic waves as the speed of light."
+          },
+          {
+            "claim_id": "4",
+            "claim_text": "Light is a form of EMR.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E4": "In fact, Maxwell concluded that light is an electromagnetic wave having such wavelengths that it can be detected by the eye."
+            },
+            "reason": "Evidence E4 confirms light is an electromagnetic wave."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gemma",
+      "request_id": "evidence_support-5c1c0fd7c6787bec193e",
+      "question_id": "sciq-train-07765",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-5c1c0fd7c6787bec193e",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Electromagnetic radiation (EMR) is a form of energy generated by a moving electric charge.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "Electromagnetic radiation is generated by a moving electric charge"
+            },
+            "reason": "The evidence explicitly states that electromagnetic radiation is generated by a moving electric charge."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "Light is a form of electromagnetic radiation.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "Light is a\n\nform of electromagnetic radiation (EMR)."
+            },
+            "reason": "The evidence explicitly confirms that light is a form of electromagnetic radiation."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-0d5fa39cbec3ffa04957",
+      "question_id": "sciq-train-01983",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-0d5fa39cbec3ffa04957",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "The sheet of paper rattle shows the sound wave moves the air in the direction of propagation, indicating a longitudinal wave.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "The sound wave rattles a sheet of paper in a direction that shows the sound wave is longitudinal."
+            },
+            "reason": "The evidence explicitly confirms that the rattling of the paper demonstrates the sound wave is longitudinal, which by definition implies motion in the direction of propagation (as opposed to perpendicular motion in transverse waves)."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-66a99212f1c0cc2abc71",
+      "question_id": "sciq-train-09640",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-66a99212f1c0cc2abc71",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The rate at which the body uses food energy to sustain life and to do different activities is called the metabolic rate.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "The rate at which the body uses food energy to sustain life and to do different activities is called the metabolic rate."
+            },
+            "reason": "The claim is a direct quote from the provided evidence E1."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "It is the overall speed at which food energy is converted into heat and work by the body.",
+            "bundle_support": "supported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "Your basal metabolic rate (BMR) is the rate at which food is converted into heat transfer and work done while the body is at complete rest."
+            },
+            "reason": "The definition provided is supported by E5 (describing metabolic rate as food converted into heat transfer and work), but the citation E1 does not contain this specific definition. Since the answer only cites E1, this claim is unsupported by the citation."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-93e29cf8bf3e42121f4a",
+      "question_id": "sciq-train-01144",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-93e29cf8bf3e42121f4a",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "The terms \"direct\" and \"alternating\" refer to two types of electric current",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "So far, we have discussed current that moves constantly in a single direction. This is called direct current \u2026 Many sources of electrical power, such as the hydroelectric dam shown at the beginning of this chapter, produce alternating current, in which the current direction alternates back and forth."
+            },
+            "reason": "Evidence E3 defines both direct and alternating current as types of current."
+          },
+          {
+            "claim_id": "claim_2",
+            "claim_text": "which is the flow of electric charge in a conductor.",
+            "bundle_support": "supported",
+            "citation_support": "unsupported",
+            "supporting_evidence_ids": [
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E3": "the electric charge flows in only one direction."
+            },
+            "reason": "Evidence E3 confirms current is the flow of charge, but the answer did not cite E3 for this specific clause, it cited E1 and E3. E1 does not contain the definition."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-c0c7beda22ff714bc1f2",
+      "question_id": "sciq-train-01435",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-c0c7beda22ff714bc1f2",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "The most common two\u2011lens telescope, like the simple microscope, uses two convex lenses.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E1": "The most common two-lens telescope, like the simple microscope, uses two convex lenses",
+              "E2": "The most common two-lens telescope, like the simple microscope, uses two convex lenses",
+              "E4": "Most simple telescopes have two convex lenses."
+            },
+            "reason": "Multiple provided evidence sources explicitly state that the most common two-lens telescope uses two convex lenses, which directly supports the claim."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-ee5401c073a1a3053800",
+      "question_id": "sciq-train-10243",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-ee5401c073a1a3053800",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Massive quanta such as electrons are the smallest units of matter",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "Massive quanta, like electrons, also act like macroscopic particles\u2014something we expect, because they are the smallest units of matter."
+            },
+            "reason": "The evidence directly confirms that massive quanta like electrons are considered the smallest units of matter."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "we expect them to behave like macroscopic particles.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E5": "Massive quanta, like electrons, also act like macroscopic particles\u2014something we expect"
+            },
+            "reason": "The evidence explicitly states that massive quanta are expected to act like macroscopic particles."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-ed5c42fb09d5008e0db2",
+      "question_id": "sciq-train-09217",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-ed5c42fb09d5008e0db2",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "The motion that repeats itself at regular time intervals is called periodic motion.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "We define periodic motion to be a motion that repeats itself at regular time intervals",
+              "E3": "Periodic motion is a motion that repeats itself at regular time intervals"
+            },
+            "reason": "Multiple provided evidence sources explicitly define periodic motion as motion that repeats at regular time intervals."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "gpt-oss",
+      "request_id": "evidence_support-b82e1df4a1f1759921ce",
+      "question_id": "sciq-train-06027",
+      "original_unresolved": true,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-b82e1df4a1f1759921ce",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The diagnostic technology that uses high\u2011frequency vibrations transmitted into any tissue in contact with the transducer is ultrasound imaging.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "When used for imaging, ultrasonic waves are emitted from a transducer... These high-frequency vibrations are transmitted into any tissue in contact with the transducer.",
+              "E2": "When used for imaging, ultrasonic waves are emitted from a transducer... These high-frequency vibrations are transmitted into any tissue in contact with the transducer."
+            },
+            "reason": "The evidence explicitly identifies that imaging via transducers involves high-frequency vibrations transmitted into contact tissue."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "The text describes ultrasonic waves emitted from a piezoelectric transducer, with the high\u2011frequency vibrations transmitted into tissue in contact with the transducer, and the reflected waves used to construct an image.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2"
+            ],
+            "evidence_quotes": {
+              "E1": "ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect... These high-frequency vibrations are transmitted into any tissue in contact with the transducer... From the time between when the original signal is sent and when the reflections... are received... the nature and position of each boundary between tissues and organs may be deduced.",
+              "E2": "ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect... These high-frequency vibrations are transmitted into any tissue in contact with the transducer... From the time between when the original signal is sent and when the reflections... are received... the nature and position of each boundary between tissues and organs may be deduced."
+            },
+            "reason": "The evidence describes the piezoelectric transducer, the transmission of vibrations into tissue, and the use of reflected waves to deduce organ boundaries for imaging."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-018fc5b2762a972dc7b7",
+      "question_id": "sciq-train-00797",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-018fc5b2762a972dc7b7",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "The tidal forces near a black hole are so great they can actually tear matter from a companion star",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "The tidal forces created by the black hole are so great that it tears matter from the companion star.",
+              "E2": "The tidal forces created by the black hole are so great that it tears matter from the companion star.",
+              "E5": "The tidal forces near them are so great that they can actually tear matter from a companion star."
+            },
+            "reason": "Multiple pieces of evidence explicitly state that tidal forces near a black hole can tear matter from a companion star."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "due to the extreme gravitational force and rapid variation of the gravitational force near the black hole.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3",
+              "E4",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E3": "Gravity increases so rapidly that, as you approach a black hole, the tidal effects tear matter apart",
+              "E4": "Gravity increases so rapidly that, as you approach a black hole, the tidal effects tear matter apart",
+              "E5": "The most extreme tides occur where the gravitational force is the strongest and varies most rapidly, such as near black holes"
+            },
+            "reason": "Evidence explicitly attributes the tidal tearing to the rapid increase or variation of gravitational force near a black hole."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-650aed7e8487de12bab0",
+      "question_id": "sciq-train-09086",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-650aed7e8487de12bab0",
+        "claims": [
+          {
+            "claim_id": "claim_1",
+            "claim_text": "The pion can only be created by violating the conservation of mass-energy",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "The pion has mass and can only be created by violating the conservation of mass-energy.",
+              "E2": "The pion has mass and can only be created by violating the conservation of mass-energy.",
+              "E5": "The pion, created through a temporary violation of conservation of mass-energy, travels from the proton to the neutron and is recaptured."
+            },
+            "reason": "Multiple evidence sources explicitly state that the pion is created through a violation of mass-energy conservation."
+          },
+          {
+            "claim_id": "claim_2",
+            "claim_text": "as explained by the Heisenberg uncertainty principle.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E5"
+            ],
+            "evidence_quotes": {
+              "E1": "This is allowed by the Heisenberg uncertainty principle if it occurs for a sufficiently short period of time.",
+              "E2": "This is allowed by the Heisenberg uncertainty principle if it occurs for a sufficiently short period of time.",
+              "E5": "The range of the force is limited by the fact that the pion can exist for only the short time allowed by the Heisenberg uncertainty principle."
+            },
+            "reason": "The evidence confirms that this violation is allowed or governed by the Heisenberg uncertainty principle."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-7d4fe3b5595cc378a864",
+      "question_id": "sciq-train-09248",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-7d4fe3b5595cc378a864",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Cyclotrons use a magnetic field to cause particles to move in circular orbits.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "Cyclotrons use a magnetic field to cause particles to move in circular orbits.",
+              "E2": "Cyclotrons use a magnetic field to cause particles to move in circular orbits.",
+              "E3": "Cyclotrons use a magnetic field to cause particles to move in circular orbits."
+            },
+            "reason": "Multiple pieces of evidence (E1, E2, E3) explicitly state that cyclotrons use a magnetic field to cause particles to move in circular orbits."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-0847f9dac4cf3ee01122",
+      "question_id": "sciq-train-01931",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-0847f9dac4cf3ee01122",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1",
+              "E2",
+              "E3"
+            ],
+            "evidence_quotes": {
+              "E1": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation.",
+              "E2": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation.",
+              "E3": "Radiotherapy is effective against cancer because cancer cells reproduce rapidly and, consequently, are more sensitive to radiation."
+            },
+            "reason": "The claim is explicitly stated in multiple provided evidence sources (E1, E2, E3)."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-74a3f2d77c09888a05f7",
+      "question_id": "sciq-train-05409",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-74a3f2d77c09888a05f7",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "The governing principle is the law of conservation of charge, which states that the total amount of charge is always constant.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E3": "In fact, in all situations the total amount of charge is always constant. This universally obeyed law of nature is called the law of conservation of charge.",
+              "E4": "In fact, in all situations the total amount of charge is always constant. This universally obeyed law of nature is called the law of conservation of charge."
+            },
+            "reason": "Evidence E3 and E4 explicitly define and state the law of conservation of charge as the total amount of charge being constant."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "The evidence shows that when charges are separated, existing charges are moved about, but no new charge is created or destroyed.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E3": "No charge is actually created or destroyed when charges are separated as we have been discussing. Rather, existing charges are moved about.",
+              "E4": "No charge is actually created or destroyed when charges are separated as we have been discussing. Rather, existing charges are moved about."
+            },
+            "reason": "Evidence E3 and E4 explicitly state that no charge is created or destroyed when separated, and charges are just moved."
+          },
+          {
+            "claim_id": "c3",
+            "claim_text": "This is demonstrated in the discussion of charging by friction, where the transfer of negative charge from one material to another results in the other material becoming positively charged.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E3": "When rubbed together, some negative charge is transferred to the amber, leaving the cloth with a net positive charge.",
+              "E4": "When rubbed together, some negative charge is transferred to the amber, leaving the cloth with a net positive charge."
+            },
+            "reason": "Evidence E3 and E4 describe charging by friction where charge transfer causes one material to become positive."
+          },
+          {
+            "claim_id": "c4",
+            "claim_text": "The law of conservation of charge is universally obeyed and is a fundamental principle of physics.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E3",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E3": "This universally obeyed law of nature is called the law of conservation of charge.",
+              "E4": "This universally obeyed law of nature is called the law of conservation of charge."
+            },
+            "reason": "Evidence E3 and E4 describe this as a universally obeyed law of nature."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-de464c0f157a48ee04e2",
+      "question_id": "sciq-train-09217",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-de464c0f157a48ee04e2",
+        "claims": [
+          {
+            "claim_id": "1",
+            "claim_text": "Periodic motion is a motion that repeats itself at regular time intervals, such as exhibited by a vibrating guitar string.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "We define periodic motion to be a motion that repeats itself at regular time intervals, such as exhibited by the guitar string"
+            },
+            "reason": "Evidence E1 provides an exact definition of periodic motion matching the claim, including the example of a guitar string."
+          },
+          {
+            "claim_id": "2",
+            "claim_text": "The time to complete one oscillation remains constant and is called the period T.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "The time to complete one oscillation remains constant and is called the period [EQUATION: T]."
+            },
+            "reason": "Evidence E1 explicitly states that the time to complete one oscillation remains constant and is called the period T."
+          },
+          {
+            "claim_id": "3",
+            "claim_text": "Its units are usually seconds, but may be any convenient unit of time.",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E1"
+            ],
+            "evidence_quotes": {
+              "E1": "Its units are usually seconds, but may be any convenient unit of time."
+            },
+            "reason": "Evidence E1 supports the statement regarding the units for the period."
+          }
+        ]
+      }
+    },
+    {
+      "level": "low",
+      "generator": "llama",
+      "request_id": "evidence_support-ad948959ff6919387538",
+      "question_id": "sciq-train-09476",
+      "original_unresolved": false,
+      "revalidated": true,
+      "error": null,
+      "output": {
+        "schema_version": "1.0",
+        "request_id": "evidence_support-ad948959ff6919387538",
+        "claims": [
+          {
+            "claim_id": "c1",
+            "claim_text": "In gas exchange, oxygen flows into the blood",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E2",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E2": "pumps it through the lungs for gas exchange with atmospheric gases \u2013 the disposal of carbon dioxide from the blood and the replenishment of oxygen.",
+              "E4": "pumps it through the lungs for gas exchange with atmospheric gases \u2013 the disposal of carbon dioxide from the blood and the replenishment of oxygen."
+            },
+            "reason": "The evidence explicitly mentions gas exchange in the lungs involves the replenishment of oxygen into the blood."
+          },
+          {
+            "claim_id": "c2",
+            "claim_text": "carbon dioxide flows out",
+            "bundle_support": "supported",
+            "citation_support": "supported",
+            "supporting_evidence_ids": [
+              "E2",
+              "E4"
+            ],
+            "evidence_quotes": {
+              "E2": "pumps it through the lungs for gas exchange with atmospheric gases \u2013 the disposal of carbon dioxide from the blood",
+              "E4": "pumps it through the lungs for gas exchange with atmospheric gases \u2013 the disposal of carbon dioxide from the blood"
+            },
+            "reason": "The evidence explicitly mentions the disposal of carbon dioxide from the blood during gas exchange."
+          }
+        ]
+      }
+    }
+  ],
+  "original_usage_audit": {
+    "cells": 20,
+    "selection_sha256": "7b340db5f37f7b5c5a63d39a45326b3bdd096f0c4bec7ff5f6e1b2882fa60052",
+    "generators": {
+      "gpt-oss": 7,
+      "llama": 7,
+      "gemma": 6
+    },
+    "levels": {
+      "high": {
+        "client_attempts": 103,
+        "token_cost_usd": 0.3641535
+      },
+      "low": {
+        "client_attempts": 101,
+        "token_cost_usd": 0.12593075
+      }
+    },
+    "total_token_cost_usd": 0.49008425,
+    "provider_invoice_reconciled": false
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "offline": false,
+  "model": "gemini-3.1-flash-lite",
+  "cells": 20,
+  "price_usd_per_million": {
+    "input": 0.25,
+    "output_incl_thinking": 1.5
+  },
+  "levels": {
+    "high": {
+      "correctness": {
+        "requests": 20,
+        "api_calls": 21,
+        "api_errors": 0,
+        "extra_attempts": 1,
+        "outcomes": {
+          "scored": 19,
+          "needs_review": 1
+        },
+        "mean_input_tokens": 655.7619047619048,
+        "mean_output_tokens_incl_thinking": 1025.5238095238096,
+        "mean_thought_tokens": 781.7619047619048,
+        "truncated_calls": 0,
+        "spent_usd": 0.03574675,
+        "cost_per_request_usd": 0.0017873375000000001,
+        "full_dev_requests": 3611,
+        "projected_full_dev_usd": 6.454075712500001
+      },
+      "adaptation": {
+        "requests": 30,
+        "api_calls": 30,
+        "api_errors": 0,
+        "extra_attempts": 0,
+        "outcomes": {
+          "resolved": 30
+        },
+        "mean_input_tokens": 1959.8666666666666,
+        "mean_output_tokens_incl_thinking": 2172.766666666667,
+        "mean_thought_tokens": 1882.4666666666667,
+        "truncated_calls": 0,
+        "spent_usd": 0.1124735,
+        "cost_per_request_usd": 0.003749116666666667,
+        "full_dev_requests": 5485,
+        "projected_full_dev_usd": 20.56390491666667
+      },
+      "discrimination": {
+        "requests": 20,
+        "api_calls": 20,
+        "api_errors": 0,
+        "extra_attempts": 0,
+        "outcomes": {
+          "resolved": 20
+        },
+        "mean_input_tokens": 3504.95,
+        "mean_output_tokens_incl_thinking": 1193.2,
+        "mean_thought_tokens": 1079.55,
+        "truncated_calls": 0,
+        "spent_usd": 0.05332075,
+        "cost_per_request_usd": 0.0026660375,
+        "full_dev_requests": 3611,
+        "projected_full_dev_usd": 9.6270614125
+      },
+      "evidence_support": {
+        "requests": 20,
+        "api_calls": 32,
+        "api_errors": 0,
+        "extra_attempts": 12,
+        "outcomes": {
+          "resolved": 17,
+          "unresolved": 3
+        },
+        "mean_input_tokens": 2924.125,
+        "mean_output_tokens_incl_thinking": 2900.40625,
+        "mean_thought_tokens": 2436.75,
+        "truncated_calls": 0,
+        "spent_usd": 0.1626125,
+        "cost_per_request_usd": 0.008130624999999999,
+        "full_dev_requests": 4169,
+        "projected_full_dev_usd": 33.896575625
+      },
+      "total_spent_usd": 0.3641535,
+      "projected_full_dev_usd": 70.54161766666667
+    },
+    "low": {
+      "correctness": {
+        "requests": 20,
+        "api_calls": 20,
+        "api_errors": 0,
+        "extra_attempts": 0,
+        "outcomes": {
+          "scored": 20
+        },
+        "mean_input_tokens": 647.4,
+        "mean_output_tokens_incl_thinking": 348.75,
+        "mean_thought_tokens": 106.35,
+        "truncated_calls": 0,
+        "spent_usd": 0.0136995,
+        "cost_per_request_usd": 0.000684975,
+        "full_dev_requests": 3611,
+        "projected_full_dev_usd": 2.473444725
+      },
+      "adaptation": {
+        "requests": 30,
+        "api_calls": 33,
+        "api_errors": 0,
+        "extra_attempts": 3,
+        "outcomes": {
+          "resolved": 30
+        },
+        "mean_input_tokens": 1991.7272727272727,
+        "mean_output_tokens_incl_thinking": 439.90909090909093,
+        "mean_thought_tokens": 132.42424242424244,
+        "truncated_calls": 0,
+        "spent_usd": 0.03820725,
+        "cost_per_request_usd": 0.0012735749999999999,
+        "full_dev_requests": 5485,
+        "projected_full_dev_usd": 6.985558875
+      },
+      "discrimination": {
+        "requests": 20,
+        "api_calls": 20,
+        "api_errors": 0,
+        "extra_attempts": 0,
+        "outcomes": {
+          "resolved": 20
+        },
+        "mean_input_tokens": 3504.95,
+        "mean_output_tokens_incl_thinking": 292.9,
+        "mean_thought_tokens": 175.55,
+        "truncated_calls": 0,
+        "spent_usd": 0.026311750000000002,
+        "cost_per_request_usd": 0.0013155875000000002,
+        "full_dev_requests": 3611,
+        "projected_full_dev_usd": 4.7505864625
+      },
+      "evidence_support": {
+        "requests": 20,
+        "api_calls": 28,
+        "api_errors": 0,
+        "extra_attempts": 8,
+        "outcomes": {
+          "resolved": 15,
+          "unresolved": 5
+        },
+        "mean_input_tokens": 2940.8928571428573,
+        "mean_output_tokens_incl_thinking": 645.8571428571429,
+        "mean_thought_tokens": 167.28571428571428,
+        "truncated_calls": 0,
+        "spent_usd": 0.04771225,
+        "cost_per_request_usd": 0.0023856125,
+        "full_dev_requests": 4169,
+        "projected_full_dev_usd": 9.9456185125
+      },
+      "total_spent_usd": 0.12593075,
+      "projected_full_dev_usd": 24.155208574999996
+    }
+  },
+  "full_dev_requests": {
+    "correctness": 3611,
+    "adaptation": 5485,
+    "discrimination": 3611,
+    "evidence_support": 4169
+  }
+}

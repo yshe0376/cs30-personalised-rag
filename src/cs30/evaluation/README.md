@@ -674,3 +674,51 @@ checklist criterion.
 
 This supports plan sections 4.2 and 12.1 item 7; it does not freeze profiles,
 approve eligibility labels, calibrate Gemini or authorize formal conclusions.
+
+
+### Offline quotation revalidation and reproducible trial tooling
+
+Evidence quotations may contain multiple verbatim excerpts for one evidence ID, including
+ellipsis-separated excerpts. Both validation entry points use evidence_quotes.quote_is_grounded:
+every fragment must exist in that evidence after NFC, whitespace and limited typographic
+quote/hyphen normalization. The matcher does not rewrite numbers, mathematical symbols or wording.
+Every nonempty fragment must contain at least three whitespace-delimited words with a letter
+or digit after normalization; punctuation-only tokens do not count. Within one quote row,
+fragments must appear in source order without overlap. Separate rows for one evidence ID
+remain independent and are stored using the reserved `\n[quote-row]\n` separator rather
+than an ellipsis, so row boundaries survive serialization. Online quote rows may not contain
+that reserved separator. The ID-to-string field type and online schema remain unchanged.
+Missing/unknown supporting IDs, absent quotations and invented content still fail closed.
+
+Use scripts/revalidate_judge_trial.py to check saved trial outputs without constructing an API
+client. It preserves the originals, audits recorded costs, and prepares existing high/low
+disagreements for human review. The current strict-policy replay is at
+docs/results/m8_quote_fragment_revalidation_20261028/README.md: high recovers 2/3,
+low recovers 3/5, and no originally accepted output regresses. The earlier quotation replay
+is historical; its permissive fragment policy has been superseded.
+
+scripts/judge_trial.py now versions the 20-cell sampling and budget-extrapolation workflow.
+Paid execution is refused unless --allow-paid is explicitly supplied; --offline never invokes
+Gemini. Offline simulated failures/zero costs are not judge-performance evidence. Client attempts
+are logged immediately; internal SDK HTTP attempts are not separately observed.
+
+
+### Package-bound always-assessed adaptation criteria
+
+For frozen package `1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238`,
+adaptation rejects `not_applicable` on B1, B2, B4, I1, I2, I3, A1 and A4.
+B3, A2 and A3 retain their conditional applicability. This enforces the frozen text
+without rewriting a verdict or changing the profile. Invalid outputs use the existing
+application retry; exhausted requests stay unresolved and receive no score.
+
+`adaptation_applicability.py` verifies the package/content binding. The request builder
+adds the policy to the hashed payload, and result assembly reconstructs the same identity.
+CLI preflight rejects old unbound production requests before provider construction;
+regenerate adaptation requests before an authorised live run. New packages need a reviewed
+policy rather than inheriting the eight IDs silently. Synthetic checklists without
+always-assessed wording preserve their existing fixture behavior.
+
+`scripts/revalidate_adaptation_trial.py` replays local outputs without provider calls.
+The original trial has 6/30 high and 5/30 low adaptation requests that would now be
+rejected, all for B4. See `docs/results/m8_adaptation_applicability_replay_20261028/`.
+Leader decision #212 selects low for all four tasks; full Dev still awaits budget approval.

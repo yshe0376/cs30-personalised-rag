@@ -1,0 +1,1 @@
+{"schema_version": "1.0", "config_version": "gemini-judge-trial-low", "provider": "gemini", "model_family": "gemini", "model_revision": "gemini-3.1-flash-lite", "temperature": 1.0, "seed": 5703, "thinking_level": "low", "prompt_version": "prompt-v1", "output_schema_version": "1.0", "local_model": false, "data_approval": "approved"}

@@ -1,0 +1,7 @@
+question_id,generator,target_level,condition,request_id,purpose
+sciq-train-01144,gpt-oss,intermediate,P1R1_combined,evidence_support-93e29cf8bf3e42121f4a,previously_affected
+sciq-train-06027,gpt-oss,advanced,P1R0_prompt_only,evidence_support-b82e1df4a1f1759921ce,previously_affected
+sciq-train-04946,gemma,advanced,P1R1_combined,evidence_support-6aa6f7519f035e70ded0,previously_affected
+sciq-train-05989,gemma,beginner,P1R0_prompt_only,evidence_support-01a0739547953c192876,previously_affected
+sciq-train-06774,gemma,beginner,P1R1_combined,evidence_support-45de587e67f396f80527,previously_affected
+sciq-train-09248,llama,intermediate,P0R1_reranking_only,evidence_support-7d4fe3b5595cc378a864,valid_control

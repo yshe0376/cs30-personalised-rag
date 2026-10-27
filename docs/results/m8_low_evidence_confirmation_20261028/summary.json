@@ -1,0 +1,163 @@
+{
+  "scope": "Fresh, user-executed low-only evidence_support confirmation; six fixed contexts.",
+  "execution_id": "gemini-low-evidence-six-20261028-01",
+  "prepared_source_commit": "96626a7f3bd03cd08cc09c970511f94eb2138244",
+  "offline_check_source_commit": "ceeb7e479d84fef4230ca0d4a98a53342c3a3142",
+  "request_count": 6,
+  "accepted_by_validation": 3,
+  "unresolved": 3,
+  "saved_cache_hits": 0,
+  "saved_success_cache_rows": 3,
+  "max_application_attempts_per_request": 1,
+  "sdk_http_attempts_configured": 5,
+  "observed_sdk_http_attempts": null,
+  "run_completed_first_utc": "2026-10-27T14:09:48.273620+00:00",
+  "run_completed_last_utc": "2026-10-27T14:10:03.539127+00:00",
+  "run_completed_first_sydney": "2026-10-28T01:09:48.273620+11:00",
+  "run_completed_last_sydney": "2026-10-28T01:10:03.539127+11:00",
+  "generator_counts": {
+    "gpt-oss": 2,
+    "gemma": 3,
+    "llama": 1
+  },
+  "target_level_counts": {
+    "intermediate": 2,
+    "advanced": 2,
+    "beginner": 2
+  },
+  "condition_counts": {
+    "P1R1_combined": 3,
+    "P1R0_prompt_only": 2,
+    "P0R1_reranking_only": 1
+  },
+  "recorded_usage_from_successes_only": {
+    "input_tokens": 7241,
+    "output_tokens": 1851,
+    "thought_tokens": 285
+  },
+  "token_cost_lower_bound_usd": "0.00458675",
+  "full_six_request_cost_usd": null,
+  "pricing_basis": "Original trial list-price arithmetic: USD 0.25/M input, USD 1.50/M output including thinking. Not a provider invoice.",
+  "usage_limitation": "Unresolved envelopes omit provider usage metadata. Their zero token fields are missing measurements, not evidence of zero cost.",
+  "new_api_calls_during_packaging_and_revalidation": 0,
+  "original_outputs_overwritten": false,
+  "cases": [
+    {
+      "question_id": "sciq-train-01144",
+      "generator": "gpt-oss",
+      "target_level": "intermediate",
+      "condition": "P1R1_combined",
+      "request_id": "evidence_support-93e29cf8bf3e42121f4a",
+      "purpose": "previously_affected",
+      "topic": "current",
+      "status": "accepted_by_validation",
+      "saved_error": null,
+      "current_validator_errors": {},
+      "recorded_usage_complete": true,
+      "input_tokens": 1495,
+      "output_tokens_including_thinking": 510,
+      "thinking_tokens_subset": 94,
+      "completed_at_utc": "2026-10-27T14:09:48.273620+00:00",
+      "explanation": "Accepted by both validators; semantic correctness has not been independently audited."
+    },
+    {
+      "question_id": "sciq-train-06027",
+      "generator": "gpt-oss",
+      "target_level": "advanced",
+      "condition": "P1R0_prompt_only",
+      "request_id": "evidence_support-b82e1df4a1f1759921ce",
+      "purpose": "previously_affected",
+      "topic": "ultrasound",
+      "status": "unresolved",
+      "saved_error": "attempt 1: claim 1 requires one quote per supporting ID",
+      "current_validator_errors": {
+        "runtime": "claim 1 requires one quote per supporting ID",
+        "canonical": "claim 1 requires exactly one quote for every supporting ID"
+      },
+      "recorded_usage_complete": false,
+      "input_tokens": 0,
+      "output_tokens_including_thinking": 0,
+      "thinking_tokens_subset": 0,
+      "completed_at_utc": "2026-10-27T14:09:52.694248+00:00",
+      "explanation": "Claims list E1 and E2 as supporting IDs but provide quotations only for E1. E2 quotations are missing."
+    },
+    {
+      "question_id": "sciq-train-04946",
+      "generator": "gemma",
+      "target_level": "advanced",
+      "condition": "P1R1_combined",
+      "request_id": "evidence_support-6aa6f7519f035e70ded0",
+      "purpose": "previously_affected",
+      "topic": "manometer",
+      "status": "unresolved",
+      "saved_error": "attempt 1: claim c2 lacks support among the cited evidence",
+      "current_validator_errors": {
+        "runtime": "claim c2 lacks support among the cited evidence",
+        "canonical": "claim c2 has no supporting evidence among cited IDs"
+      },
+      "recorded_usage_complete": false,
+      "input_tokens": 0,
+      "output_tokens_including_thinking": 0,
+      "thinking_tokens_subset": 0,
+      "completed_at_utc": "2026-10-27T14:09:56.048208+00:00",
+      "explanation": "Claim c2 marks citation_support supported using E5, but the answer cites E1/E2. There is no declared supporting ID among the actual citation IDs."
+    },
+    {
+      "question_id": "sciq-train-05989",
+      "generator": "gemma",
+      "target_level": "beginner",
+      "condition": "P1R0_prompt_only",
+      "request_id": "evidence_support-01a0739547953c192876",
+      "purpose": "previously_affected",
+      "topic": "nuclei",
+      "status": "unresolved",
+      "saved_error": "attempt 1: claim c1 requires one quote per supporting ID",
+      "current_validator_errors": {
+        "runtime": "claim c1 requires one quote per supporting ID",
+        "canonical": "claim c1 requires exactly one quote for every supporting ID"
+      },
+      "recorded_usage_complete": false,
+      "input_tokens": 0,
+      "output_tokens_including_thinking": 0,
+      "thinking_tokens_subset": 0,
+      "completed_at_utc": "2026-10-27T14:09:58.552409+00:00",
+      "explanation": "Claims list E1 and E2 as supporting IDs but provide quotations only for E1. E2 quotations are missing."
+    },
+    {
+      "question_id": "sciq-train-06774",
+      "generator": "gemma",
+      "target_level": "beginner",
+      "condition": "P1R1_combined",
+      "request_id": "evidence_support-45de587e67f396f80527",
+      "purpose": "previously_affected",
+      "topic": "EMR",
+      "status": "accepted_by_validation",
+      "saved_error": null,
+      "current_validator_errors": {},
+      "recorded_usage_complete": true,
+      "input_tokens": 2958,
+      "output_tokens_including_thinking": 929,
+      "thinking_tokens_subset": 92,
+      "completed_at_utc": "2026-10-27T14:10:01.570429+00:00",
+      "explanation": "Accepted by both validators; semantic correctness has not been independently audited."
+    },
+    {
+      "question_id": "sciq-train-09248",
+      "generator": "llama",
+      "target_level": "intermediate",
+      "condition": "P0R1_reranking_only",
+      "request_id": "evidence_support-7d4fe3b5595cc378a864",
+      "purpose": "valid_control",
+      "topic": "cyclotron control",
+      "status": "accepted_by_validation",
+      "saved_error": null,
+      "current_validator_errors": {},
+      "recorded_usage_complete": true,
+      "input_tokens": 2788,
+      "output_tokens_including_thinking": 412,
+      "thinking_tokens_subset": 99,
+      "completed_at_utc": "2026-10-27T14:10:03.539127+00:00",
+      "explanation": "Previously valid control remains accepted; this is not a general judge-accuracy claim."
+    }
+  ]
+}

@@ -32,6 +32,7 @@ from cs30.evaluation.level_discrimination import (
     discrimination_summary,
     validate_discrimination_output,
 )
+from cs30.evaluation.level_profiles import profile_package_content_sha256
 from cs30.evaluation.v2_generation_models import (
     AdaptationJudgeOutput,
     ApprovalStatus,
@@ -456,7 +457,7 @@ def test_local_models_reject_omitted_online_required_fields(model, raw) -> None:
         model.model_validate(raw)
 
 
-def test_online_evidence_quote_rows_reject_duplicate_ids() -> None:
+def test_online_evidence_quote_rows_preserve_multiple_excerpts_per_id() -> None:
     raw = {
         "schema_version": "1.0",
         "request_id": "request-1",
@@ -475,8 +476,8 @@ def test_online_evidence_quote_rows_reject_duplicate_ids() -> None:
             }
         ],
     }
-    with pytest.raises(ValueError, match="repeat an evidence_id"):
-        EvidenceSupportJudgeOutput.model_validate(raw)
+    output = EvidenceSupportJudgeOutput.model_validate(raw)
+    assert output.claims[0].evidence_quotes == {"E1": "first\n[quote-row]\nsecond"}
 
 
 def test_adaptation_rejects_a_quote_for_not_applicable() -> None:
@@ -810,6 +811,9 @@ def test_assemble_judge_results_validates_and_reattaches_hidden_metadata() -> No
         profiles=profiles,
         checklists=checklists,
         package_sha256="d" * 64,
+    )
+    package = package.model_copy(
+        update={"package_sha256": profile_package_content_sha256(package.model_dump(mode="json"))}
     )
     adaptation_request = build_adaptation_request(item, profiles[0], checklists[0], configuration)
     discrimination_request = build_discrimination_request(item, profiles, configuration)
