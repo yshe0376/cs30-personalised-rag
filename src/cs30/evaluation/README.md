@@ -532,8 +532,12 @@ contains three global learner profiles, eleven checklist criteria and three shar
 non-Gold questions with answers at every level. Its draft deliberately has
 `frozen=false` and no physics reviewer IDs. Validate it using
 `python -m cs30.evaluation.profile_authoring`; export to the existing frozen-input
-contract only after hash-bound Leader and M3 review records are actually complete.
-This does not change the M8 loader or claim that judge calibration has passed.
+contract only after hash-bound Leader and M3 review records are actually complete,
+or after the Leader approves and records a waiver of the physics review. A waived
+package lists no physics reviewer and carries `physics_review_waiver` (who, when,
+why, decision record); judge outputs report `profile_physics_review_waived`. The
+2026-10-27 frozen `level-profile-v1` uses that waiver. Freezing the profiles does
+not claim that judge calibration has passed.
 
 The M8 V2 command keeps development proposals separate from team-frozen
 decisions. `adaptation_pass_threshold` and every field in `ValidityThresholds`

@@ -1,0 +1,42 @@
+{
+  "package_version": "level-profile-v1",
+  "draft_package_sha256": "2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e",
+  "frozen": true,
+  "reportable": false,
+  "non_gold_check": {
+    "anchor_count": 3,
+    "gold_sources": [
+      {
+        "path": "m3_gold/final_v0_1_1/gold_v0_1_3.jsonl",
+        "sha256": "7d69af416591b64198bf25806424347366eb2123fdcdcf36ad757d37c4f942b8",
+        "questions_checked": 341
+      }
+    ],
+    "exact_normalized_question_or_id_collisions": 0,
+    "semantic_independence_requires_review": true
+  },
+  "package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "review_record_sha256": "13a9eb26b52b7b3389a8090794abe52e04dd235799d88dd3337108196d9cb69b",
+  "review_record": {
+    "schema_version": "1.0",
+    "draft_package_sha256": "2c61590cf98989d652602750cc6519e05fcc25122ac82a7b579e78890ee0716e",
+    "reviews": [
+      {
+        "role": "leader",
+        "reviewer_id": "yshe0376",
+        "status": "approved",
+        "review_record_id": "leader-decision-2026-10-27-level-profile-v1",
+        "reviewed_at": "2026-10-27T15:11:17+11:00",
+        "notes": "Leader approves the level-profile-v1 draft 2c61590c as it stands, without content changes. Decided in the Leader's working session on 2026-10-27 and recorded in docs/构思与待定.md."
+      },
+      {
+        "role": "physics",
+        "reviewer_id": null,
+        "status": "waived",
+        "review_record_id": null,
+        "reviewed_at": null,
+        "notes": "Waived by the Leader on 2026-10-27: the draft is frozen without an independent M3 physics review. The three anchor answers were checked for physical correctness during the PR #197 code review, which is not a formal physics sign-off."
+      }
+    ]
+  }
+}

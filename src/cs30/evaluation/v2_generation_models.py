@@ -170,6 +170,22 @@ class LevelChecklist(ContractModel):
         return self
 
 
+class PhysicsReviewWaiver(ContractModel):
+    """Leader decision to freeze a package without an independent physics review."""
+
+    waived_by: Identifier
+    decided_at: datetime
+    reason: NonEmptyText
+    decision_record: NonEmptyText
+
+    @field_validator("decided_at")
+    @classmethod
+    def validate_timezone(cls, value: datetime) -> datetime:
+        if value.utcoffset() is None:
+            raise ValueError("waiver timestamps must include a timezone")
+        return value
+
+
 class ProfileChecklistPackage(ContractModel):
     """All three profiles and checklists frozen as one evaluation input."""
 
@@ -180,7 +196,8 @@ class ProfileChecklistPackage(ContractModel):
     generation_guidance_consistency: Literal["consistent", "mismatch_recorded"]
     generation_guidance_mismatch_notes: NonEmptyText | None = None
     author_ids: list[Identifier] = Field(min_length=1)
-    physics_reviewer_ids: list[Identifier] = Field(min_length=1)
+    physics_reviewer_ids: list[Identifier] = Field(default_factory=list)
+    physics_review_waiver: PhysicsReviewWaiver | None = None
     frozen: Literal[True] = True
     profiles: list[LevelProfile] = Field(min_length=3, max_length=3)
     checklists: list[LevelChecklist] = Field(min_length=3, max_length=3)
@@ -211,6 +228,12 @@ class ProfileChecklistPackage(ContractModel):
             and self.generation_guidance_mismatch_notes is not None
         ):
             raise ValueError("consistent guidance must not carry mismatch notes")
+        if self.frozen and bool(self.physics_reviewer_ids) == (
+            self.physics_review_waiver is not None
+        ):
+            raise ValueError(
+                "a frozen package requires physics reviewer IDs or a Leader waiver, not both"
+            )
         _validate_sha256(self.package_sha256, "package_sha256")
         return self
 

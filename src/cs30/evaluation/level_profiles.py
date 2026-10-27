@@ -45,6 +45,9 @@ def profile_package_content_sha256(payload: Mapping[str, Any]) -> str:
 
     content = dict(payload)
     content.pop("package_sha256", None)
+    # Packages without a waiver keep the digest they had before the field existed.
+    if content.get("physics_review_waiver") is None:
+        content.pop("physics_review_waiver", None)
     return canonical_json_sha256(content)
 
 
