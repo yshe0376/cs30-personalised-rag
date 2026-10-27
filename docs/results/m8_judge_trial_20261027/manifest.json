@@ -1,0 +1,560 @@
+{
+  "schema_version": "1.0",
+  "source_commit": "7068dae27e44c4ad316e4ce3bed7cb64dd2daf2a",
+  "merged_commit": "0bc96aa5e087b58f673719c8b7041f35a5ff96c0",
+  "trial_script_sha256": "7eab81e6ff2d2f7bfac97dae034613e0e060d4acc5a7471c069857ec6f07ecaf",
+  "files": {
+    "analysis.md": {
+      "sha256": "33762bd6f599e13aff68366cdd20d72c40702edf0cddeaf6f4fdfa28cdc6eeac",
+      "bytes": 6575
+    },
+    "calls.csv": {
+      "sha256": "76ff205c4a6f4294576ec2286b9c588ca736e5524edb420956946c41f7c2d4cc",
+      "bytes": 13423
+    },
+    "calls.jsonl": {
+      "sha256": "69ca8390f16dde85c7c1c338e91dcd225cc9bd5d75fdb706ea7460287c0ee89b",
+      "bytes": 46769
+    },
+    "README.md": {
+      "sha256": "69749810bcd643a915e3166f07038f7d216564f525b6194231158234134f3e8b",
+      "bytes": 5037
+    },
+    "report.md": {
+      "sha256": "600829f98aeb35a6073175232645d29e1b6940e073055ca65fcf6dd62f718919",
+      "bytes": 2726
+    },
+    "selection.json": {
+      "sha256": "7b340db5f37f7b5c5a63d39a45326b3bdd096f0c4bec7ff5f6e1b2882fa60052",
+      "bytes": 248254
+    },
+    "spotcheck.md": {
+      "sha256": "54ac92a65a774200d38477621a7998ddd2be24020c47411c0c2849f3d9442daf",
+      "bytes": 93260
+    },
+    "subset/gemma/expected_experiment.json": {
+      "sha256": "424265730853e28a987a15d8ca0676aaf2dd610696e91da428541a5db2f00d89",
+      "bytes": 1276
+    },
+    "subset/gemma/inputs.jsonl": {
+      "sha256": "446dfcab6c88e7a8a626d21a7b7a6a62b99528cb9742f174b286a69d03241413",
+      "bytes": 76492
+    },
+    "subset/gemma/saved_answers.jsonl": {
+      "sha256": "3b09f8ec8b84527dc70bc172211760243a6a20c22559b3e04fdd3ac2eb82d597",
+      "bytes": 4472
+    },
+    "subset/gpt-oss/expected_experiment.json": {
+      "sha256": "0ec18b464af674887beb358c567c72d0c3212d65e1c96a6a231279a4a46313ec",
+      "bytes": 1442
+    },
+    "subset/gpt-oss/inputs.jsonl": {
+      "sha256": "252a12eb3c5c48ee157ee67775969fad25713702b6e3caba994787e328783215",
+      "bytes": 77139
+    },
+    "subset/gpt-oss/saved_answers.jsonl": {
+      "sha256": "e79b28a1c2be55f655fae81d485e174afad1f09516dde86639d2db448bb06d0c",
+      "bytes": 4428
+    },
+    "subset/llama/expected_experiment.json": {
+      "sha256": "2aac47a34f56d00409b5089d4c405186152eb2af7af7a48bf8b6e5875768c923",
+      "bytes": 1634
+    },
+    "subset/llama/inputs.jsonl": {
+      "sha256": "de85d00e00009481ad22485b9b2398ff341182f133f339431c305b6294cd8168",
+      "bytes": 84700
+    },
+    "subset/llama/saved_answers.jsonl": {
+      "sha256": "31d72c6516c2a88440476821c93df34ffe9ecf3590d2eb15d154f87b0c4abfe2",
+      "bytes": 6532
+    },
+    "summary.json": {
+      "sha256": "abc166fb1a1028feecef4c84d93c6543ed06fec55acaf0306405509df64ea82c",
+      "bytes": 5085
+    },
+    "thinking-high/adaptation/cache.jsonl": {
+      "sha256": "299e24008a00c560cebb3e815f1d5dbf7cdb519ec08a9db2e67a5ce88befaee0",
+      "bytes": 46021
+    },
+    "thinking-high/adaptation/gemma-requests.jsonl": {
+      "sha256": "7b07f114865a3fe6350bd59653f0d4e5ab7b1cf7fa7683f45bcf4dd70bbffe6f",
+      "bytes": 97292
+    },
+    "thinking-high/adaptation/gemma-results.jsonl": {
+      "sha256": "433b45344bb23f66eafc3bda33cf43bee6f1ddda28f42617e96eb4301a772714",
+      "bytes": 15690
+    },
+    "thinking-high/adaptation/gpt-oss-requests.jsonl": {
+      "sha256": "76c482ff35d3b4c376dc01202604a5e5e3abbb8bfdc82021dc99723bb1124686",
+      "bytes": 104832
+    },
+    "thinking-high/adaptation/gpt-oss-results.jsonl": {
+      "sha256": "0bfcbe72a93c915ec752b78297dad534633eb9efafe16fd3291da9b14d7e4ee7",
+      "bytes": 16504
+    },
+    "thinking-high/adaptation/llama-requests.jsonl": {
+      "sha256": "1073f0159c1f6b34313c73ea13ddbd953ac8b4e798e00920ec5f2e54bb490090",
+      "bytes": 83778
+    },
+    "thinking-high/adaptation/llama-results.jsonl": {
+      "sha256": "7937ff6d8daf856cb5d660decf3d012f98ade493d3821b6a16ae0ba29cd808f3",
+      "bytes": 13857
+    },
+    "thinking-high/correctness/gemma/open_answer_report.md": {
+      "sha256": "ce262458dde761f30068e9de2069006f8e774b7f5770dc0b77a666095fe4da5e",
+      "bytes": 1275
+    },
+    "thinking-high/correctness/gemma/open_answer_review_queue.jsonl": {
+      "sha256": "4ffb738eafa9c9c9c72d2a5daa62824e625c732fb8b70156a04a29152535150e",
+      "bytes": 4040
+    },
+    "thinking-high/correctness/gemma/open_answer_scores.jsonl": {
+      "sha256": "5fa18ec9ef2284657551a70ac8f5993e5c620e9b8510071f02259ef00df2267c",
+      "bytes": 22116
+    },
+    "thinking-high/correctness/gemma/open_answer_summary.csv": {
+      "sha256": "cd2d1744b452ef6fcf611792071f71df5563cc52fce70ef12c88a21b8878b268",
+      "bytes": 549
+    },
+    "thinking-high/correctness/gemma/open_answer_summary.json": {
+      "sha256": "f9d1243ddd9a01c6179b863fbf3d8bbc31867b61821d003f7213abad6a720e49",
+      "bytes": 31577
+    },
+    "thinking-high/correctness/gemma/run_manifest.json": {
+      "sha256": "6a8a08d3f228e208f2fc127d378da8894e0f0fb8d6522184d5b3fe6ff2ad40d1",
+      "bytes": 16864
+    },
+    "thinking-high/correctness/gpt-oss/open_answer_report.md": {
+      "sha256": "fa656ff1afd5b975f025badb0b605a598b022f24ac7b21e38ba505c1d24fce4d",
+      "bytes": 1298
+    },
+    "thinking-high/correctness/gpt-oss/open_answer_review_queue.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "thinking-high/correctness/gpt-oss/open_answer_scores.jsonl": {
+      "sha256": "3b38a2a4e2bcd55a273123708e7bb77d59714ed5d5a55442084f86a5575cf03a",
+      "bytes": 20920
+    },
+    "thinking-high/correctness/gpt-oss/open_answer_summary.csv": {
+      "sha256": "4675d76273ea87f2a8f40115013b632c097ba43a2cac765d0eb587cde0d2cedb",
+      "bytes": 604
+    },
+    "thinking-high/correctness/gpt-oss/open_answer_summary.json": {
+      "sha256": "50bb058dcfbf479f7daad243249843b26cf2837eb0ca5e73a32e3a3002e3ddc5",
+      "bytes": 32854
+    },
+    "thinking-high/correctness/gpt-oss/run_manifest.json": {
+      "sha256": "49ddabca7fde3be501eb7980768ac3d9522936370e0298689764c15393ad1208",
+      "bytes": 16900
+    },
+    "thinking-high/correctness/llama/open_answer_report.md": {
+      "sha256": "ee01a32fc10f4b6773d4e3d2c97d6e0e4b384ce4392ba158dc35f39c2a300cc2",
+      "bytes": 1535
+    },
+    "thinking-high/correctness/llama/open_answer_review_queue.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "thinking-high/correctness/llama/open_answer_scores.jsonl": {
+      "sha256": "e1c2bb56db319888cd3dd1b85c6dc5abbeb0e1c600ad60e352f2907518f1bde8",
+      "bytes": 21122
+    },
+    "thinking-high/correctness/llama/open_answer_summary.csv": {
+      "sha256": "6179269ee09e3c583b0d3c77f620053b59f376d7d04fe8671ada2ef1dcd26942",
+      "bytes": 796
+    },
+    "thinking-high/correctness/llama/open_answer_summary.json": {
+      "sha256": "5c2a105dab3062be029ca9f1ed251c13d7f4c0a6e91e9c8546b7e79a6a96728b",
+      "bytes": 33316
+    },
+    "thinking-high/correctness/llama/run_manifest.json": {
+      "sha256": "b885ebe2c6eafcf12ae4fba5d5ff6ae728801c61905e7b044edc0fdfff021ef1",
+      "bytes": 16900
+    },
+    "thinking-high/correctness-cache/035751ef391d0190a441f69b0e9acd00eb08c055e64cd2b7e4fc08e0d2dc65f2.json": {
+      "sha256": "6fe7f4f88531c9d58ce16c4a08a4beecebfd94d9e78afc6a2959dab5fab30e68",
+      "bytes": 2397
+    },
+    "thinking-high/correctness-cache/0421bc07b6a81eaf355a9dbce876a04c0d4fa4523ea64d38884003b36c629326.json": {
+      "sha256": "f0e5f6312ebbb7d691abd0ed8d6d1534e426bc5505368988209556cbd65104fa",
+      "bytes": 2191
+    },
+    "thinking-high/correctness-cache/0ce84ac208c46fc1fc223150631be9ec4439470ef209b603011c4ed9de01283b.json": {
+      "sha256": "e06ca7a4873a5634d9d18754b1e53d494647fba6ec9070737f6f02f8fca78c86",
+      "bytes": 2287
+    },
+    "thinking-high/correctness-cache/28b5821bdd038d38b4448aec14342c0ae9670cc556c18137db2bf421b74c8033.json": {
+      "sha256": "987e59c229fe5f5715822ad148a824063fdc2aea9c73b6933739c39ed7481f70",
+      "bytes": 2365
+    },
+    "thinking-high/correctness-cache/2f1d613601626c7b8ea22d1dab8dd0b89795e7b422749d07ee484b52ef798bc2.json": {
+      "sha256": "e623b82f2e7745ad076bf38870f21a8fb5ae24abbc51f33fb27c5d56b3f49f06",
+      "bytes": 2409
+    },
+    "thinking-high/correctness-cache/479db650c6433b2b8546397a963ddf4c1891a3da329eaacbc718052dfa905397.json": {
+      "sha256": "21f73b25598f312ec1934fccf0b88181283f9c51e78f7403a19af69fae7ad764",
+      "bytes": 2317
+    },
+    "thinking-high/correctness-cache/4c5a8781030dd99ebd6a90577392f22264148f2ab48349220ee755fa2de69ad6.json": {
+      "sha256": "8db99a2a92e507b255a2a59a2b03437bf37a18c4a30ba8ec1d5596726beff751",
+      "bytes": 2933
+    },
+    "thinking-high/correctness-cache/5a75b798f1ebc33ba67c71388fcc3550d35ecb865080481718a07a0e1a8da216.json": {
+      "sha256": "16505a0d6d9f14a15864f3121ad282bec4328498cf54c9d538791dc3018314c4",
+      "bytes": 2511
+    },
+    "thinking-high/correctness-cache/60370db1131bcbba18bd2e12d32966c0ad15526d46f0b67586e3c56b202b1d04.json": {
+      "sha256": "bebc73520b7c5748a2a62b93baf6470219b62a8f8cac3f756162d9afeca2ab1e",
+      "bytes": 2162
+    },
+    "thinking-high/correctness-cache/6a9e048c9d2e70617da12daa5288db73cfd7e631030a7cb445df66130c6db0f7.json": {
+      "sha256": "afcb90117475f17da76d8c6bf99c513b9320ddf7a5b64dfe72e6492d90fdd210",
+      "bytes": 2197
+    },
+    "thinking-high/correctness-cache/709267c1dff7330ef3fc6ac6c6d292b78f9f16c291badaaa9daa48bae071b77f.json": {
+      "sha256": "660cc71d88bcf9cdc40a1d08d36945c0ac2b9b8da248b776b6f915c14ffe61b4",
+      "bytes": 2219
+    },
+    "thinking-high/correctness-cache/951cab97f20566fb036f8e914fdfe24e0df499dbc6731df0b33f99cbc2f40a40.json": {
+      "sha256": "a6f46fddbad6611253bb3762848c0621e348a69cb6d47944dbba150b035eb154",
+      "bytes": 2475
+    },
+    "thinking-high/correctness-cache/96d0ba32a42261cfa8a45e223e89d5940f71244d2ca0c2f55131d607672f4110.json": {
+      "sha256": "558daa35b06e48573062aaa1df09273ab61d53b2223031498422fd7936abb9c3",
+      "bytes": 2383
+    },
+    "thinking-high/correctness-cache/a9bd2d98e9aa0fe2afa7117f8cfc20b5c6f5f230d183fd410bf8e0d8c5d22102.json": {
+      "sha256": "daa778dd6e4d4381b09521b35a6840aa3bc9b998be59a7d5d7b106cb8a185b40",
+      "bytes": 2432
+    },
+    "thinking-high/correctness-cache/caeb9aa143eff2b4379985cd9c3c89a99664930a99f8ab0f027d14efefb36477.json": {
+      "sha256": "52e389f15fbd93ffb5fe95bb13cd052ac8295ff2792757e5dd44bc8be6f06717",
+      "bytes": 4362
+    },
+    "thinking-high/correctness-cache/db29690554d83b17c9933aed3f5887d75ff6153ac8d49ae84f91b50ab0cefe3e.json": {
+      "sha256": "f4e93998bade52ea0d5cc6f3837200af56993f3637097cdc549094e5b8683666",
+      "bytes": 3177
+    },
+    "thinking-high/correctness-cache/df3f3d31aa9e0bcd9ffd0f95c1b6782d339a8ab36a8372f945cc5c9334df6035.json": {
+      "sha256": "942152aafd0175d3323463a502c2ae2a2a94eb296e10c34d3cf54eb4bba8b920",
+      "bytes": 2405
+    },
+    "thinking-high/correctness-cache/e4e53592ca418b340e907c5f4d0c7fcd5b9f533bdd1510c08eb8f7410b4a19ab.json": {
+      "sha256": "a3aea58bd535f73741c534d7c32a0290e0af0d04661c36a3e6cf7f9c8814272e",
+      "bytes": 2363
+    },
+    "thinking-high/correctness-cache/ea294de1d6a5cae843bd26a326829eb34b9f6d36b329aba5cecfa582129e5fab.json": {
+      "sha256": "41ef66b153b5d3b89f04f025774807508fed34af806fdb75e00ece39bb5ddd21",
+      "bytes": 2287
+    },
+    "thinking-high/correctness-cache/f1857a2f9fcf776a75384ee9d5a12ca1923c615336a790def847c1ae70d34e45.json": {
+      "sha256": "9eb0fcf4bf144b62339c2861d436113dd98a7d3d99fc5f85aeea416a948d5d9d",
+      "bytes": 2059
+    },
+    "thinking-high/discrimination/cache.jsonl": {
+      "sha256": "9abfc682905994948d2289be0453c2f280365d004ae351a17cfbfd5d1049697d",
+      "bytes": 20877
+    },
+    "thinking-high/discrimination/gemma-requests.jsonl": {
+      "sha256": "c18d98474811ee970ad51fba3fbdca8a4fc240f05c6ac5df6e96894f507882df",
+      "bytes": 103118
+    },
+    "thinking-high/discrimination/gemma-results.jsonl": {
+      "sha256": "1ee90fc69c44659b3059e8c02720e9619054c985802dd9b18e95ddd342472e1c",
+      "bytes": 6333
+    },
+    "thinking-high/discrimination/gpt-oss-requests.jsonl": {
+      "sha256": "bd22405a25e21c394f1efe49073193da3a1673c83af08bfcfed8f77263972275",
+      "bytes": 119951
+    },
+    "thinking-high/discrimination/gpt-oss-results.jsonl": {
+      "sha256": "6b22313ee4ceef55c233577434d11f7429348fe18eae3d46682cd96b8051cdf2",
+      "bytes": 7243
+    },
+    "thinking-high/discrimination/llama-requests.jsonl": {
+      "sha256": "c5c36d877de07aace7a1399705abb82a954c435b84832238c9b9aa1a4f98531b",
+      "bytes": 120069
+    },
+    "thinking-high/discrimination/llama-results.jsonl": {
+      "sha256": "bf1f1a4e03aa14c859f3e45aadcf7020c752f933cf83d2d1952cbd4314e61825",
+      "bytes": 7321
+    },
+    "thinking-high/evidence_support/cache.jsonl": {
+      "sha256": "d655dc02f95c36cc27dc88c45e8b6ef91e9538a72ee09a1862e5623ed8d90ecc",
+      "bytes": 34113
+    },
+    "thinking-high/evidence_support/gemma-requests.jsonl": {
+      "sha256": "5f9b5779f2117728732f3d5070ddd53815aee698705edc6e11e19e033bdfb5a7",
+      "bytes": 76480
+    },
+    "thinking-high/evidence_support/gemma-results.jsonl": {
+      "sha256": "037fb2d5ec42b2be6395f852df34e475a24cb6487ae522928be7c4f2158fad5f",
+      "bytes": 13729
+    },
+    "thinking-high/evidence_support/gpt-oss-requests.jsonl": {
+      "sha256": "9a82dae43e41348d34094422db5e6a1907c67c5bcceeab6cd9efe87da92c523e",
+      "bytes": 77193
+    },
+    "thinking-high/evidence_support/gpt-oss-results.jsonl": {
+      "sha256": "b6e3d479eddb461a6bedb6c0dd6a56e42a50e228b3b2c88787a19ec948f84b15",
+      "bytes": 12871
+    },
+    "thinking-high/evidence_support/llama-requests.jsonl": {
+      "sha256": "b81990250cade1682cc16976004e2fd81ea83cd0d7f77b3a20a92f90c5e9a59d",
+      "bytes": 83069
+    },
+    "thinking-high/evidence_support/llama-results.jsonl": {
+      "sha256": "404201b4b3e0d937b4aefbdcf54c9bf8704fabe9b8e2bb3c7155bbc69110cd0f",
+      "bytes": 14819
+    },
+    "thinking-high/judge-config.json": {
+      "sha256": "4ef4c3a94d01197c86944837f02cfb47023fb92b330d81efe6100c7eae21064b",
+      "bytes": 335
+    },
+    "thinking-low/adaptation/cache.jsonl": {
+      "sha256": "b75a64e1a54c45f5330eae7092d3a5c13f21b042ebd0b23077e45e3ba0737836",
+      "bytes": 48819
+    },
+    "thinking-low/adaptation/gemma-requests.jsonl": {
+      "sha256": "ac33aaaeeedad2d9a05a45eb9164768ade4db95c674dbd9aeba64d3e9ef60674",
+      "bytes": 97292
+    },
+    "thinking-low/adaptation/gemma-results.jsonl": {
+      "sha256": "67f9c5c4bf1ba56de059a3b94badd7598fa29d5e41a8aa2791a2a5df6f5f8d0b",
+      "bytes": 16806
+    },
+    "thinking-low/adaptation/gpt-oss-requests.jsonl": {
+      "sha256": "f40315c81a818df5b0875fb0dd7bc3da04272153ebd2374efbbd85342b218305",
+      "bytes": 104832
+    },
+    "thinking-low/adaptation/gpt-oss-results.jsonl": {
+      "sha256": "d91f5571f33622ca10e0d7605cd69218040a12e1aeaf3eb2372c1b943a6fb4d3",
+      "bytes": 17543
+    },
+    "thinking-low/adaptation/llama-requests.jsonl": {
+      "sha256": "25d7e0ee4ad14957dabc3916a205095f16857e3aa5f2bbef988237038d5225a5",
+      "bytes": 83778
+    },
+    "thinking-low/adaptation/llama-results.jsonl": {
+      "sha256": "d2b80392ba2bee65fcf5b330e9ca06e5a367f53501dbb6c8a772a3c99bd5be87",
+      "bytes": 14500
+    },
+    "thinking-low/correctness/gemma/open_answer_report.md": {
+      "sha256": "4673286e199d82db8dd349fb6ae4d5e5f0031036106864d72736641c144a0b55",
+      "bytes": 1289
+    },
+    "thinking-low/correctness/gemma/open_answer_review_queue.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "thinking-low/correctness/gemma/open_answer_scores.jsonl": {
+      "sha256": "da2e1075863d99a9666952fd7420f04a8aa8109a66f9ea48f4237e360e312789",
+      "bytes": 20194
+    },
+    "thinking-low/correctness/gemma/open_answer_summary.csv": {
+      "sha256": "77b3d721054ce120f3bb4926837ac976586fa65a43f618741b4bdefed026a0d1",
+      "bytes": 552
+    },
+    "thinking-low/correctness/gemma/open_answer_summary.json": {
+      "sha256": "a710317c74c2fc1f72759baccf04f9cfc08c35535b4b01a56d9badf02fb5a2d7",
+      "bytes": 31509
+    },
+    "thinking-low/correctness/gemma/run_manifest.json": {
+      "sha256": "a1740e9fb0a6170dad532287deaac4c75864d8c7ff78f0adf6f0bc1a1a3a5ea1",
+      "bytes": 16863
+    },
+    "thinking-low/correctness/gpt-oss/open_answer_report.md": {
+      "sha256": "fa656ff1afd5b975f025badb0b605a598b022f24ac7b21e38ba505c1d24fce4d",
+      "bytes": 1298
+    },
+    "thinking-low/correctness/gpt-oss/open_answer_review_queue.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "thinking-low/correctness/gpt-oss/open_answer_scores.jsonl": {
+      "sha256": "1ffaec2de4cd3f137521aa908a1662c534a566e015249dea12826cdc53598506",
+      "bytes": 22395
+    },
+    "thinking-low/correctness/gpt-oss/open_answer_summary.csv": {
+      "sha256": "4675d76273ea87f2a8f40115013b632c097ba43a2cac765d0eb587cde0d2cedb",
+      "bytes": 604
+    },
+    "thinking-low/correctness/gpt-oss/open_answer_summary.json": {
+      "sha256": "bfebb6c2311dfdeae7a934b299f3630eed3938304304b08e97d0ee89fe41807c",
+      "bytes": 32853
+    },
+    "thinking-low/correctness/gpt-oss/run_manifest.json": {
+      "sha256": "b11fc06d7a08e110e5905014f76b788de0dc3b8c27dcd6f424459e55057bd5fa",
+      "bytes": 16899
+    },
+    "thinking-low/correctness/llama/open_answer_report.md": {
+      "sha256": "ee01a32fc10f4b6773d4e3d2c97d6e0e4b384ce4392ba158dc35f39c2a300cc2",
+      "bytes": 1535
+    },
+    "thinking-low/correctness/llama/open_answer_review_queue.jsonl": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "thinking-low/correctness/llama/open_answer_scores.jsonl": {
+      "sha256": "a742ba685c4d253eca64950ec41b224668f277c5b4ce7375b2e175856e1d8234",
+      "bytes": 22619
+    },
+    "thinking-low/correctness/llama/open_answer_summary.csv": {
+      "sha256": "6179269ee09e3c583b0d3c77f620053b59f376d7d04fe8671ada2ef1dcd26942",
+      "bytes": 796
+    },
+    "thinking-low/correctness/llama/open_answer_summary.json": {
+      "sha256": "026a515c4e175153632b3c5edc0d4d5b4513a9656e4bfd84d4b3f763ae29d5a2",
+      "bytes": 33315
+    },
+    "thinking-low/correctness/llama/run_manifest.json": {
+      "sha256": "34b92cd775d41c2d5cb9606d26b64880927b7eab10bb415c06278147014bf81a",
+      "bytes": 16899
+    },
+    "thinking-low/correctness-cache/0595c806a30b535e78d7390f950b1948d47800e92d33ef174c4e6a9452b0fc59.json": {
+      "sha256": "db7e6e8872bab68e134b6412424f404c8c4f3c49d55cb6e2e3441a42d001776c",
+      "bytes": 2815
+    },
+    "thinking-low/correctness-cache/12ada75ab2183f4e06dcd65c73b1fdaba79ba8e15f31a7cf0cc148addef15b12.json": {
+      "sha256": "56ed2037ab083e7ca0edebbaa5d2b137d91660762b1e0fd8204ed25fe0d67597",
+      "bytes": 2507
+    },
+    "thinking-low/correctness-cache/293218a184404023e249e099c9cc3f39de1d748168a418b99079e51537da316b.json": {
+      "sha256": "ee13038eaacb18e79afbd2a87387f01eb89686d7eea0cfbd633827b8969bc01a",
+      "bytes": 2217
+    },
+    "thinking-low/correctness-cache/2ab4f4200f175578246dd7f6e9e29481d101d430ff0b4e20faf743b3e134e46b.json": {
+      "sha256": "c6272327aa0e4eaa4ad442b698ec271bcdd7e622f0228b775af7cba55f1c7cb3",
+      "bytes": 2317
+    },
+    "thinking-low/correctness-cache/4111bae51b170a5031e50b914bfc9eb21258d4a78b420ebaa62eba399a98f534.json": {
+      "sha256": "362f9e03f2ac720a68bf8a707981d93385928e699e4cccf4e65f8ccb68c05ba1",
+      "bytes": 2450
+    },
+    "thinking-low/correctness-cache/448b7f769909242acaa5d17e4e1e0c90ed6800b16d08dcb211a39486bc489f84.json": {
+      "sha256": "6dd49183be65efe69a8cd9685f6eb4b9d2da0d9ce3f8ea92dc5316404cc9465f",
+      "bytes": 2272
+    },
+    "thinking-low/correctness-cache/560e58b7dea29a2666baefa334b87096d82789de062d6231bfcb11cbd0e471f3.json": {
+      "sha256": "71f4beec2621b3500399595b6c81dddde7fca6c4a33490b73ea42806ea75e29c",
+      "bytes": 2437
+    },
+    "thinking-low/correctness-cache/56124ef242bf8ce32770f291df74398d739e54234ffe6231836430acad27cb1a.json": {
+      "sha256": "ec2a0bfa5818b23b85555b819d6949c5a00961e1d984dfcb0ace5a98b089ea1b",
+      "bytes": 2587
+    },
+    "thinking-low/correctness-cache/6ccbfd6427a7bf1c643e867807de6d7fe52b9082d1470cc2a34e49934b9ebfa2.json": {
+      "sha256": "f0231bf21e1c025de426450c848f0635c8436b2a85e04f78dc741320c6b1669d",
+      "bytes": 2421
+    },
+    "thinking-low/correctness-cache/7216e942b669c583900854a8e50213f06f09b22cb9bc6338194bfbd4da781207.json": {
+      "sha256": "5114e09bcdf406f70a8915b1e30f9e3b4975692124f78968343fea1a6040b3c0",
+      "bytes": 2467
+    },
+    "thinking-low/correctness-cache/7ae876e4d7334b5fa273430067032b50ec374467bb7f03a72d97715c71f4e199.json": {
+      "sha256": "a14687212874b53ce482ae404373dbee4e7053ccebd9f445f5df9733a028b4de",
+      "bytes": 2598
+    },
+    "thinking-low/correctness-cache/a79dfc59720869fce6e11ba359d847b0f6c1a7e7b402690c12a23bce8c35cc96.json": {
+      "sha256": "9e5c446a884287568fef6aeb5ecb3a3031dfce0b9627aaeeeeb8f36abeca3723",
+      "bytes": 2415
+    },
+    "thinking-low/correctness-cache/a9a98763750e1581407650c31d19f21c632f349f99d5325f155de261d852dbac.json": {
+      "sha256": "6e6b584b0efeedc92a413f3071b21afbbbea3b13e2035a75124f66d857ffd6b7",
+      "bytes": 2459
+    },
+    "thinking-low/correctness-cache/afbd4bc5d2f77578f6c4926acad9cd2cc9c29cc364adc10e25a2edaf16c27212.json": {
+      "sha256": "b4b67f8c1f2943f372098c948df178bdbbd1d61f8aadedc534bffad08f567777",
+      "bytes": 2371
+    },
+    "thinking-low/correctness-cache/ce9a54dac5f2aa9072201012c9e4945c92c3649a1784785c97ebbf8ab7fc3bf8.json": {
+      "sha256": "b52aab241ecd8937d4a9c969b6ded3cbf15f230db079e83b0e6a0a81ea513374",
+      "bytes": 2594
+    },
+    "thinking-low/correctness-cache/d7acc99006192aecccfe6b0a8e7e1cda50d08c2bc0fb6fe056a43f345b315704.json": {
+      "sha256": "4ea09f76bbb53906ce6043e200a7552a65e6b1c1a21f960968602032a59cd1c0",
+      "bytes": 2741
+    },
+    "thinking-low/correctness-cache/d990dab78ac9833f0aebc3a607ebfa8cccb3e884307a04b94b75b491fba9ee80.json": {
+      "sha256": "14f931bb9a96707e4134b8130da4d1e04679d2eb213afb6aa229ea0eca57ebc4",
+      "bytes": 2719
+    },
+    "thinking-low/correctness-cache/e1068666f0d2b874f8a428b705e8ab04de83e18aefc7df3cc1a2abc8bd36f9cf.json": {
+      "sha256": "5a5ee738b48bacc5ca3a6e0995d60f9a10179646f58e53d6cb9a45821ca2abf4",
+      "bytes": 2707
+    },
+    "thinking-low/correctness-cache/e5b3e3727fa184762c69bdc1c2d2a73deb323aeca9a362df8bfe713139bc307e.json": {
+      "sha256": "2319ca14e7e4ebca9a3370262f8698a25082a8ef0e36a7d501a037d012ba0649",
+      "bytes": 2387
+    },
+    "thinking-low/correctness-cache/ff18e0e6483236a03f27e2f3df200bda07ac2106b0c705a6ff27ed0a87f3a82f.json": {
+      "sha256": "cdba71ad419a1832bc7a76eff80430af591047ee363e92fd0ef75f3dee853920",
+      "bytes": 3161
+    },
+    "thinking-low/discrimination/cache.jsonl": {
+      "sha256": "d94ef57ce35a78331c02cb107ddc79288a625278f9e9dd0c6e7bcb7897a40838",
+      "bytes": 20732
+    },
+    "thinking-low/discrimination/gemma-requests.jsonl": {
+      "sha256": "d0460cb0486be9295f6abba8663f160b8289ab5aba5980273c2c9e1e9258186d",
+      "bytes": 103118
+    },
+    "thinking-low/discrimination/gemma-results.jsonl": {
+      "sha256": "45900cab174f1bdf0ed586bf43df96c1426c930a65fb25160fccc90b3ba6aa72",
+      "bytes": 6327
+    },
+    "thinking-low/discrimination/gpt-oss-requests.jsonl": {
+      "sha256": "05ae844b014cbddeae5b07c037fb91fb82f089c4faa9a18360067ff810dd61d3",
+      "bytes": 119951
+    },
+    "thinking-low/discrimination/gpt-oss-results.jsonl": {
+      "sha256": "9d4fd9e688a467c800bf8b8ca246f15727fcbfb723ef598af57d903c1a73e8e7",
+      "bytes": 7119
+    },
+    "thinking-low/discrimination/llama-requests.jsonl": {
+      "sha256": "8965e63b7c5f44fd7eff7a5facf503423dab02c87dfb51a26214734a5503a425",
+      "bytes": 120069
+    },
+    "thinking-low/discrimination/llama-results.jsonl": {
+      "sha256": "d6537ad4b4e40b633927597f66db173b642d184e91ab533b3dca183bb20eb42e",
+      "bytes": 7306
+    },
+    "thinking-low/evidence_support/cache.jsonl": {
+      "sha256": "c149ed37ff12ede23fff0c65451909d2f6850bba3151aa24f231472ca21fbc1c",
+      "bytes": 27869
+    },
+    "thinking-low/evidence_support/gemma-requests.jsonl": {
+      "sha256": "63ee3c8fdd4518943fc8213bcf0d80fd29c876824f19661f6b1b1efdc9eb5d96",
+      "bytes": 76480
+    },
+    "thinking-low/evidence_support/gemma-results.jsonl": {
+      "sha256": "b834709a9a4a8ec8879c7e20f2a208a51e7c56c85e66915744395bc70b10026a",
+      "bytes": 13555
+    },
+    "thinking-low/evidence_support/gpt-oss-requests.jsonl": {
+      "sha256": "2a9dff19f9a54239b9dfd18a45f99d0ef5cbae21ef1a70d016e1f65596085ebf",
+      "bytes": 77193
+    },
+    "thinking-low/evidence_support/gpt-oss-results.jsonl": {
+      "sha256": "d74e8ed49a169198c8d0ba987d97baebe4646cf4e17616a078180c23694baa31",
+      "bytes": 12509
+    },
+    "thinking-low/evidence_support/llama-requests.jsonl": {
+      "sha256": "43e37f28223c1b336aa7e83845facd9f515912bf34cba5830160e426da50b566",
+      "bytes": 83069
+    },
+    "thinking-low/evidence_support/llama-results.jsonl": {
+      "sha256": "e85a12c386120f3ddf5d131e769fc1465b57e7ab533840f5d12007a65b35122a",
+      "bytes": 14425
+    },
+    "thinking-low/judge-config.json": {
+      "sha256": "60c24a6b6999d7909d3b6895b398261fbcf1c4c7850e667fff5bfea511243048",
+      "bytes": 333
+    },
+    ".gitattributes": {
+      "sha256": "730a35ae3d558080083c3103d9ac8100c3f6561678092abe341701dfa331eb1d",
+      "bytes": 29
+    }
+  }
+}

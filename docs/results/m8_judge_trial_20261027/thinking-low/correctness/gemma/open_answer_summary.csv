@@ -1,0 +1,7 @@
+split,student_level,condition_id,generator_model,eligible,full_correct,denominator,unresolved,value,lower_bound,upper_bound
+dev,advanced,P0R0_plain,google/gemma-3-12b-it,1,1,1,0,1.0,1.0,1.0
+dev,advanced,P0R1_reranking_only,google/gemma-3-12b-it,1,1,1,0,1.0,1.0,1.0
+dev,advanced,P1R1_combined,google/gemma-3-12b-it,1,1,1,0,1.0,1.0,1.0
+dev,beginner,P1R0_prompt_only,google/gemma-3-12b-it,1,1,1,0,1.0,1.0,1.0
+dev,beginner,P1R1_combined,google/gemma-3-12b-it,1,1,1,0,1.0,1.0,1.0
+dev,intermediate,P0R0_plain,google/gemma-3-12b-it,1,0,1,0,0.0,0.0,0.0
