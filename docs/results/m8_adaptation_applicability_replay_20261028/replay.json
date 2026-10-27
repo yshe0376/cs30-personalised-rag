@@ -1,0 +1,789 @@
+{
+  "profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "api_calls": 0,
+  "new_cost_usd": 0,
+  "retry_calls": 0,
+  "summary": {
+    "high": {
+      "requests": 30,
+      "would_be_rejected": 6,
+      "always_assessed_verdicts": 80,
+      "invalid_verdicts": {
+        "B4": 6
+      }
+    },
+    "low": {
+      "requests": 30,
+      "would_be_rejected": 5,
+      "always_assessed_verdicts": 80,
+      "invalid_verdicts": {
+        "B4": 5
+      }
+    }
+  },
+  "source_hashes": {
+    "profile_package": "50bb9a61414268cb343b79c096bec3c380310c041eeb69deefbf51fc0ebd1b38",
+    "thinking-high/judge-config.json": "4ef4c3a94d01197c86944837f02cfb47023fb92b330d81efe6100c7eae21064b",
+    "thinking-high/adaptation/gemma-results.jsonl": "433b45344bb23f66eafc3bda33cf43bee6f1ddda28f42617e96eb4301a772714",
+    "thinking-high/adaptation/gemma-requests.jsonl": "7b07f114865a3fe6350bd59653f0d4e5ab7b1cf7fa7683f45bcf4dd70bbffe6f",
+    "subset/gemma/inputs.jsonl": "446dfcab6c88e7a8a626d21a7b7a6a62b99528cb9742f174b286a69d03241413",
+    "thinking-high/adaptation/gpt-oss-results.jsonl": "0bfcbe72a93c915ec752b78297dad534633eb9efafe16fd3291da9b14d7e4ee7",
+    "thinking-high/adaptation/gpt-oss-requests.jsonl": "76c482ff35d3b4c376dc01202604a5e5e3abbb8bfdc82021dc99723bb1124686",
+    "subset/gpt-oss/inputs.jsonl": "252a12eb3c5c48ee157ee67775969fad25713702b6e3caba994787e328783215",
+    "thinking-high/adaptation/llama-results.jsonl": "7937ff6d8daf856cb5d660decf3d012f98ade493d3821b6a16ae0ba29cd808f3",
+    "thinking-high/adaptation/llama-requests.jsonl": "1073f0159c1f6b34313c73ea13ddbd953ac8b4e798e00920ec5f2e54bb490090",
+    "subset/llama/inputs.jsonl": "de85d00e00009481ad22485b9b2398ff341182f133f339431c305b6294cd8168",
+    "thinking-low/judge-config.json": "60c24a6b6999d7909d3b6895b398261fbcf1c4c7850e667fff5bfea511243048",
+    "thinking-low/adaptation/gemma-results.jsonl": "67f9c5c4bf1ba56de059a3b94badd7598fa29d5e41a8aa2791a2a5df6f5f8d0b",
+    "thinking-low/adaptation/gemma-requests.jsonl": "ac33aaaeeedad2d9a05a45eb9164768ade4db95c674dbd9aeba64d3e9ef60674",
+    "thinking-low/adaptation/gpt-oss-results.jsonl": "d91f5571f33622ca10e0d7605cd69218040a12e1aeaf3eb2372c1b943a6fb4d3",
+    "thinking-low/adaptation/gpt-oss-requests.jsonl": "f40315c81a818df5b0875fb0dd7bc3da04272153ebd2374efbbd85342b218305",
+    "thinking-low/adaptation/llama-results.jsonl": "d2b80392ba2bee65fcf5b330e9ca06e5a367f53501dbb6c8a772a3c99bd5be87",
+    "thinking-low/adaptation/llama-requests.jsonl": "25d7e0ee4ad14957dabc3916a205095f16857e3aa5f2bbef988237038d5225a5"
+  },
+  "results": [
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-3e898dabee7c0cfc6d46",
+      "validation_request_id": "adaptation-d1db3104b0f96a8b9bf7",
+      "question_id": "sciq-train-04946",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-b204abc160f8946f10ac",
+      "validation_request_id": "adaptation-545172276bdaede8afa5",
+      "question_id": "sciq-train-04113",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-cc5fdbe1fbc5186b4943",
+      "validation_request_id": "adaptation-bf46bf860fb91ff3ef00",
+      "question_id": "sciq-train-04113",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-a6f8d2d86b3c2a11e603",
+      "validation_request_id": "adaptation-6f941d8e372dd632acf9",
+      "question_id": "sciq-train-04113",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-19b42ade994b179ba079",
+      "validation_request_id": "adaptation-f220ad7053f1a5344549",
+      "question_id": "sciq-train-05989",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-520e5acc9d62684cbee3",
+      "validation_request_id": "adaptation-0af475039d01881dc07a",
+      "question_id": "sciq-train-00056",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-6934b554ce5159d797c5",
+      "validation_request_id": "adaptation-577a1607eb229c3b1df2",
+      "question_id": "sciq-train-00056",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-787761ec1f3540cb2846",
+      "validation_request_id": "adaptation-517fa4b5d79c80aa9eeb",
+      "question_id": "sciq-train-00056",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-81abcdbd27b56b1113d6",
+      "validation_request_id": "adaptation-1ddaea7b19e51d0a584a",
+      "question_id": "sciq-train-06774",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gemma",
+      "source_request_id": "adaptation-060dd2e5f97853da13aa",
+      "validation_request_id": "adaptation-909a5025e23921aef939",
+      "question_id": "sciq-train-07765",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-727b00da3582c63b74bc",
+      "validation_request_id": "adaptation-92546492d479ba100909",
+      "question_id": "sciq-train-01983",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-590c2bb3b1a82d89b223",
+      "validation_request_id": "adaptation-21b74a102a4976f601be",
+      "question_id": "sciq-train-09640",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-bd8e70d19b3660a546ff",
+      "validation_request_id": "adaptation-9b002919aaf871c9bc31",
+      "question_id": "sciq-train-01144",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-8ff42a1699ae0f208a2c",
+      "validation_request_id": "adaptation-20b1e070bbdcf2991cc2",
+      "question_id": "sciq-train-01435",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-d067ade10e6d060d62aa",
+      "validation_request_id": "adaptation-95a435846301c1b2bb93",
+      "question_id": "sciq-train-10243",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-8b127d8bb90e0690c4fd",
+      "validation_request_id": "adaptation-6fc93d818f6d72262fb0",
+      "question_id": "sciq-train-10243",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-2fa418a5928a322a0d74",
+      "validation_request_id": "adaptation-edf954be54945bfd5086",
+      "question_id": "sciq-train-10243",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-87edb0405e75fa704503",
+      "validation_request_id": "adaptation-fdf415c11bb1416c160c",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-0bf911f47ce9127efaea",
+      "validation_request_id": "adaptation-249c2654948ecd9a1040",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-cb026500d8f093056d40",
+      "validation_request_id": "adaptation-3611fced758b588202eb",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-fc56f01a06b0dd45840e",
+      "validation_request_id": "adaptation-e7f949c598e7a7bf12ed",
+      "question_id": "sciq-train-06027",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-d78bbb9b395b6bcb8d31",
+      "validation_request_id": "adaptation-4cadb12ab7590175f718",
+      "question_id": "sciq-train-00797",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-d9aba666a3f847c49036",
+      "validation_request_id": "adaptation-29517c5e6a6ed1ad8ca6",
+      "question_id": "sciq-train-09086",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-3c854dab40552c63f18f",
+      "validation_request_id": "adaptation-b4ebf16ae2f4c354f240",
+      "question_id": "sciq-train-09248",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-9ac1884f150ad5b554ad",
+      "validation_request_id": "adaptation-08d99cd4399ea1834962",
+      "question_id": "sciq-train-01931",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-f4822db193640693f489",
+      "validation_request_id": "adaptation-9ab50c0e3134a4035575",
+      "question_id": "sciq-train-01931",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-aed1aeb74cc009e69163",
+      "validation_request_id": "adaptation-60a5ac6286bf9419fdb2",
+      "question_id": "sciq-train-01931",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-050037fee955bba1351c",
+      "validation_request_id": "adaptation-66929709d491e97d4bfa",
+      "question_id": "sciq-train-05409",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-dd8e9943659cccb82422",
+      "validation_request_id": "adaptation-7ae02eb74a5e5e2bca03",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "high",
+      "generator": "llama",
+      "source_request_id": "adaptation-be78a92f560b49f9921b",
+      "validation_request_id": "adaptation-752f3ad585313009a802",
+      "question_id": "sciq-train-09476",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-3e898dabee7c0cfc6d46",
+      "validation_request_id": "adaptation-d1db3104b0f96a8b9bf7",
+      "question_id": "sciq-train-04946",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-b204abc160f8946f10ac",
+      "validation_request_id": "adaptation-545172276bdaede8afa5",
+      "question_id": "sciq-train-04113",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-cc5fdbe1fbc5186b4943",
+      "validation_request_id": "adaptation-bf46bf860fb91ff3ef00",
+      "question_id": "sciq-train-04113",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-a6f8d2d86b3c2a11e603",
+      "validation_request_id": "adaptation-6f941d8e372dd632acf9",
+      "question_id": "sciq-train-04113",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-19b42ade994b179ba079",
+      "validation_request_id": "adaptation-f220ad7053f1a5344549",
+      "question_id": "sciq-train-05989",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-520e5acc9d62684cbee3",
+      "validation_request_id": "adaptation-0af475039d01881dc07a",
+      "question_id": "sciq-train-00056",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-6934b554ce5159d797c5",
+      "validation_request_id": "adaptation-577a1607eb229c3b1df2",
+      "question_id": "sciq-train-00056",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-787761ec1f3540cb2846",
+      "validation_request_id": "adaptation-517fa4b5d79c80aa9eeb",
+      "question_id": "sciq-train-00056",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-81abcdbd27b56b1113d6",
+      "validation_request_id": "adaptation-1ddaea7b19e51d0a584a",
+      "question_id": "sciq-train-06774",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gemma",
+      "source_request_id": "adaptation-060dd2e5f97853da13aa",
+      "validation_request_id": "adaptation-909a5025e23921aef939",
+      "question_id": "sciq-train-07765",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-727b00da3582c63b74bc",
+      "validation_request_id": "adaptation-92546492d479ba100909",
+      "question_id": "sciq-train-01983",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-590c2bb3b1a82d89b223",
+      "validation_request_id": "adaptation-21b74a102a4976f601be",
+      "question_id": "sciq-train-09640",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-bd8e70d19b3660a546ff",
+      "validation_request_id": "adaptation-9b002919aaf871c9bc31",
+      "question_id": "sciq-train-01144",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-8ff42a1699ae0f208a2c",
+      "validation_request_id": "adaptation-20b1e070bbdcf2991cc2",
+      "question_id": "sciq-train-01435",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-d067ade10e6d060d62aa",
+      "validation_request_id": "adaptation-95a435846301c1b2bb93",
+      "question_id": "sciq-train-10243",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-8b127d8bb90e0690c4fd",
+      "validation_request_id": "adaptation-6fc93d818f6d72262fb0",
+      "question_id": "sciq-train-10243",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-2fa418a5928a322a0d74",
+      "validation_request_id": "adaptation-edf954be54945bfd5086",
+      "question_id": "sciq-train-10243",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-87edb0405e75fa704503",
+      "validation_request_id": "adaptation-fdf415c11bb1416c160c",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-0bf911f47ce9127efaea",
+      "validation_request_id": "adaptation-249c2654948ecd9a1040",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-cb026500d8f093056d40",
+      "validation_request_id": "adaptation-3611fced758b588202eb",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "gpt-oss",
+      "source_request_id": "adaptation-fc56f01a06b0dd45840e",
+      "validation_request_id": "adaptation-e7f949c598e7a7bf12ed",
+      "question_id": "sciq-train-06027",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-d78bbb9b395b6bcb8d31",
+      "validation_request_id": "adaptation-4cadb12ab7590175f718",
+      "question_id": "sciq-train-00797",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-d9aba666a3f847c49036",
+      "validation_request_id": "adaptation-29517c5e6a6ed1ad8ca6",
+      "question_id": "sciq-train-09086",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-3c854dab40552c63f18f",
+      "validation_request_id": "adaptation-b4ebf16ae2f4c354f240",
+      "question_id": "sciq-train-09248",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-9ac1884f150ad5b554ad",
+      "validation_request_id": "adaptation-08d99cd4399ea1834962",
+      "question_id": "sciq-train-01931",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-f4822db193640693f489",
+      "validation_request_id": "adaptation-9ab50c0e3134a4035575",
+      "question_id": "sciq-train-01931",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-aed1aeb74cc009e69163",
+      "validation_request_id": "adaptation-60a5ac6286bf9419fdb2",
+      "question_id": "sciq-train-01931",
+      "evaluated_level": "advanced",
+      "always_assessed_verdicts": 2,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-050037fee955bba1351c",
+      "validation_request_id": "adaptation-66929709d491e97d4bfa",
+      "question_id": "sciq-train-05409",
+      "evaluated_level": "intermediate",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-dd8e9943659cccb82422",
+      "validation_request_id": "adaptation-7ae02eb74a5e5e2bca03",
+      "question_id": "sciq-train-09217",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [],
+      "would_be_rejected": false,
+      "error": null
+    },
+    {
+      "thinking_level": "low",
+      "generator": "llama",
+      "source_request_id": "adaptation-be78a92f560b49f9921b",
+      "validation_request_id": "adaptation-752f3ad585313009a802",
+      "question_id": "sciq-train-09476",
+      "evaluated_level": "beginner",
+      "always_assessed_verdicts": 3,
+      "invalid_not_applicable_ids": [
+        "B4"
+      ],
+      "would_be_rejected": true,
+      "error": "always-assessed criteria cannot be not_applicable: B4"
+    }
+  ],
+  "note": "Offline validation only. Original verdicts, request files and scores unchanged."
+}

@@ -120,6 +120,7 @@ def assemble_judge_results(
                 configuration,
                 evaluated_level=evaluated_level,
                 criterion_order=criterion_order,
+                profile_package=package,
                 mode=mode,
             )
             expected_request_ids.add(request.request_id)

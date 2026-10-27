@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from cs30.contracts import StudentLevel
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 
+from .adaptation_applicability import always_assessed_ids
 from .condition_statistics import CONTRASTS, MetricObservation, paired_condition_contrasts
 from .evaluation_audit import (
     load_bound_human_audit,
@@ -396,6 +397,9 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
     if not requests or len(request_ids) != len(set(request_ids)):
         raise ValueError("judge request file must contain unique nonempty request IDs")
 
+    for request in requests:
+        if request.task is JudgeTask.ADAPTATION:
+            always_assessed_ids(request)
     provider_name = configuration.provider.casefold()
     max_output_tokens = args.max_output_tokens or (8192 if provider_name == "gemini" else 2048)
     model_digest: str | None = None
@@ -523,6 +527,7 @@ def _prepare_requests(args: argparse.Namespace) -> int:
                     configuration,
                     evaluated_level=evaluated_level,
                     criterion_order=criterion_order,
+                    profile_package=package,
                     mode=mode,
                 )
                 requests.setdefault(request.request_id, request)

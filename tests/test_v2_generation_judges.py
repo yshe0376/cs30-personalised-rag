@@ -32,6 +32,7 @@ from cs30.evaluation.level_discrimination import (
     discrimination_summary,
     validate_discrimination_output,
 )
+from cs30.evaluation.level_profiles import profile_package_content_sha256
 from cs30.evaluation.v2_generation_models import (
     AdaptationJudgeOutput,
     ApprovalStatus,
@@ -810,6 +811,9 @@ def test_assemble_judge_results_validates_and_reattaches_hidden_metadata() -> No
         profiles=profiles,
         checklists=checklists,
         package_sha256="d" * 64,
+    )
+    package = package.model_copy(
+        update={"package_sha256": profile_package_content_sha256(package.model_dump(mode="json"))}
     )
     adaptation_request = build_adaptation_request(item, profiles[0], checklists[0], configuration)
     discrimination_request = build_discrimination_request(item, profiles, configuration)

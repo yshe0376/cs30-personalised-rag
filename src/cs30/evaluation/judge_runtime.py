@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from cs30.generation.client import LLMClient
 
+from .adaptation_applicability import validate_adaptation_applicability
 from .evidence_quotes import quote_is_grounded
 from .level_profiles import canonical_json_sha256
 from .v2_generation_models import (
@@ -277,6 +278,7 @@ def validate_output_against_request(
                 raise ValueError(
                     f"criterion {judgement.criterion_id} quote is not an exact answer substring"
                 )
+        validate_adaptation_applicability(request, output)
         return output
 
     if isinstance(output, DiscriminationJudgeOutput):

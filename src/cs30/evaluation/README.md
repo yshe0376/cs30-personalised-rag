@@ -693,3 +693,24 @@ scripts/judge_trial.py now versions the 20-cell sampling and budget-extrapolatio
 Paid execution is refused unless --allow-paid is explicitly supplied; --offline never invokes
 Gemini. Offline simulated failures/zero costs are not judge-performance evidence. Client attempts
 are logged immediately; internal SDK HTTP attempts are not separately observed.
+
+
+### Package-bound always-assessed adaptation criteria
+
+For frozen package `1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238`,
+adaptation rejects `not_applicable` on B1, B2, B4, I1, I2, I3, A1 and A4.
+B3, A2 and A3 retain their conditional applicability. This enforces the frozen text
+without rewriting a verdict or changing the profile. Invalid outputs use the existing
+application retry; exhausted requests stay unresolved and receive no score.
+
+`adaptation_applicability.py` verifies the package/content binding. The request builder
+adds the policy to the hashed payload, and result assembly reconstructs the same identity.
+CLI preflight rejects old unbound production requests before provider construction;
+regenerate adaptation requests before an authorised live run. New packages need a reviewed
+policy rather than inheriting the eight IDs silently. Synthetic checklists without
+always-assessed wording preserve their existing fixture behavior.
+
+`scripts/revalidate_adaptation_trial.py` replays local outputs without provider calls.
+The original trial has 6/30 high and 5/30 low adaptation requests that would now be
+rejected, all for B4. See `docs/results/m8_adaptation_applicability_replay_20261028/`.
+Leader decision #212 selects low for all four tasks; full Dev still awaits budget approval.
