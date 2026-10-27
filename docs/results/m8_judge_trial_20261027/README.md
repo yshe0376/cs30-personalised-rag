@@ -43,3 +43,17 @@ The raw spotcheck.md previews truncate judgment JSON; use the full task result f
 - Full-Dev task request counts are 3,611 correctness, 5,485 adaptation, 3,611 discrimination and 4,169 evidence support, as computed by the original trial script after task-specific applicability and de-duplication. The 20-cell sample does not establish projection precision for the full workload.
 
 The original script and local study notes remain outside the repository under W8. The bulk handoff package and full-Dev projection intermediates are not duplicated here. No new API calls were made to prepare this publication.
+
+
+## Later supplements
+
+Leader decision #212 now selects thinking low for all four tasks; high remains historical
+comparison evidence. Full Dev still awaits budget approval. The sampling and budget script
+is now versioned at [scripts/judge_trial.py](../../../scripts/judge_trial.py).
+
+- [Provider AUD billing observation](billing_observation.md): user-reported AUD 0.69 project
+  spending, rounded provider token charts and explicit reconciliation limits. Original USD
+  estimates and trial files are unchanged.
+- [Fresh six-request low evidence confirmation](../m8_low_evidence_confirmation_20261028/README.md):
+  separate user-executed diagnostic run after quotation repair; three accepted and three
+  unresolved, with incomplete saved usage on failed outputs. Not another full trial.

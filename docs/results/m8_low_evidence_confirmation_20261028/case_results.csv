@@ -1,0 +1,7 @@
+question_id,topic,generator,target_level,condition,request_id,status,saved_error,input_tokens,output_tokens_including_thinking,thinking_tokens_subset,recorded_usage_complete
+sciq-train-01144,current,gpt-oss,intermediate,P1R1_combined,evidence_support-93e29cf8bf3e42121f4a,accepted_by_validation,,1495,510,94,True
+sciq-train-06027,ultrasound,gpt-oss,advanced,P1R0_prompt_only,evidence_support-b82e1df4a1f1759921ce,unresolved,attempt 1: claim 1 requires one quote per supporting ID,0,0,0,False
+sciq-train-04946,manometer,gemma,advanced,P1R1_combined,evidence_support-6aa6f7519f035e70ded0,unresolved,attempt 1: claim c2 lacks support among the cited evidence,0,0,0,False
+sciq-train-05989,nuclei,gemma,beginner,P1R0_prompt_only,evidence_support-01a0739547953c192876,unresolved,attempt 1: claim c1 requires one quote per supporting ID,0,0,0,False
+sciq-train-06774,EMR,gemma,beginner,P1R1_combined,evidence_support-45de587e67f396f80527,accepted_by_validation,,2958,929,92,True
+sciq-train-09248,cyclotron control,llama,intermediate,P0R1_reranking_only,evidence_support-7d4fe3b5595cc378a864,accepted_by_validation,,2788,412,99,True

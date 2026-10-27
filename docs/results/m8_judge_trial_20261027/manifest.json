@@ -17,8 +17,8 @@
       "bytes": 46769
     },
     "README.md": {
-      "sha256": "69749810bcd643a915e3166f07038f7d216564f525b6194231158234134f3e8b",
-      "bytes": 5037
+      "sha256": "61f1517d633a4b91d834959a1b947a7b65ba623acce43593052270911525c4d4",
+      "bytes": 5838
     },
     "report.md": {
       "sha256": "600829f98aeb35a6073175232645d29e1b6940e073055ca65fcf6dd62f718919",
@@ -555,6 +555,14 @@
     ".gitattributes": {
       "sha256": "730a35ae3d558080083c3103d9ac8100c3f6561678092abe341701dfa331eb1d",
       "bytes": 29
+    },
+    "billing_observation.md": {
+      "sha256": "8e3c8f81cd678e4721839424e5ead9029468168e557b199b17f7244d367d992f",
+      "bytes": 2319
+    },
+    "billing_observation.json": {
+      "sha256": "6c358dc943d76fecef1d88c9d2e8704d174ce9c3cb1b4d42ff6b329d0be68668",
+      "bytes": 1847
     }
   }
 }

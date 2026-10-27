@@ -1,0 +1,16 @@
+HISTORICAL EXECUTION SETTINGS — NOT AN INSTRUCTION TO RUN NOW
+
+The user ran the existing run-judge-requests CLI with the archived requests.jsonl
+and judge-config.json, a new empty cache/output folder, execution ID
+gemini-low-evidence-six-20261028-01, and these options:
+
+--max-attempts 1 --max-output-tokens 8192 --require-fresh-cache
+
+Portable equivalent for a separately approved future rerun, from the repository
+root. The new output folder must be empty. This command SPENDS MONEY and was not
+executed while preparing this report. A fresh run will not reproduce stochastic
+model outputs exactly; offline validation uses the archived results instead.
+
+$caseDir = "docs/results/m8_low_evidence_confirmation_20261028"
+$newRunDir = "../W8/judge-trial/low-confirm-evidence-new-run"
+python -m cs30.evaluation.v2_generation_cli run-judge-requests --requests "$caseDir/requests.jsonl" --judge-config "$caseDir/judge-config.json" --cache "$newRunDir/fresh-cache.jsonl" --output "$newRunDir/results.jsonl" --judge-execution-id gemini-low-evidence-six-new-run --max-attempts 1 --max-output-tokens 8192 --require-fresh-cache

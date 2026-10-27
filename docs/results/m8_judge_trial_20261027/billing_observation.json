@@ -1,0 +1,37 @@
+{
+  "scope": "First 20-cell high/low trial only; not the later six-request confirmation.",
+  "provider_observation": {
+    "source": "User-supplied AI Studio dashboard captures, reviewed privately; screenshots not published.",
+    "spending_currency": "AUD",
+    "displayed_project_spending": "0.69",
+    "attribution": "User identifies this as the first trial cost. Dashboard is project-level, not a per-execution invoice.",
+    "visible_spending_window": "2026-09-30 to 2026-10-27",
+    "model_chart_date": "2026-10-27",
+    "model_chart_timezone_label": "UTC-8",
+    "displayed_input_tokens_rounded": "535.47K",
+    "displayed_output_tokens_rounded": "246.81K",
+    "displayed_requests": 204,
+    "dashboard_warning": "Cost reporting may be delayed, potentially beyond 24 hours."
+  },
+  "original_local_logs": {
+    "logged_client_attempts": 204,
+    "input_tokens": 467357,
+    "output_tokens_including_thinking": 248830,
+    "thinking_tokens_subset": 187150,
+    "estimated_token_cost_currency": "USD",
+    "estimated_token_cost": "0.49008425",
+    "cost_basis": "Original trial prices: USD 0.25/M input and USD 1.50/M output including thinking."
+  },
+  "reconciliation": {
+    "status": "not_reconciled",
+    "exchange_rate_applied": null,
+    "notes": [
+      "AUD provider spending and USD token-price estimates are different measurements/currencies.",
+      "Provider token charts are rounded and do not exactly match the local counters.",
+      "Matching 204 requests alone does not establish exact per-call billing attribution.",
+      "No cause is assumed for the token discrepancy and no inferred exchange rate is used.",
+      "Earlier AUD 0.77 was an account balance difference, not an execution-specific bill.",
+      "AUD 0.69 must not be attributed to the later six-request run."
+    ]
+  }
+}
