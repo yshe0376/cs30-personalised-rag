@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from .evidence_quotes import quote_is_grounded
 from .judge_runtime import make_judge_request
 from .v2_generation_models import (
     EvaluationMode,
@@ -128,7 +129,7 @@ def validate_evidence_support_output(
                 f"claim {claim.claim_id} requires exactly one quote for every supporting ID"
             )
         for evidence_id, quote in claim.evidence_quotes.items():
-            if quote not in evidence[evidence_id]:
+            if not quote_is_grounded(quote, evidence[evidence_id]):
                 raise ValueError(
                     f"claim {claim.claim_id} quote is not present in evidence {evidence_id}"
                 )
