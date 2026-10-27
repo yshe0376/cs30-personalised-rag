@@ -456,7 +456,7 @@ def test_local_models_reject_omitted_online_required_fields(model, raw) -> None:
         model.model_validate(raw)
 
 
-def test_online_evidence_quote_rows_reject_duplicate_ids() -> None:
+def test_online_evidence_quote_rows_preserve_multiple_excerpts_per_id() -> None:
     raw = {
         "schema_version": "1.0",
         "request_id": "request-1",
@@ -475,8 +475,8 @@ def test_online_evidence_quote_rows_reject_duplicate_ids() -> None:
             }
         ],
     }
-    with pytest.raises(ValueError, match="repeat an evidence_id"):
-        EvidenceSupportJudgeOutput.model_validate(raw)
+    output = EvidenceSupportJudgeOutput.model_validate(raw)
+    assert output.claims[0].evidence_quotes == {"E1": "first … second"}
 
 
 def test_adaptation_rejects_a_quote_for_not_applicable() -> None:

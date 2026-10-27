@@ -674,3 +674,22 @@ checklist criterion.
 
 This supports plan sections 4.2 and 12.1 item 7; it does not freeze profiles,
 approve eligibility labels, calibrate Gemini or authorize formal conclusions.
+
+
+### Offline quotation revalidation and reproducible trial tooling
+
+Evidence quotations may contain multiple verbatim excerpts for one evidence ID, including
+ellipsis-separated excerpts. Both validation entry points use evidence_quotes.quote_is_grounded:
+every fragment must exist in that evidence after NFC, whitespace and limited typographic
+quote/hyphen normalization. The matcher does not rewrite numbers, mathematical symbols or wording.
+Ellipsis fragments are a collection of excerpts, not a claim of continuous source order.
+Missing/unknown supporting IDs, absent quotations and invented content still fail closed.
+
+Use scripts/revalidate_judge_trial.py to check saved trial outputs without constructing an API
+client. It preserves the originals, audits recorded costs, and prepares existing high/low
+disagreements for human review. See docs/results/m8_judge_quote_revalidation_20261027/README.md.
+
+scripts/judge_trial.py now versions the 20-cell sampling and budget-extrapolation workflow.
+Paid execution is refused unless --allow-paid is explicitly supplied; --offline never invokes
+Gemini. Offline simulated failures/zero costs are not judge-performance evidence. Client attempts
+are logged immediately; internal SDK HTTP attempts are not separately observed.

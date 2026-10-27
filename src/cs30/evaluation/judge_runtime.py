@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from cs30.generation.client import LLMClient
 
+from .evidence_quotes import quote_is_grounded
 from .level_profiles import canonical_json_sha256
 from .v2_generation_models import (
     AdaptationJudgeOutput,
@@ -308,7 +309,7 @@ def validate_output_against_request(
         if set(claim.evidence_quotes) != supporting:
             raise ValueError(f"claim {claim.claim_id} requires one quote per supporting ID")
         if any(
-            quote not in evidence[evidence_id]
+            not quote_is_grounded(quote, evidence[evidence_id])
             for evidence_id, quote in claim.evidence_quotes.items()
         ):
             raise ValueError(f"claim {claim.claim_id} has a quote outside the supplied evidence")

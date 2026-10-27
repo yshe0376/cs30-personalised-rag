@@ -18,6 +18,7 @@ from pydantic import Field, field_validator, model_validator
 from cs30.contracts import StudentLevel
 from cs30.contracts.models import ContractModel, Identifier, NonEmptyText
 
+from .evidence_quotes import merge_quote_rows
 from .models import PersonalisationEligibility
 
 
@@ -455,19 +456,7 @@ class ClaimSupportJudgement(ContractModel):
     @field_validator("evidence_quotes", mode="before")
     @classmethod
     def normalize_online_quote_rows(cls, value: object) -> object:
-        if not isinstance(value, list):
-            return value
-        quote_map: dict[str, object] = {}
-        for entry in value:
-            if not isinstance(entry, dict):
-                raise ValueError("evidence quote entries must be objects")
-            evidence_id = entry.get("evidence_id")
-            if not isinstance(evidence_id, str) or not evidence_id:
-                raise ValueError("evidence quote entries require an evidence_id")
-            if evidence_id in quote_map:
-                raise ValueError("evidence quote entries repeat an evidence_id")
-            quote_map[evidence_id] = entry.get("quote")
-        return quote_map
+        return merge_quote_rows(value)
 
 
 class EvidenceSupportJudgeOutput(ContractModel):
