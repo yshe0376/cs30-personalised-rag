@@ -57,3 +57,7 @@ is now versioned at [scripts/judge_trial.py](../../../scripts/judge_trial.py).
 - [Fresh six-request low evidence confirmation](../m8_low_evidence_confirmation_20261028/README.md):
   separate user-executed diagnostic run after quotation repair; three accepted and three
   unresolved, with incomplete saved usage on failed outputs. Not another full trial.
+
+- [Strict quote-fragment replay](../m8_quote_fragment_revalidation_20261028/README.md):
+  current three-word/order policy; 5/8 old failures recovered without new calls. The archived
+  six-request run predates this policy and is not its required fresh confirmation.

@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from cs30.evaluation.evidence_quotes import merge_quote_rows, quote_is_grounded
+from cs30.evaluation.evidence_quotes import QUOTE_ROW_SEPARATOR, merge_quote_rows, quote_is_grounded
 from cs30.evaluation.evidence_support import (
     build_evidence_support_request,
     validate_evidence_support_output,
@@ -25,15 +25,27 @@ from cs30.evaluation.v2_generation_models import (
 @pytest.mark.parametrize(
     ("quote", "source", "accepted"),
     [
-        ("Force … acceleration", "Force causes acceleration.", True),
-        ("Force...acceleration", "Force causes acceleration.", True),
-        ("acceleration … Force", "Force causes acceleration.", True),
+        (
+            "Force acts on mass … It causes acceleration",
+            "Force acts on mass. It causes acceleration.",
+            True,
+        ),
+        (
+            "Force acts on mass...It causes acceleration",
+            "Force acts on mass. It causes acceleration.",
+            True,
+        ),
+        (
+            "It causes acceleration … Force acts on mass",
+            "Force acts on mass. It causes acceleration.",
+            False,
+        ),
         ("Force ... invented", "Force causes acceleration.", False),
         ("...", "Force causes acceleration.", False),
         ("Force\u00a0causes acceleration", "Force\n causes  acceleration.", True),
-        ("cafe\u0301", "café", True),
-        ("two-lens", "two\u2011lens", True),
-        ('"force"', "\u201cforce\u201d", True),
+        ("cafe\u0301 serves coffee", "café serves coffee", True),
+        ("two-lens optical system", "two\u2011lens optical system", True),
+        ('"force" causes acceleration', "\u201cforce\u201d causes acceleration", True),
         ("Force causes acceleration", "force causes acceleration.", False),
         ("mass is 50", "mass is 60", False),
         ("x - y", "x \u2212 y", False),
@@ -43,6 +55,56 @@ from cs30.evaluation.v2_generation_models import (
 )
 def test_excerpt_matching_changes_formatting_not_content(quote, source, accepted):
     assert quote_is_grounded(quote, source) is accepted
+
+
+@pytest.mark.parametrize("quote", ["a ... e", "damaged ... Healthy cells are not"])
+def test_leader_counterexamples_are_rejected(quote):
+    source = (
+        "Cancer cells reproduce rapidly. Healthy cells are not damaged "
+        "by the radiation dose used in therapy."
+    )
+    assert not quote_is_grounded(quote, source)
+
+
+@pytest.mark.parametrize(
+    ("quote", "source", "accepted"),
+    [
+        ("one two three ... four five six", "one two three four five six", True),
+        ("four five six ... one two three", "one two three four five six", False),
+        ("one two three ... three four five", "one two three four five", False),
+        ("one two three ... one two three", "one two three", False),
+        ("one two three ... one two three", "one two three then one two three", True),
+        ("are received", "Signals are received from tissue.", False),
+        ("one two ... three four five", "one two three four five", False),
+        ("one two ---", "one two ---", False),
+    ],
+)
+def test_each_row_requires_three_words_order_and_nonoverlap(quote, source, accepted):
+    assert quote_is_grounded(quote, source) is accepted
+
+
+def test_separate_rows_keep_boundaries_and_allow_reverse_order_and_overlap():
+    merged = merge_quote_rows(
+        [
+            {"evidence_id": "E1", "quote": "three four five"},
+            {"evidence_id": "E1", "quote": "one two three"},
+        ]
+    )
+    assert merged == {"E1": "three four five" + QUOTE_ROW_SEPARATOR + "one two three"}
+    assert quote_is_grounded(merged["E1"], "one two three four five")
+    assert not quote_is_grounded("three four five ... one two three", "one two three four five")
+
+
+def test_reserved_row_separator_cannot_be_injected_into_one_online_row():
+    with pytest.raises(ValueError, match="reserved row separator"):
+        merge_quote_rows(
+            [
+                {
+                    "evidence_id": "E1",
+                    "quote": "three four five" + QUOTE_ROW_SEPARATOR + "one two three",
+                }
+            ]
+        )
 
 
 @pytest.mark.parametrize("bad", [None, 4, "", "   "])
@@ -119,9 +181,29 @@ def test_both_validation_layers_accept_multiple_grounded_excerpts():
     first = validate_output_against_request(raw, request)
     second = validate_evidence_support_output(raw, request=request, item=item)
     assert first.claims[0].evidence_quotes == {
-        "E1": "Force acts on mass. … It causes acceleration."
+        "E1": "Force acts on mass." + QUOTE_ROW_SEPARATOR + "It causes acceleration."
     }
     assert second.claims[0].supporting_evidence_ids == ["source-1"]
+
+
+def test_separate_rows_survive_model_serialization_and_both_validators():
+    item, request, raw = evidence_case()
+    raw["claims"][0]["evidence_quotes"].reverse()
+    runtime = validate_output_against_request(raw, request)
+    saved = json.loads(runtime.model_dump_json())
+    assert QUOTE_ROW_SEPARATOR in saved["claims"][0]["evidence_quotes"]["E1"]
+    assert validate_output_against_request(saved, request)
+    assert validate_evidence_support_output(saved, request=request, item=item)
+
+
+@pytest.mark.parametrize("quote", ["Force acts", "It causes acceleration ... Force acts on mass"])
+def test_both_layers_reject_short_or_reordered_fragments(quote):
+    item, request, raw = evidence_case()
+    raw["claims"][0]["evidence_quotes"] = [{"evidence_id": "E1", "quote": quote}]
+    with pytest.raises(ValueError):
+        validate_output_against_request(raw, request)
+    with pytest.raises(ValueError):
+        validate_evidence_support_output(raw, request=request, item=item)
 
 
 @pytest.mark.parametrize("problem", ["fabrication", "missing_id", "unknown_id", "wrong_request"])

@@ -477,7 +477,7 @@ def test_online_evidence_quote_rows_preserve_multiple_excerpts_per_id() -> None:
         ],
     }
     output = EvidenceSupportJudgeOutput.model_validate(raw)
-    assert output.claims[0].evidence_quotes == {"E1": "first … second"}
+    assert output.claims[0].evidence_quotes == {"E1": "first\n[quote-row]\nsecond"}
 
 
 def test_adaptation_rejects_a_quote_for_not_applicable() -> None:

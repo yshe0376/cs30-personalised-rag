@@ -1,4 +1,9 @@
-# Fresh six-request low evidence confirmation
+# Historical six-request low evidence confirmation
+
+**Timing correction:** this user-run check predates the strict quote-fragment policy requested
+by the Leader. It does not fulfil the required post-change six-request confirmation. Original
+results below are preserved. See [the current policy and replay](../m8_quote_fragment_revalidation_20261028/README.md).
+No post-change paid confirmation has been run.
 
 Start with [report.md](report.md). The user executed this paid check after the evidence-quotation
 repair: **3 accepted by validation, 3 unresolved**. Both current validators reproduce the saved

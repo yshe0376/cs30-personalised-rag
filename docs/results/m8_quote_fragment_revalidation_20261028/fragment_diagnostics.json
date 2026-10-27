@@ -1,0 +1,116 @@
+[
+  {
+    "thinking_level": "high",
+    "question_id": "sciq-train-04946",
+    "request_id": "evidence_support-6aa6f7519f035e70ded0",
+    "claim_id": "3",
+    "evidence_id": "E2",
+    "fragments": [
+      {
+        "text": "support a column of fluid of height [EQUATION: h]. (c) Similarly, atmospheric pressure is greater than a negative gauge pressure [EQUATION: P_g] by an amount [FIGURE DESCRIPTION: h rho g]. The density of the mercury fluid in the manometer is 13.6 times greater than water",
+        "words": 45,
+        "present_anywhere": false,
+        "position_at_or_after_previous_end": -1
+      }
+    ]
+  },
+  {
+    "thinking_level": "low",
+    "question_id": "sciq-train-04946",
+    "request_id": "evidence_support-6aa6f7519f035e70ded0",
+    "claim_id": "c2",
+    "evidence_id": "E5",
+    "fragments": [
+      {
+        "text": "The gauge pressure is [EQUATION: P_g = h rho g] and is found by measuring [EQUATION: h].",
+        "words": 16,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 1245
+      },
+      {
+        "text": "[EQUATION: rho] is the density of the fluid in the manometer.",
+        "words": 11,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": -1
+      }
+    ]
+  },
+  {
+    "thinking_level": "low",
+    "question_id": "sciq-train-06027",
+    "request_id": "evidence_support-b82e1df4a1f1759921ce",
+    "claim_id": "2",
+    "evidence_id": "E1",
+    "fragments": [
+      {
+        "text": "ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect",
+        "words": 13,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 23
+      },
+      {
+        "text": "These high-frequency vibrations are transmitted into any tissue in contact with the transducer",
+        "words": 13,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 237
+      },
+      {
+        "text": "From the time between when the original signal is sent and when the reflections",
+        "words": 14,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 689
+      },
+      {
+        "text": "are received",
+        "words": 2,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 807
+      },
+      {
+        "text": "the nature and position of each boundary between tissues and organs may be deduced.",
+        "words": 14,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 881
+      }
+    ]
+  },
+  {
+    "thinking_level": "low",
+    "question_id": "sciq-train-06027",
+    "request_id": "evidence_support-b82e1df4a1f1759921ce",
+    "claim_id": "2",
+    "evidence_id": "E2",
+    "fragments": [
+      {
+        "text": "ultrasonic waves are emitted from a transducer, a crystal exhibiting the piezoelectric effect",
+        "words": 13,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 23
+      },
+      {
+        "text": "These high-frequency vibrations are transmitted into any tissue in contact with the transducer",
+        "words": 13,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 237
+      },
+      {
+        "text": "From the time between when the original signal is sent and when the reflections",
+        "words": 14,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 689
+      },
+      {
+        "text": "are received",
+        "words": 2,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 807
+      },
+      {
+        "text": "the nature and position of each boundary between tissues and organs may be deduced.",
+        "words": 14,
+        "present_anywhere": true,
+        "position_at_or_after_previous_end": 881
+      }
+    ]
+  }
+]

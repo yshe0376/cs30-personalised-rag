@@ -1,4 +1,9 @@
-# Offline evidence-quotation repair verification
+# Historical offline evidence-quotation repair verification
+
+**Superseded policy and replay:** the fragment-length/order policy below describes the first
+implementation. For the current three-word, ordered, nonoverlapping rule and the updated
+5/8 recovery count, use [the strict-policy replay](../m8_quote_fragment_revalidation_20261028/README.md).
+The original data and historical counts below are preserved; they are not the current policy.
 
 This follow-up revalidates the saved #210 outputs. It makes no Gemini calls and spends no new money. Original trial artifacts are unchanged.
 

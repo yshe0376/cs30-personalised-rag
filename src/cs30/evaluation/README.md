@@ -682,12 +682,20 @@ Evidence quotations may contain multiple verbatim excerpts for one evidence ID, 
 ellipsis-separated excerpts. Both validation entry points use evidence_quotes.quote_is_grounded:
 every fragment must exist in that evidence after NFC, whitespace and limited typographic
 quote/hyphen normalization. The matcher does not rewrite numbers, mathematical symbols or wording.
-Ellipsis fragments are a collection of excerpts, not a claim of continuous source order.
+Every nonempty fragment must contain at least three whitespace-delimited words with a letter
+or digit after normalization; punctuation-only tokens do not count. Within one quote row,
+fragments must appear in source order without overlap. Separate rows for one evidence ID
+remain independent and are stored using the reserved `\n[quote-row]\n` separator rather
+than an ellipsis, so row boundaries survive serialization. Online quote rows may not contain
+that reserved separator. The ID-to-string field type and online schema remain unchanged.
 Missing/unknown supporting IDs, absent quotations and invented content still fail closed.
 
 Use scripts/revalidate_judge_trial.py to check saved trial outputs without constructing an API
 client. It preserves the originals, audits recorded costs, and prepares existing high/low
-disagreements for human review. See docs/results/m8_judge_quote_revalidation_20261027/README.md.
+disagreements for human review. The current strict-policy replay is at
+docs/results/m8_quote_fragment_revalidation_20261028/README.md: high recovers 2/3,
+low recovers 3/5, and no originally accepted output regresses. The earlier quotation replay
+is historical; its permissive fragment policy has been superseded.
 
 scripts/judge_trial.py now versions the 20-cell sampling and budget-extrapolation workflow.
 Paid execution is refused unless --allow-paid is explicitly supplied; --offline never invokes

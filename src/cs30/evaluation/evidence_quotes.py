@@ -9,6 +9,7 @@ _TYPOGRAPHY = str.maketrans(
     {"\u2010": "-", "\u2011": "-", "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"'}
 )
 _OMISSION = re.compile(r"\.{3,}|\u2026")
+QUOTE_ROW_SEPARATOR = "\n[quote-row]\n"
 
 
 def normalize_quote_text(text: str) -> str:
@@ -17,16 +18,28 @@ def normalize_quote_text(text: str) -> str:
 
 
 def quote_is_grounded(quote: str, evidence: str) -> bool:
-    """Require every nonempty excerpt to occur in the same cited evidence.
+    """Ground three-word fragments in source order within each independent row.
 
-    Ellipses delimit independent excerpts, not a reconstructed continuous sentence.
-    Excerpt order is immaterial, as it is for multiple quote rows for one evidence ID.
+    Rows are stored separately inside the existing ID-to-string representation.
+    Ellipsis fragments within a row must not overlap. Row order is independent.
     Numbers, case, mathematical symbols and other wording are not rewritten.
     """
-    normalized = normalize_quote_text(quote)
-    fragments = [part.strip() for part in _OMISSION.split(normalized) if part.strip()]
     source = normalize_quote_text(evidence)
-    return bool(fragments) and all(fragment in source for fragment in fragments)
+    for row in quote.split(QUOTE_ROW_SEPARATOR):
+        normalized = normalize_quote_text(row)
+        fragments = [part.strip() for part in _OMISSION.split(normalized) if part.strip()]
+        if not fragments:
+            return False
+        cursor = 0
+        for fragment in fragments:
+            words = sum(any(char.isalnum() for char in token) for token in fragment.split())
+            if words < 3:
+                return False
+            start = source.find(fragment, cursor)
+            if start < 0:
+                return False
+            cursor = start + len(fragment)
+    return True
 
 
 def merge_quote_rows(value: object) -> object:
@@ -43,5 +56,11 @@ def merge_quote_rows(value: object) -> object:
         quote = entry.get("quote")
         if not isinstance(quote, str) or not quote.strip():
             raise ValueError("evidence quote entries require a nonempty quote")
+        if QUOTE_ROW_SEPARATOR in quote:
+            raise ValueError(
+                "a single evidence quote row cannot contain the reserved row separator"
+            )
         grouped.setdefault(evidence_id, []).append(quote)
-    return {evidence_id: " … ".join(quotes) for evidence_id, quotes in grouped.items()}
+    return {
+        evidence_id: QUOTE_ROW_SEPARATOR.join(quotes) for evidence_id, quotes in grouped.items()
+    }
