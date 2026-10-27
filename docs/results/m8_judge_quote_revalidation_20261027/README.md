@@ -22,6 +22,7 @@ Both the request-level validator and the canonical evidence-task validator were 
 - [revalidation.json](revalidation.json): per-request results, saved source hashes and original token-cost audit.
 - [report.md](report.md): short offline summary.
 - [human_review.md](human_review.md): existing disagreements with their answer context and both explanations; decisions remain pending.
+- [review_notes_pending.md](review_notes_pending.md): English provisional findings for all 23 criterion differences and five level predictions, plus the pending correctness/evidence cases. These notes do not replace scores or record team approval.
 
 ## Reproduce without spending
 
