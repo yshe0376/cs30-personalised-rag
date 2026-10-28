@@ -12,22 +12,46 @@ Install the `ui` extra first. The Windows launcher uses `.venv` when available;
 `CS30_PYTHON` can select an existing Python environment and `CS30_PORT` defaults
 to 8512. It does not install dependencies or call a model API.
 
-This layout reuses V1 styling and the existing Concept Check fixture runtime.
-The sidebar contains the starting level, one Concept Check switch (off by
-default), and existing fixture scenarios. The learning tab shows the saved
-answer, synthetic cited/retrieved passages, quiz, state and optional audited
-Topic override. The report tab reuses the existing event report/downloads.
+The default **Ask a question** page accepts free text. Its UI-owned composition
+calls the shared BM25 backend, Topic/snapshot service, V2 evidence builder,
+M7 `V2AnswerGenerator` and citation validator in order. It displays the exact
+generation-time profile, sources and optional Concept Check decision. The
+secondary **Concept Check examples** page retains the old prepared scenarios.
+
+**Team V2 / DeepInfra** uses M7's documented `openai/gpt-oss-20b`, JSON Object,
+temperature 0, 4096 output tokens and `reasoning_effort=low`, through the existing
+`OpenAICompatibleClient`. Set `DEEPINFRA_API_KEY` and `CS30_UI_CORPUS` in the
+server environment. API requests happen only when the user clicks Generate
+answer; page load never calls a model. The UI allows at most two HTTP attempts
+per submitted question (one repair, no transport retry), with separate local
+API-cache/audit data. This is a UI demonstration limit, not the experiment budget.
+The public model alias is not an immutable model revision.
+
+The corpus loader verifies the released manifest and exact record bytes.
+The Topic map/registry are loaded from the checked-in rc.1 release. BM25 is the
+existing baseline, **not** the selected Qwen3 Dense 0.10 / BM25 0.90 experiment
+retriever. The published M6 frozen candidates cannot answer arbitrary new
+queries. No replacement hybrid algorithm or transferred lambda is invented.
+
+**Offline integration** executes the same V2 chain with the shared synthetic
+corpus, BM25 retrieval and M7's existing mock JSON client. It is explicitly
+labelled simulated, cannot establish answer quality, and never silently replaces
+a failed live request. Its available synthetic releases drive practice/feedback.
 
 The switch controls dynamic Topic state and practice together. Off mode hides
 write controls and uses the static starting profile without deleting history.
 Each starting level uses a separate fixture profile, as in the existing demo.
-Changing the level does not regenerate a saved fixture answer. Temporary
-single-session logs are not a durable student account or cross-session storage.
+Changing the level clears the previous Q&A output; another submission generates
+a new answer with the new snapshot. The fixed examples page still never
+regenerates its saved answers. Temporary single-session logs are not a durable
+student account or cross-session storage.
 
-The page has no free-text/live Q&A adapter, production retrieval/model wiring,
-or real reviewed practice corpus. These remain upstream integration work; the
-fixture banner must stay visible. V1 and the original standalone demo remain
-available.
+The real-corpus path has no installed compatible reviewed practice releases.
+It uses an empty provider and reports the shared selection reason; synthetic
+questions are never offered against the real corpus. A real practice pack and
+the arbitrary-query selected hybrid index/runtime remain integration dependencies.
+V1 and the original standalone demo remain available. No paid API smoke has been
+run as part of this local UI change.
 
 This module consumes `PipelineRun`.
 

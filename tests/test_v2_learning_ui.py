@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("streamlit")
 from streamlit.testing.v1 import AppTest
 
-PAGE = Path(__file__).parents[1] / "src/cs30/ui/v2_app.py"
+PAGE = Path(__file__).parents[1] / "src/cs30/ui/v2_fixture.py"
 
 
 def button(app, label):
