@@ -1,4 +1,12 @@
-"""Free-text V2 Q&A with shared generation, validation and optional practice."""
+"""Redesigned CS-30 learning page (layout and presentation only).
+
+Started from the V2 page (``cs30.ui.qa_app``) and keeps every feature and every
+runtime call: retrieval, M7 generation, citation validation, Concept Check
+selection, grading, revocation, Topic overrides, event replay and the session report
+all go through the same V2 runtime (``cs30.ui.v2_runtime``). Only the arrangement
+changes: a compact header with a visible mode badge, one question card, the answer
+beside its numbered sources, a practice card, and a short progress strip.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +33,7 @@ _UI_MODULES = (
     "cs30.ui.concept_check_demo",
     "cs30.ui.v2_fixture",
     "cs30.ui.v2_runtime",
+    "cs30.ui.qa_quiz",
 )
 
 
@@ -50,12 +59,12 @@ def _reload_changed_ui_modules() -> None:
 
 _reload_changed_ui_modules()
 
-from cs30.ui.concept_check import (  # noqa: E402
+from cs30.ui.concept_check_demo import record_demo_attempt  # noqa: E402
+from cs30.ui.qa_quiz import (  # noqa: E402
     clear_quiz_component,
     inject_concept_check_styles,
     render_quiz,
 )
-from cs30.ui.concept_check_demo import record_demo_attempt  # noqa: E402
 from cs30.ui.v2_fixture import inject_v2_styles  # noqa: E402
 from cs30.ui.v2_runtime import (  # noqa: E402
     TEAM_MODELS,
@@ -66,6 +75,7 @@ from cs30.ui.v2_runtime import (  # noqa: E402
     refresh_controls,
     run_question,
 )
+from cs30.v2.catalog import get_textbook_spec  # noqa: E402
 from cs30.v2.contracts import StudentLevel, StudentProfile  # noqa: E402
 
 QUIZ_KEY = "qa-quiz"
@@ -75,6 +85,7 @@ RETRIEVAL_OPTIONS = {
     "hybrid": "Hybrid · Qwen3 0.10 + BM25 0.90 (M6 system retriever)",
     "bm25": "BM25 baseline (comparison only)",
 }
+# Resolve assets inside this checkout, independently of the preview directory.
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
@@ -100,7 +111,8 @@ def get_retriever(kind: str, corpus, directory: Path, corpus_path: str):
             )
         else:
             st.session_state[key] = UiBm25Retriever(
-                corpus, directory / ("fixture-index" if corpus.synthetic else "real-index")
+                corpus,
+                directory / ("fixture-index" if corpus.synthetic else "real-index"),
             )
     return st.session_state[key]
 
@@ -134,62 +146,110 @@ def clear_practice() -> None:
 
 def session_directory() -> Path:
     if "qa-directory" not in st.session_state:
-        st.session_state["qa-directory"] = mkdtemp(prefix="cs30-v2-qa-")
+        st.session_state["qa-directory"] = mkdtemp(prefix="cs30-v3-qa-")
     return Path(st.session_state["qa-directory"])
 
 
+def book_title(textbook_id: str) -> str:
+    """Readable textbook name from the project catalog; the raw ID if it is unknown."""
+
+    try:
+        return get_textbook_spec(textbook_id).title
+    except Exception:
+        return textbook_id
+
+
+def badge(text: str, tone: str = "neutral") -> str:
+    return f'<span class="v3-badge v3-badge-{tone}">{escape(text)}</span>'
+
+
 def render_answer(run: QuestionRun) -> None:
-    """Show the exact validated output and generation-time settings, never relabel it."""
+    """Answer card: the exact validated output plus the settings it was generated with."""
 
     validated = run.runtime.validated
+    snapshot = run.prepared.snapshot
+    status = validated.citation_status
+    tone = {"passed": "success", "failed": "danger"}.get(status, "neutral")
+    st.markdown(
+        '<div class="v3-badges">'
+        + badge(f"Level used · {snapshot.profile.level.value.title()}")
+        + badge(f"Profile · {snapshot.profile_source.value.replace('_', ' ')}")
+        + badge(f"Citation check · {status}", tone)
+        + "</div>",
+        unsafe_allow_html=True,
+    )
     st.markdown("### Answer")
     if run.mode == "offline-integration":
-        st.info(
-            "Simulated answer. Fixture mode never calls a language model, so this fixed "
-            "placeholder only shows where the answer appears. In Team V2 mode the selected "
-            "model writes the answer from the evidence below."
+        st.markdown(
+            '<p class="v3-note">Simulated answer · Fixture mode never calls a language '
+            "model, so this fixed placeholder only shows where the answer appears. In Team "
+            "V2 mode the selected model writes the answer from the sources.</p>",
+            unsafe_allow_html=True,
         )
     if validated.abstained:
         st.warning(validated.answer.explanation)
     else:
-        st.write(validated.answer.explanation)
-    snapshot = run.prepared.snapshot
-    st.caption(
-        f"Level used: {snapshot.profile.level.value.title()} · "
-        f"Profile source: {snapshot.profile_source.value} · "
-        f"Citation integrity: {validated.citation_status.upper()}"
-    )
-    st.markdown("#### Evidence and sources")
+        with st.container(key="qa-answer-text"):
+            st.markdown(validated.answer.explanation)
+    cited_ids = [
+        item.evidence_id
+        for item in run.bundle.evidence_items
+        if item.chunk_id in set(validated.resolved_citations)
+    ]
+    if cited_ids:
+        st.markdown(
+            '<p class="v3-cited-line">Cites '
+            + " ".join(f'<span class="v3-ref">{escape(e)}</span>' for e in cited_ids)
+            + " · see Sources</p>",
+            unsafe_allow_html=True,
+        )
+
+
+def render_sources(run: QuestionRun) -> None:
+    """Sources card: every retrieved passage, numbered with the evidence IDs the answer cites."""
+
+    validated = run.runtime.validated
     cited = set(validated.resolved_citations)
+    textbook_by_chunk = {hit.chunk_id: hit.textbook_id for hit in run.runtime.retrieval.hits}
+    st.markdown('<p class="v3-card-title">Sources</p>', unsafe_allow_html=True)
+    if not run.bundle.evidence_items:
+        st.caption(
+            "No evidence was retrieved. The generator returns an abstention without a model call."
+        )
+        return
     first_cited = next(
-        (item.evidence_id for item in run.bundle.evidence_items if item.chunk_id in cited), None
+        (item.evidence_id for item in run.bundle.evidence_items if item.chunk_id in cited),
+        None,
     )
     for item in run.bundle.evidence_items:
-        marker = "Cited" if item.chunk_id in cited else "Retrieved only"
+        marker = "Cited" if item.chunk_id in cited else "Retrieved"
+        book = book_title(textbook_by_chunk.get(item.chunk_id, item.source_name))
         with st.expander(
-            f"{item.evidence_id} · {item.source_name} · Chapter {item.chapter_id} · {marker}",
+            f"{item.evidence_id} · {book} · Ch {item.chapter_id} · {marker}",
             expanded=item.evidence_id == first_cited,
         ):
             st.write(item.text)
-            st.code(item.source_locator, language=None)
-            st.caption(f"Chunk ID: {item.chunk_id} · Rank: {item.rank}")
-    if not run.bundle.evidence_items:
-        st.info(
-            "No evidence was retrieved. The generator returns an abstention without a model call."
-        )
+            st.caption(
+                f"Rank {item.rank} · Chunk ID {item.chunk_id} · Locator {item.source_locator}"
+            )
 
 
 def render_practice(run, corpus, directory, enabled) -> None:
     """Continue from the actual validated answer, using the shared selection contract."""
 
     runtime = refresh_controls(run, corpus, directory, enabled)
-    st.divider()
-    st.markdown("### Concept Check")
     if not enabled:
-        st.info("Concept Check is off. Topic changes are paused; existing history is kept.")
+        with st.container(border=True, key="qa-practice"):
+            st.markdown("### Check your understanding")
+            st.caption(
+                "Concept Check is off. Topic changes are paused; existing history is kept. "
+                "Switch on Enable Concept Check above to practise."
+            )
         return
+    practice_card = st.container(border=True, key="qa-practice")
+    practice_card.markdown("### Check your understanding")
     if not corpus.synthetic:
-        st.caption(
+        practice_card.caption(
             "Real-corpus selection uses the released Topic map. No compatible reviewed "
             "practice releases are installed; fixture questions are never mixed into this corpus."
         )
@@ -202,17 +262,18 @@ def render_practice(run, corpus, directory, enabled) -> None:
         )
 
     selection = st.session_state.get("qa-selection")
-    if selection is None or selection.question is None:
-        st.caption("Practise with a short question on this answer's cited Topic.")
-        quiz_column, _ = st.columns(2)
-        if quiz_column.button("Quiz me", type="primary", use_container_width=True):
-            select()
-            st.rerun()
-    if selection is not None:
-        if selection.question is None:
+    with practice_card:
+        if selection is None or selection.question is None:
+            st.caption("A short question on the Topic this answer cites.")
+            quiz_column, _ = st.columns(2)
+            if quiz_column.button("Quiz me", type="primary", use_container_width=True):
+                select()
+                st.rerun()
+        if selection is not None and selection.question is None:
             code = selection.error_code.value if selection.error_code else selection.status.value
             st.info(f"No practice question is offered for this answer. Reason: {code}")
-        else:
+    if selection is not None and selection.question is not None:
+        with practice_card:
 
             def revoke(attempt_id):
                 runtime.service.revoke(attempt_id, event_id=f"revoke-{attempt_id}")
@@ -229,9 +290,7 @@ def render_practice(run, corpus, directory, enabled) -> None:
     state = runtime.replayer.replay(runtime.event_store.events(runtime.profile.profile_id))
     resolution = runtime.service.resolver.resolve_cited_topic(runtime.retrieval, runtime.validated)
     topic_id = resolution.topic_id
-    st.markdown(
-        '<p class="cc-field-title qa-section-gap">Topic progress</p>', unsafe_allow_html=True
-    )
+    st.markdown('<p class="v3-section-title">Your progress</p>', unsafe_allow_html=True)
     if topic_id is None:
         st.caption(f"Topic unavailable: {resolution.error_code or resolution.status.value}")
         return
@@ -258,7 +317,7 @@ def render_practice(run, corpus, directory, enabled) -> None:
     )
     st.caption("Updated automatically from your scored Concept Check answers.")
     st.markdown(
-        '<p class="cc-field-title qa-section-gap">Adjust this Topic level</p>'
+        '<p class="v3-section-title">Adjust this Topic level</p>'
         '<p class="qa-section-help">Feel this Topic is too easy or too hard? Choose a new '
         "level and give a short, specific reason. The change is recorded with your reason, "
         "earlier answers are kept, and it applies from your next generated answer.</p>",
@@ -333,7 +392,8 @@ def inject_qa_styles() -> None:
         button[data-variant="pills"] p,
         [data-testid="stButtonGroup"] button p,
         [data-testid="stMain"] [data-testid="stMarkdownContainer"]
-            p:not(.qa-helper-title, .v2-eyebrow),
+            p:not(.qa-helper-title, .v2-eyebrow, .v3-subtitle, .v3-note,
+                .v3-cited-line, .v3-card-title, .v3-section-title, .v3-field-title),
         [data-testid="stMain"] [data-testid="stCaptionContainer"] p,
         [data-testid="stMain"] [data-testid="stMarkdownContainer"] li,
         [data-testid="stMain"] [data-testid="stExpander"] summary p,
@@ -420,6 +480,111 @@ def inject_qa_styles() -> None:
             font-size: var(--qa-body-size) !important;
             font-weight: 650 !important;
         }
+        /* ---------- V3 layout ---------- */
+        [data-testid="stMainBlockContainer"] { max-width: 1180px; }
+        .v3-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin: 0 0 6px;
+        }
+        .v3-title {
+            margin: 2px 0 6px !important;
+            padding: 0 !important;
+            font-size: 2.15rem !important;
+            font-weight: 700 !important;
+            letter-spacing: -0.025em;
+            line-height: 1.15 !important;
+        }
+        .v3-subtitle { margin: 0; color: #706a64; font-size: .95rem !important; }
+        .v3-mode {
+            flex: 0 1 300px;
+            margin-top: 26px;
+            padding: 6px 12px;
+            border: 1px solid;
+            border-radius: 10px;
+            font-size: .8rem;
+            font-weight: 600;
+            line-height: 1.4;
+        }
+        .v3-mode-fixture { border-color: #efdca4; color: #7a5b00; background: #fdf7e4; }
+        .v3-mode-live { border-color: #c9dcf0; color: #1d4f80; background: #eef4fb; }
+        /* Cards: question, answer, sources, practice. */
+        .st-key-qa-setup, .st-key-qa-composer, .st-key-qa-answer, .st-key-qa-sources,
+        .st-key-qa-practice {
+            border-color: #ebe7e3 !important;
+            border-radius: 14px !important;
+            background: #ffffff;
+            box-shadow: 0 1px 2px rgba(23, 20, 17, 0.04);
+        }
+        .st-key-qa-composer h3, .st-key-qa-answer h3, .st-key-qa-practice h3 {
+            padding-top: 0 !important;
+            font-size: 1.35rem !important;
+        }
+        .v3-field-title {
+            margin: 0 0 6px !important;
+            font-size: 1.125rem !important;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #171411;
+        }
+        /* The toggle label lines up with the "Starting level" title beside it. */
+        .st-key-qa-setup .st-key-qa-practice-control { margin-top: 2px; }
+        .v3-badges { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 4px; }
+        .v3-badge {
+            padding: 2px 9px;
+            border-radius: 999px;
+            background: #f3f1ee;
+            color: #5b554f;
+            font-size: .75rem;
+            font-weight: 600;
+        }
+        .v3-badge-success { background: #edf8f1; color: #1f7045; }
+        .v3-badge-danger { background: #fdecea; color: #a33e2b; }
+        .v3-note {
+            margin: 0 0 10px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #f2f6fb;
+            color: #4b5d78;
+            font-size: .85rem !important;
+            line-height: 1.5;
+        }
+        .st-key-qa-answer-text [data-testid="stMarkdownContainer"] {
+            color: #171411;
+            font-size: 1.06rem;
+            line-height: 1.75;
+        }
+        .v3-cited-line { margin: 12px 0 0; color: #706a64; font-size: .85rem !important; }
+        .v3-ref {
+            display: inline-block;
+            margin-right: 3px;
+            padding: 1px 7px;
+            border-radius: 6px;
+            background: #fff4f1;
+            color: #df5b40;
+            font-size: .75rem;
+            font-weight: 700;
+        }
+        .v3-card-title { margin: 0 0 6px; font-size: 1.05rem !important; font-weight: 700; }
+        .st-key-qa-sources [data-testid="stExpander"] summary p { font-size: .88rem !important; }
+        .st-key-qa-sources [data-testid="stExpander"] { margin-bottom: 2px; }
+        .v3-section-title {
+            margin: 26px 0 8px !important;
+            font-size: 1.05rem !important;
+            font-weight: 700;
+            color: #171411;
+        }
+        .v3-empty {
+            margin: 8px 0 12px;
+            padding: 18px 20px;
+            border: 1px dashed #e2ddd8;
+            border-radius: 14px;
+            color: #706a64;
+        }
+        .v3-empty p { margin: 0; font-size: .92rem !important; }
+        .v3-empty .v3-empty-title { margin-bottom: 4px; color: #171411; font-weight: 650; }
         /* Secondary actions (Undo, Skip) are outlined so the primary action stands out. */
         div[data-testid="stButton"] > button[kind="secondary"] {
             border: 1px solid #f06f54 !important;
@@ -771,7 +936,11 @@ def show_demo_mode() -> None:
 
 
 def main() -> None:
-    st.set_page_config(page_title="CS-30 · Ask a question", page_icon="🎓", layout="wide")
+    st.set_page_config(
+        page_title="CS-30 · Learning assistant",
+        page_icon="🎓",
+        layout="wide",
+    )
     inject_v2_styles()
     inject_concept_check_styles()
     inject_qa_styles()
@@ -785,50 +954,68 @@ def main() -> None:
     live = mode == LIVE_MODE
     model_id = settings["model"]
     retrieval_kind = settings["retrieval"] if live else "bm25"
-    st.markdown('<p class="v2-eyebrow">CS-30 / VERSION 2</p>', unsafe_allow_html=True)
-    st.title("Personalised Learning Assistant")
-    st.caption(
-        "Answers are grounded in four physics textbooks. Check the evidence, "
-        "then test yourself with a Concept Check."
-    )
+    # The actual mode is always visible next to the title and never switches silently.
     if live:
-        st.info(
-            f"TEAM MODEL · {TEAM_MODELS[model_id].label} · DeepInfra · "
-            f"V2 four-book corpus · {RETRIEVAL_OPTIONS[retrieval_kind]}"
+        mode_badge = (
+            '<span class="v3-mode v3-mode-live">Team V2 · '
+            f"{escape(TEAM_MODELS[model_id].label)} · DeepInfra · "
+            f"{'Hybrid retrieval' if retrieval_kind == 'hybrid' else 'BM25 baseline'}</span>"
         )
     else:
-        st.warning(
-            "FIXTURE MODE · SYNTHETIC CORPUS + SIMULATED ANSWERS · Not model-quality evidence"
+        mode_badge = (
+            '<span class="v3-mode v3-mode-fixture">Fixture mode · synthetic corpus · '
+            "simulated answers · not model-quality evidence</span>"
         )
+    st.markdown(
+        '<div class="v3-header"><div>'
+        '<p class="v2-eyebrow">CS-30 / VERSION 2</p>'
+        '<h1 class="v3-title">Personalised Learning Assistant</h1>'
+        '<p class="v3-subtitle">Answers grounded in four physics textbooks. Check the '
+        "sources, then test yourself with a Concept Check.</p>"
+        f"</div>{mode_badge}</div>",
+        unsafe_allow_html=True,
+    )
     st.session_state.setdefault("qa-question", EXAMPLES["Acceleration"])
     render_back_to_top()
-    st.markdown("### Starting level")
-    level_column, practice_column = st.columns(2, gap="large", vertical_alignment="center")
-    with level_column:
-        level = st.selectbox(
-            "Starting level",
-            list(StudentLevel),
-            format_func=lambda x: x.value.title(),
-            key="qa-level",
-            on_change=clear_question,
-            label_visibility="collapsed",
-        )
-    with practice_column:
-        with st.container(key="qa-practice-control"):
-            enabled = st.toggle(
-                "Enable Concept Check", value=False, key="qa-enabled", on_change=clear_practice
+    # Learner setup: the same two V2 controls, in one card above the question.
+    with st.container(border=True, key="qa-setup"):
+        level_column, practice_column = st.columns(2, gap="large", vertical_alignment="top")
+        with level_column:
+            st.markdown('<p class="v3-field-title">Starting level</p>', unsafe_allow_html=True)
+            level = st.selectbox(
+                "Starting level",
+                list(StudentLevel),
+                format_func=lambda x: x.value.title(),
+                key="qa-level",
+                on_change=clear_question,
+                label_visibility="collapsed",
             )
-    level_help, practice_help = st.columns(2, gap="large")
-    level_help.caption("Choose your physics background as the starting point for explanations.")
-    practice_help.caption(
-        "Optional practice and dynamic Topic levels. Changes apply to your next generated answer."
+            st.caption("Choose your physics background as the starting point for explanations.")
+        with practice_column:
+            with st.container(key="qa-practice-control"):
+                enabled = st.toggle(
+                    "Enable Concept Check",
+                    value=False,
+                    key="qa-enabled",
+                    on_change=clear_practice,
+                )
+            st.caption(
+                "Optional practice and dynamic Topic levels. "
+                "Changes apply to your next generated answer."
+            )
+    composer = st.container(border=True, key="qa-composer")
+    composer.markdown("### Ask a physics question")
+    composer.text_area(
+        "Your physics question",
+        key="qa-question",
+        height=96,
+        label_visibility="collapsed",
     )
-    st.markdown("### Ask a physics question")
-    st.text_area(
-        "Your physics question", key="qa-question", height=110, label_visibility="collapsed"
+    examples_column, generate_column = composer.columns([3, 1.2], vertical_alignment="bottom")
+    examples_column.markdown(
+        '<p class="qa-helper-title">Try an example</p>', unsafe_allow_html=True
     )
-    st.markdown('<p class="qa-helper-title">Try an example</p>', unsafe_allow_html=True)
-    st.pills(
+    examples_column.pills(
         "Try a prepared question",
         options=list(EXAMPLES),
         selection_mode="single",
@@ -837,14 +1024,16 @@ def main() -> None:
         label_visibility="collapsed",
     )
     learning = st.container()
-    topic_dir = Path(__file__).resolve().parents[3] / "artifacts/v2/topics/releases/2.0.0-rc.1"
+    topic_dir = REPO_ROOT / "artifacts/v2/topics/releases/2.0.0-rc.1"
     corpus_path = os.environ.get("CS30_UI_CORPUS", "")
     cache_key = f"qa-corpus-{live}-{corpus_path}"
     corpus = None
     try:
         if cache_key not in st.session_state:
             st.session_state[cache_key] = load_ui_corpus(
-                Path(corpus_path) if corpus_path else None, topic_dir, synthetic=not live
+                Path(corpus_path) if corpus_path else None,
+                topic_dir,
+                synthetic=not live,
             )
         corpus = st.session_state[cache_key]
     except (OSError, ValueError) as exc:
@@ -868,7 +1057,6 @@ def main() -> None:
                 "available after setup. Switch Demo mode to Fixture mode to test the "
                 "full workflow without a key."
             )
-        generate_column, _ = st.columns(2)  # same width as Next question / Quiz me
         clicked = generate_column.button(
             "Generate answer" if live else "Generate answer · fixture",
             type="primary",
@@ -912,8 +1100,11 @@ def main() -> None:
                     "The result below belongs to the previous submitted question."
                 )
             st.caption(f"Submitted question: {run.runtime.retrieval.query}")
-            with st.container(key="qa-answer"):
+            answer_column, sources_column = st.columns([1.7, 1], gap="medium")
+            with answer_column, st.container(border=True, key="qa-answer"):
                 render_answer(run)
+            with sources_column, st.container(border=True, key="qa-sources"):
+                render_sources(run)
             scroll_id = st.session_state.pop("qa-scroll-to-answer", None)
             if scroll_id:
                 scroll_to_answer(scroll_id)
@@ -938,9 +1129,11 @@ def main() -> None:
                     }
                 )
         else:
-            st.info(
-                "Enter a question and run the pipeline to see an answer, "
-                "sources and practice availability."
+            st.markdown(
+                '<div class="v3-empty"><p class="v3-empty-title">Your answer will appear '
+                "here</p><p>Each answer is written from textbook passages and lists them as "
+                "numbered sources, so you can check every claim.</p></div>",
+                unsafe_allow_html=True,
             )
             if enabled:
                 st.caption(

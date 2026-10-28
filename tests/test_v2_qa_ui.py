@@ -235,7 +235,7 @@ def test_live_mode_is_default_and_waits_for_corpus_when_key_is_set(monkeypatch, 
     assert app.session_state["qa-demo-settings"]["mode"] == "Team V2 · DeepInfra"
     assert app.session_state["qa-demo-settings"]["retrieval"] == "hybrid"
     assert any("M6 Qwen3 hybrid index not found" in x.value for x in app.error)
-    assert any("M6 system retriever" in x.value for x in app.info)
+    assert any("v3-mode-live" in x.value and "Hybrid retrieval" in x.value for x in app.markdown)
     assert app_button(app, "Generate answer").disabled
 
 
@@ -403,7 +403,7 @@ def test_three_independent_model_choices_change_banner_without_calls(monkeypatch
     selector.set_value("google/gemma-3-12b-it").run()
     app_button(app, "Done").click().run()
     assert not app.exception
-    assert any("Gemma 3 12B" in x.value for x in app.info)
+    assert any("v3-mode-live" in x.value and "Gemma 3 12B" in x.value for x in app.markdown)
     assert app_button(app, "Generate answer").disabled
     assert "qa-run" not in app.session_state
     app_button(app, "Demo Mode").click().run()

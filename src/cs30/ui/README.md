@@ -21,6 +21,22 @@ Starting level and Enable Concept Check appear above the question input.
 settings dialog without resizing the learning page. The older fixture layout
 remains in `v2_fixture.py`, but is not a second page in the V2 navigation.
 
+The redesigned layout integrates the local `cs30-v3-ui-preview` presentation
+into this checkout. The existing `v2_app.py` entry and Windows launcher now open
+the redesigned page; no sibling preview directory or separate server is needed.
+It adds a compact header with a visible mode badge, learning-settings and
+question cards, an answer beside a numbered Sources card, a practice card with
+two-column options, and a progress section. Sources retain passage text,
+chapter, rank, chunk ID and locator. Answer text retains Streamlit's Markdown
+rendering. Narrow screens stack the cards and quiz options vertically.
+
+`qa_app.py` owns the page layout. `qa_quiz.py` owns the redesigned quiz
+presentation and imports the existing `QuizAttemptView` type so shared grading
+callbacks and event handling remain compatible. `v2_runtime.py`, shared
+contracts, retrieval/generation logic, and learner-state/report rules are not
+changed by this layout integration. The standalone fixture demo continues to
+use `concept_check.py`.
+
 **Team V2 / DeepInfra** offers three independent answer models through the existing
 `OpenAICompatibleClient`, with M7's recorded per-model settings:
 
@@ -93,12 +109,14 @@ This branch is a development demo, not a completed real-model end-to-end release
   real-embedding smoke failed because this machine lacks a complete cached Qwen3
   model. Download the pinned model before claiming live hybrid readiness; the
   passing hybrid regression uses a test embedding model, not real Qwen weights.
-- The relevant offline regression passed **100 tests** covering free-text Q&A,
+- The redesigned-page offline regression passed **116 tests** covering free-text Q&A,
   hybrid composition with a test embedding model, citation validation,
   learner-state controls, selection/refusal, reports and fixture UI. UI/test
   Ruff checks passed. Browser checks covered question -> answer/evidence -> quiz
   -> feedback -> native sidebar report/downloads, dialog settings, sidebar
-  resizing/collapse and body-text sizes.
+  resizing/collapse, floating-button positioning, and a 390px mobile viewport
+  without document horizontal overflow. These tests were run locally; they do
+  not rely on the preview author's cloud test results.
 - Loading the real 6,184-chunk corpus and BM25 with an injected mock passed
   citation validation. The average-acceleration example returned
   `TOPIC_SUPPORT_BELOW_THRESHOLD`; this is a refusal, not completed real practice.
