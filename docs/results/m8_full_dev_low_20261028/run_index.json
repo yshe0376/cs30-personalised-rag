@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0",
+  "original_source_commit": "2b565b8ad4b0181ba27bda7a287700db24d5a36e",
+  "frozen_profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "jobs": [
+    {
+      "job": 1,
+      "batch": "dev-gpt-oss",
+      "task": "correctness",
+      "output": "original/results/dev-gpt-oss/correctness",
+      "ledger": "original/ledgers/dev-gpt-oss.correctness.attempts.jsonl"
+    },
+    {
+      "job": 2,
+      "batch": "dev-gpt-oss",
+      "task": "adaptation",
+      "output": "original/results/dev-gpt-oss/adaptation.results.jsonl",
+      "ledger": "original/ledgers/dev-gpt-oss.adaptation.attempts.jsonl"
+    },
+    {
+      "job": 3,
+      "batch": "dev-gpt-oss",
+      "task": "discrimination",
+      "output": "original/results/dev-gpt-oss/discrimination.results.jsonl",
+      "ledger": "original/ledgers/dev-gpt-oss.discrimination.attempts.jsonl"
+    },
+    {
+      "job": 4,
+      "batch": "dev-gpt-oss",
+      "task": "evidence_support",
+      "output": "original/results/dev-gpt-oss/evidence_support.results.jsonl",
+      "ledger": "original/ledgers/dev-gpt-oss.evidence_support.attempts.jsonl"
+    },
+    {
+      "job": 5,
+      "batch": "dev-llama",
+      "task": "correctness",
+      "output": "original/results/dev-llama/correctness",
+      "ledger": "original/ledgers/dev-llama.correctness.attempts.jsonl"
+    },
+    {
+      "job": 6,
+      "batch": "dev-llama",
+      "task": "adaptation",
+      "output": "original/results/dev-llama/adaptation.results.jsonl",
+      "ledger": "original/ledgers/dev-llama.adaptation.attempts.jsonl"
+    },
+    {
+      "job": 7,
+      "batch": "dev-llama",
+      "task": "discrimination",
+      "output": "original/results/dev-llama/discrimination.results.jsonl",
+      "ledger": "original/ledgers/dev-llama.discrimination.attempts.jsonl"
+    },
+    {
+      "job": 8,
+      "batch": "dev-llama",
+      "task": "evidence_support",
+      "output": "original/results/dev-llama/evidence_support.results.jsonl",
+      "ledger": "original/ledgers/dev-llama.evidence_support.attempts.jsonl"
+    },
+    {
+      "job": 9,
+      "batch": "dev-gemma",
+      "task": "correctness",
+      "output": "original/results/dev-gemma/correctness",
+      "ledger": "original/ledgers/dev-gemma.correctness.attempts.jsonl"
+    },
+    {
+      "job": 10,
+      "batch": "dev-gemma",
+      "task": "adaptation",
+      "output": "original/results/dev-gemma/adaptation.results.jsonl",
+      "ledger": "original/ledgers/dev-gemma.adaptation.attempts.jsonl"
+    },
+    {
+      "job": 11,
+      "batch": "dev-gemma",
+      "task": "discrimination",
+      "output": "original/results/dev-gemma/discrimination.results.jsonl",
+      "ledger": "original/ledgers/dev-gemma.discrimination.attempts.jsonl"
+    },
+    {
+      "job": 12,
+      "batch": "dev-gemma",
+      "task": "evidence_support",
+      "output": "original/results/dev-gemma/evidence_support.results.jsonl",
+      "ledger": "original/ledgers/dev-gemma.evidence_support.attempts.jsonl"
+    },
+    {
+      "job": 13,
+      "batch": "repeat-gpt-oss",
+      "task": "correctness",
+      "output": "original/results/repeat-gpt-oss/correctness",
+      "ledger": "original/ledgers/repeat-gpt-oss.correctness.attempts.jsonl"
+    },
+    {
+      "job": 14,
+      "batch": "repeat-gpt-oss",
+      "task": "adaptation",
+      "output": "original/results/repeat-gpt-oss/adaptation.results.jsonl",
+      "ledger": "original/ledgers/repeat-gpt-oss.adaptation.attempts.jsonl"
+    },
+    {
+      "job": 15,
+      "batch": "repeat-gpt-oss",
+      "task": "discrimination",
+      "output": "original/results/repeat-gpt-oss/discrimination.results.jsonl",
+      "ledger": "original/ledgers/repeat-gpt-oss.discrimination.attempts.jsonl"
+    },
+    {
+      "job": 16,
+      "batch": "repeat-gpt-oss",
+      "task": "evidence_support",
+      "output": "original/results/repeat-gpt-oss/evidence_support.results.jsonl",
+      "ledger": "original/ledgers/repeat-gpt-oss.evidence_support.attempts.jsonl"
+    },
+    {
+      "job": 17,
+      "batch": "repeat-llama",
+      "task": "correctness",
+      "output": "original/results/repeat-llama/correctness",
+      "ledger": "original/ledgers/repeat-llama.correctness.attempts.jsonl"
+    },
+    {
+      "job": 18,
+      "batch": "repeat-llama",
+      "task": "adaptation",
+      "output": "original/results/repeat-llama/adaptation.results.jsonl",
+      "ledger": "original/ledgers/repeat-llama.adaptation.attempts.jsonl"
+    },
+    {
+      "job": 19,
+      "batch": "repeat-llama",
+      "task": "discrimination",
+      "output": "original/results/repeat-llama/discrimination.results.jsonl",
+      "ledger": "original/ledgers/repeat-llama.discrimination.attempts.jsonl"
+    },
+    {
+      "job": 20,
+      "batch": "repeat-llama",
+      "task": "evidence_support",
+      "output": "original/results/repeat-llama/evidence_support.results.jsonl",
+      "ledger": "original/ledgers/repeat-llama.evidence_support.attempts.jsonl"
+    },
+    {
+      "job": 21,
+      "batch": "repeat-gemma",
+      "task": "correctness",
+      "output": "original/results/repeat-gemma/correctness",
+      "ledger": "original/ledgers/repeat-gemma.correctness.attempts.jsonl"
+    },
+    {
+      "job": 22,
+      "batch": "repeat-gemma",
+      "task": "adaptation",
+      "output": "original/results/repeat-gemma/adaptation.results.jsonl",
+      "ledger": "original/ledgers/repeat-gemma.adaptation.attempts.jsonl"
+    },
+    {
+      "job": 23,
+      "batch": "repeat-gemma",
+      "task": "discrimination",
+      "output": "original/results/repeat-gemma/discrimination.results.jsonl",
+      "ledger": "original/ledgers/repeat-gemma.discrimination.attempts.jsonl"
+    },
+    {
+      "job": 24,
+      "batch": "repeat-gemma",
+      "task": "evidence_support",
+      "output": "original/results/repeat-gemma/evidence_support.results.jsonl",
+      "ledger": "original/ledgers/repeat-gemma.evidence_support.attempts.jsonl"
+    }
+  ]
+}

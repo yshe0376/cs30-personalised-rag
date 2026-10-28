@@ -1,0 +1,13 @@
+split,student_level,condition_id,generator_model,eligible,full_correct,denominator,unresolved,value,lower_bound,upper_bound
+dev,advanced,P0R0_plain,openai/gpt-oss-20b,154,146,154,5,,0.948051948051948,0.9805194805194806
+dev,advanced,P0R1_reranking_only,openai/gpt-oss-20b,154,145,154,3,,0.9415584415584416,0.961038961038961
+dev,advanced,P1R0_prompt_only,openai/gpt-oss-20b,154,145,154,3,,0.9415584415584416,0.961038961038961
+dev,advanced,P1R1_combined,openai/gpt-oss-20b,154,144,154,6,,0.935064935064935,0.974025974025974
+dev,beginner,P0R0_plain,openai/gpt-oss-20b,154,146,154,2,,0.948051948051948,0.961038961038961
+dev,beginner,P0R1_reranking_only,openai/gpt-oss-20b,154,143,154,4,,0.9285714285714286,0.9545454545454546
+dev,beginner,P1R0_prompt_only,openai/gpt-oss-20b,154,145,154,4,,0.9415584415584416,0.9675324675324676
+dev,beginner,P1R1_combined,openai/gpt-oss-20b,154,143,154,5,,0.9285714285714286,0.961038961038961
+dev,intermediate,P0R0_plain,openai/gpt-oss-20b,154,147,154,3,,0.9545454545454546,0.974025974025974
+dev,intermediate,P0R1_reranking_only,openai/gpt-oss-20b,154,146,154,4,,0.948051948051948,0.974025974025974
+dev,intermediate,P1R0_prompt_only,openai/gpt-oss-20b,154,144,154,5,,0.935064935064935,0.9675324675324676
+dev,intermediate,P1R1_combined,openai/gpt-oss-20b,154,146,154,2,,0.948051948051948,0.961038961038961

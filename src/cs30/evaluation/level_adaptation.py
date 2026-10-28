@@ -11,6 +11,7 @@ from pydantic import ValidationError
 from cs30.contracts import StudentLevel
 
 from .adaptation_applicability import make_applicability_binding, validate_adaptation_applicability
+from .evidence_quotes import quote_in_answer
 from .judge_runtime import make_judge_request
 from .level_profiles import eligible_levels
 from .v2_generation_models import (
@@ -136,7 +137,9 @@ def validate_adaptation_output(
             f"actual={sorted(actual)}"
         )
     for judgement in output.criteria:
-        if judgement.exact_quote is not None and judgement.exact_quote not in answer:
+        if judgement.exact_quote is not None and not quote_in_answer(
+            judgement.exact_quote, answer
+        ):
             raise ValueError(
                 f"criterion {judgement.criterion_id} quote is not an exact answer substring"
             )

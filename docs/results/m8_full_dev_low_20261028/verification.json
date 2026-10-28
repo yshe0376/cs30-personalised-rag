@@ -1,0 +1,14 @@
+{
+  "base_commit": "573a80cf6f7ec939562262edc080c65e52168972",
+  "branch": "fix/judge-quote-normalization",
+  "patch_sha256": "b259573265a5cde999755cf2520756dfb6905186a478b0a798d0de7cbf5233bb",
+  "full_suite_passed": 1432,
+  "full_suite_skipped": 2,
+  "new_tests_passed": 39,
+  "ruff": "passed",
+  "real_offline_prepared_cache_coverage": "passed",
+  "independent_prepared_cache_misses": 329,
+  "api_calls_during_verification": 0,
+  "original_artifacts_modified": false,
+  "claim_boundary": "Original execution archive plus offline review, not a final repaired evaluation release"
+}

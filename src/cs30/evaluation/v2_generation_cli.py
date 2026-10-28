@@ -466,6 +466,12 @@ def _run_judge_requests(args: argparse.Namespace) -> int:
         require_current_execution_cache=args.require_fresh_cache,
         attempt_log_path=attempt_log,
     )
+    # Preflight: every reusable cached result must satisfy the current validators before
+    # any provider call, so an outdated cache stops the run instead of being re-bought.
+    for request in requests:
+        runner.verify_cached(
+            request, lambda raw, bound=request: validate_output_against_request(raw, bound)
+        )
     results: list[JudgeResultEnvelope] = []
     for request in requests:
         results.append(
