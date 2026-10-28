@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "task": "discrimination",
+  "request_id": "discrimination-6a4ebbf9c6f6be4d2b61",
+  "cache_key": "d96c0da061e0da4a86c29f989697b19a6636039bdc1674b5087b75fbb355945f",
+  "judge_config_version": "synthetic-free-key-probe-v1",
+  "judge_execution_id": "synthetic-free-key-e063521e5241",
+  "model_digest": null,
+  "context_window": null,
+  "output": {
+    "schema_version": "1.0",
+    "request_id": "discrimination-6a4ebbf9c6f6be4d2b61",
+    "predicted_level": "uncertain",
+    "exact_quote": null,
+    "reason": "Synthetic connectivity fixture only"
+  },
+  "raw_output": null,
+  "unresolved": false,
+  "error": null,
+  "provider_response_id": "q0Dhatq6J5rcvr0PloGXqQs",
+  "completed_at_utc": "2026-10-28T00:24:20.129613+00:00",
+  "reported_model": "gemini-3.1-flash-lite",
+  "input_tokens": 561,
+  "output_tokens": 552,
+  "thought_tokens": 359,
+  "cache_hit": false
+}

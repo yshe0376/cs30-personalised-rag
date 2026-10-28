@@ -1,0 +1,346 @@
+"""Synthetic Gemini metadata checks; offline unless explicitly enabled."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import inspect
+import json
+import os
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import uuid4
+
+import cs30.evaluation.judge_runtime as runtime
+from cs30.evaluation.gemini_judge_client import GeminiJudgeClient
+from cs30.evaluation.v2_generation_models import EvaluationMode, JudgeConfiguration, JudgeTask
+
+MODEL = "gemini-3.1-flash-lite"
+KEY_VARIABLE = "API_FREE_KEY"
+TOKEN_FIELDS = (
+    "prompt_token_count",
+    "candidates_token_count",
+    "thoughts_token_count",
+    "total_token_count",
+)
+
+
+def save_json(path: Path, value: object) -> None:
+    path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+
+
+class RecordingModels:
+    """Capture returned usage per attempt and enforce the explicit call limit."""
+
+    def __init__(self, models: object, out: Path, *, max_calls: int = 1) -> None:
+        if max_calls not in {1, 3}:
+            raise ValueError("The probe supports only a one-call or three-call limit")
+        self.models = models
+        self.out = out
+        self.max_calls = max_calls
+        self.calls = 0
+        self.usage: dict | None = None
+        self.usage_history: list[dict] = []
+
+    def generate_content(self, **kwargs):
+        if self.calls >= self.max_calls:
+            limit = "only one" if self.max_calls == 1 else "at most three"
+            raise RuntimeError(f"The probe permits {limit} generate_content invocations")
+        self.calls += 1
+        try:
+            response = self.models.generate_content(**kwargs)
+        except Exception as exc:
+            # Do not let SDK exception text echo a key into logs or terminal output.
+            code = getattr(exc, "code", None)
+            status = str(code) if isinstance(code, int) else "unknown"
+            raise RuntimeError(
+                f"Gemini request failed; HTTP status {status}. "
+                "Stop and inspect project/quota settings."
+            ) from None
+        metadata = getattr(response, "usage_metadata", None)
+        self.usage = {name: getattr(metadata, name, None) for name in TOKEN_FIELDS}
+        save_json(self.out / "raw_usage.json", self.usage)
+        record = {"attempt": self.calls, **self.usage}
+        self.usage_history.append(record)
+        with (self.out / "raw_usage_by_attempt.jsonl").open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record) + "\n")
+        return response
+
+
+class OfflineModels:
+    """A local stand-in for preparation checks; no SDK or network needed."""
+
+    def __init__(self, request_id: str) -> None:
+        self.request_id = request_id
+
+    def generate_content(self, **_kwargs):
+        return SimpleNamespace(
+            text=json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "request_id": self.request_id,
+                    "predicted_level": "uncertain",
+                    "exact_quote": None,
+                    "reason": "Synthetic connectivity fixture only.",
+                }
+            ),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=13,
+                candidates_token_count=17,
+                thoughts_token_count=3,
+                total_token_count=33,
+            ),
+            model_version=MODEL,
+            response_id="offline-fixture",
+            candidates=[SimpleNamespace(finish_reason="STOP")],
+        )
+
+
+def build_fixture():
+    configuration = JudgeConfiguration(
+        config_version="synthetic-free-key-probe-v1",
+        provider="gemini",
+        model_family="gemini",
+        model_revision=MODEL,
+        temperature=1,
+        seed=5703,
+        thinking_level="low",
+        prompt_version="synthetic-probe-v1",
+        output_schema_version="1.0",
+        local_model=False,
+        # User approval is for this fixed fictional fixture, not research/Dev data.
+        data_approval="approved",
+    )
+    request = runtime.make_judge_request(
+        task=JudgeTask.DISCRIMINATION,
+        payload={"question": "What colour is the fictional cube?", "answer": "The cube is blue."},
+        system_instruction=(
+            "This is a synthetic API connectivity check, not learner evaluation. "
+            "Return schema_version 1.0 and the supplied request_id. Set predicted_level to "
+            "uncertain and exact_quote to null. Set reason to Synthetic connectivity fixture only."
+        ),
+        configuration=configuration,
+        generation_model_family="synthetic-fixture",
+        mode=EvaluationMode.DEVELOPMENT,
+    )
+    return configuration, request
+
+
+def run_probe(
+    out: Path,
+    *,
+    online: bool,
+    free_key: str | None,
+    max_attempts: int = 1,
+    force_invalid_attempts: int = 0,
+) -> dict:
+    if (max_attempts, force_invalid_attempts) not in {(1, 0), (3, 2), (3, 3)}:
+        raise ValueError("Use one normal call or three calls with two/three forced rejections")
+    configuration, request = build_fixture()
+    forced_rejections: list[int] = []
+    sdk = None
+    try:
+        if online:
+            if not free_key:
+                raise ValueError(
+                    f"Set {KEY_VARIABLE} to the free-project key; no other key is read"
+                )
+            from google import genai
+            from google.genai import types
+
+            sdk = genai.Client(
+                api_key=free_key,
+                vertexai=False,
+                http_options=types.HttpOptions(
+                    timeout=45000, retry_options=types.HttpRetryOptions(attempts=1)
+                ),
+            )
+            underlying_models = sdk.models
+        else:
+            underlying_models = OfflineModels(request.request_id)
+        recorder = RecordingModels(underlying_models, out, max_calls=max_attempts)
+        client = GeminiJudgeClient(
+            MODEL,
+            sdk_client=SimpleNamespace(models=recorder),
+            thinking_level="low",
+            temperature=1,
+            max_output_tokens=1024,
+            timeout_seconds=45,
+        )
+        save_json(out / "configuration.json", configuration.model_dump(mode="json"))
+        save_json(out / "request.json", request.model_dump(mode="json"))
+        runner = runtime.CachedJudgeRunner(
+            out / "cache.jsonl",
+            judge_execution_id="synthetic-free-key-" + uuid4().hex[:12],
+            max_attempts=max_attempts,
+            attempt_log_path=out / "calls.jsonl",
+        )
+
+        def validate_probe_output(raw):
+            validated = runtime.validate_output_against_request(raw, request)
+            if recorder.calls <= force_invalid_attempts:
+                forced_rejections.append(recorder.calls)
+                raise ValueError(
+                    "Intentional local probe rejection after a valid response; "
+                    "record this attempt's usage and retry. This is not a model error."
+                )
+            return validated
+
+        result = runner.run(
+            request,
+            configuration,
+            runtime.StructuredJsonJudgeProvider(client),
+            validate_probe_output,
+        )
+        save_json(out / "result.json", result.model_dump(mode="json"))
+        ledger = [
+            json.loads(line)
+            for line in (out / "calls.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        raw_by_attempt = {row["attempt"]: row for row in recorder.usage_history}
+        metadata_present = len(raw_by_attempt) == len(ledger) == recorder.calls and all(
+            isinstance(row[name], int)
+            for row in recorder.usage_history
+            for name in TOKEN_FIELDS[:2]
+        )
+        expected = {"input_tokens": 0, "output_tokens": 0, "thought_tokens": 0}
+        comparisons = []
+        for entry in ledger:
+            raw = raw_by_attempt.get(entry["attempt"])
+            mapped = None
+            if raw and all(isinstance(raw[name], int) for name in TOKEN_FIELDS[:2]):
+                mapped = {
+                    "input_tokens": raw["prompt_token_count"],
+                    "output_tokens": raw["candidates_token_count"]
+                    + (raw["thoughts_token_count"] or 0),
+                    "thought_tokens": raw["thoughts_token_count"] or 0,
+                }
+                for field, value in mapped.items():
+                    expected[field] += value
+            comparisons.append(
+                {
+                    "attempt": entry["attempt"],
+                    "status": entry["status"],
+                    "intentional_rejection": entry["attempt"] in forced_rejections,
+                    "sdk_matches_ledger": bool(mapped)
+                    and all(entry[field] == value for field, value in mapped.items()),
+                    "input_tokens": entry["input_tokens"],
+                    "output_tokens": entry["output_tokens"],
+                    "thought_tokens": entry["thought_tokens"],
+                }
+            )
+        matches = (
+            metadata_present
+            and all(row["sdk_matches_ledger"] for row in comparisons)
+            and all(getattr(result, field) == value for field, value in expected.items())
+        )
+        expected_statuses = ["invalid_output"] * force_invalid_attempts
+        if force_invalid_attempts < max_attempts:
+            expected_statuses.append("accepted")
+        scenario_passed = (
+            matches
+            and recorder.calls == max_attempts
+            and forced_rejections == list(range(1, force_invalid_attempts + 1))
+            and [entry["status"] for entry in ledger] == expected_statuses
+            and result.unresolved is (force_invalid_attempts == max_attempts)
+        )
+        save_json(out / "forced_rejections.json", {"attempts": forced_rejections})
+        summary = {
+            "mode": "real-api" if online else "offline-simulated",
+            "model": MODEL,
+            "provider_invocations": recorder.calls,
+            "real_network_invocations": recorder.calls if online else 0,
+            "sdk_http_attempt_limit": 1,
+            "application_attempt_limit": max_attempts,
+            "intentional_rejection_limit": force_invalid_attempts,
+            "forced_rejections_observed": forced_rejections,
+            "retry_scenario_passed": bool(scenario_passed) if force_invalid_attempts else None,
+            "max_output_tokens": 1024,
+            "metadata_present": metadata_present,
+            "metadata_matches_ledger_and_result": bool(matches),
+            "expected_mapped_usage": expected,
+            "per_attempt": comparisons,
+            "output_valid": not result.unresolved,
+            "error": result.error,
+            "scope": "Fixed fictional connectivity fixture; no research inputs loaded.",
+            "billing_note": (
+                "Operator must verify Free Tier status; the key alone cannot prove it."
+            ),
+        }
+        save_json(out / "summary.json", summary)
+        return summary
+    finally:
+        if sdk is not None:
+            sdk.close()
+
+
+def main(argv=None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--online", action="store_true", help="enable real requests within the selected probe limit"
+    )
+    parser.add_argument(
+        "--confirm-free-project",
+        action="store_true",
+        help="operator verified this key belongs to an eligible Free Tier project",
+    )
+    parser.add_argument("--out", type=Path)
+    parser.add_argument(
+        "--retry-check",
+        action="store_true",
+        help="reject two valid responses locally, then validate the third (three calls maximum)",
+    )
+    args = parser.parse_args(argv)
+    free_key = os.environ.get(KEY_VARIABLE, "").strip() if args.online else None
+    if args.online and not args.confirm_free_project:
+        parser.error("Confirm the key's project is Free Tier before using --online")
+    if args.online and (not free_key or len(free_key) < 20):
+        parser.error(
+            f"Enter the actual free-project key into {KEY_VARIABLE}; "
+            "enter its secret value, not the display name API Free Key"
+        )
+    if "attempt_log_path" not in inspect.signature(runtime.CachedJudgeRunner).parameters:
+        parser.error("Use the fix/judge-attempt-usage branch and its virtual environment")
+    repo = Path(__file__).resolve().parents[3] / "cs30-personalised-rag-v2-m8"
+    if not Path(runtime.__file__).resolve().is_relative_to(repo / "src"):
+        parser.error("Python imported a different repository; use this repository's .venv")
+    name = (
+        ("real-" if args.online else "offline-")
+        + ("retry-" if args.retry_check else "")
+        + datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+        + "-"
+        + uuid4().hex[:4]
+    )
+    out = args.out or Path(__file__).resolve().parent / "runs" / name
+    out.mkdir(parents=True, exist_ok=False)
+    save_json(
+        out / "provenance.json",
+        {
+            "source_commit": subprocess.check_output(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True
+            ).strip(),
+            "key_environment_variable": KEY_VARIABLE,
+            "contains_api_key": False,
+            "private_probe_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+            "intentional_retry_probe": args.retry_check,
+        },
+    )
+    summary = run_probe(
+        out,
+        online=args.online,
+        free_key=free_key,
+        max_attempts=3 if args.retry_check else 1,
+        force_invalid_attempts=2 if args.retry_check else 0,
+    )
+    print(json.dumps(summary, indent=2))
+    print("Files written to", out)
+    passed = summary["metadata_matches_ledger_and_result"]
+    if args.retry_check:
+        passed = passed and summary["retry_scenario_passed"]
+    return 0 if passed else 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

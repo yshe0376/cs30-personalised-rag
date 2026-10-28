@@ -1,0 +1,7 @@
+{
+  "source_commit": "8bab9a773e6d854fa05cd62cc07e403f31964295",
+  "key_environment_variable": "API_FREE_KEY",
+  "contains_api_key": false,
+  "private_probe_sha256": "144a415c0c809c6dfe7850f10ce720974b42b61ad3bc8f93e651104fe1ae742b",
+  "intentional_retry_probe": true
+}
