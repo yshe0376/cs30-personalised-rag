@@ -355,18 +355,17 @@ def inject_qa_styles() -> None:
         .qa-section-gap { margin-top: 28px !important; }
         .st-key-qa-practice-control [data-testid="stCheckbox"] label {
             display: flex;
-            flex-direction: row-reverse;
+            flex-direction: row;
             align-items: center !important;
             gap: 10px;
             width: fit-content;
         }
         .st-key-qa-practice-control [data-testid="stCheckbox"] label > div {
             margin: 0 !important;
-            padding: 0;
         }
         .st-key-qa-practice-control [data-testid="stCheckbox"] label
             [data-testid="stMarkdownContainer"] p {
-            font-size: 1.1rem !important;
+            font-size: 1.125rem !important;
             font-weight: 700 !important;
             line-height: 1.3 !important;
             margin: 0 !important;
