@@ -5,7 +5,10 @@ from types import ModuleType, SimpleNamespace
 
 import pytest
 
-from cs30.evaluation.gemini_judge_client import GeminiJudgeClient
+from cs30.evaluation.gemini_judge_client import (
+    GeminiJudgeClient,
+    GeminiJudgeEmptyResponseError,
+)
 from cs30.generation.exceptions import (
     LLMEmptyResponseError,
     LLMProviderError,
@@ -117,8 +120,17 @@ def test_empty_or_blocked_response_fails_closed() -> None:
     )
     client = GeminiJudgeClient("gemini-test", sdk_client=sdk(RecordingModels(blocked)))
 
-    with pytest.raises(LLMEmptyResponseError, match="prompt was blocked"):
+    with pytest.raises(LLMEmptyResponseError, match="prompt was blocked") as caught:
         client.complete("prompt", {"type": "object", "properties": {}})
+    assert isinstance(caught.value, GeminiJudgeEmptyResponseError)
+    metadata = caught.value.response
+    assert metadata.usage_available
+    assert metadata.response_id == "gemini-response-1"
+    assert metadata.model == "gemini-3.1-flash-lite"
+    assert metadata.done_reason == "safety"
+    assert metadata.usage.input_tokens == 31
+    assert metadata.usage.output_tokens == 9
+    assert metadata.thought_tokens == 2
 
 
 def test_sdk_timeout_and_provider_errors_use_shared_error_categories() -> None:
@@ -184,7 +196,6 @@ def test_constructor_configures_sdk_retry_policy(monkeypatch) -> None:
     assert {408, 429, 500, 599} <= set(options.retry_options.http_status_codes)
 
 
-
 def test_retry_policy_is_accepted_by_installed_sdk(monkeypatch) -> None:
     """When google-genai is installed, its real option types must accept our settings."""
 
@@ -199,6 +210,7 @@ def test_retry_policy_is_accepted_by_installed_sdk(monkeypatch) -> None:
     GeminiJudgeClient("gemini-test", api_key="not-a-real-key")
 
     assert captured["http_options"].retry_options.attempts == 5
+
 
 def test_defaults_follow_frozen_gemini_judge_policy() -> None:
     client = GeminiJudgeClient("gemini-test", sdk_client=sdk(RecordingModels(response())))

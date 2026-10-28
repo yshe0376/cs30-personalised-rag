@@ -18,9 +18,18 @@ from cs30.generation.exceptions import (
 
 @dataclass(frozen=True)
 class GeminiJudgeResponse(LLMResponse):
-    """Shared response plus Gemini's separately reported reasoning-token count."""
+    """Shared response plus Gemini thinking tokens and usage-metadata availability."""
 
     thought_tokens: int = 0
+    usage_available: bool = True
+
+
+class GeminiJudgeEmptyResponseError(LLMEmptyResponseError):
+    """Reject empty content while retaining the returned Gemini response metadata."""
+
+    def __init__(self, message: str, response: GeminiJudgeResponse) -> None:
+        super().__init__(message)
+        self.response = response
 
 
 class GeminiJudgeClient:
@@ -86,7 +95,7 @@ class GeminiJudgeClient:
             ),
         )
 
-    def complete(self, prompt: str, text_format: dict) -> LLMResponse:
+    def complete(self, prompt: str, text_format: dict) -> GeminiJudgeResponse:
         """Request one schema-constrained JSON response and preserve provider metadata."""
 
         schema = text_format.get("schema", text_format)
@@ -119,14 +128,6 @@ class GeminiJudgeClient:
 
         done_reason = self._finish_reason(response)
         text = getattr(response, "text", None)
-        if not isinstance(text, str) or not text.strip():
-            if done_reason != "length":
-                detail = self._blocked_detail(response)
-                raise LLMEmptyResponseError(
-                    "Gemini response contained no text" + (f": {detail}" if detail else "")
-                )
-            text = ""
-
         usage = getattr(response, "usage_metadata", None)
         input_tokens = self._integer_field(usage, "prompt_token_count")
         output_tokens = self._integer_field(usage, "candidates_token_count")
@@ -137,8 +138,8 @@ class GeminiJudgeClient:
             total_tokens = input_tokens + billed_output_tokens
         reported_model = getattr(response, "model_version", None)
         response_id = getattr(response, "response_id", None)
-        return GeminiJudgeResponse(
-            text=text,
+        result = GeminiJudgeResponse(
+            text=text if isinstance(text, str) and text.strip() else "",
             model=str(reported_model or self.model),
             usage=TokenUsage(
                 input_tokens=input_tokens,
@@ -149,7 +150,15 @@ class GeminiJudgeClient:
             latency_ms=(time.perf_counter() - started) * 1000,
             done_reason=done_reason,
             thought_tokens=thought_tokens,
+            usage_available=usage is not None,
         )
+        if not result.text.strip() and done_reason != "length":
+            detail = self._blocked_detail(response)
+            raise GeminiJudgeEmptyResponseError(
+                "Gemini response contained no text" + (f": {detail}" if detail else ""),
+                result,
+            )
+        return result
 
     @staticmethod
     def _integer_field(value: object, name: str) -> int:

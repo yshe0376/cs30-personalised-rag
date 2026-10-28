@@ -16,6 +16,7 @@ from cs30.generation.client import LLMClient
 
 from .adaptation_applicability import validate_adaptation_applicability
 from .evidence_quotes import quote_is_grounded
+from .gemini_judge_client import GeminiJudgeEmptyResponseError
 from .level_profiles import canonical_json_sha256
 from .v2_generation_models import (
     AdaptationJudgeOutput,
@@ -189,15 +190,20 @@ class StructuredJsonJudgeProvider:
         configuration: JudgeConfiguration,
     ) -> JudgeProviderResponse:
         prompt = _render_judge_prompt(request)
-        response = self.client.complete(
-            prompt,
-            {
-                "type": "json_schema",
-                "name": f"{request.task.value}_judge_output",
-                "strict": True,
-                "schema": _ONLINE_OUTPUT_SCHEMAS[request.task],
-            },
-        )
+        empty_error = None
+        try:
+            response = self.client.complete(
+                prompt,
+                {
+                    "type": "json_schema",
+                    "name": f"{request.task.value}_judge_output",
+                    "strict": True,
+                    "schema": _ONLINE_OUTPUT_SCHEMAS[request.task],
+                },
+            )
+        except GeminiJudgeEmptyResponseError as exc:
+            response = exc.response
+            empty_error = exc
         metadata = JudgeProviderResponse(
             output={},
             response_id=response.response_id,
@@ -206,7 +212,10 @@ class StructuredJsonJudgeProvider:
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
             thought_tokens=int(getattr(response, "thought_tokens", 0)),
+            usage_available=bool(getattr(response, "usage_available", True)),
         )
+        if empty_error is not None:
+            raise JudgeProviderOutputError(str(empty_error), metadata) from empty_error
         if response.done_reason == "length":
             raise JudgeProviderOutputError("judge provider output was truncated", metadata)
         try:

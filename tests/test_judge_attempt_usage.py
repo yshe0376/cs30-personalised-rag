@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from cs30.evaluation.evidence_support import build_evidence_support_request
+from cs30.evaluation.gemini_judge_client import GeminiJudgeClient
 from cs30.evaluation.judge_runtime import (
     CachedJudgeRunner,
     JudgeProviderResponse,
@@ -148,6 +150,110 @@ def test_returned_usage_survives_decode_and_truncation_failures(tmp_path, text, 
         row["status"] == "invalid_output" and row["usage_available"]
         for row in read_log(runner.attempt_log_path)
     )
+
+
+@pytest.mark.parametrize("blocked", [False, True])
+@pytest.mark.parametrize("recovers", [False, True])
+def test_gemini_empty_response_usage_survives_retries(tmp_path, blocked, recovers):
+    request, valid = request_and_output()
+    calls = []
+
+    def generate_content(**kwargs):
+        calls.append(kwargs)
+        succeeds = recovers and len(calls) == 2
+        return SimpleNamespace(
+            text=json.dumps(valid) if succeeds else None,
+            candidates=[
+                SimpleNamespace(finish_reason="STOP" if succeeds or not blocked else "SAFETY")
+            ],
+            prompt_feedback=(
+                SimpleNamespace(block_reason="SAFETY", block_reason_message="Fixture block")
+                if blocked and not succeeds
+                else None
+            ),
+            usage_metadata=SimpleNamespace(
+                prompt_token_count=31 if len(calls) == 1 else 17,
+                candidates_token_count=3 if succeeds else 0,
+                thoughts_token_count=2 if len(calls) == 1 else 4,
+            ),
+            model_version="independent",
+            response_id=f"gemini-{len(calls)}",
+        )
+
+    client = GeminiJudgeClient(
+        "independent",
+        sdk_client=SimpleNamespace(models=SimpleNamespace(generate_content=generate_content)),
+    )
+    cache = tmp_path / "cache.jsonl"
+    runner = CachedJudgeRunner(cache, judge_execution_id="empty-response-test")
+    result = runner.run(
+        request,
+        configuration(),
+        StructuredJsonJudgeProvider(client),
+        lambda raw: validate_output_against_request(raw, request),
+    )
+
+    records = read_log(runner.attempt_log_path)
+    assert len(calls) == 2
+    assert result.unresolved is (not recovers)
+    assert (result.output is not None) is recovers
+    assert cache.exists() is recovers
+    assert [row["status"] for row in records] == [
+        "invalid_output",
+        "accepted" if recovers else "invalid_output",
+    ]
+    assert "contained no text" in records[0]["error"]
+    if blocked:
+        assert "Fixture block" in records[0]["error"]
+    assert all(row["usage_available"] for row in records)
+    assert [row["input_tokens"] for row in records] == [31, 17]
+    assert [row["output_tokens"] for row in records] == [2, 7 if recovers else 4]
+    assert [row["thought_tokens"] for row in records] == [2, 4]
+    assert [row["provider_response_id"] for row in records] == ["gemini-1", "gemini-2"]
+    assert (result.input_tokens, result.output_tokens, result.thought_tokens) == (
+        48,
+        9 if recovers else 6,
+        6,
+    )
+    assert result.provider_response_id == "gemini-2"
+
+
+@pytest.mark.parametrize("content", ["valid", "empty", "malformed", "truncated"])
+def test_gemini_response_without_usage_metadata_remains_unknown(tmp_path, content):
+    request, valid = request_and_output()
+    response = SimpleNamespace(
+        text={"valid": json.dumps(valid), "empty": None, "malformed": "[", "truncated": ""}[
+            content
+        ],
+        candidates=[
+            SimpleNamespace(finish_reason="MAX_TOKENS" if content == "truncated" else "STOP")
+        ],
+        model_version="independent",
+        response_id="no-usage",
+    )
+    client = GeminiJudgeClient(
+        "independent",
+        sdk_client=SimpleNamespace(
+            models=SimpleNamespace(generate_content=lambda **_kwargs: response)
+        ),
+    )
+    runner = CachedJudgeRunner(tmp_path / "cache.jsonl", judge_execution_id="missing-usage")
+    result = runner.run(
+        request,
+        configuration(),
+        StructuredJsonJudgeProvider(client),
+        lambda raw: validate_output_against_request(raw, request),
+    )
+    records = read_log(runner.attempt_log_path)
+    assert result.unresolved is (content != "valid")
+    assert len(records) == (1 if content == "valid" else 2)
+    assert all(not row["usage_available"] for row in records)
+    assert all(
+        row[field] is None
+        for row in records
+        for field in ("input_tokens", "output_tokens", "thought_tokens")
+    )
+    assert (result.input_tokens, result.output_tokens, result.thought_tokens) == (0, 0, 0)
 
 
 def test_provider_error_has_unknown_usage_not_a_false_zero_measurement(tmp_path):

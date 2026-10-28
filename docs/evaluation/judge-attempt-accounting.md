@@ -11,6 +11,9 @@ full Dev still requires review/merge of these changes and sufficient billing bal
 including failed local validation and exhausted requests. A later success does not erase
 earlier usage. `StructuredJsonJudgeProvider` also preserves returned usage when JSON decoding,
 JSON-object shape checks or output truncation reject a response before ordinary validation.
+Gemini empty-content and safety-blocked returns retain their response identity and any
+returned usage through an Evaluation-owned `LLMEmptyResponseError` subclass. They remain
+invalid outputs: retries can recover, but exhausted requests stay unresolved without a score.
 
 The CLI writes `RESULT_STEM.attempts.jsonl` beside its result output by default. For example,
 `--output results.jsonl` produces `results.attempts.jsonl`. `--attempt-log PATH` selects an
@@ -32,6 +35,9 @@ Each record includes:
 
 Unknown usage is **not** recorded as a measured zero. A transport error without a response
 cannot supply exact usage. Legacy mapping-only fixture providers likewise lack counters.
+Gemini responses without `usage_metadata` also produce null ledger counters, including
+otherwise valid, empty, malformed and truncated responses. Numeric zero placeholders inside
+the shared response/envelope types do not imply measured zero usage.
 For Gemini, output tokens already include thinking; never add thought tokens a second time.
 Internal SDK HTTP retries are not separately observable here: one ledger row is one provider
 invocation/application attempt, not a claim to instrument every underlying HTTP request.
@@ -83,8 +89,9 @@ fresh full-Dev output/cache/ledger paths and the approved low configuration.
 
 ## Offline verification
 
-`tests/test_judge_attempt_usage.py` uses local stand-ins, without constructing a Gemini API
-client. The two required scenarios return input counters 100 and 80 and check a total of 180:
+`tests/test_judge_attempt_usage.py` uses local stand-ins; its Gemini adapter receives an
+injected SDK stand-in rather than constructing a network client. The two required scenarios
+return input counters 100 and 80 and check a total of 180:
 
 1. first output rejected, second output accepted;
 2. both outputs rejected, request unresolved.
@@ -92,10 +99,12 @@ client. The two required scenarios return input counters 100 and 80 and check a 
 The tests also cover returned usage on malformed/truncated responses, unknown transport-error
 usage, immediate log persistence before a retry, cache reuse without duplicated attempts,
 log write failure, evidence retry preflight and CLI default ledger creation. Running these
-tests does not use a paid or free-tier API, and needs no API key.
+tests does not use a paid or free-tier API, and needs no API key. End-to-end adapter/provider/
+runner tests additionally cover empty and safety-blocked returns followed by success or
+exhausted retries, and missing metadata in valid/empty/malformed/truncated returns.
 
-Verification on 2026-10-28: **114 related tests passed**; full offline regression
-**1,333 passed, 2 skipped**; Ruff and diff whitespace checks passed.
+Verification on 2026-10-28: **130 related tests passed** (including Gemini adapter tests);
+full offline regression **1,341 passed, 2 skipped**; Ruff and diff whitespace checks passed.
 
 ```powershell
 python -m pytest -o addopts='' -q -p no:cacheprovider tests/test_judge_attempt_usage.py

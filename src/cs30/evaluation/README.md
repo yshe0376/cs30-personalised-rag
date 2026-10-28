@@ -734,6 +734,8 @@ and unresolved attempts. `--attempt-log` overrides its default `OUTPUT_STEM.atte
 Result token fields sum known usage across attempts; null ledger counters disclose missing
 usage, and cached results create no new attempt records. Evidence support requires at least
 two application attempts and its prompt explicitly requires quotes for every supporting ID.
+Gemini empty/safety-blocked responses retain returned usage through rejection and retries;
+missing `usage_metadata` stays unknown, including when the content is otherwise valid.
 No API key is needed for the local stand-in tests. See
 [judge-attempt-accounting.md](../../../docs/evaluation/judge-attempt-accounting.md) for field
 semantics, cache/resume behavior, retry limits, offline checks and the pre-run gate.
