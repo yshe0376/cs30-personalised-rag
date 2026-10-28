@@ -587,4 +587,5 @@ def test_malformed_provider_metadata_is_isolated_as_judge_error(invalid_text):
 
     record = score(OpenAnswerScorer(BrokenClient(), max_retries=0), [run(answer="slowing down")])[0]
     assert record.score_status == "judge_error" and record.score is None
-    assert record.judge_attempts[0].input_tokens == 0
+    assert record.judge_attempts[0].input_tokens is None
+    assert record.judge_attempts[0].usage_available is False

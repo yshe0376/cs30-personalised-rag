@@ -93,6 +93,7 @@ def test_every_validation_attempt_retains_usage_and_request_totals(tmp_path, rec
     result = runner.run(request, configuration(), provider, validate)
     assert len(prompts) == 2 and "REPAIR_REQUEST" in prompts[1]
     assert result.unresolved is (not recovers)
+    assert result.attempt_count == 2 and result.usage_complete is True
     assert (result.input_tokens, result.output_tokens, result.thought_tokens) == (180, 50, 15)
     assert result.provider_response_id == "response-2"
     records = read_log(log)
@@ -279,6 +280,32 @@ def test_provider_error_has_unknown_usage_not_a_false_zero_measurement(tmp_path)
     assert records[0]["status"] == "provider_error"
     assert records[0]["input_tokens"] is None and not records[0]["usage_available"]
     assert result.input_tokens == 9 and not result.unresolved
+    assert result.attempt_count == 2 and result.usage_complete is False
+
+
+def test_legacy_envelope_cache_does_not_invent_accounting_metadata(tmp_path):
+    request, valid = request_and_output()
+    cache = tmp_path / "cache.jsonl"
+    runner = CachedJudgeRunner(cache, judge_execution_id="original")
+    original = runner.run(
+        request,
+        configuration(),
+        lambda *_: JudgeProviderResponse(valid, "r1", "2026-10-28T00:00:00+00:00"),
+        lambda raw: validate_output_against_request(raw, request),
+    )
+    assert original.attempt_count == 1 and original.usage_complete is True
+    saved = read_log(cache)[0]
+    saved.pop("attempt_count")
+    saved.pop("usage_complete")
+    cache.write_text(json.dumps(saved) + "\n", encoding="utf-8")
+    resumed = CachedJudgeRunner(cache, judge_execution_id="resume")
+
+    def unexpected(*_):
+        raise AssertionError("cached output must not call the provider")
+
+    result = resumed.run(request, configuration(), unexpected, lambda raw: raw)
+    assert result.cache_hit and result.attempt_count is None and result.usage_complete is None
+    assert len(read_log(runner.attempt_log_path)) == 1
 
 
 def test_log_write_failure_stops_before_another_provider_attempt(tmp_path, monkeypatch):

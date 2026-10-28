@@ -736,6 +736,12 @@ usage, and cached results create no new attempt records. Evidence support requir
 two application attempts and its prompt explicitly requires quotes for every supporting ID.
 Gemini empty/safety-blocked responses retain returned usage through rejection and retries;
 missing `usage_metadata` stays unknown, including when the content is otherwise valid.
+The correctness scorer now preserves that metadata too, with nullable unknown counters and
+an immediate sidecar log beside its report directory. Both result types expose
+`attempt_count` and `usage_complete`, with unknown defaults for historical records.
+`scripts/judge_spending.py` estimates cumulative spending offline from selected attempt logs
+and correctness results, deduplicating persistent attempt IDs. Prices and AUD-per-USD rate
+are explicit inputs; pause signals do not stop scoring automatically.
 No API key is needed for the local stand-in tests. See
 [judge-attempt-accounting.md](../../../docs/evaluation/judge-attempt-accounting.md) for field
 semantics, cache/resume behavior, retry limits, offline checks and the pre-run gate.

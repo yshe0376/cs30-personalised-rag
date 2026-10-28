@@ -158,9 +158,21 @@ class JudgeAttempt(ScoringModel):
     raw_output: str | None
     error: str | None
     reported_model: str | None = None
-    input_tokens: int = Field(default=0, ge=0)
-    output_tokens: int = Field(default=0, ge=0)
-    thought_tokens: int = Field(default=0, ge=0)
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    thought_tokens: int | None = Field(default=None, ge=0)
+    usage_available: bool | None = None
+    attempt_id: NonEmptyText | None = None
+    provider_response_id: NonEmptyText | None = None
+
+    @model_validator(mode="after")
+    def validate_usage(self) -> JudgeAttempt:
+        counters = (self.input_tokens, self.output_tokens, self.thought_tokens)
+        if self.usage_available is True and any(value is None for value in counters):
+            raise ValueError("available usage requires all token counters")
+        if self.usage_available is False and any(value is not None for value in counters):
+            raise ValueError("unknown usage must use null token counters")
+        return self
 
 
 class OpenAnswerScore(ExpectedAnswer):
@@ -183,6 +195,8 @@ class OpenAnswerScore(ExpectedAnswer):
     judge_attempts: list[JudgeAttempt] = Field(default_factory=list)
     cache_hit: bool = False
     judge_calls_this_run: int = Field(default=0, ge=0)
+    attempt_count: int | None = Field(default=None, ge=0)
+    usage_complete: bool | None = None
     review_record_id: str | None = None
     human_rater_id: str | None = None
 
@@ -196,6 +210,12 @@ class OpenAnswerScore(ExpectedAnswer):
             raise ValueError("human scores require a review record and rater identity")
         if self.judge_calls_this_run > len(self.judge_attempts):
             raise ValueError("fresh judge call count cannot exceed saved attempts")
+        if self.attempt_count is not None and self.attempt_count != len(self.judge_attempts):
+            raise ValueError("attempt_count must match the saved attempt history")
+        if self.usage_complete is True and any(
+            attempt.usage_available is not True for attempt in self.judge_attempts
+        ):
+            raise ValueError("complete usage requires known usage on every attempt")
         return self
 
 

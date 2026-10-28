@@ -64,8 +64,96 @@ new records even when the request/within-invocation attempt number repeats. Earl
 entries remain. Old records with missing usage are not retroactively repaired or estimated.
 
 The ledger covers adaptation, discrimination and evidence-support execution through
-`CachedJudgeRunner`. Correctness retains its separate scorer/attempt-recording path; shared
-generation/provider contracts, frozen profiles, Gold and historical trial artifacts are unchanged.
+`CachedJudgeRunner`. The follow-up also gives the separate correctness scorer the same
+immediate, per-attempt accounting. Shared generation/provider contracts, frozen profiles,
+Gold and historical trial artifacts are unchanged.
+
+## Correctness accounting and result metadata
+
+`OpenAnswerScorer` captures usage before parsing or checking content. It also extracts
+metadata from `GeminiJudgeEmptyResponseError`; empty/blocked output remains rejected.
+Exhausted attempts still produce `judge_error` with no correctness score. Missing metadata
+and invalid counters produce null counters with `usage_available: false`; a real measured
+zero remains zero with `usage_available: true`. Thinking is already part of output tokens.
+This does not route rule-based scoring to an API. Complete aliases and supported numerical
+rules still return before the client path; semantic judging uses a client only when supplied.
+Without a client, non-rule answers remain `needs_review`. A rubric supplies the assessment
+criteria; it is not itself a semantic execution engine.
+
+The correctness CLI writes `OUTPUT_DIR.attempts.jsonl` **beside** the immutable report
+directory, so the six existing report files and their creation rule are preserved.
+`--attempt-log PATH` overrides it. Log paths cannot alias inputs, enter the report directory,
+or enter the success-cache directory. An unwritable log prevents execution; an append
+failure stops before another provider call. Direct Python callers can supply
+`OpenAnswerScorer(..., attempt_log_path=...)`; otherwise they receive attempt history in the
+returned scores, but no live sidecar ledger. Log/execution IDs do not enter judge configuration
+hashes or change cache identities.
+
+Each new correctness attempt has a persistent `attempt_id` and optional response ID in both
+the ledger and the saved score. A cached score retains its historical attempts and IDs, has
+`judge_calls_this_run: 0`, and writes no new ledger row. Historical attempts are never relabelled
+as new spending. Legacy caches still load; their old zero fields remain historically ambiguous.
+
+Both `JudgeResultEnvelope` and `OpenAnswerScore` add:
+
+| Field | New results | Historical records without the field |
+| --- | --- | --- |
+| `attempt_count` | Attempts represented by the result's history/totals, including rejected outputs | null; not inferred from old envelope totals |
+| `usage_complete` | true only when every represented attempt has known usage | null on old envelopes; false on newly emitted correctness results using unknown legacy history |
+
+Rule-only or otherwise unjudged new correctness results have zero attempts and complete
+zero-call accounting. A cached result's count describes its original history, not fresh calls.
+These are Evaluation-owned result extensions: old data remains readable by the updated
+models, but older strict readers need updating to accept the new fields and nullable
+correctness counters. Online judge output schemas, request hashes, scoring criteria and
+score calculations are unchanged. Do not use this metadata as evidence of judging accuracy.
+
+## Offline running cost estimate
+
+`scripts/judge_spending.py` reads the explicitly selected ledgers and/or new correctness
+score JSONL files. It never constructs a provider, reads a key, changes billing or runs scoring.
+One consistent model's verified input/output prices and an explicit AUD-per-USD rate are
+required. Different configured models are rejected rather than priced at one guessed rate.
+
+The script unions records by `attempt_id`, so selecting a ledger twice, copying it, or
+selecting both its correctness results and ledger does not charge the same attempt twice.
+Distinct attempt IDs remain distinct even if provider response IDs match. Conflicting copies,
+malformed files and legacy attempts without reliable IDs fail rather than silently undercount.
+Cached correctness rows are skipped; their original execution's ledger is the source if it
+belongs to the monitored run. Three-task result envelopes are not an extra spending source.
+An incomplete final log row asks the operator to take another snapshot; it is not ignored.
+
+Only select files belonging to the approved full-Dev budget period, including its repeat,
+validity and repair executions. Earlier trials and Test must remain outside this file set.
+The input/output rates below are the original trial parameters, not a live price lookup;
+verify current rates before using them for an authorised run. The FX rate is operator-supplied.
+
+```powershell
+$runRoot = "..\W8\full-dev" # Replace with the actual full-Dev execution folder.
+$logs = @(Get-ChildItem -LiteralPath $runRoot -Recurse -File -Filter "*.attempts.jsonl" |
+    Select-Object -ExpandProperty FullName)
+if ($logs.Count -eq 0) { throw "No attempt ledgers found in the selected execution folder" }
+$usdToAud = Read-Host "Enter the planning exchange rate: AUD per USD"
+.\.venv\Scripts\python.exe scripts\judge_spending.py --attempt-log $logs --model gemini-3.1-flash-lite --input-usd-per-million 0.25 --output-usd-per-million 1.5 --usd-to-aud $usdToAud --input-multiplier 1.15
+```
+
+`--correctness-results PATH [PATH ...]` can supplement or replace correctness ledgers with
+new score files. `--actual-spend-aud AMOUNT` optionally supplies observed spending attributable
+to **this full-Dev run**, rather than account balance or all historical account spending.
+
+The default input multiplier is 1. The example explicitly buffers **input** by 15%, following
+the observation recorded in #213; it is a planning allowance, not a universal billing rule.
+Output includes thinking already and receives no extra thinking charge. The JSON report shows
+known list-price USD, buffered AUD estimate, unknown-attempt count and every supplied rate.
+Any unknown attempt makes the total incomplete; it cannot establish that spending is below budget.
+
+At/above AUD 45 the action is `PAUSE_AND_REPORT`; at/above AUD 60 it is `STOP_CAP`. The larger
+of the estimate and supplied actual spend is used for those signals. Below both thresholds,
+unknown usage returns `VERIFY_UNKNOWN_USAGE`, otherwise `BELOW_PAUSE_ESTIMATE`. Attention
+states return exit code 3; invalid input returns 2. This read-only helper does **not** terminate
+another process or guarantee a spending cap. Actual billing, tax, unavailable usage, SDK-internal
+HTTP attempts and currency differences can diverge from the estimate. The operator still pauses
+the scoring process and follows the Leader's actual-bill limits.
 
 ## Evidence-support output and retry rule
 
@@ -103,11 +191,13 @@ tests does not use a paid or free-tier API, and needs no API key. End-to-end ada
 runner tests additionally cover empty and safety-blocked returns followed by success or
 exhausted retries, and missing metadata in valid/empty/malformed/truncated returns.
 
-Verification on 2026-10-28: **130 related tests passed** (including Gemini adapter tests);
-full offline regression **1,341 passed, 2 skipped**; Ruff and diff whitespace checks passed.
+Follow-up verification on 2026-10-28: **250 related tests passed** (including correctness,
+Gemini adapters, cache compatibility and spending signals); full offline regression
+**1,393 passed, 2 skipped**; Ruff and diff whitespace checks passed. All tests use local
+stand-ins. Correctness rule-based routing and scores are explicitly covered without an API.
 
 ```powershell
-python -m pytest -o addopts='' -q -p no:cacheprovider tests/test_judge_attempt_usage.py
+python -m pytest -o addopts='' -q -p no:cacheprovider tests/test_judge_attempt_usage.py tests/test_correctness_attempt_usage.py tests/test_judge_spending.py
 ```
 
 ## Full-Dev gate
@@ -115,6 +205,8 @@ python -m pytest -o addopts='' -q -p no:cacheprovider tests/test_judge_attempt_u
 The budget decision in [#213](https://github.com/yshe0376/cs30-personalised-rag/pull/213) is
 AUD 60 maximum on actual provider spending, with a pause/report threshold of AUD 45 if the
 run is unfinished. It excludes Test. These code changes do not charge the account, top it
-up, monitor the live AI Studio bill or authorise starting the run automatically. Before the
-user starts full Dev: this follow-up must be reviewed/merged, billing balance must be ready,
-and the execution/monitoring plan must retain the Leader's spending controls.
+up, read the live AI Studio bill or authorise starting the run automatically. The Leader
+accepted the original prerequisites in #215, which is merged. This additional follow-up is
+prepared separately for review; its optional metadata/estimator work must not be presented as
+a new Leader-imposed gate. Before using this follow-up for full Dev, review/merge its changes,
+prepare billing balance and retain the Leader's actual-spending controls.
