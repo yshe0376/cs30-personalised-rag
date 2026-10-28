@@ -147,7 +147,17 @@ def test_missing_team_key_does_not_construct_provider(monkeypatch, tmp_path):
         v2_runtime.team_client(tmp_path, "run-1")
 
 
-def test_team_client_reuses_m7_settings_and_bounds_ui_requests(monkeypatch, tmp_path):
+@pytest.mark.parametrize(
+    "model, output_format, tokens, extra_body",
+    [
+        ("openai/gpt-oss-20b", "json_object", 4096, {"reasoning_effort": "low"}),
+        ("google/gemma-3-12b-it", "json_schema", 2048, {}),
+        ("meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo", "json_object", 2048, {}),
+    ],
+)
+def test_team_client_reuses_m7_settings_and_bounds_ui_requests(
+    monkeypatch, tmp_path, model, output_format, tokens, extra_body
+):
     recorded = {}
 
     class Client:
@@ -163,12 +173,12 @@ def test_team_client_reuses_m7_settings_and_bounds_ui_requests(monkeypatch, tmp_
 
     monkeypatch.setenv("DEEPINFRA_API_KEY", "offline-test-placeholder")
     monkeypatch.setattr(v2_runtime, "OpenAICompatibleClient", Client)
-    v2_runtime.team_client(tmp_path, "run-1")
-    assert recorded["model"] == "openai/gpt-oss-20b"
+    v2_runtime.team_client(tmp_path, "run-1", model)
+    assert recorded["model"] == model
     assert recorded["base_url"] == "https://api.deepinfra.com/v1/openai"
-    assert recorded["structured_output"] == "json_object"
-    assert recorded["max_output_tokens"] == 4096
-    assert recorded["extra_body"] == {"reasoning_effort": "low"}
+    assert recorded["structured_output"] == output_format
+    assert recorded["max_output_tokens"] == tokens
+    assert recorded["extra_body"] == extra_body
     assert recorded["max_api_requests"] == 2
     assert recorded["transport_retries"] == 0
 
@@ -252,9 +262,23 @@ def test_changed_question_clears_old_output_when_new_run_fails(monkeypatch):
 
 def test_example_populates_the_input_before_next_run(monkeypatch):
     app = offline_page(monkeypatch)
-    next(x for x in app.selectbox if x.label == "Prepared examples").set_value(
-        "Newton's second law"
-    ).run()
-    app_button(app, "Use example").click().run()
+    assert all(x.label != "Prepared examples" for x in app.selectbox)
+    assert all(x.label != "Use example" for x in app.button)
+    for label in ["Acceleration", "Newton's second law", "Out of scope"]:
+        assert app_button(app, label)
+    app_button(app, "Newton's second law").click().run()
     assert not app.exception
     assert "net force" in app.text_area[0].value
+    assert "qa-run" not in app.session_state
+
+
+def test_three_independent_model_choices_change_banner_without_calls(monkeypatch):
+    monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
+    app = AppTest.from_file(PAGE, default_timeout=20).run()
+    selector = next(x for x in app.selectbox if x.label == "Answer model")
+    assert len(selector.options) == 3
+    selector.set_value("google/gemma-3-12b-it").run()
+    assert not app.exception
+    assert any("Gemma 3 12B" in x.value for x in app.info)
+    assert app_button(app, "Generate answer").disabled
+    assert "qa-run" not in app.session_state

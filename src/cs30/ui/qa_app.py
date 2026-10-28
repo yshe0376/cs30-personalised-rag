@@ -19,7 +19,7 @@ from cs30.ui.concept_check import clear_quiz_component, render_quiz
 from cs30.ui.concept_check_demo import record_demo_attempt
 from cs30.ui.v2_fixture import inject_v2_styles
 from cs30.ui.v2_runtime import (
-    TEAM_MODEL,
+    TEAM_MODELS,
     QuestionRun,
     UiBm25Retriever,
     load_ui_corpus,
@@ -34,6 +34,12 @@ EXAMPLES = {
     "Newton's second law": "How are net force, mass and acceleration related?",
     "Out of scope": "Which team won the football match yesterday?",
 }
+
+
+def apply_example(label: str) -> None:
+    """Fill the input on click; model execution still requires explicit submission."""
+
+    st.session_state["qa-question"] = EXAMPLES[label]
 
 
 def clear_question() -> None:
@@ -194,8 +200,6 @@ def main() -> None:
     st.set_page_config(page_title="CS-30 · Ask a question", page_icon="🎓", layout="wide")
     inject_v2_styles()
     directory = session_directory()
-    if "qa-pending-example" in st.session_state:
-        st.session_state["qa-question"] = st.session_state.pop("qa-pending-example")
     with st.sidebar:
         st.markdown("## Your starting level")
         level = st.selectbox(
@@ -221,10 +225,16 @@ def main() -> None:
             on_change=clear_question,
         )
         live = mode == "Team V2 · DeepInfra"
-        st.caption(f"Team generator: {TEAM_MODEL}")
-        st.caption(
-            "Searches the selected corpus using the team's BM25 baseline."
+        model_id = st.selectbox(
+            "Answer model",
+            list(TEAM_MODELS),
+            format_func=lambda value: TEAM_MODELS[value].label,
+            key="qa-model",
+            on_change=clear_question,
+            disabled=not live,
         )
+        st.caption("One model answers each question. The three models are evaluated separately.")
+        st.caption("Searches the selected corpus using the team's BM25 baseline.")
         with st.expander("Connection details"):
             st.write(
                 "DeepInfra key: "
@@ -243,17 +253,26 @@ def main() -> None:
     st.title("Personalised Learning Assistant")
     st.caption("Ask a physics question, inspect the evidence, and choose a Concept Check.")
     if live:
-        st.info("TEAM MODEL · DeepInfra / gpt-oss-20b · V2 four-book corpus · BM25 baseline")
+        st.info(
+            f"TEAM MODEL · {TEAM_MODELS[model_id].label} · DeepInfra · "
+            "V2 four-book corpus · BM25 baseline"
+        )
     else:
         st.warning(
             "OFFLINE INTEGRATION · SYNTHETIC CORPUS + MOCK ANSWERS · Not model-quality evidence"
         )
     st.session_state.setdefault("qa-question", EXAMPLES["Acceleration"])
     st.text_area("Your physics question", key="qa-question", height=110)
-    example = st.selectbox("Prepared examples", ["Choose an example", *EXAMPLES])
-    if st.button("Use example") and example in EXAMPLES:
-        st.session_state["qa-pending-example"] = EXAMPLES[example]
-        st.rerun()
+    example_columns = st.columns([0.7, 1, 1.4, 1], vertical_alignment="center")
+    example_columns[0].markdown("**Examples**")
+    for column, label in zip(example_columns[1:], EXAMPLES, strict=True):
+        column.button(
+            label,
+            key=f"qa-example-{label}",
+            on_click=apply_example,
+            args=(label,),
+            use_container_width=True,
+        )
     learning, report_tab = st.tabs(["Answer and practice", "Session report"])
     topic_dir = Path(__file__).resolve().parents[3] / "artifacts/v2/topics/releases/2.0.0-rc.1"
     corpus_path = os.environ.get("CS30_UI_CORPUS", "")
@@ -298,6 +317,7 @@ def main() -> None:
                         directory,
                         enabled=enabled,
                         live=live,
+                        model_id=model_id,
                         progress=st.write,
                     )
                     st.session_state["qa-run"] = run

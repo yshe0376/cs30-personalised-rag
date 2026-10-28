@@ -18,9 +18,23 @@ M7 `V2AnswerGenerator` and citation validator in order. It displays the exact
 generation-time profile, sources and optional Concept Check decision. The
 secondary **Concept Check examples** page retains the old prepared scenarios.
 
-**Team V2 / DeepInfra** uses M7's documented `openai/gpt-oss-20b`, JSON Object,
-temperature 0, 4096 output tokens and `reasoning_effort=low`, through the existing
-`OpenAICompatibleClient`. Set `DEEPINFRA_API_KEY` and `CS30_UI_CORPUS` in the
+**Team V2 / DeepInfra** offers three independent answer models through the existing
+`OpenAICompatibleClient`, with M7's recorded per-model settings:
+
+| Model | Output format | Output limit | Extra settings |
+|---|---|---:|---|
+| `openai/gpt-oss-20b` (default/main) | JSON Object | 4096 | `reasoning_effort=low` |
+| `google/gemma-3-12b-it` | JSON Schema | 2048 | none |
+| `meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo` | JSON Object | 2048 | none |
+
+All use temperature 0. One selected model answers each submitted question; this
+is not an ensemble, vote, automatic routing or a three-model parallel request.
+Changing the model clears old output; the completed trace records the actual
+response model. Offline mode disables model selection because it uses a mock.
+The examples row follows V1: **Examples** followed by three one-click question
+buttons. These fill the input and never trigger generation.
+
+Set `DEEPINFRA_API_KEY` and `CS30_UI_CORPUS` in the
 server environment. API requests happen only when the user clicks Generate
 answer; page load never calls a model. The UI allows at most two HTTP attempts
 per submitted question (one repair, no transport retry), with separate local

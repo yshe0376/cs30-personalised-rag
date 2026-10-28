@@ -48,6 +48,21 @@ TEAM_BASE_URL = "https://api.deepinfra.com/v1/openai"
 
 
 @dataclass(frozen=True)
+class TeamModel:
+    label: str
+    output_format: str
+    max_output_tokens: int
+    reasoning_effort: str | None = None
+
+
+TEAM_MODELS = {
+    TEAM_MODEL: TeamModel("GPT-OSS 20B · Main model", "json_object", 4096, "low"),
+    "google/gemma-3-12b-it": TeamModel("Gemma 3 12B", "json_schema", 2048),
+    "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo": TeamModel("Llama 3.1 8B", "json_object", 2048),
+}
+
+
+@dataclass(frozen=True)
 class UiCorpus:
     """Validated source identities used only by this UI composition layer."""
 
@@ -208,20 +223,25 @@ def make_service(corpus: UiCorpus, profile: StudentProfile, directory: Path, ena
     return service, store, replayer
 
 
-def team_client(directory: Path, run_id: str) -> OpenAICompatibleClient:
+def team_client(directory: Path, run_id: str, model_id: str = TEAM_MODEL) -> OpenAICompatibleClient:
     """Reuse M7's recorded DeepInfra settings; called only after a user submission."""
 
+    if model_id not in TEAM_MODELS:
+        raise ValueError("Select one of the three delivered team models.")
+    settings = TEAM_MODELS[model_id]
     if not os.environ.get("DEEPINFRA_API_KEY", "").strip():
         raise ValueError("DEEPINFRA_API_KEY is missing in the UI server environment.")
     client = OpenAICompatibleClient(
-        TEAM_MODEL,
+        model_id,
         base_url=TEAM_BASE_URL,
         provider_name="DeepInfra",
         model_version="public-model-alias;immutable-revision-unverified",
         api_key_env="DEEPINFRA_API_KEY",
-        max_output_tokens=4096,
-        structured_output="json_object",
-        extra_body={"reasoning_effort": "low"},
+        max_output_tokens=settings.max_output_tokens,
+        structured_output=settings.output_format,
+        extra_body={"reasoning_effort": settings.reasoning_effort}
+        if settings.reasoning_effort
+        else {},
         timeout_seconds=120,
         transport_retries=0,
         max_api_requests=2,
@@ -239,6 +259,7 @@ def run_question(
     *,
     enabled: bool,
     live: bool,
+    model_id: str = TEAM_MODEL,
     client: LLMClient | None = None,
     progress: Callable[[str], None] | None = None,
 ) -> QuestionRun:
@@ -265,7 +286,7 @@ def run_question(
     bundle = EvidenceBundleAdapter(run_provenance={"run_id": run_id}).build(retrieval)
     step("Generate answer · M7 V2AnswerGenerator")
     if client is None:
-        client = team_client(directory / run_id, run_id) if live else MockJsonLLMClient()
+        client = team_client(directory / run_id, run_id, model_id) if live else MockJsonLLMClient()
     generator = V2AnswerGenerator(client, max_retries=1)
     answer = generator.generate(question, prepared.snapshot, bundle)
     step("Validate citations against the same evidence bundle")
