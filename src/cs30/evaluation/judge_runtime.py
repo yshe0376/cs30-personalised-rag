@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol, TypeVar
+from uuid import uuid4
 
 from pydantic import BaseModel
 
@@ -15,6 +16,7 @@ from cs30.generation.client import LLMClient
 
 from .adaptation_applicability import validate_adaptation_applicability
 from .evidence_quotes import quote_is_grounded
+from .gemini_judge_client import GeminiJudgeEmptyResponseError
 from .level_profiles import canonical_json_sha256
 from .v2_generation_models import (
     AdaptationJudgeOutput,
@@ -51,6 +53,21 @@ class JudgeProviderResponse:
     input_tokens: int = 0
     output_tokens: int = 0
     thought_tokens: int = 0
+    usage_available: bool = True
+
+
+class JudgeProviderOutputError(ValueError):
+    """Preserve returned usage when structured-output decoding fails locally."""
+
+    def __init__(self, message: str, response: JudgeProviderResponse) -> None:
+        super().__init__(message)
+        self.response = response
+
+
+def _append_attempt(path: Path, record: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record, sort_keys=True) + "\n")
 
 
 _OUTPUT_MODELS: dict[JudgeTask, type[BaseModel]] = {
@@ -71,9 +88,7 @@ def _strict_object(properties: dict[str, object]) -> dict[str, object]:
     }
 
 
-_NULLABLE_STRING: dict[str, object] = {
-    "anyOf": [{"type": "string"}, {"type": "null"}]
-}
+_NULLABLE_STRING: dict[str, object] = {"anyOf": [{"type": "string"}, {"type": "null"}]}
 _ONLINE_OUTPUT_SCHEMAS: dict[JudgeTask, dict[str, object]] = {
     JudgeTask.ADAPTATION: _strict_object(
         {
@@ -175,32 +190,43 @@ class StructuredJsonJudgeProvider:
         configuration: JudgeConfiguration,
     ) -> JudgeProviderResponse:
         prompt = _render_judge_prompt(request)
-        response = self.client.complete(
-            prompt,
-            {
-                "type": "json_schema",
-                "name": f"{request.task.value}_judge_output",
-                "strict": True,
-                "schema": _ONLINE_OUTPUT_SCHEMAS[request.task],
-            },
-        )
-        if response.done_reason == "length":
-            raise ValueError("judge provider output was truncated")
+        empty_error = None
         try:
-            raw = json.loads(response.text)
-        except json.JSONDecodeError as exc:
-            raise ValueError("judge provider did not return valid JSON") from exc
-        if not isinstance(raw, Mapping):
-            raise ValueError("judge provider JSON must be an object")
-        return JudgeProviderResponse(
-            output=raw,
+            response = self.client.complete(
+                prompt,
+                {
+                    "type": "json_schema",
+                    "name": f"{request.task.value}_judge_output",
+                    "strict": True,
+                    "schema": _ONLINE_OUTPUT_SCHEMAS[request.task],
+                },
+            )
+        except GeminiJudgeEmptyResponseError as exc:
+            response = exc.response
+            empty_error = exc
+        metadata = JudgeProviderResponse(
+            output={},
             response_id=response.response_id,
             completed_at_utc=datetime.now(UTC).isoformat(),
             reported_model=response.model,
             input_tokens=response.usage.input_tokens,
             output_tokens=response.usage.output_tokens,
             thought_tokens=int(getattr(response, "thought_tokens", 0)),
+            usage_available=bool(getattr(response, "usage_available", True)),
         )
+        if empty_error is not None:
+            raise JudgeProviderOutputError(str(empty_error), metadata) from empty_error
+        if response.done_reason == "length":
+            raise JudgeProviderOutputError("judge provider output was truncated", metadata)
+        try:
+            raw = json.loads(response.text)
+        except json.JSONDecodeError as exc:
+            raise JudgeProviderOutputError(
+                "judge provider did not return valid JSON", metadata
+            ) from exc
+        if not isinstance(raw, Mapping):
+            raise JudgeProviderOutputError("judge provider JSON must be an object", metadata)
+        return replace(metadata, output=raw)
 
 
 def configuration_sha256(configuration: JudgeConfiguration) -> str:
@@ -388,6 +414,7 @@ class CachedJudgeRunner:
         context_window: int | None = None,
         max_attempts: int = 2,
         require_current_execution_cache: bool = False,
+        attempt_log_path: Path | None = None,
     ) -> None:
         if max_attempts < 1:
             raise ValueError("max_attempts must be positive")
@@ -397,6 +424,9 @@ class CachedJudgeRunner:
         if context_window is not None and context_window <= 0:
             raise ValueError("context_window must be positive")
         self.cache_path = cache_path
+        self.attempt_log_path = attempt_log_path or cache_path.with_suffix(".attempts.jsonl")
+        if self.attempt_log_path.resolve() == cache_path.resolve():
+            raise ValueError("judge attempt log must be separate from the success cache")
         self.judge_execution_id = judge_execution_id
         self.model_digest = model_digest
         self.context_window = context_window
@@ -409,6 +439,9 @@ class CachedJudgeRunner:
             raise ValueError(
                 "fresh judge execution cache contains results from another or unaudited execution"
             )
+        self.attempt_log_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.attempt_log_path.open("a", encoding="utf-8"):
+            pass
 
     def run(
         self,
@@ -417,22 +450,20 @@ class CachedJudgeRunner:
         provider: JudgeProvider,
         validator: Callable[[Mapping[str, Any]], ValidatedOutput],
     ) -> JudgeResultEnvelope:
+        if request.task is JudgeTask.EVIDENCE_SUPPORT and self.max_attempts < 2:
+            raise ValueError("evidence support requires at least two application attempts")
         expected_config = configuration_sha256(configuration)
         if request.config_sha256 != expected_config:
             raise ValueError("judge request is bound to a different configuration")
         cache_key = request_cache_key(request)
         cached = self._cache.get(cache_key)
         if cached is not None:
-            reused_from_other_execution = (
-                cached.judge_execution_id != self.judge_execution_id
-            )
+            reused_from_other_execution = cached.judge_execution_id != self.judge_execution_id
             if not reused_from_other_execution and (
                 cached.model_digest != self.model_digest
                 or cached.context_window != self.context_window
             ):
-                raise ValueError(
-                    "judge resume runtime differs from the original execution"
-                )
+                raise ValueError("judge resume runtime differs from the original execution")
             return cached.model_copy(update={"cache_hit": reused_from_other_execution})
 
         errors: list[str] = []
@@ -440,8 +471,14 @@ class CachedJudgeRunner:
         last_raw: dict[str, object] | None = None
         last_response: JudgeProviderResponse | None = None
         attempt_request = request
+        totals = {"input_tokens": 0, "output_tokens": 0, "thought_tokens": 0}
         for attempt in range(1, self.max_attempts + 1):
             attempt_raw: dict[str, object] | None = None
+            response: JudgeProviderResponse | None = None
+            started_at = datetime.now(UTC).isoformat()
+            status = "provider_error"
+            attempt_error: str | None = None
+            attempt_failure: Exception | None = None
             try:
                 provider_result = provider(attempt_request, configuration)
                 if isinstance(provider_result, JudgeProviderResponse):
@@ -453,12 +490,13 @@ class CachedJudgeRunner:
                         output=raw,
                         response_id=None,
                         completed_at_utc=datetime.now(UTC).isoformat(),
+                        usage_available=False,
                     )
-                if (
-                    response.reported_model is not None
-                    and canonical_model_family(response.reported_model)
-                    != canonical_model_family(configuration.model_family)
-                ):
+                last_response = response
+                status = "invalid_output"
+                if response.reported_model is not None and canonical_model_family(
+                    response.reported_model
+                ) != canonical_model_family(configuration.model_family):
                     raise ValueError(
                         "judge provider reported a model outside the configured model family"
                     )
@@ -466,15 +504,57 @@ class CachedJudgeRunner:
                     raise TypeError("judge provider must return a mapping")
                 attempt_raw = dict(raw)
                 last_raw = attempt_raw
-                last_response = response
                 validated = validator(raw)
-                break
+                status = "accepted"
             except Exception as exc:  # Provider failures remain auditable unresolved records.
+                if isinstance(exc, JudgeProviderOutputError):
+                    response = last_response = exc.response
+                    status = "invalid_output"
+                attempt_error = str(exc)
+                attempt_failure = exc
                 errors.append(f"attempt {attempt}: {exc}")
-                if attempt < self.max_attempts and attempt_raw is not None:
-                    attempt_request = _repair_judge_request(request, attempt_raw, exc)
-                else:
-                    attempt_request = request
+            usage_available = response is not None and response.usage_available
+            usage = {
+                field: getattr(response, field) if usage_available else None for field in totals
+            }
+            for field, value in usage.items():
+                totals[field] += value or 0
+            # A ledger write failure propagates: never spend on another retry without logging.
+            _append_attempt(
+                self.attempt_log_path,
+                {
+                    "schema_version": "1.0",
+                    "attempt_id": uuid4().hex,
+                    "judge_execution_id": self.judge_execution_id,
+                    "task": request.task.value,
+                    "request_id": request.request_id,
+                    "cache_key": cache_key,
+                    "config_sha256": request.config_sha256,
+                    "provider": configuration.provider,
+                    "model_revision": configuration.model_revision,
+                    "attempt": attempt,
+                    "started_at_utc": started_at,
+                    "completed_at_utc": response.completed_at_utc
+                    if response
+                    else datetime.now(UTC).isoformat(),
+                    "provider_response_id": response.response_id if response else None,
+                    "reported_model": response.reported_model if response else None,
+                    "status": status,
+                    "error": attempt_error,
+                    "usage_available": usage_available,
+                    **usage,
+                },
+            )
+            if validated is not None:
+                break
+            if (
+                attempt < self.max_attempts
+                and attempt_raw is not None
+                and attempt_failure is not None
+            ):
+                attempt_request = _repair_judge_request(request, attempt_raw, attempt_failure)
+            else:
+                attempt_request = request
 
         if validated is None:
             envelope = JudgeResultEnvelope(
@@ -491,6 +571,9 @@ class CachedJudgeRunner:
                 completed_at_utc=(
                     last_response.completed_at_utc if last_response is not None else None
                 ),
+                provider_response_id=last_response.response_id if last_response else None,
+                reported_model=last_response.reported_model if last_response else None,
+                **totals,
             )
         else:
             if last_response is None:
@@ -507,9 +590,7 @@ class CachedJudgeRunner:
                 provider_response_id=last_response.response_id,
                 completed_at_utc=last_response.completed_at_utc,
                 reported_model=last_response.reported_model,
-                input_tokens=last_response.input_tokens,
-                output_tokens=last_response.output_tokens,
-                thought_tokens=last_response.thought_tokens,
+                **totals,
             )
         if not envelope.unresolved:
             _append_cache(self.cache_path, envelope)

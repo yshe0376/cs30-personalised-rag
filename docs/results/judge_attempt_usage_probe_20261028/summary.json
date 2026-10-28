@@ -1,0 +1,55 @@
+{
+  "mode": "real-api",
+  "model": "gemini-3.1-flash-lite",
+  "provider_invocations": 3,
+  "real_network_invocations": 3,
+  "sdk_http_attempt_limit": 1,
+  "application_attempt_limit": 3,
+  "intentional_rejection_limit": 2,
+  "forced_rejections_observed": [
+    1,
+    2
+  ],
+  "retry_scenario_passed": true,
+  "max_output_tokens": 1024,
+  "metadata_present": true,
+  "metadata_matches_ledger_and_result": true,
+  "expected_mapped_usage": {
+    "input_tokens": 561,
+    "output_tokens": 552,
+    "thought_tokens": 359
+  },
+  "per_attempt": [
+    {
+      "attempt": 1,
+      "status": "invalid_output",
+      "intentional_rejection": true,
+      "sdk_matches_ledger": true,
+      "input_tokens": 103,
+      "output_tokens": 190,
+      "thought_tokens": 130
+    },
+    {
+      "attempt": 2,
+      "status": "invalid_output",
+      "intentional_rejection": true,
+      "sdk_matches_ledger": true,
+      "input_tokens": 229,
+      "output_tokens": 195,
+      "thought_tokens": 122
+    },
+    {
+      "attempt": 3,
+      "status": "accepted",
+      "intentional_rejection": false,
+      "sdk_matches_ledger": true,
+      "input_tokens": 229,
+      "output_tokens": 167,
+      "thought_tokens": 107
+    }
+  ],
+  "output_valid": true,
+  "error": null,
+  "scope": "Fixed fictional connectivity fixture; no research inputs loaded.",
+  "billing_note": "Operator must verify Free Tier status; the key alone cannot prove it."
+}

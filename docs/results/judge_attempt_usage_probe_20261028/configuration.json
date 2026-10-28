@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0",
+  "config_version": "synthetic-free-key-probe-v1",
+  "provider": "gemini",
+  "model_family": "gemini",
+  "model_revision": "gemini-3.1-flash-lite",
+  "temperature": 1.0,
+  "seed": 5703,
+  "thinking_level": "low",
+  "prompt_version": "synthetic-probe-v1",
+  "output_schema_version": "1.0",
+  "local_model": false,
+  "data_approval": "approved",
+  "allow_same_family_exploratory": false,
+  "role_label_model_families": [],
+  "role_label_family_overlap_disclosure": null
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "task": "discrimination",
+  "request_id": "discrimination-6a4ebbf9c6f6be4d2b61",
+  "input_sha256": "6a4ebbf9c6f6be4d2b61e5def4b02e17a154c550ff7cabd75455b55de2ac050a",
+  "config_sha256": "f30c2cdf25eba3558be2cf37f64adf4d4a22d35b04e07f0c4dae28140e6085ae",
+  "system_instruction": "This is a synthetic API connectivity check, not learner evaluation. Return schema_version 1.0 and the supplied request_id. Set predicted_level to uncertain and exact_quote to null. Set reason to Synthetic connectivity fixture only.",
+  "payload": {
+    "question": "What colour is the fictional cube?",
+    "answer": "The cube is blue."
+  }
+}
