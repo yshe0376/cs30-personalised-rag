@@ -12,11 +12,14 @@ Install the `ui` extra first. The Windows launcher uses `.venv` when available;
 `CS30_PYTHON` can select an existing Python environment and `CS30_PORT` defaults
 to 8512. It does not install dependencies or call a model API.
 
-The default **Ask a question** page accepts free text. Its UI-owned composition
-calls the shared BM25 backend, Topic/snapshot service, V2 evidence builder,
+The V2 entry has one **Ask a question** page. Its UI-owned composition calls
+retrieval, the shared Topic/snapshot service, V2 evidence builder,
 M7 `V2AnswerGenerator` and citation validator in order. It displays the exact
-generation-time profile, sources and optional Concept Check decision. The
-secondary **Concept Check examples** page retains the old prepared scenarios.
+generation-time profile, sources and optional Concept Check decision.
+Starting level and Enable Concept Check appear above the question input.
+**Session report** opens the native left sidebar; **Demo Mode** opens a small
+settings dialog without resizing the learning page. The older fixture layout
+remains in `v2_fixture.py`, but is not a second page in the V2 navigation.
 
 **Team V2 / DeepInfra** offers three independent answer models through the existing
 `OpenAICompatibleClient`, with M7's recorded per-model settings:
@@ -31,8 +34,8 @@ All use temperature 0. One selected model answers each submitted question; this
 is not an ensemble, vote, automatic routing or a three-model parallel request.
 Changing the model clears old output; the completed trace records the actual
 response model. Offline mode disables model selection because it uses a mock.
-The examples row follows V1: **Examples** followed by three one-click question
-buttons. These fill the input and never trigger generation.
+The **Try an example** row offers three question pills. These fill the input
+and never trigger generation.
 
 Set `DEEPINFRA_API_KEY` and `CS30_UI_CORPUS` in the
 server environment. API requests happen only when the user clicks Generate
@@ -42,12 +45,25 @@ API-cache/audit data. This is a UI demonstration limit, not the experiment budge
 The public model alias is not an immutable model revision.
 
 The corpus loader verifies the released manifest and exact record bytes.
-The Topic map/registry are loaded from the checked-in rc.1 release. BM25 is the
-existing baseline, **not** the selected Qwen3 Dense 0.10 / BM25 0.90 experiment
-retriever. The published M6 frozen candidates cannot answer arbitrary new
-queries. No replacement hybrid algorithm or transferred lambda is invented.
+The Topic map/registry are loaded from the checked-in rc.1 release. Team mode
+defaults to **Qwen3 Dense 0.10 / BM25 0.90 hybrid** through M6's existing
+`materialise_v2_retrieval_view` / `build_real_retrieval_deps` path and M7's
+`freeze_v2_retrieval` converter. It uses weighted RRF k=60 with top-20 inputs,
+then sends the fused top-5 to generation. BM25 remains an explicit comparison
+option. A missing or incompatible hybrid index causes an error, not a fallback.
 
-**Offline integration** executes the same V2 chain with the shared synthetic
+Hybrid setup requires the `ml` extra (`pip install -e ".[ui,ml]"`) and the
+`qwen3-embedding` index folder from the
+[M6 release](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/m6-w6-qwen3-hybrid-dev-v1)
+asset `M5_to_M6_four_book_2026-10-21.zip`. Set `CS30_UI_HYBRID_INDEX` to the folder
+containing `artifact.json` and `index/index.faiss`; the default is
+`artifacts/v2/m6_qwen3_hybrid`. The shared loader checks index bytes and identities.
+The embedding model/revision is `Qwen/Qwen3-Embedding-0.6B` /
+`97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3`, with query prompt `query`.
+Model weights, corpus records and indexes are external assets and are not
+included in this Git branch. The first hybrid submission may download the model.
+
+**Fixture mode** executes the V2 chain with the shared synthetic
 corpus, BM25 retrieval and M7's existing mock JSON client. It is explicitly
 labelled simulated, cannot establish answer quality, and never silently replaces
 a failed live request. Its available synthetic releases drive practice/feedback.
@@ -56,18 +72,43 @@ The switch controls dynamic Topic state and practice together. Off mode hides
 write controls and uses the static starting profile without deleting history.
 Each starting level uses a separate fixture profile, as in the existing demo.
 Changing the level clears the previous Q&A output; another submission generates
-a new answer with the new snapshot. The fixed examples page still never
-regenerates its saved answers. Temporary single-session logs are not a durable
+a new answer with the new snapshot. Temporary single-session logs are not a durable
 student account or cross-session storage.
 
-The real-corpus path has no installed compatible reviewed practice releases.
-It uses an empty provider and reports the shared selection reason; synthetic
-questions are never offered against the real corpus. A real practice pack and
-the arbitrary-query selected hybrid index/runtime remain integration dependencies.
-V1 and the original standalone demo remain available. No paid API smoke has been
-run as part of this local UI change.
+### Development-demo limits and verification (2026-10-29)
 
-This module consumes `PipelineRun`.
+This branch is a development demo, not a completed real-model end-to-end release.
+
+- M7's level-aware Role reranking with Dev-selected lambda=0.1 is not connected
+  to this UI. Direct fused top-5 generation is not the experimental top-20
+  candidate -> Role reranking -> evidence-selection path.
+- The real-corpus path has no installed compatible reviewed practice releases.
+  It uses an empty provider and reports the shared selection reason. Synthetic
+  questions are never offered against real data. Topic/citation eligibility
+  can also refuse a question before provider selection; those guards stay intact.
+- No real DeepInfra request was made for this UI audit. Credentials and a manual
+  live smoke are still required to verify actual hosted generation. Fixture or
+  injected-mock success does not establish model quality or real quiz readiness.
+- The installed FAISS file matches the released index SHA-256, but an offline
+  real-embedding smoke failed because this machine lacks a complete cached Qwen3
+  model. Download the pinned model before claiming live hybrid readiness; the
+  passing hybrid regression uses a test embedding model, not real Qwen weights.
+- The relevant offline regression passed **100 tests** covering free-text Q&A,
+  hybrid composition with a test embedding model, citation validation,
+  learner-state controls, selection/refusal, reports and fixture UI. UI/test
+  Ruff checks passed. Browser checks covered question -> answer/evidence -> quiz
+  -> feedback -> native sidebar report/downloads, dialog settings, sidebar
+  resizing/collapse and body-text sizes.
+- Loading the real 6,184-chunk corpus and BM25 with an injected mock passed
+  citation validation. The average-acceleration example returned
+  `TOPIC_SUPPORT_BELOW_THRESHOLD`; this is a refusal, not completed real practice.
+
+M6/M7 configuration is checked against the current
+[generation handoff](https://github.com/yshe0376/cs30-personalised-rag/blob/main/docs/results/m7_api_dev_20261026/README.md)
+and [Concept Check contract](https://github.com/yshe0376/cs30-personalised-rag/blob/main/docs/member7-concept-check-handoff.md).
+GitHub main was `573a80cf6f7ec939562262edc080c65e52168972` at this audit.
+V1 and the original standalone demo remain available. The V2 page consumes
+UI-owned `QuestionRun` / `DemoRuntime`; the V1 page below consumes `PipelineRun`.
 
 ## Week 1 acceptance
 
@@ -138,8 +179,8 @@ states rebuilt with M7's `EventReplayer`. Accuracy includes submissions that wer
 later revoked; revocations are reported separately. `--starting-level` is required
 so a formal report cannot silently assume a beginner profile.
 
-The student control panel (revoke/override/feature toggle) remains deferred until
-M7's control-event signatures are finalized.
+The student controls use the shared `revoke`, reason-required `override_level`
+and feature-toggle service paths; learner-state rules stay in the shared runtime.
 
 The Concept Check selection trace includes the shared selection status and stable
 error code. Refusals display their specific reason. Event reports validate Topic

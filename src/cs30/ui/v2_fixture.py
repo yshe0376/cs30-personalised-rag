@@ -45,6 +45,29 @@ def inject_v2_styles() -> None:
         [data-testid="stCheckbox"] label[data-baseweb="checkbox"]
         > div:first-child:has(input:checked) { background-color: #f06f54; }
         .v2-eyebrow { color: #df5b40; font-weight: 700; letter-spacing: .08em; }
+        /* V1 hides the toolbar, which also hid the "expand sidebar" control.
+           Keep the toolbar hidden but always show that control as a labelled tab. */
+        [data-testid="stExpandSidebarButton"],
+        [data-testid="stExpandSidebarButton"] *,
+        [data-testid="stSidebarCollapsedControl"],
+        [data-testid="stSidebarCollapsedControl"] * { visibility: visible !important; }
+        [data-testid="stExpandSidebarButton"] {
+            display: inline-flex !important;
+            align-items: center;
+            gap: 6px;
+            width: auto !important;
+            padding: 6px 14px 6px 10px !important;
+            border: 1px solid #f06f54 !important;
+            border-radius: 999px !important;
+            color: #df5b40 !important;
+            background: #fff4f1 !important;
+            font-weight: 650;
+        }
+        [data-testid="stExpandSidebarButton"]::after {
+            content: "Demo Mode";
+            font-size: .9rem;
+        }
+        [data-testid="stExpandSidebarButton"]:hover { background: #ffe6df !important; }
         </style>
         """,
         unsafe_allow_html=True,

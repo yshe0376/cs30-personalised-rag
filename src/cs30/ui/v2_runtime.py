@@ -22,10 +22,14 @@ from cs30.concept_check.learner_state import EventReplayer
 from cs30.concept_check.provider import FixtureQuestionProvider
 from cs30.concept_check.service import ConceptCheckService, PreparedRound
 from cs30.concept_check.topics import ChunkTopicResolver
+from cs30.config import AppConfig, RetrievalConfig
 from cs30.contracts import IndexArtifact as LegacyArtifact
+from cs30.contracts import RetrievalMode as LegacyRetrievalMode
 from cs30.generation.client import LLMClient, MockJsonLLMClient
 from cs30.generation.compatible import OpenAICompatibleClient
+from cs30.retrieval.m6_handoff import freeze_v2_retrieval
 from cs30.retrieval.real import BM25Retriever
+from cs30.retrieval.v2_adapter import materialise_v2_retrieval_view
 from cs30.ui.concept_check_demo import DemoRuntime
 from cs30.v2.config import ConceptCheckConfig
 from cs30.v2.contracts import (
@@ -60,6 +64,22 @@ TEAM_MODELS = {
     "google/gemma-3-12b-it": TeamModel("Gemma 3 12B", "json_schema", 2048),
     "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo": TeamModel("Llama 3.1 8B", "json_object", 2048),
 }
+
+
+# M6 system retriever (README + docs/v2-member7-experiments.md, decision table 2026-10-23):
+# Qwen3-Embedding-0.6B Dense 0.10 / BM25 0.90, weighted RRF k=60 over top-20 inputs.
+M6_HYBRID = {
+    "embedding_model": "Qwen/Qwen3-Embedding-0.6B",
+    "embedding_revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3",
+    "query_prompt_name": "query",
+    "trust_remote_code": False,
+    "rrf_k": 60,
+    "rrf_input_top_k": 20,
+    "rrf_dense_weight": 0.10,
+    "rrf_bm25_weight": 0.90,
+    "bm25_stopwords": True,
+}
+M6_INDEX_RELEASE = "m6-w6-qwen3-hybrid-dev-v1 / M5_to_M6_four_book_2026-10-21.zip / qwen3-embedding"
 
 
 @dataclass(frozen=True)
@@ -141,8 +161,102 @@ def load_ui_corpus(corpus_dir: Path | None, topic_dir: Path, *, synthetic: bool)
     return UiCorpus(hits, provenance, registry, topic_map, False)
 
 
+class UiHybridRetriever:
+    """M6's selected Qwen3 Hybrid retriever, built through the shared M6 code path.
+
+    ``materialise_v2_retrieval_view`` + ``build_real_retrieval_deps`` are exactly what the
+    M6 notebook uses; ``freeze_v2_retrieval`` is the converter that produced M7's inputs.
+    Nothing here re-implements scoring, and a missing index never falls back to BM25.
+    """
+
+    label = "Qwen3 Hybrid · Dense 0.10 / BM25 0.90 (M6 system retriever)"
+
+    def __init__(self, corpus: UiCorpus, index_dir: Path, work_dir: Path) -> None:
+        if corpus.synthetic:
+            raise ValueError("Hybrid retrieval needs the real V2 corpus, not the fixture corpus.")
+        artifact_path = index_dir / "artifact.json"
+        index_path = index_dir / "index" / "index.faiss"
+        if not artifact_path.is_file() or not index_path.is_file():
+            raise ValueError(
+                f"M6 Qwen3 index not found in {index_dir}. Expected artifact.json and "
+                f"index/index.faiss from {M6_INDEX_RELEASE}. Set CS30_UI_HYBRID_INDEX."
+            )
+        v2_artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+        if v2_artifact.get("corpus_hash") != corpus.provenance.corpus_hash:
+            raise ValueError("The M6 index was built for a different corpus hash.")
+        if (
+            v2_artifact.get("embedding_model") != M6_HYBRID["embedding_model"]
+            or v2_artifact.get("embedding_revision") != M6_HYBRID["embedding_revision"]
+        ):
+            raise ValueError("The index is not the M6-selected Qwen3-Embedding-0.6B revision.")
+        self.corpus = corpus
+        self.by_id = {hit.chunk_id: hit for hit in corpus.hits}
+        self.index_version = str(v2_artifact["artifact_id"])
+        records = [
+            {
+                "chunk_id": hit.chunk_id,
+                "text": hit.text,
+                "chapter_id": hit.chapter_id,
+                "source_name": hit.source_name,
+            }
+            for hit in corpus.hits
+        ]
+        view_dir = work_dir / "m6-hybrid-view"
+        materialise_v2_retrieval_view(
+            v2_artifact=v2_artifact,
+            records=records,
+            index_source=index_path,
+            output_dir=view_dir,
+            query_prompt_name=M6_HYBRID["query_prompt_name"],
+        )
+        config = AppConfig(
+            fixture_mode=False,
+            retrieval=RetrievalConfig(
+                mode=LegacyRetrievalMode.HYBRID,
+                index_dir=str(view_dir),
+                rrf_k=M6_HYBRID["rrf_k"],
+                rrf_input_top_k=M6_HYBRID["rrf_input_top_k"],
+                rrf_dense_weight=M6_HYBRID["rrf_dense_weight"],
+                rrf_bm25_weight=M6_HYBRID["rrf_bm25_weight"],
+                bm25_stopwords=M6_HYBRID["bm25_stopwords"],
+                expected_embedding_model=M6_HYBRID["embedding_model"],
+                expected_embedding_revision=M6_HYBRID["embedding_revision"],
+                embedding_trust_remote_code=M6_HYBRID["trust_remote_code"],
+                query_prompt_name=M6_HYBRID["query_prompt_name"],
+            ),
+        )
+        # Imported here so the fixture-only path does not load the pipeline module.
+        from cs30.pipeline import build_real_retrieval_deps
+
+        self.backend = build_real_retrieval_deps(config).retriever
+
+    def retrieve(self, query: str, *, top_k: int = 5) -> RetrievalResult:
+        query = query.strip()
+        result = self.backend.retrieve(query, top_k)
+        p = self.corpus.provenance
+        frozen = freeze_v2_retrieval(
+            question_id="ui-query",
+            question=query,
+            result=result,
+            chunks_by_id={cid: hit.model_dump() for cid, hit in self.by_id.items()},
+            corpus_manifest={
+                "corpus_version": p.corpus_version,
+                "corpus_hash": p.corpus_hash,
+                "manifest_hash": p.manifest_hash,
+                "chunk_config_hash": p.chunk_config_hash,
+            },
+            embedding_model=M6_HYBRID["embedding_model"],
+            embedding_revision=M6_HYBRID["embedding_revision"],
+            index_version=self.index_version,
+            retrieval_config={**M6_HYBRID, "top_k": top_k},
+        )
+        return frozen.retrieval
+
+
 class UiBm25Retriever:
     """Adapt the existing BM25 backend; do not copy its scoring/tokenisation."""
+
+    label = "BM25 baseline"
 
     def __init__(self, corpus: UiCorpus, directory: Path) -> None:
         self.corpus = corpus
@@ -277,7 +391,7 @@ def run_question(
         if progress:
             progress(label)
 
-    step("Retrieve evidence · shared BM25 baseline")
+    step(f"Retrieve evidence · {getattr(retriever, 'label', 'BM25 baseline')}")
     retrieval = retriever.retrieve(question, top_k=5)
     service, store, replayer = make_service(corpus, profile, directory / "events", enabled)
     step("Resolve retrieval Topic and build learner snapshot")

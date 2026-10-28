@@ -214,25 +214,121 @@ def app_button(app, name):
 def offline_page(monkeypatch):
     monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
     app = AppTest.from_file(PAGE, default_timeout=20).run()
-    next(x for x in app.selectbox if x.label == "Demo mode").set_value(
-        "Offline integration · simulated answers"
-    ).run()
     return app
 
 
-def test_main_page_has_free_text_input_and_live_readiness(monkeypatch):
+def test_main_page_has_free_text_input_and_defaults_to_fixture_without_key(monkeypatch):
     monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
     app = AppTest.from_file(ROOT / "src/cs30/ui/v2_app.py", default_timeout=20).run()
     assert not app.exception
     assert app.text_area[0].label == "Your physics question"
+    assert app.session_state["qa-demo-settings"]["mode"].startswith("Fixture")
+    assert not app_button(app, "Generate answer · fixture").disabled
+
+
+def test_live_mode_is_default_and_waits_for_corpus_when_key_is_set(monkeypatch, tmp_path):
+    monkeypatch.setenv("DEEPINFRA_API_KEY", "offline-test-placeholder")
+    monkeypatch.delenv("CS30_UI_CORPUS", raising=False)
+    monkeypatch.setenv("CS30_UI_HYBRID_INDEX", str(tmp_path / "missing"))
+    app = AppTest.from_file(PAGE, default_timeout=20).run()
+    assert not app.exception
+    assert app.session_state["qa-demo-settings"]["mode"] == "Team V2 · DeepInfra"
+    assert app.session_state["qa-demo-settings"]["retrieval"] == "hybrid"
+    assert any("M6 Qwen3 hybrid index not found" in x.value for x in app.error)
+    assert any("M6 system retriever" in x.value for x in app.info)
     assert app_button(app, "Generate answer").disabled
+
+
+def _tiny_m6_index(corpus, root):
+    """A real FAISS IndexFlatIP over the fixture chunks with the M6 identity fields."""
+
+    import hashlib
+    import json
+
+    import numpy as np
+
+    faiss = pytest.importorskip("faiss")
+    vectors = np.eye(len(corpus.hits), 8, dtype=np.float32)
+    index = faiss.IndexFlatIP(8)
+    index.add(vectors)
+    (root / "index").mkdir(parents=True)
+    faiss.write_index(index, str(root / "index" / "index.faiss"))
+    digest = hashlib.sha256((root / "index" / "index.faiss").read_bytes()).hexdigest()
+    artifact = {
+        "schema_version": "2.0",
+        "artifact_id": "v2-faiss-test-qwen3",
+        "index_type": "faiss.IndexFlatIP",
+        "similarity_metric": "inner_product",
+        "normalise_embeddings": True,
+        "corpus_hash": corpus.provenance.corpus_hash,
+        "chunk_config_hash": corpus.provenance.chunk_config_hash,
+        "index_version": "v2-faiss-flat-ip-1",
+        "chunk_count": len(corpus.hits),
+        "chunk_ids": [hit.chunk_id for hit in corpus.hits],
+        "embedding_model": v2_runtime.M6_HYBRID["embedding_model"],
+        "embedding_revision": v2_runtime.M6_HYBRID["embedding_revision"],
+        "embedding_dimension": 8,
+        "metadata": {"index_sha256": "sha256:" + digest},
+    }
+    (root / "artifact.json").write_text(json.dumps(artifact), encoding="utf-8")
+    return vectors
+
+
+def test_hybrid_uses_m6_settings_and_produces_hybrid_provenance(monkeypatch, tmp_path):
+    import cs30.retrieval.real as real
+
+    corpus = replace(dataset(), synthetic=False)
+    vectors = _tiny_m6_index(corpus, tmp_path / "qwen3")
+    loaded, encoded = [], []
+
+    class Model:
+        def encode(self, sentences, **kwargs):
+            encoded.append(kwargs)
+            return vectors[:1]
+
+    def loader(name, *, revision=None, trust_remote_code=False):
+        loaded.append((name, revision, trust_remote_code))
+        return Model()
+
+    monkeypatch.setattr(real, "_default_model_loader", loader)
+    retriever = v2_runtime.UiHybridRetriever(corpus, tmp_path / "qwen3", tmp_path / "work")
+    run = run_question(
+        "What is average acceleration?",
+        profile(),
+        corpus,
+        retriever,
+        tmp_path,
+        enabled=False,
+        live=True,
+        client=MockJsonLLMClient(),
+    )
+    result = run.runtime.retrieval
+    assert loaded == [
+        ("Qwen/Qwen3-Embedding-0.6B", "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3", False)
+    ]
+    assert encoded[0]["prompt_name"] == "query"
+    assert result.mode.value == "hybrid"
+    assert result.provenance.embedding_model == "Qwen/Qwen3-Embedding-0.6B"
+    # Dense's top chunk is fused in; BM25 (weight 0.90) still dominates the ordering.
+    assert corpus.hits[0].chunk_id in {hit.chunk_id for hit in result.hits}
+    assert {hit.retriever_type.value for hit in result.hits} == {"hybrid"}
+    assert "Hybrid" in run.steps[0]
+    assert run.runtime.validated.citation_status == "passed"
+
+
+def test_hybrid_refuses_wrong_index_instead_of_falling_back(tmp_path):
+    corpus = replace(dataset(), synthetic=False)
+    with pytest.raises(ValueError, match="M6 Qwen3 index not found"):
+        v2_runtime.UiHybridRetriever(corpus, tmp_path / "missing", tmp_path / "work")
+    with pytest.raises(ValueError, match="real V2 corpus"):
+        v2_runtime.UiHybridRetriever(dataset(), tmp_path / "missing", tmp_path / "work")
 
 
 def test_question_to_quiz_to_report_and_switch_preserves_history(monkeypatch):
     app = offline_page(monkeypatch)
     app.toggle[0].set_value(True).run()
     app.text_area[0].set_value("What is average acceleration?").run()
-    app_button(app, "Run offline pipeline").click().run()
+    app_button(app, "Generate answer · fixture").click().run()
     assert not app.exception
     assert app.session_state["qa-run"].runtime.retrieval.query == "What is average acceleration?"
     app_button(app, "Quiz me").click().run()
@@ -241,20 +337,44 @@ def test_question_to_quiz_to_report_and_switch_preserves_history(monkeypatch):
     app.radio[0].set_value("A").run()
     app_button(app, "Submit answer").click().run()
     assert not app.exception
+    # The native Session report sidebar renders the report and its downloads.
     assert len(app.get("download_button")) == 3
     app.toggle[0].set_value(False).run()
     assert not app.exception
     assert all(x.label != "Quiz me" for x in app.button)
     app.toggle[0].set_value(True).run()
     assert not app.exception
-    assert any("Scored attempts: 1" in x.value for x in app.caption)
+    scored = '<span class="cc-state-label">Scored attempts</span>'
+    assert any(scored + '<span class="cc-state-value">1</span>' in x.value for x in app.markdown)
+
+
+def test_topic_level_controls_are_on_the_page_and_require_a_reason(monkeypatch):
+    app = offline_page(monkeypatch)
+    app.toggle[0].set_value(True).run()
+    app_button(app, "Generate answer · fixture").click().run()
+    assert not app.exception
+    assert all(x.label != "Adjust this Topic level" for x in app.expander)
+    level = next(x for x in app.selectbox if x.label == "New Topic level")
+    assert level.value is StudentLevel.BEGINNER
+    level.set_value(StudentLevel.ADVANCED).run()
+    app_button(app, "Apply Topic level").click().run()
+    assert any("reason is required" in x.value for x in app.error)
+    next(x for x in app.text_input if x.label == "Reason for level change").input(
+        "Prior course"
+    ).run()
+    app_button(app, "Apply Topic level").click().run()
+    assert not app.exception
+    assert any(
+        'Topic level</span><span class="cc-state-value">Advanced</span>' in x.value
+        for x in app.markdown
+    )
 
 
 def test_changed_question_clears_old_output_when_new_run_fails(monkeypatch):
     app = offline_page(monkeypatch)
-    app_button(app, "Run offline pipeline").click().run()
+    app_button(app, "Generate answer · fixture").click().run()
     app.text_area[0].set_value("").run()
-    app_button(app, "Run offline pipeline").click().run()
+    app_button(app, "Generate answer · fixture").click().run()
     assert not app.exception
     assert any("pipeline stopped" in x.value for x in app.error)
     assert "qa-run" not in app.session_state
@@ -264,9 +384,10 @@ def test_example_populates_the_input_before_next_run(monkeypatch):
     app = offline_page(monkeypatch)
     assert all(x.label != "Prepared examples" for x in app.selectbox)
     assert all(x.label != "Use example" for x in app.button)
-    for label in ["Acceleration", "Newton's second law", "Out of scope"]:
-        assert app_button(app, label)
-    app_button(app, "Newton's second law").click().run()
+    assert all(x.label not in {"Acceleration", "Out of scope"} for x in app.button)
+    examples = app.pills[0]
+    assert list(examples.options) == ["Acceleration", "Newton's second law", "Out of scope"]
+    examples.set_value("Newton's second law").run()
     assert not app.exception
     assert "net force" in app.text_area[0].value
     assert "qa-run" not in app.session_state
@@ -275,10 +396,26 @@ def test_example_populates_the_input_before_next_run(monkeypatch):
 def test_three_independent_model_choices_change_banner_without_calls(monkeypatch):
     monkeypatch.delenv("DEEPINFRA_API_KEY", raising=False)
     app = AppTest.from_file(PAGE, default_timeout=20).run()
+    app_button(app, "Demo Mode").click().run()
+    next(x for x in app.selectbox if x.label == "Demo mode").set_value("Team V2 · DeepInfra").run()
     selector = next(x for x in app.selectbox if x.label == "Answer model")
     assert len(selector.options) == 3
     selector.set_value("google/gemma-3-12b-it").run()
+    app_button(app, "Done").click().run()
     assert not app.exception
     assert any("Gemma 3 12B" in x.value for x in app.info)
     assert app_button(app, "Generate answer").disabled
     assert "qa-run" not in app.session_state
+    app_button(app, "Demo Mode").click().run()
+    assert (
+        next(x for x in app.selectbox if x.label == "Answer model").value == "google/gemma-3-12b-it"
+    )
+    app_button(app, "Done").click().run()
+
+
+def test_session_report_panel_waits_for_a_question(monkeypatch):
+    app = offline_page(monkeypatch)
+    assert not app.exception
+    assert any(x.value == "## Session report" for x in app.markdown)
+    assert any("Run a question first" in x.value for x in app.info)
+    assert not app.get("download_button")

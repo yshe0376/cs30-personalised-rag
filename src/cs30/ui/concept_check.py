@@ -68,7 +68,7 @@ def inject_concept_check_styles() -> None:
         .cc-answer-review {
             display: grid;
             gap: 7px;
-            margin: 10px 0 18px;
+            margin: 0 0 18px;
         }
         .cc-answer-option {
             padding: 8px 11px;
@@ -114,6 +114,54 @@ def inject_concept_check_styles() -> None:
             line-height: 1.3;
             overflow-wrap: anywhere;
         }
+        /* Unanswered options use the same boxes as the reviewed answer, without colour.
+           Two selectors: Streamlit >=1.64 (stRadioOption) and older baseweb radios. */
+        [class*="st-key-cc-options"] [role="radiogroup"] {
+            display: grid !important;
+            gap: 7px;
+            width: 100%;
+        }
+        [class*="st-key-cc-options"] [data-testid="stRadio"],
+        [class*="st-key-cc-options"] [data-testid="stElementContainer"],
+        [class*="st-key-cc-options"] [role="radiogroup"] { width: 100% !important; }
+        [class*="st-key-cc-options"] [role="radiogroup"] > div { width: 100%; }
+        [class*="st-key-cc-options"] label[data-testid="stRadioOption"],
+        [class*="st-key-cc-options"] label[data-baseweb="radio"] {
+            box-sizing: border-box;
+            width: 100%;
+            margin: 0;
+            padding: 8px 11px;
+            border: 1px solid var(--cc-line);
+            border-radius: 9px;
+            background: #ffffff;
+            cursor: pointer;
+            transition: border-color .15s ease, background-color .15s ease;
+        }
+        /* Hover and selection use the same quiet grey as the example pills; the radio
+           dot is hidden so unanswered and reviewed options look the same. */
+        [class*="st-key-cc-options"] label[data-testid="stRadioOption"]:hover,
+        [class*="st-key-cc-options"] label[data-baseweb="radio"]:hover {
+            border-color: rgba(49, 51, 63, 0.2);
+            background: #f0f2f6;
+        }
+        [class*="st-key-cc-options"] label[data-testid="stRadioOption"]:has(input:checked),
+        [class*="st-key-cc-options"] label[data-baseweb="radio"]:has(input:checked) {
+            border-color: rgba(49, 51, 63, 0.55);
+            background: #f0f2f6;
+        }
+        [class*="st-key-cc-options"] label:has(input:checked) p { font-weight: 600; }
+        [class*="st-key-cc-options"] label[data-testid="stRadioOption"] div,
+        [class*="st-key-cc-options"] label[data-baseweb="radio"] div {
+            background: transparent !important;
+        }
+        [class*="st-key-cc-options"] label[data-testid="stRadioOption"]
+            div:not([data-testid="stMarkdownContainer"]):not(:has(p)) {
+            display: none !important;
+        }
+        [class*="st-key-cc-options"] [role="radiogroup"] p {
+            color: #49433e;
+            font-size: .94rem;
+        }
         @media (max-width: 720px) {
             .cc-state-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
@@ -153,8 +201,7 @@ def _render_options(release: ConceptCheckQuestionRelease, grade: ConceptCheckGra
                 classes.append("incorrect")
         suffix = f" <strong>· {' · '.join(notes)}</strong>" if notes else ""
         rows.append(
-            f'<div class="{" ".join(classes)}">'
-            f"{escape(choice)} — {escape(option)}{suffix}</div>"
+            f'<div class="{" ".join(classes)}">{escape(choice)} — {escape(option)}{suffix}</div>'
         )
     st.markdown(
         f'<div class="cc-answer-review">{"".join(rows)}</div>',
@@ -203,7 +250,7 @@ def _render_result(
 ) -> None:
     grade = result.grade
     question = release.question
-    st.markdown('<p class="cc-field-title">Quiz result</p>', unsafe_allow_html=True)
+    # Same question line and option boxes as before submission, so only colours change.
     st.write(question.question)
     _render_options(release, grade)
 
@@ -254,27 +301,19 @@ def render_quiz(
     stored = st.session_state.get(f"{key}:result")
     if isinstance(stored, QuizAttemptView):
         _render_result(release, stored)
-        if (
+        can_undo = (
             on_revoke is not None
             and stored.event.event_type is ConceptCheckEventType.ATTEMPT_SUBMITTED
             and stored.event.attempt_id is not None
-        ):
+        )
+        if can_undo:
             st.caption(
                 "Undo applies to this most recent scored attempt. The original record "
                 "stays in the event history and a revocation event is added."
             )
-            if st.button(
-                "Undo latest scored attempt",
-                key=f"{key}:revoke",
-                use_container_width=True,
-            ):
-                try:
-                    on_revoke(stored.event.attempt_id)
-                except ValueError as exc:
-                    st.error(f"The attempt could not be undone: {exc}")
-                else:
-                    st.rerun()
-        if on_next is not None and st.button(
+        # Same two equal columns as Submit answer / Skip.
+        next_column, undo_column = st.columns(2)
+        if on_next is not None and next_column.button(
             "Next question",
             key=f"{key}:next",
             type="primary",
@@ -282,18 +321,29 @@ def render_quiz(
         ):
             on_next()
             st.rerun()
+        if can_undo and undo_column.button(
+            "Undo latest scored attempt",
+            key=f"{key}:revoke",
+            use_container_width=True,
+        ):
+            try:
+                on_revoke(stored.event.attempt_id)
+            except ValueError as exc:
+                st.error(f"The attempt could not be undone: {exc}")
+            else:
+                st.rerun()
         return stored
 
-    st.markdown('<p class="cc-field-title">Quick check</p>', unsafe_allow_html=True)
     st.write(question.question)
-    selected = st.radio(
-        "Concept Check answer",
-        options=list(question.options),
-        index=None,
-        format_func=lambda choice: f"{choice} — {question.options[choice]}",
-        key=f"{key}:choice",
-        label_visibility="collapsed",
-    )
+    with st.container(key=f"cc-options-{key}".replace(":", "-")):
+        selected = st.radio(
+            "Concept Check answer",
+            options=list(question.options),
+            index=None,
+            format_func=lambda choice: f"{choice} — {question.options[choice]}",
+            key=f"{key}:choice",
+            label_visibility="collapsed",
+        )
     submit_column, skip_column = st.columns(2)
     submit = submit_column.button(
         "Submit answer",
