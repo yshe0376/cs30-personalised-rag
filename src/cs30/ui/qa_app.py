@@ -384,6 +384,7 @@ def inject_qa_styles() -> None:
         }
         [data-testid="stExpandSidebarButton"]::after {
             content: "Session report" !important;
+            font-size: var(--qa-body-size) !important;
         }
         [data-testid="stSidebar"][aria-expanded="true"] {
             width: var(--qa-report-width, 300px) !important;
@@ -409,7 +410,7 @@ def inject_qa_styles() -> None:
             background: #ffe6df !important;
         }
         .st-key-qa-open-demo [data-testid="stButton"] button p {
-            font-size: .9rem !important;
+            font-size: var(--qa-body-size) !important;
             font-weight: 650 !important;
         }
         /* Secondary actions (Undo, Skip) are outlined so the primary action stands out. */
