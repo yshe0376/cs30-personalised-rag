@@ -8,12 +8,16 @@ import math
 import re
 import unicodedata
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from cs30.evaluation.models import GoldSample
-from cs30.generation.client import LLMClient
+from cs30.generation.client import LLMClient, LLMResponse
 from cs30.v2.contracts import GoldQuestion
 
+from .gemini_judge_client import GeminiJudgeEmptyResponseError
+from .judge_runtime import _append_attempt
 from .open_answer_models import (
     ExpectedAnswer,
     JudgeAssessment,
@@ -27,6 +31,23 @@ from .open_answer_models import (
 Gold = GoldQuestion | GoldSample
 JUDGE_PROMPT_VERSION = "open-answer-facts-0.1"
 _NUMBER = re.compile(r"^([+\-−]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?)\s*(.*?)$")
+
+
+def _response_usage(response: LLMResponse) -> dict:
+    """Validate returned counters; absent metadata is explicitly unknown."""
+    unknown = dict(
+        input_tokens=None, output_tokens=None, thought_tokens=None, usage_available=False
+    )
+    if not getattr(response, "usage_available", True):
+        return unknown
+    counters = {
+        "input_tokens": response.usage.input_tokens,
+        "output_tokens": response.usage.output_tokens,
+        "thought_tokens": getattr(response, "thought_tokens", 0),
+    }
+    if any(type(value) is not int or value < 0 for value in counters.values()):
+        raise ValueError("judge client returned invalid token usage")
+    return dict(**counters, usage_available=True)
 
 
 def sha256_bytes(value: bytes) -> str:
@@ -152,6 +173,7 @@ class OpenAnswerScorer:
         max_retries: int = 1,
         cache_directory: Path | None = None,
         allow_self_judge: bool = False,
+        attempt_log_path: Path | None = None,
     ) -> None:
         if max_retries < 0 or max_retries > 3:
             raise ValueError("judge retries must be between 0 and 3")
@@ -159,6 +181,16 @@ class OpenAnswerScorer:
         self.max_retries = max_retries
         self.cache_directory = cache_directory
         self.allow_self_judge = allow_self_judge
+        self.attempt_log_path = attempt_log_path
+        self.judge_execution_id = uuid4().hex
+        if attempt_log_path is not None:
+            if cache_directory and attempt_log_path.resolve().is_relative_to(
+                cache_directory.resolve()
+            ):
+                raise ValueError("correctness attempt log must be outside the cache directory")
+            attempt_log_path.parent.mkdir(parents=True, exist_ok=True)
+            with attempt_log_path.open("a", encoding="utf-8"):
+                pass
         self.judge_config = {
             "model": client.model if client else None,
             "temperature": client.temperature if client else None,
@@ -250,6 +282,8 @@ class OpenAnswerScorer:
         }
 
         def result(status: str, source: str, reason: str, **extra: object) -> OpenAnswerScore:
+            extra.setdefault("attempt_count", 0)
+            extra.setdefault("usage_complete", True)
             return OpenAnswerScore(
                 **base, score_status=status, scoring_source=source, reason=reason, **extra
             )
@@ -315,9 +349,19 @@ class OpenAnswerScorer:
             for _ in range(self.max_retries + 1):
                 raw = None
                 reported_model = None
-                usage = {"input_tokens": 0, "output_tokens": 0}
+                response = None
+                candidate = None
+                error = None
+                started_at = datetime.now(UTC).isoformat()
+                usage = dict(
+                    input_tokens=None,
+                    output_tokens=None,
+                    thought_tokens=None,
+                    usage_available=False,
+                )
                 try:
                     response = self.client.complete(prompt, text_format)
+                    usage = _response_usage(response)
                     raw = response.text
                     if not isinstance(raw, str):
                         raw = repr(raw)
@@ -326,27 +370,51 @@ class OpenAnswerScorer:
                     if not isinstance(reported_model, str) or not reported_model.strip():
                         reported_model = None
                         raise ValueError("judge client returned no model identity")
-                    if any(
-                        type(value) is not int or value < 0
-                        for value in (response.usage.input_tokens, response.usage.output_tokens)
-                    ):
-                        raise ValueError("judge client returned invalid token usage")
-                    usage = {
-                        "input_tokens": response.usage.input_tokens,
-                        "output_tokens": response.usage.output_tokens,
-                        "thought_tokens": int(getattr(response, "thought_tokens", 0)),
-                    }
                     candidate = JudgeAssessment.model_validate_json(raw)
                     validate_assessment(candidate, rubric, answer)
                 except Exception as exc:
-                    attempts.append(
-                        JudgeAttempt(
-                            raw_output=raw,
-                            error=f"{type(exc).__name__}: {exc}",
-                            reported_model=reported_model,
-                            **usage,
-                        )
+                    error = f"{type(exc).__name__}: {exc}"
+                    candidate = None
+                    if isinstance(exc, GeminiJudgeEmptyResponseError):
+                        response = exc.response
+                        reported_model = response.model
+                        try:
+                            usage = _response_usage(response)
+                        except ValueError as metadata_error:
+                            error += f"; {metadata_error}"
+                attempt = JudgeAttempt(
+                    raw_output=raw,
+                    error=error,
+                    reported_model=reported_model,
+                    provider_response_id=response.response_id if response else None,
+                    attempt_id=uuid4().hex,
+                    **usage,
+                )
+                attempts.append(attempt)
+                if self.attempt_log_path is not None:
+                    _append_attempt(
+                        self.attempt_log_path,
+                        {
+                            "schema_version": "1.0",
+                            "judge_execution_id": self.judge_execution_id,
+                            "task": "correctness",
+                            "request_id": key,
+                            "run_id": case.run_id,
+                            "cache_key": key,
+                            "config_sha256": self.judge_config_sha256,
+                            "model_revision": self.client.model,
+                            "attempt": len(attempts),
+                            "started_at_utc": started_at,
+                            "completed_at_utc": datetime.now(UTC).isoformat(),
+                            "status": "accepted"
+                            if error is None
+                            else "invalid_output"
+                            if response
+                            else "provider_error",
+                            **attempt.model_dump(exclude={"raw_output"}),
+                        },
                     )
+                if error is not None:
                     # Provider failures retry the original; invalid JSON gets a fresh repair.
                     prompt = (
                         original
@@ -358,9 +426,6 @@ class OpenAnswerScorer:
                         )
                     )
                     continue
-                attempts.append(
-                    JudgeAttempt(raw_output=raw, error=None, reported_model=reported_model, **usage)
-                )
                 assessment = candidate
                 break
             if assessment is not None and cache_path:
@@ -378,6 +443,8 @@ class OpenAnswerScorer:
             judge_attempts=attempts,
             cache_hit=cached,
             judge_calls_this_run=0 if cached else len(attempts),
+            attempt_count=len(attempts),
+            usage_complete=all(attempt.usage_available is True for attempt in attempts),
         )
         if assessment is None:
             return result(

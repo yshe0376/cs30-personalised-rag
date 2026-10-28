@@ -188,6 +188,12 @@ def _parser() -> argparse.ArgumentParser:
         "--model", help="independent judge model identifier, preferably version-pinned"
     )
     score.add_argument("--cache-dir", type=Path)
+    score.add_argument(
+        "--attempt-log",
+        type=Path,
+        help="append-only usage ledger; defaults to OUTPUT_DIR.attempts.jsonl "
+        "beside the report directory",
+    )
     score.add_argument("--timeout", type=float, default=120.0)
     score.add_argument(
         "--max-output-tokens",
@@ -271,6 +277,15 @@ def main(argv: list[str] | None = None) -> int:
             if args.provider == "none" and args.model:
                 raise ValueError("--model requires a live judge provider")
             client = None
+            attempt_log = args.attempt_log or args.output_dir.with_name(
+                args.output_dir.name + ".attempts.jsonl"
+            )
+            if attempt_log.resolve() in {getattr(args, name).resolve() for name in snapshots}:
+                raise ValueError("correctness attempt log must be separate from input files")
+            if attempt_log.resolve().is_relative_to(args.output_dir.resolve()):
+                raise ValueError(
+                    "correctness attempt log must be outside the immutable report directory"
+                )
             if args.provider != "none":
                 client_types = {
                     "ollama": OllamaChatClient,
@@ -300,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
                 max_retries=args.max_retries,
                 cache_directory=args.cache_dir,
                 allow_self_judge=args.allow_self_judge,
+                attempt_log_path=attempt_log if client is not None else None,
             )
             records = scorer.score(manifest, gold, rubrics, runs)
             provenance = {
@@ -310,6 +326,7 @@ def main(argv: list[str] | None = None) -> int:
                 "provider": args.provider,
                 "judge_config": scorer.judge_config,
                 "judge_config_sha256": scorer.judge_config_sha256,
+                "attempt_log": str(attempt_log) if client is not None else None,
                 "allow_self_judge": args.allow_self_judge,
                 "expected_run_ids": [case.run_id for case in manifest.cases],
                 "rubrics_without_review_record": sorted(

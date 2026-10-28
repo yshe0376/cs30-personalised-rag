@@ -472,6 +472,7 @@ class CachedJudgeRunner:
         last_response: JudgeProviderResponse | None = None
         attempt_request = request
         totals = {"input_tokens": 0, "output_tokens": 0, "thought_tokens": 0}
+        usage_complete = True
         for attempt in range(1, self.max_attempts + 1):
             attempt_raw: dict[str, object] | None = None
             response: JudgeProviderResponse | None = None
@@ -514,6 +515,7 @@ class CachedJudgeRunner:
                 attempt_failure = exc
                 errors.append(f"attempt {attempt}: {exc}")
             usage_available = response is not None and response.usage_available
+            usage_complete = usage_complete and usage_available
             usage = {
                 field: getattr(response, field) if usage_available else None for field in totals
             }
@@ -573,6 +575,8 @@ class CachedJudgeRunner:
                 ),
                 provider_response_id=last_response.response_id if last_response else None,
                 reported_model=last_response.reported_model if last_response else None,
+                attempt_count=attempt,
+                usage_complete=usage_complete,
                 **totals,
             )
         else:
@@ -590,6 +594,8 @@ class CachedJudgeRunner:
                 provider_response_id=last_response.response_id,
                 completed_at_utc=last_response.completed_at_utc,
                 reported_model=last_response.reported_model,
+                attempt_count=attempt,
+                usage_complete=usage_complete,
                 **totals,
             )
         if not envelope.unresolved:

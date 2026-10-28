@@ -487,6 +487,8 @@ class JudgeResultEnvelope(ContractModel):
     output_tokens: int = Field(default=0, ge=0)
     thought_tokens: int = Field(default=0, ge=0)
     cache_hit: bool = False
+    attempt_count: int | None = Field(default=None, ge=0)
+    usage_complete: bool | None = None
 
     @model_validator(mode="after")
     def validate_envelope(self) -> JudgeResultEnvelope:
