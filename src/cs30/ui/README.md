@@ -1,5 +1,34 @@
 # Member 8 UI interfaces
 
+## V2 learning layout
+
+Run `start_v2_demo.cmd` on Windows, or use:
+
+```bash
+python -m streamlit run src/cs30/ui/v2_app.py --theme.base light --theme.primaryColor '#f06f54' --theme.font sans-serif
+```
+
+Install the `ui` extra first. The Windows launcher uses `.venv` when available;
+`CS30_PYTHON` can select an existing Python environment and `CS30_PORT` defaults
+to 8512. It does not install dependencies or call a model API.
+
+This layout reuses V1 styling and the existing Concept Check fixture runtime.
+The sidebar contains the starting level, one Concept Check switch (off by
+default), and existing fixture scenarios. The learning tab shows the saved
+answer, synthetic cited/retrieved passages, quiz, state and optional audited
+Topic override. The report tab reuses the existing event report/downloads.
+
+The switch controls dynamic Topic state and practice together. Off mode hides
+write controls and uses the static starting profile without deleting history.
+Each starting level uses a separate fixture profile, as in the existing demo.
+Changing the level does not regenerate a saved fixture answer. Temporary
+single-session logs are not a durable student account or cross-session storage.
+
+The page has no free-text/live Q&A adapter, production retrieval/model wiring,
+or real reviewed practice corpus. These remain upstream integration work; the
+fixture banner must stay visible. V1 and the original standalone demo remain
+available.
+
 This module consumes `PipelineRun`.
 
 ## Week 1 acceptance
