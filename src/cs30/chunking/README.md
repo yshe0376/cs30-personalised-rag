@@ -198,12 +198,20 @@ python scripts/build_retrieval_corpus.py \
 Version `0.4.0` is intentional. Version `0.3.0` added embedding-input and
 duplicate-rejection provenance during the M5 hand-off; `0.4.0` adds candidate,
 content-filter, parent-span and unified-corpus semantics. Both revisions are
-contained in the still-unmerged M4 feature branch.
+part of the merged M4 implementation on `main`.
 
 ## Current integration status
 
-The implementation and unit tests do not wait for Member 2. Provisional
-multi-chapter evidence may be generated through a documented adapter, but a
-production corpus must be rebuilt from Member 2's frozen, contract-valid
-`OpenStaxDocument` export. The manifest's document hashes and parser versions
-make that replacement observable.
+M4's production chunker, four-textbook development corpus, and shared
+Gold/Concept Check evidence resolver are merged on `main`. The frozen corpus
+contains the three pinned OpenStax deliveries plus CK-12, records 6,184 chunks,
+and is published as
+`2.0.0-dev.m4-four-book-main-a1fe99e`. Its manifest, engineering validation,
+and reproducible build command are recorded in
+`docs/results/m4_v2_four_book/`.
+
+That corpus is development-only (`reportable=false`), not a formal evaluation
+result. Any parser delivery, source identity, chunking configuration, or
+evidence-policy change requires a new corpus version and regenerated downstream
+bindings/indexes; consumers must not mix artifacts across corpus hashes. With
+the current frozen inputs, no additional M4 implementation dependency remains.
