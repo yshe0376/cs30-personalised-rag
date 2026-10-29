@@ -43,7 +43,7 @@ All four jobs have completion receipts. Exit code 3 denotes unresolved/review ou
 
 All-target coverage above is distinct from the eligibility-restricted primary analysis. The adaptation and evidence runners retain 36 and 104 unresolved unique requests respectively; those are not interchangeable with target-cell counts. The 48-row companion CSV reports missingness by task, level and condition.
 
-Total: 7,424 API attempts; all have known usage. Input: 17,168,562 tokens. Output including thinking: 3,382,963 tokens. List-price token estimate: USD 9.366585. Planning estimate: AUD 15.015609 using AUD/USD 1.50 and input multiplier 1.15. These are estimates, not an invoice or verified balance deduction. The operator should reconcile the provider bill after billing updates.
+Total: 7,424 API attempts; all have known usage. Input: 17,168,562 tokens. Output including thinking: 3,382,963 tokens. List-price token estimate: USD 9.366585. Planning estimate: AUD 15.015609 using AUD/USD 1.50 and input multiplier 1.15. These amounts are calculated from the recorded token usage and stated pricing assumptions only. Provider billing updates are delayed and the official billing report is not yet available for download. The final billed expense remains unverified.
 
 ## Integrity and interpretation limits
 
@@ -63,10 +63,6 @@ M7 may consume the scores for integration or verification without regenerating a
 The Leader should review the findings and claim boundaries. Pre-release publication
 makes the artifacts available for review; it does not change `reportable=false`.
 No rule tuning, threshold change or additional paid run was performed after Test.
-
-The operator reported a displayed account balance of AUD 8.56 after completion.
-This is a balance snapshot, not a reconciled Test expense. The token-based estimates
-above remain separately labelled.
 
 ## Descriptive supporting results
 
