@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
-from .evidence_quotes import quote_is_grounded
+from .evidence_quotes import quote_in_answer, quote_is_grounded
 from .judge_runtime import make_judge_request
 from .v2_generation_models import (
     EvaluationMode,
@@ -122,7 +122,7 @@ def validate_evidence_support_output(
         if canonical_id in item.citation_ids
     }
     for claim in output.claims:
-        if claim.claim_text not in item.answer:
+        if not quote_in_answer(claim.claim_text, item.answer):
             raise ValueError(f"claim {claim.claim_id} is not an exact answer substring")
         supporting = set(claim.supporting_evidence_ids)
         if len(supporting) != len(claim.supporting_evidence_ids):

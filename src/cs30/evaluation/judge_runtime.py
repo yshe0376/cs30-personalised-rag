@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from cs30.generation.client import LLMClient
 
 from .adaptation_applicability import validate_adaptation_applicability
-from .evidence_quotes import quote_is_grounded
+from .evidence_quotes import ANSWER_QUOTE_POLICY, quote_in_answer, quote_is_grounded
 from .gemini_judge_client import GeminiJudgeEmptyResponseError
 from .level_profiles import canonical_json_sha256
 from .v2_generation_models import (
@@ -300,7 +300,9 @@ def validate_output_against_request(
         if len(actual_ids) != len(set(actual_ids)) or set(actual_ids) != expected_ids:
             raise ValueError("adaptation output criterion coverage does not match request")
         for judgement in output.criteria:
-            if judgement.exact_quote is not None and judgement.exact_quote not in answer:
+            if judgement.exact_quote is not None and not quote_in_answer(
+                judgement.exact_quote, answer
+            ):
                 raise ValueError(
                     f"criterion {judgement.criterion_id} quote is not an exact answer substring"
                 )
@@ -308,7 +310,7 @@ def validate_output_against_request(
         return output
 
     if isinstance(output, DiscriminationJudgeOutput):
-        if output.exact_quote is not None and output.exact_quote not in answer:
+        if output.exact_quote is not None and not quote_in_answer(output.exact_quote, answer):
             raise ValueError("discrimination quote is not an exact answer substring")
         return output
 
@@ -327,7 +329,7 @@ def validate_output_against_request(
     if len(claim_ids) != len(set(claim_ids)):
         raise ValueError("evidence-support output contains duplicate claim IDs")
     for claim in output.claims:
-        if claim.claim_text not in answer:
+        if not quote_in_answer(claim.claim_text, answer):
             raise ValueError(f"claim {claim.claim_id} is not an exact answer substring")
         supporting = set(claim.supporting_evidence_ids)
         if len(supporting) != len(claim.supporting_evidence_ids):
@@ -343,6 +345,12 @@ def validate_output_against_request(
             raise ValueError(f"claim {claim.claim_id} has a quote outside the supplied evidence")
         if claim.bundle_support is SupportVerdict.SUPPORTED and not supporting:
             raise ValueError(f"supported claim {claim.claim_id} requires supporting evidence")
+        # Mirrors validate_evidence_support_output, which the result assembler enforces;
+        # without it a contradictory output could be cached here and rejected downstream.
+        if claim.bundle_support is not SupportVerdict.SUPPORTED and supporting:
+            raise ValueError(
+                f"non-supported claim {claim.claim_id} must not identify supporting evidence"
+            )
         if claim.citation_support is SupportVerdict.SUPPORTED and (
             claim.bundle_support is not SupportVerdict.SUPPORTED
             or not supporting.intersection(citations)
@@ -443,6 +451,30 @@ class CachedJudgeRunner:
         with self.attempt_log_path.open("a", encoding="utf-8"):
             pass
 
+    def verify_cached(
+        self,
+        request: JudgeRequest,
+        validator: Callable[[Mapping[str, Any]], ValidatedOutput],
+    ) -> bool:
+        """Re-check a cached result against the current rules; never spend to replace it.
+
+        A cache written under older, weaker rules must not be returned as if it were
+        valid, and must not be silently replaced by a paid call either. Callers run this
+        for every request before the first provider call so the run stops up front.
+        Returns whether the request is cached.
+        """
+        cached = self._cache.get(request_cache_key(request))
+        if cached is None:
+            return False
+        try:
+            validator(cached.output or {})
+        except Exception as exc:  # noqa: BLE001 - any failure blocks reuse
+            raise ValueError(
+                f"cached result for {request.request_id} fails current validation ({exc}); "
+                "prepare the cache with scripts/revalidate_full_dev_quotes.py first"
+            ) from exc
+        return True
+
     def run(
         self,
         request: JudgeRequest,
@@ -458,6 +490,7 @@ class CachedJudgeRunner:
         cache_key = request_cache_key(request)
         cached = self._cache.get(cache_key)
         if cached is not None:
+            self.verify_cached(request, validator)
             reused_from_other_execution = cached.judge_execution_id != self.judge_execution_id
             if not reused_from_other_execution and (
                 cached.model_digest != self.model_digest
@@ -577,6 +610,7 @@ class CachedJudgeRunner:
                 reported_model=last_response.reported_model if last_response else None,
                 attempt_count=attempt,
                 usage_complete=usage_complete,
+                answer_quote_policy=ANSWER_QUOTE_POLICY,
                 **totals,
             )
         else:
@@ -596,6 +630,7 @@ class CachedJudgeRunner:
                 reported_model=last_response.reported_model,
                 attempt_count=attempt,
                 usage_complete=usage_complete,
+                answer_quote_policy=ANSWER_QUOTE_POLICY,
                 **totals,
             )
         if not envelope.unresolved:

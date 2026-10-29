@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from cs30.contracts import StudentLevel
 
+from .evidence_quotes import quote_in_answer
 from .judge_runtime import make_judge_request
 from .v2_generation_models import (
     DiscriminationJudgeOutput,
@@ -80,7 +81,7 @@ def validate_discrimination_output(
         raise ValueError(f"invalid discrimination judge output: {exc}") from exc
     if output.request_id != request.request_id:
         raise ValueError("discrimination output request_id does not match request")
-    if output.exact_quote is not None and output.exact_quote not in answer:
+    if output.exact_quote is not None and not quote_in_answer(output.exact_quote, answer):
         raise ValueError("discrimination quote is not an exact answer substring")
     return output
 

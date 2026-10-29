@@ -16,6 +16,7 @@ from cs30.evaluation.models import GoldSample
 from cs30.generation.client import LLMClient, LLMResponse
 from cs30.v2.contracts import GoldQuestion
 
+from .evidence_quotes import quote_in_answer
 from .gemini_judge_client import GeminiJudgeEmptyResponseError
 from .judge_runtime import _append_attempt
 from .open_answer_models import (
@@ -73,15 +74,13 @@ def validate_assessment(assessment: JudgeAssessment, rubric: OpenAnswerRubric, a
     for item in assessment.criteria:
         if item.verdict in {"met", "contradicted"} and not item.answer_quote:
             raise ValueError("met/contradicted criteria require an exact answer quote")
-        if item.answer_quote is not None and (
-            not item.answer_quote or item.answer_quote not in answer
-        ):
+        if item.answer_quote is not None and not quote_in_answer(item.answer_quote, answer):
             raise ValueError("judge quote is absent from the complete original answer")
     for flagged, quote in (
         (assessment.critical_error, assessment.critical_error_quote),
         (assessment.minor_error, assessment.minor_error_quote),
     ):
-        if flagged and (not quote or quote not in answer):
+        if flagged and (not quote or not quote_in_answer(quote, answer)):
             raise ValueError("error flags require a nonempty exact answer quote")
         if not flagged and quote is not None:
             raise ValueError("unflagged errors must not carry a quote")

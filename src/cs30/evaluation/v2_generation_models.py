@@ -489,6 +489,9 @@ class JudgeResultEnvelope(ContractModel):
     cache_hit: bool = False
     attempt_count: int | None = Field(default=None, ge=0)
     usage_complete: bool | None = None
+    # Answer-quote rule this result was validated under; None means the original
+    # exact-substring rule (v1). Metadata only: never part of a request or cache key.
+    answer_quote_policy: NonEmptyText | None = None
 
     @model_validator(mode="after")
     def validate_envelope(self) -> JudgeResultEnvelope:
