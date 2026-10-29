@@ -1,0 +1,61 @@
+{
+  "id": 427434978,
+  "tag_name": "v2-m7-api-test-gpt-oss20b-20261029",
+  "name": "M7 primary Test generation — gpt-oss-20b, 2244 cells (unscored)",
+  "html_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-api-test-gpt-oss20b-20261029",
+  "target_commitish": "d1c216fdabf8067fe0b4d35e4321b93a1ae3ea8c",
+  "draft": false,
+  "prerelease": true,
+  "published_at": "2026-10-29T03:32:56Z",
+  "assets": [
+    {
+      "id": 687233314,
+      "name": "m7_api_test_gpt_oss20b_20261029.tar.gz",
+      "size": 27225573,
+      "digest": "sha256:c9545bf50cb161a8f923546431ba9efda8dd3c40077114061f9827a2a4511ebc",
+      "browser_download_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-test-gpt-oss20b-20261029/m7_api_test_gpt_oss20b_20261029.tar.gz"
+    },
+    {
+      "id": 687233422,
+      "name": "SHA256SUMS.txt",
+      "size": 105,
+      "digest": "sha256:3667039fb04eaf98ca80cc169148ec6b0f5a3add5d3baf04d7ebdfe16c93895e",
+      "browser_download_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-test-gpt-oss20b-20261029/SHA256SUMS.txt"
+    },
+    {
+      "id": 687233450,
+      "name": "VERIFICATION.json",
+      "size": 2962,
+      "digest": "sha256:9cad2d5bacb8c29472652635c5fa5c2cb7d1a94b30e2043a2109ad8530d85145",
+      "browser_download_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m7-api-test-gpt-oss20b-20261029/VERIFICATION.json"
+    }
+  ],
+  "public_download_verification": {
+    "checked_at_utc": "2026-10-29T03:34:58.940733+00:00",
+    "all_public_downloads_verified": true,
+    "authentication_used_for_downloads": false,
+    "files": [
+      {
+        "name": "m7_api_test_gpt_oss20b_20261029.tar.gz",
+        "bytes": 27225573,
+        "sha256": "c9545bf50cb161a8f923546431ba9efda8dd3c40077114061f9827a2a4511ebc",
+        "public_download_verified": true
+      },
+      {
+        "name": "SHA256SUMS.txt",
+        "bytes": 105,
+        "sha256": "3667039fb04eaf98ca80cc169148ec6b0f5a3add5d3baf04d7ebdfe16c93895e",
+        "public_download_verified": true
+      },
+      {
+        "name": "VERIFICATION.json",
+        "bytes": 2962,
+        "sha256": "9cad2d5bacb8c29472652635c5fa5c2cb7d1a94b30e2043a2109ad8530d85145",
+        "public_download_verified": true
+      }
+    ]
+  },
+  "original_archive_modified": false,
+  "generation_source_commit": "d1c216fdabf8067fe0b4d35e4321b93a1ae3ea8c",
+  "publication_base_commit": "6be45f3"
+}
