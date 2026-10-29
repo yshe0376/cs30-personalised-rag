@@ -10,6 +10,22 @@ The current milestone is `v0.1-thin-slice`: a small OpenStax Physics path used
 to validate the engineering workflow. It does not report formal retrieval or
 model-effectiveness results.
 
+## Online learning and Concept Check
+
+The integrated Demo offers an optional Concept Check after a textbook-grounded
+answer: a short comprehension exercise with choices, grading, an explanation and
+the supporting source quotation. It first uses a mapped Topic; if none is available,
+it uses the answer's validated textbook passages directly. Only Topic-linked
+scored attempts affect Topic mastery and level. Textbook-only attempts are saved
+separately without updating the learner profile.
+
+Online questions are API-authored drafts with local structure and quotation checks;
+they are not independently reviewed published-bank questions. See the
+[current concept and framework](docs/superpowers/specs/2026-10-28-api-learning-demo-design.md)
+for the two practice paths and their relationship to the original design.
+Start with `start_learning_demo.cmd` or `start_v2_demo.cmd`; local asset/configuration
+setup is described in the [runbook](docs/api-learning-demo-runbook.md).
+
 ## M6 W6 four-book retrieval experiment
 
 The current nine-model diagnostic retrieval comparison is in

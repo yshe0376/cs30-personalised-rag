@@ -1,5 +1,10 @@
 # Unified online Concept Check
 
+Concept Check means optional comprehension practice after an answer. Its current
+[product definition and flow](../../../docs/superpowers/specs/2026-10-28-api-learning-demo-design.md)
+distinguish practice availability from eligibility to update Topic state; the original
+reviewed-pool specification remains the reference for shared published contracts.
+
 Concept Check prefers mapped Topics. If validated cited passages have no eligible
 Topic, it generates textbook-based practice directly from those passages. These
 questions can be graded or skipped, with answers, explanations and located quotations;

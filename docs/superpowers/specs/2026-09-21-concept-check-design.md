@@ -1,6 +1,14 @@
 # Concept Check — first design specification
 
-> Status: decided (finalised 2026-09-22, recorded in the decided table of `docs/构思与待定.md`)
+> Scope update (2026-10-29): this document preserves the original reviewed-question-pool
+> design and shared-contract requirements. The current online Demo is defined in
+> [Online Concept Check v5](2026-10-28-api-learning-demo-design.md): optional comprehension
+> practice authored from validated answer citations, with Topic-linked adaptive practice
+> and textbook-only practice that does not update Topic state. Its Topic-selection and
+> online-authoring rules supersede this document's corresponding product-flow rules
+> for that Demo only. Reviewed-pool publication gates and formal experiment isolation remain.
+>
+> Original status: decided (finalised 2026-09-22, recorded in the decided table of `docs/构思与待定.md`)
 >
 > Date: drafted 2026-09-21, finalised 2026-09-22
 >

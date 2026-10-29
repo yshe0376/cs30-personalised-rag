@@ -1,5 +1,10 @@
 # M8 page integration (2026-10-29)
 
+For the current meaning of Concept Check and the two practice paths, use
+[Online Concept Check v5](superpowers/specs/2026-10-28-api-learning-demo-design.md).
+This runbook explains how to run that Demo; the original reviewed-pool specification
+does not define its full online question-availability policy.
+
 Quiz quotation handling now supplies a bounded set of contiguous, uniquely locatable
 source quotations in each passage's `allowed_quotes`. The per-request response schema
 restricts quote text and chunk IDs to those supplied values. Every returned quote
