@@ -64,13 +64,52 @@ Native noise-floor bounds and by-condition/level details are in generation_noise
 
 The existing full task × generator × target-level × condition tables are copied byte-for-byte. Dev and generation-repeat cohorts remain separate; adaptation additionally has an all-checklist-level table. Scored system-zero generation failures stay distinguished from null judge outcomes. Evidence missingness differs between generators; use the detailed tables rather than assume complete-case model comparisons are unbiased.
 
-## Small perturbation: prepared for review, not run
+## Small perturbation v2: redesigned for review, not run
 
-There are 18 single-edit drafts: B1, B4, A1, I3, correctness and evidence support, with three generators per target and seed 5703. All base answers were scored 2 and each adaptation target originally passed. The proposed A1/I3 redundancy cases are an alternative to deleting requested reasoning, which could also damage correctness completeness. They do not test A4/I2, and require Leader approval of the target selection. Appended tutorials and true-but-unprovided evidence claims retain the original answer text. Correctness replaces the required answer velocity with acceleration for displacement/time; it does not merely change a figure number.
+The v1 stock-template design has been replaced. The v2 draft uses 18 different Dev
+questions, with one case for each target/generator pair (six per generator), and
+covers all four experimental conditions. Selection is purposeful and constrained
+by coverage; it is not a representative random sample. Exact IDs, source hashes,
+controlled edits and reasons are tracked in curated_edits.v2.json. Approval of the
+revised selection approach remains pending. Source scoring records are unchanged.
 
-Read perturbation-draft/REVIEW_PENDING.md for every question, original, modified answer, exact frozen criterion, single edit and pending decision. No claim of semantic isolation or human confirmation is made yet. The six target clauses, 18 cases and proposed 80% detection-plus-at-least-one-per-target rule require Leader approval and a recorded freeze before perturbation scoring and before viewing any Test quality scores. With 18 cases, 80% requires at least 15 detected cases and at least one of three in each target group. Unresolved judge outputs must not disappear from the audit denominator.
+| Target | Three subject-specific changes |
+|---|---|
+| B1 | Sap-transport wording compressed into hydraulic jargon; accessible inertia wording replaced by formal language; equipotential definition removed |
+| B4 | Local pressure derivative without notation explanations; ideal-mixture pressure sum written with unexplained indices; sound-level logarithm without symbol definitions |
+| A1 | Elementary vector preface to a magnetic-force answer; circuit definitions interrupting a loop-law answer; repeated velocity-difference walkthrough in a falling-ball answer |
+| I3 | Quantum-color explanation removed; plain lensing description replaced by unexplained general-relativistic concepts; mastered frequency/period definitions repeated in an atomic-clock answer |
+| Correctness | Carbon proton-count error updated consistently in both mentions; positive-current direction reversed; dispersion confused with diffraction |
+| Evidence support | A temperature-specific sound speed not given in the bundle; an unprovided delayed-neutron mechanism; an unprovided parallel-voltmeter procedure |
 
-The code can verify byte-level single-edit isolation; only the human review can confirm that a changed answer really violates exactly the intended criterion while preserving other requirements. No live requests or runnable paid commands are included. After review and budget agreement, use the frozen production configuration, fresh IDs, new caches/results/attempt logs, and keep synthetic audit scores out of primary Dev/Test scores. The future report must state authoring method, reviewer, counts, target/other-criterion changes and limits; this is a small sensitivity audit, not population judge accuracy.
+Each target has proposed clear, moderate and subtle cases, six of each overall.
+Every difficulty label has a case-specific reason recorded before scoring; these
+are design judgements, not measured difficulty. The Leader must confirm or revise
+labels before freezing and must reject a case if the intended failure is not real.
+The correct answer is not retained elsewhere as an artificial contradiction cue.
+For correctness, repeated mentions of one wrong fact are changed consistently.
+
+The proposed detection rule remains at least 15 of 18 cases and at least one
+per target. An unresolved output remains in the denominator as not detected and is
+reported separately. An evidence detection must address the added subclaim as
+unsupported by the supplied bundle; factual truth established in an external
+review reference does not establish bundle support. Omitting the subclaim is not
+a successful detection. These rules are pending approval, not observed results.
+
+Read perturbation-draft/REVIEW_PENDING.md for originals, changed answers, frozen
+clauses, edit spans, difficulty rationales and review-only physics references.
+Every case has pending checks for the target violation, other-criterion effects,
+full-answer consistency and final approval. Source/boundary checks are mechanical;
+no semantic isolation or human approval is claimed. The saved baseline pass is a
+selection filter, not independent physics validation. External reference pages
+must never be added to the scoring evidence. This small audit does not estimate
+population judge accuracy and does not test A4/I2 reasoning-depth requirements.
+
+All perturbation model calls are still unrun. Approve the sample, difficulty labels,
+detection rule and budget before scoring, and record Test-scoring decisions before
+viewing Test quality scores. Re-estimate cost from the approved v2 requests;
+the older v1 average estimate is not a cap or execution approval. Use the unchanged
+production judge configuration with separate IDs, results, caches and call logs.
 
 ## Parallel work and Test order
 

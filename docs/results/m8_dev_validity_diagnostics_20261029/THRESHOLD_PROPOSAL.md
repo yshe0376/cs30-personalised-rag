@@ -35,7 +35,9 @@ these values after inspecting Test scores.
 | Small perturbation detection | At least 80% overall and at least one detection in every target group | 18 Leader-approved cases, three per target and one per generator, with targets/edits frozen before scoring; at least 15/18 detections | Retains the Leader's suggested rule. Missing/unresolved outputs count as not detected in the overall denominator and are also reported separately. No target group may have zero detections. The small targeted sample does not estimate population judge accuracy. |
 
 The sample-count choices above are practical screening safeguards, not a power
-calculation. If the Leader rejects a draft case, replace and approve it before
+calculation. The revised v2 sample uses 18 distinct, purposefully selected Dev
+questions. Preassigned clear/moderate/subtle labels require Leader confirmation
+before scoring; they are not measured difficulty or approved outcomes. If the Leader rejects a draft case, replace and approve it before
 judging so the proposed 18-case denominator is retained, or record a revised plan
 before any perturbed outcomes are observed.
 

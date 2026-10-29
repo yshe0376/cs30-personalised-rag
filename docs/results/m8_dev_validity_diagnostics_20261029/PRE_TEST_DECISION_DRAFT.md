@@ -9,10 +9,15 @@ proposed after inspecting Dev summaries and are not retrospective preregistratio
 or a complete production validity configuration. Approval remains pending.
 
 - Scope: Dev-only synthetic audit; no Test inputs or primary score replacement.
-- Candidate targets: B1, B4, A1, I3, correctness, evidence supportedness. Three base
-  generators per target, one case per generator, total 18. Seed 5703 and case IDs/hash
-  in selection_manifest.json. A1/I3 use redundant-tutorial additions as a proposed
-  alternative to derivation deletion; the Leader must approve this choice first.
+- Candidate targets: B1, B4, A1, I3, correctness and evidence support. The v2
+  sample has 18 distinct Dev questions, three cases per target and six per generator.
+  Selection is purposeful under explicit coverage constraints, not random. Exact
+  originals/edits are in curated_edits.v2.json; case IDs/hashes are in selection_manifest.json.
+  A1 tests topic-specific redundancy. I3 includes both specialist-language gaps and
+  redundant course-core definitions. This does not test A4/I2 reasoning depth.
+- Difficulty proposals: one clear, moderate and subtle case per target, each with a
+  case-specific rationale. Confirm/freeze these labels before scoring; do not revise
+  labels in response to judge outcomes. All labels and cases remain review-pending.
 - The original full answers remain preserved; code verifies one contiguous edit.
   Leader review is still needed for semantic isolation and factual preservation.
 - Proposed detection rule: >=80% overall (at least 15/18), at least one case in each target

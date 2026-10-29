@@ -10,7 +10,6 @@ import argparse
 import csv
 import hashlib
 import json
-import re
 import shutil
 import sys
 from collections import Counter, defaultdict
@@ -47,12 +46,332 @@ def csv_file(path, values):
         writer.writerows(values)
 
 
+def build_curated_cases(source_data, criteria, rubrics, edit_package):
+    """Reconstruct review-only edits from hash-bound, scored-correct Dev originals.
+
+    Checks establish provenance, coverage and edit integrity. They do not establish
+    a pedagogical violation, semantic isolation or human approval.
+    """
+    targets = {"B1", "B4", "A1", "I3", "correctness", "evidence_support"}
+    generators = {"gpt-oss", "llama", "gemma"}
+    specs = edit_package.get("cases", [])
+    if edit_package.get("schema_version") != "m8-curated-perturbation-edits-2":
+        raise ValueError("Unsupported curated edit package version")
+    if (
+        set(edit_package.get("targets", [])) != targets
+        or set(edit_package.get("generators", [])) != generators
+        or edit_package.get("expected_case_count") != 18
+    ):
+        raise ValueError("Declared target/generator coverage must match the review matrix")
+    if len(specs) != 18:
+        raise ValueError("The proposed matrix requires exactly 18 cases")
+    pairs = [(s["target"], s["generator"]) for s in specs]
+    if len(set(pairs)) != 18 or set(pairs) != {(t, g) for t in targets for g in generators}:
+        raise ValueError("Require one case per target/generator pair")
+    if len({s["source_question_id"] for s in specs}) != 18:
+        raise ValueError("Require 18 distinct source questions")
+    if len({s["case_id"] for s in specs}) != 18:
+        raise ValueError("Case IDs must be unique")
+    minimum_domains = max(9, edit_package.get("minimum_unique_domains", 9))
+    if len({s["physics_domain"] for s in specs}) < minimum_domains:
+        raise ValueError("The proposed sample requires at least nine physics domains")
+    for target in targets:
+        difficulties = {s["difficulty_proposal"] for s in specs if s["target"] == target}
+        if difficulties != {"clear", "moderate", "subtle"}:
+            raise ValueError("Each target needs a preassigned difficulty gradient")
+    blocks = [s["edit"]["perturbed_span"].strip() for s in specs]
+    nonempty = [s for s in blocks if s]
+    if len(nonempty) != len(set(nonempty)):
+        raise ValueError("Do not reuse an identical replacement block across questions")
+
+    cases = []
+    for spec in specs:
+        target = spec["target"]
+        batch = "dev-" + spec["generator"]
+        data = source_data[batch]
+        item = data["items"][spec["source_evaluation_id"]]
+        for field, source_field in (
+            ("source_question_id", "question_id"),
+            ("source_target_level", "target_level"),
+            ("source_condition", "condition"),
+        ):
+            if spec[field] != item[source_field]:
+                raise ValueError(f"Source identity mismatch: {field}")
+        answer = item["answer"]
+        if not answer or item["technical_failure"] or item["abstained"]:
+            raise ValueError("The base must be a substantive, successful answer")
+        answer_hash = hashlib.sha256(answer.encode()).hexdigest()
+        if spec["source_answer_sha256"] != answer_hash:
+            raise ValueError("Source answer hash mismatch")
+        score = data["correctness"][item["run_id"]]
+        if score["score_status"] != "scored" or score["score"] != 2:
+            raise ValueError("The base must have a fully correct saved score")
+        if target in criteria:
+            baseline = next(
+                (
+                    r
+                    for r in data["adaptation"]
+                    if r["evaluation_id"] == item["evaluation_id"]
+                    and r["is_target_level_evaluation"]
+                ),
+                None,
+            )
+            if baseline is None or not any(
+                c["criterion_id"] == target and c["verdict"] == "pass" for c in baseline["criteria"]
+            ):
+                raise ValueError("The target criterion must pass in the saved baseline")
+            if criteria[target]["level"] != item["target_level"]:
+                raise ValueError("Criterion does not belong to the source target level")
+        elif target == "evidence_support":
+            baseline = next(
+                (r for r in data["evidence"] if r["evaluation_id"] == item["evaluation_id"]),
+                None,
+            )
+            if (
+                baseline is None
+                or not baseline["claims"]
+                or any(c["bundle_support"] != "supported" for c in baseline["claims"])
+            ):
+                raise ValueError("Evidence base claims must all be supported in saved output")
+        else:
+            baseline = score
+        edit = spec["edit"]
+        start, end = edit["start"], edit["end"]
+        if (
+            type(start) is not int
+            or type(end) is not int
+            or not 0 <= start <= end <= len(answer)
+            or answer[start:end] != edit["original_span"]
+        ):
+            raise ValueError("Edit offsets/span do not match the original answer")
+        perturbed = answer[:start] + edit["perturbed_span"] + answer[end:]
+        if perturbed == answer:
+            raise ValueError("An unchanged answer is not a perturbation")
+        cases.append(
+            {
+                "case_id": spec["case_id"],
+                "generator": spec["generator"],
+                "target": target,
+                "source_batch": batch,
+                "base_evaluation_id": item["evaluation_id"],
+                "base_run_id": item["run_id"],
+                "question_id": item["question_id"],
+                "target_level": item["target_level"],
+                "condition": item["condition"],
+                "question": item["question"],
+                "original_answer": answer,
+                "perturbed_answer": perturbed,
+                "single_edit": edit,
+                "original_answer_sha256": answer_hash,
+                "perturbed_answer_sha256": hashlib.sha256(perturbed.encode()).hexdigest(),
+                "frozen_criterion": criteria.get(target),
+                "baseline_judgement": baseline,
+                "correctness_reference_rubric": rubrics[item["question_id"]],
+                "supplied_evidence": item["evidence"] if target == "evidence_support" else None,
+                "physics_domain": spec["physics_domain"],
+                "perturbation_type": spec["perturbation_type"],
+                "selection_reason": spec["selection_reason"],
+                "expected_response": (
+                    "target criterion fail, not not_applicable"
+                    if target in criteria
+                    else "not fully correct under the existing rubric (score below 2)"
+                    if target == "correctness"
+                    else "the added factual subclaim has bundle_support unsupported"
+                ),
+                "proposed_non_target_invariants": spec["expected_non_target_invariants"],
+                "review_focus": spec["review_focus"],
+                "review_only_external_references": spec["review_only_external_references"],
+                "difficulty_proposal": spec["difficulty_proposal"],
+                "difficulty_rationale": spec["difficulty_rationale"],
+                "difficulty_confirmed": False,
+                "review_status": "pending_leader_confirmation",
+                "target_violation_confirmed": False,
+                "non_target_invariance_confirmed": False,
+                "internal_consistency_confirmed": False,
+                "criterion_isolation_verified": False,
+                "single_edit_bytes_outside_span_unchanged": True,
+                "reviewer": None,
+                "reviewed_at": None,
+                "paid_result": None,
+            }
+        )
+    return cases
+
+
+def write_curated_review(draft, cases, edit_package, edits_sha256):
+    """Write a pending plan, before/after review sheet and mechanical coverage audit."""
+    coverage = {
+        "case_count": len(cases),
+        "unique_question_count": len({c["question_id"] for c in cases}),
+        "physics_domains": sorted({c["physics_domain"] for c in cases}),
+        "by_generator": dict(Counter(c["generator"] for c in cases)),
+        "by_target": dict(Counter(c["target"] for c in cases)),
+        "by_condition": dict(Counter(c["condition"] for c in cases)),
+        "by_difficulty_proposal": dict(Counter(c["difficulty_proposal"] for c in cases)),
+        "human_reviews_completed": 0,
+        "semantic_diversity_human_confirmed": False,
+    }
+    plan = {
+        "plan_version": "perturbation-small-v2-draft",
+        "status": "proposed_not_frozen_not_run",
+        "source_profile_package_sha256": edit_package["source_profile_package_sha256"],
+        "source_scoring_bundle_manifest_sha256": edit_package[
+            "source_scoring_bundle_manifest_sha256"
+        ],
+        "curated_edits_sha256": edits_sha256,
+        "selection_method": edit_package["selection_method"],
+        "seed": None,
+        "selection_is_random": False,
+        "targets": edit_package["targets"],
+        "coverage": coverage,
+        "expected_case_count": 18,
+        "detection_rate_proposal": 0.8,
+        "per_target_minimum_detected_proposal": 1,
+        "thresholds_frozen": False,
+        "difficulty_design": edit_package["difficulty_design"],
+        "difficulty_labels_frozen": False,
+        "review_owner": "Leader",
+        "scoring_owner": "M8",
+        "step_4_status": "pending_leader_confirmation",
+        "step_5_status": "not_run",
+        "step_6_status": "not_run",
+        "paid_calls": 0,
+        "external_references_are_review_only": True,
+        "detection_scoring_proposal": {
+            "adaptation": "The selected criterion is fail; report other-criterion changes.",
+            "correctness": "The existing correctness rubric yields score below 2.",
+            "evidence_support": (
+                "A factual claim covering the added subclaim is bundle_support unsupported. "
+                "Omitting the subclaim or marking it supported/not_applicable is not detection."
+            ),
+            "unresolved": "Keep in the denominator as not detected and report separately.",
+        },
+        "interpretation": "Targeted sensitivity examples, not population judge accuracy.",
+    }
+    json_file(draft / "PLAN_DRAFT.json", plan)
+    jsonl(draft / "cases.draft.jsonl", cases)
+    json_file(
+        draft / "selection_manifest.json",
+        {
+            "selection_method": edit_package["selection_method"],
+            "seed": None,
+            "case_ids": [c["case_id"] for c in cases],
+            "question_ids": [c["question_id"] for c in cases],
+            "draft_sha256": sha(draft / "cases.draft.jsonl"),
+            "curated_edits_sha256": edits_sha256,
+            "coverage": coverage,
+            "frozen": False,
+            "paid_calls": 0,
+        },
+    )
+    review = [
+        "# Perturbation v2: per-case review pending, not scored",
+        "",
+        "This replaces the rejected repeated-template v1 draft. Eighteen distinct Dev questions",
+        "cover six targets and three generators. IDs are purposefully selected for coverage;",
+        "the sample is not random or representative. All difficulty labels are pre-run proposals.",
+        "Leader review must confirm the target violation, other-criterion effects and full-answer",
+        "consistency. A mechanical single-span check does not prove semantic isolation.",
+        "A saved baseline pass is a selection filter, not an independent physics endorsement.",
+        "External references below are review-only; never add them to the judge evidence bundle.",
+        "JSONL preserves the exact answer text; Markdown is a display of that record.",
+        "",
+        "| Case | Generator | Question | Target | Domain | Proposed difficulty |",
+        "|---|---|---|---|---|---|",
+    ]
+    for case in cases:
+        review.append(
+            f"| {case['case_id']} | {case['generator']} | {case['question_id']} | "
+            f"{case['target']} | {case['physics_domain']} | {case['difficulty_proposal']} |"
+        )
+    for case in cases:
+        edit = case["single_edit"]
+        review += [
+            "",
+            "## " + case["case_id"],
+            "",
+            "Question: " + case["question"],
+            "",
+            f"Source: {case['base_evaluation_id']}; {case['target_level']}; {case['condition']}.",
+            "",
+            "Frozen criterion: "
+            + (
+                case["frozen_criterion"]["description"]
+                if case["frozen_criterion"]
+                else "Existing correctness rubric / supplied-evidence support definition."
+            ),
+            "",
+            "Original answer:",
+            "",
+            "> " + case["original_answer"].replace("\n", "\n> "),
+            "",
+            "Perturbed candidate:",
+            "",
+            "> " + case["perturbed_answer"].replace("\n", "\n> "),
+            "",
+            "Controlled edit (one semantic target; repeated mentions may share one span):",
+            "",
+            "```text",
+            "BEFORE: " + json.dumps(edit["original_span"], ensure_ascii=False),
+            "AFTER: " + json.dumps(edit["perturbed_span"], ensure_ascii=False),
+            "```",
+            "",
+            "Selection reason: " + case["selection_reason"],
+            "",
+            "Expected response (hypothesis): " + case["expected_response"],
+            "",
+            "Proposed difficulty: " + case["difficulty_proposal"],
+            "",
+            "Difficulty reason: " + case["difficulty_rationale"],
+            "",
+            "Proposed invariants (not human-confirmed):",
+            "",
+            *["- " + value for value in case["proposed_non_target_invariants"]],
+            "",
+            "Review focus: " + case["review_focus"],
+        ]
+        if case["supplied_evidence"]:
+            review += ["", "Evidence actually supplied to generation:", ""]
+            for evidence in case["supplied_evidence"]:
+                review += [
+                    "- ID: " + evidence["evidence_id"],
+                    "",
+                    "> " + evidence["text"].replace("\n", "\n> "),
+                    "",
+                ]
+        if case["review_only_external_references"]:
+            review += ["", "External physics references (review-only, not judge evidence):", ""]
+            for reference in case["review_only_external_references"]:
+                review.append(f"- [{reference['purpose']}]({reference['url']})")
+        review += [
+            "",
+            "Leader checks:",
+            "",
+            "- Intended target violation: **pending**.",
+            "- Other-criterion effects / physics preservation: **pending**.",
+            "- Full-answer internal consistency: **pending**.",
+            "- Difficulty label confirmation: **pending**.",
+            "- Accept / revise / reject and reason: **pending**.",
+            "- Reviewer, date and frozen sample hash: **pending**.",
+            "",
+        ]
+    markdown = "\n".join(line.rstrip(" \t\r") for line in "\n".join(review).split("\n"))
+    (draft / "REVIEW_PENDING.md").write_text(markdown.rstrip("\n") + "\n", encoding="utf-8")
+    return plan
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--package", required=True, type=Path)
     parser.add_argument("--repo", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--seed", type=int, default=5703)
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=5703,
+        help="Legacy compatibility only; v2 uses explicit curated case IDs, not random sampling",
+    )
+    parser.add_argument("--perturbation-edits", type=Path)
     args = parser.parse_args()
     package, repo, out = args.package.resolve(), args.repo.resolve(), args.out.resolve()
     if out.exists():
@@ -76,6 +395,16 @@ def main():
         for r in rows(repo / "eval_inputs/m8/correctness-dev-rubrics-v0.1/rubrics.draft.jsonl")
     }
     manifest = json.loads((package / "handoff_manifest.json").read_text(encoding="utf-8"))
+    edits_path = args.perturbation_edits or (
+        repo
+        / "docs/results/m8_dev_validity_diagnostics_20261029"
+        / "perturbation-draft/curated_edits.v2.json"
+    )
+    edit_package = json.loads(edits_path.read_text(encoding="utf-8"))
+    if edit_package["source_profile_package_sha256"] != frozen.package_sha256:
+        raise ValueError("Curated edits bind a different frozen profile")
+    if edit_package["source_scoring_bundle_manifest_sha256"] != sha(package / "SHA256SUMS.json"):
+        raise ValueError("Curated edits bind a different source scoring package")
     out.mkdir(parents=True)
     offline = out / "diagnostics"
     offline.mkdir()
@@ -386,318 +715,23 @@ def main():
     ):
         shutil.copy2(package / filename, offline / filename)
 
-    # Proposed rules precede sample generation; no perturbed verdict has been requested.
-    selected_targets = ["B1", "B4", "A1", "I3", "correctness", "evidence_support"]
-    plan = {
-        "plan_version": "perturbation-small-v1-draft",
-        "status": "proposed_not_frozen_not_run",
-        "seed": args.seed,
-        "source_profile_package_sha256": frozen.package_sha256,
-        "source_scoring_bundle_manifest_sha256": sha(package / "SHA256SUMS.json"),
-        "targets": selected_targets,
-        "cases_per_target": 3,
-        "generators_per_target": ["gpt-oss", "llama", "gemma"],
-        "expected_case_count": 18,
-        "detection_rate_proposal": 0.8,
-        "per_target_minimum_detected_proposal": 1,
-        "thresholds_frozen": False,
-        ("answer_change_review_required"): (
-            "Leader reviews and confirms semantic isolation before any judge call"
-        ),
-        "paid_calls": 0,
-        "review_owner": "Leader",
-        "scoring_owner": "M8",
-        "post_scoring_report_owner": "M8",
-        "step_4_status": "pending_leader_confirmation",
-        "step_5_status": "not_run",
-        "step_6_status": "not_run",
-        "reviewer_student_substitution_allowed": False,
-        ("prompt_and_thinking"): (
-            "Use unchanged production prompt/model/temperature/thinking "
-            "low; fresh requests/execution/cache/ledger; never add to main "
-            "scores"
-        ),
-        ("preregistration_destination"): (
-            "Record the approved plan in a versioned pre-Test decision "
-            "before inspecting perturbation or relevant Test outcomes"
-        ),
-        ("interpretation"): (
-            "Small sensitivity audit for these selected clauses, not judge "
-            "accuracy, calibration or full validity approval"
-        ),
-        ("frozen_rule_correction"): (
-            "A1 checks unnecessary introductory teaching; A4 checks rigor. "
-            "Recognition-only questions must not fail solely for lacking "
-            "derivation. B4 does not require a formula."
-        ),
-        ("selection"): (
-            "Targeted eligible Dev originals with correct score2 and target"
-            " verdict pass. Stable seeded SHA256 ranking within "
-            "generator/target; no perturbed scoring outcomes used. This is "
-            "not a representative population sample."
-        ),
-    }
-    json_file(draft / "PLAN_DRAFT.json", plan)
-    cases = []
-    used = set()
-    pool_sizes = {}
-
-    def first_sentence(answer):
-        m = re.search(r"(?<!\d)[.!?](?!\d)", answer)
-        return answer[: m.end()] if m else None
-
-    for target in selected_targets:
-        for model in ["gpt-oss", "llama", "gemma"]:
-            data = source_data["dev-" + model]
-            candidates = []
-            if target in ("B1", "B4", "A1", "I3"):
-                for record in data["adaptation"]:
-                    if not record["is_target_level_evaluation"]:
-                        continue
-                    item = data["items"][record["evaluation_id"]]
-                    answer = item["answer"]
-                    score = data["correctness"][item["run_id"]]
-                    if score["score_status"] != "scored" or score["score"] != 2:
-                        continue
-                    verdicts = {x["criterion_id"]: x["verdict"] for x in record["criteria"]}
-                    if verdicts.get(target) != "pass":
-                        continue
-                    span = None
-                    if target in ("B1", "B4"):
-                        m = re.search(r"\bspeed\b", answer, re.IGNORECASE)
-                        if not m or "velocity" in item["question"].lower():
-                            continue
-                        if not re.search(
-                            r"speed|velocity|displacement|wave|sound|motion|momentum|distance",
-                            item["question"],
-                            re.IGNORECASE,
-                        ):
-                            continue
-                        replacement = (
-                            "norm of the velocity vector" if target == "B1" else r"\(\|\vec{v}\|\)"
-                        )
-                        span = (m.start(), m.end(), replacement)
-                    else:
-                        # A1 and I3 explicitly prohibit needless re-teaching of the
-                        # assumed core. An appended true elementary tutorial leaves
-                        # the original physical answer intact; deleting a requested
-                        # derivation would risk changing correctness completeness.
-                        tutorial = (
-                            " Here are elementary reminders for the reader. An integer is a"
-                            " whole number. "
-                            "Adding zero to a number leaves it unchanged. Multiplying a "
-                            "number by one leaves it unchanged. "
-                            "For positive integers, multiplication is repeated addition. "
-                            "Two plus two equals four. "
-                            "Four divided by two equals two. A metre is one hundred "
-                            "centimetres. A second is a unit of time."
-                        )
-                        span = (len(answer), len(answer), tutorial)
-                    candidates.append((item, record, span))
-            elif target == "correctness":
-                for item in data["items"].values():
-                    score = data["correctness"][item["run_id"]]
-                    if (
-                        score["score_status"] != "scored"
-                        or score["score"] != 2
-                        or not item["answer"]
-                    ):
-                        continue
-                    # Change a required scientific answer, not an incidental figure
-                    # number or an approximate numeric range that may remain true.
-                    if "displacement divided by time" not in item["question"].lower():
-                        continue
-                    match = re.search(r"\bvelocity\b", item["answer"], re.IGNORECASE)
-                    if match:
-                        candidates.append(
-                            (item, score, (match.start(), match.end(), "acceleration"))
-                        )
-            else:
-                for record in data["evidence"]:
-                    item = data["items"][record["evaluation_id"]]
-                    score = data["correctness"][item["run_id"]]
-                    if (
-                        score["score_status"] != "scored"
-                        or score["score"] != 2
-                        or not record["claims"]
-                    ):
-                        continue
-                    if any(c["bundle_support"] != "supported" for c in record["claims"]):
-                        continue
-                    if any(
-                        re.search(r"\bgold\b|\b79\b", e["text"], re.IGNORECASE)
-                        for e in item["evidence"]
-                    ):
-                        continue
-                    candidates.append(
-                        (
-                            item,
-                            record,
-                            (
-                                len(item["answer"]),
-                                len(item["answer"]),
-                                " Gold has atomic number 79.",
-                            ),
-                        )
-                    )
-            candidates = [x for x in candidates if (model, x[0]["evaluation_id"]) not in used]
-            pool_sizes[target + "/" + model] = len(candidates)
-            candidates.sort(
-                key=lambda x: hashlib.sha256(
-                    f"{args.seed}|{model}|{target}|{x[0]['evaluation_id']}".encode()
-                ).hexdigest()
-            )
-            if not candidates:
-                raise ValueError("No eligible case for " + target + "/" + model)
-            item, base, span = candidates[0]
-            start, end, replacement = span
-            answer = item["answer"]
-            perturbed = answer[:start] + replacement + answer[end:]
-            assert (
-                perturbed != answer
-                and perturbed[:start] == answer[:start]
-                and perturbed[start + len(replacement) :] == answer[end:]
-            )
-            used.add((model, item["evaluation_id"]))
-            warning = (
-                "Leader must verify this single contiguous edit violates the "
-                "target clause, preserves all other relevant criteria and "
-                "leaves physical correctness unchanged unless correctness is "
-                "the target."
-            )
-            if target in ("I3", "A1"):
-                warning += (
-                    " Confirm the added elementary tutorial is genuinely redundant "
-                    "and obscures the requested answer for this prior; brief useful"
-                    " reminders would not violate the rule. This alternative "
-                    "targets redundancy, not A4/I2 reasoning depth."
-                )
-            if target == "correctness":
-                warning += (
-                    " Confirm replacing velocity with acceleration changes the "
-                    "required scientific answer, not an incidental example."
-                )
-            if target == "evidence_support":
-                warning += (
-                    " Confirm the added true scientific statement is absent from "
-                    "every supplied evidence passage; this is a supportedness "
-                    "perturbation, not a known false fact."
-                )
-            cases.append(
-                {
-                    "case_id": f"perturb-v1-{target.lower().replace('_', '-')}-{model}",
-                    "generator": model,
-                    "target": target,
-                    "source_batch": "dev-" + model,
-                    "base_evaluation_id": item["evaluation_id"],
-                    "base_run_id": item["run_id"],
-                    "question_id": item["question_id"],
-                    "target_level": item["target_level"],
-                    "condition": item["condition"],
-                    "question": item["question"],
-                    "original_answer": answer,
-                    "perturbed_answer": perturbed,
-                    "single_edit": {
-                        "start": start,
-                        "end": end,
-                        "original_span": answer[start:end],
-                        "perturbed_span": replacement,
-                    },
-                    "original_answer_sha256": hashlib.sha256(answer.encode()).hexdigest(),
-                    "perturbed_answer_sha256": hashlib.sha256(perturbed.encode()).hexdigest(),
-                    "frozen_criterion": criteria.get(target),
-                    "baseline_judgement": base,
-                    "correctness_reference_rubric": rubrics[item["question_id"]],
-                    "supplied_evidence": item["evidence"] if target == "evidence_support" else None,
-                    "expected_response": "fail (not not_applicable)"
-                    if target in criteria
-                    else "detect factual error"
-                    if target == "correctness"
-                    else "mark added claim unsupported",
-                    "review_status": "pending_leader_confirmation",
-                    "review_warning": warning,
-                    "single_edit_bytes_outside_span_unchanged": True,
-                    "criterion_isolation_verified": False,
-                    "reviewer": None,
-                    "reviewed_at": None,
-                    "paid_result": None,
-                }
-            )
-    assert len(cases) == 18 and Counter(c["target"] for c in cases) == {
-        t: 3 for t in selected_targets
-    }
-    jsonl(draft / "cases.draft.jsonl", cases)
+    cases = build_curated_cases(source_data, criteria, rubrics, edit_package)
+    write_curated_review(draft, cases, edit_package, sha(edits_path))
+    shutil.copy2(edits_path, draft / "curated_edits.v2.json")
     json_file(
-        draft / "selection_manifest.json",
+        draft / "COST_ESTIMATE_NOT_APPROVAL.json",
         {
-            "seed": args.seed,
-            "pool_sizes": pool_sizes,
-            "case_ids": [c["case_id"] for c in cases],
-            "draft_sha256": sha(draft / "cases.draft.jsonl"),
-            "frozen": False,
+            "plan_version": "perturbation-small-v2-draft",
+            "candidate_cases": len(cases),
+            "estimate_status": "pending_v2_request_preparation",
+            "approved_budget": None,
             "paid_calls": 0,
+            "warning": (
+                "Re-estimate from the approved v2 inputs/configuration before execution. "
+                "The earlier v1 average was neither a cap nor paid-launch approval."
+            ),
         },
     )
-    review = [
-        "# Perturbation cases: review pending, not scored",
-        "",
-        (
-            "These 18 drafts are single contiguous edits of Dev answers "
-            "already scored correct with the target criterion passed. All "
-            "three generators are represented in each target group. No "
-            "perturbed Gemini score exists. Check semantic isolation before"
-            " freezing the plan or running any paid command."
-        ),
-        "",
-        (
-            "Draft targets: B1, B4, A1, I3, correctness, evidence support. "
-            "A1/I3 test needless re-teaching of the assumed core; they are "
-            "a proposed alternative to derivation deletion, which can also "
-            "damage correctness completeness. They do NOT test A4/I2. A1 is"
-            " not relabelled as a depth criterion. The Leader must approve "
-            "this target choice or request replacements before freezing or "
-            "paid scoring. The 80% aggregate detection and at least one "
-            "detected case per target are proposed thresholds, not yet "
-            "approved decisions."
-        ),
-        "",
-    ]
-    for c in cases:
-        review += [
-            "## " + c["case_id"],
-            "",
-            (
-                f"Target: {c['target']}; level: {c['target_level']}; "
-                f"condition: {c['condition']}; source: {c['base_evaluation_id']}."
-            ),
-            "",
-            "Question: " + c["question"],
-            "",
-            "Frozen rule: "
-            + (
-                c["frozen_criterion"]["description"]
-                if c["frozen_criterion"]
-                else (
-                    "Correctness rubric / evidence supportedness, unchanged production definitions."
-                )
-            ),
-            "",
-            "Original answer:",
-            "",
-            "> " + c["original_answer"].replace("\n", "\n> "),
-            "",
-            "Perturbed draft:",
-            "",
-            "> " + c["perturbed_answer"].replace("\n", "\n> "),
-            "",
-            "Expected (hypothesis): " + c["expected_response"],
-            "",
-            c["review_warning"],
-            "",
-            "Leader decision and reason: **pending**.",
-            "",
-        ]
-    (draft / "REVIEW_PENDING.md").write_text("\n".join(review), encoding="utf-8")
     summary = {
         "api_calls": 0,
         "scope": "Dev-only supplemental diagnostics; main scores and original assets unchanged",
@@ -716,7 +750,8 @@ def main():
             "Any authorised paid scoring of perturbed answers",
         ],
         "source_manifest_sha256": sha(package / "SHA256SUMS.json"),
-        "seed": args.seed,
+        "seed": None,
+        "selection_method": edit_package["selection_method"],
         "threshold_x": None,
     }
     json_file(out / "summary.json", summary)

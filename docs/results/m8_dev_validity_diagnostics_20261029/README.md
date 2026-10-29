@@ -7,11 +7,18 @@ This supplement adds five offline computations without replacing the original sc
 P0R0 observations, length/formula associations, generation noise, missingness, and
 optional-criterion N/A proportions. The numeric warning threshold X is still unset.
 
-perturbation-draft/ contains 18 single-edit candidate cases, not judged results.
-Read REVIEW_PENDING.md and PLAN_DRAFT.json. Leader confirmation of target choice,
-semantic isolation, thresholds and sample freeze is required before paid scoring.
-A1/I3 redundancy cases are proposed alternatives to reasoning deletion; they do not
-validate A4/I2. No live command or fabricated human decision is included.
+perturbation-draft/ now contains the v2 review draft: 18 distinct Dev questions,
+three generators, six targets and all four conditions. curated_edits.v2.json is the
+source of truth for exact originals, edit spans, selection reasons and pre-run
+difficulty proposals. The sample is purposefully selected for coverage, not random.
+The rejected v1 is retained in Git history and a private backup, not mixed into the
+active review sheet. Leader approval of this revised selection approach is pending.
+
+Read REVIEW_PENDING.md and PLAN_DRAFT.json. A1 edits are topic-specific redundancy;
+I3 covers both unexplained specialist language and redundant introductory teaching.
+A4/I2 reasoning-depth deletions are not tested. Every case still needs confirmation
+of the intended violation, other-criterion effects and full-answer consistency.
+No live command, fabricated human decision or measured detection result is included.
 
 The primary score handoff remains m8_scoring_handoff_20261029.tar.gz on the existing
 release. This is its companion report, not a replacement scoring interface. M7
@@ -22,7 +29,7 @@ PR #221; record actual decision timing and any prior data access. This supplemen
 does not set reportable=true.
 
 Reproduce offline (source package and repository are explicit inputs):
-python scripts/build_dev_diagnostics.py --package PATH_TO_EXTRACTED_SCORE_PACKAGE --repo PATH_TO_REPOSITORY --out NEW_EMPTY_OUTPUT_DIRECTORY --seed 5703
+python scripts/build_dev_diagnostics.py --package PATH_TO_EXTRACTED_SCORE_PACKAGE --repo PATH_TO_REPOSITORY --out NEW_EMPTY_OUTPUT_DIRECTORY
 
 The script constructs no provider client, uses Dev-only inputs and refuses to
 replace an existing output directory. See SOURCE_HASHES.json and verification.json.
@@ -44,3 +51,8 @@ Its SHA-256 is da1b860a1204bb16a79026c5433614fa0d1b6202dfdbf9502d725e871969d07e.
 The script intentionally does not construct a judge client or emit paid commands.
 Numerical policy thresholds remain unset or proposed. This branch is a review
 proposal and must not be described as an approved Test-scoring freeze record.
+
+The script reconstructs these exact v2 edits from the tracked specification and
+checks source hashes, 18 unique questions, the target/generator matrix and difficulty
+coverage. It no longer creates the rejected stock templates. --seed is accepted
+only for old-command compatibility; it does not randomise the curated v2 sample.

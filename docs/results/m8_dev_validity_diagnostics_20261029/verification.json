@@ -19,5 +19,19 @@
   "all_18_drafts_pending_leader_review": true,
   "new_model_calls": 0,
   "network_blocked_full_reproduction_passed": true,
-  "deterministic_generated_files_compared": 20
+  "deterministic_generated_files_compared": 22,
+  "perturbation_plan_version": "perturbation-small-v2-draft",
+  "source_question_count": 18,
+  "difficulty_counts_proposed": {
+    "clear": 6,
+    "moderate": 6,
+    "subtle": 6
+  },
+  "semantic_reviews_completed": 0,
+  "curated_source_sha256": "89799c12f5a1388eab4220d0835a1639fe9e19f5e6b6ea07d024253032c1a8ea",
+  "rejected_v1_templates_no_longer_generated": true,
+  "focused_guard_tests_passed": 17,
+  "curated_profile_and_source_preflight_passed": true,
+  "production_helper_sha256": "0648908119233359801ae58a9d0d5035ce9e62d0fa01ff0934ac4cfcb59b2318",
+  "curated_spec_sha256": "89799c12f5a1388eab4220d0835a1639fe9e19f5e6b6ea07d024253032c1a8ea"
 }
