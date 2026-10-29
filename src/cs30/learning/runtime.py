@@ -320,6 +320,7 @@ class LearningRuntime:
             resolved_topic_id: str | None = None
             candidate_topic_ids: tuple[str, ...] = ()
             topic_selection_trace: TopicSelectionTrace | None = None
+            generation_basis = "topic"
             try:
                 with self.request_budget.operation(
                     turn_id=turn_id,
@@ -403,6 +404,7 @@ class LearningRuntime:
                                 "No valid cited textbook passages are available."
                             )
                         topic = None
+                        generation_basis = "textbook"
                         target_level = self.static_profile.level
                     else:
                         selected_candidate = next(
@@ -442,6 +444,7 @@ class LearningRuntime:
                     quiz_index=quiz_index,
                     status="unavailable",
                     topic_id=resolved_topic_id,
+                    generation_basis=generation_basis,
                     candidate_topic_ids=candidate_topic_ids,
                     topic_selection_trace=topic_selection_trace,
                     notice=detail,

@@ -1,5 +1,13 @@
 # M8 page integration (2026-10-29)
 
+Quiz quotation handling now supplies a bounded set of contiguous, uniquely locatable
+source quotations in each passage's `allowed_quotes`. The per-request response schema
+restricts quote text and chunk IDs to those supplied values. Every returned quote
+still passes the local locator and shared span resolver. A retry includes the previous
+validation error; the two-request limit is unchanged. Later quizzes include earlier
+question texts to discourage duplicate questions. The author still supplies the answer
+and explanation; source matching does not independently verify their semantic accuracy.
+
 Concept Check now prefers a mapped Topic, then falls back to the answer's validated
 textbook passages when no eligible Topic is mapped. The fallback generates a question,
 answer and explanation with the same local quotation checks and request limits.

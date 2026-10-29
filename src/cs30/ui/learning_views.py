@@ -75,8 +75,9 @@ def render_quiz(view: OnlineQuizView, result: PracticeResult | None, record=None
     textbook_only = getattr(view, "generation_basis", "topic") == "textbook"
     if textbook_only:
         st.info(
-            "Textbook-based practice: no usable mapped Topic was found. This question uses "
-            "the answer's validated textbook passages and does not change Topic mastery or level."
+            "Textbook-based practice: no usable mapped Topic was found. "
+            "Questions are generated from the answer's validated textbook passages. "
+            "This mode does not change Topic mastery or level."
         )
         if selection_trace is not None:
             with st.expander("Topic lookup details"):

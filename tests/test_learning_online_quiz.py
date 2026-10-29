@@ -115,7 +115,7 @@ def test_missing_author_fields_are_reported_after_two_budgeted_author_attempts(t
         author_client=author,
         verifier_client=verifier,
         corpus=SimpleNamespace(
-            chunks_by_id={"chunk-1": SimpleNamespace(text="A textbook passage.")}
+            chunks_by_id={"chunk-1": SimpleNamespace(text=_author_payload()["evidence_quote"])}
         ),
         topic_registry=SimpleNamespace(topic_registry_version="topic-registry-v1"),
         profile_id="learner-test",
@@ -172,7 +172,7 @@ def test_textbook_quiz_uses_author_answer_without_calling_reviewer(monkeypatch):
         author_client=author,
         verifier_client=verifier,
         corpus=SimpleNamespace(
-            chunks_by_id={"chunk-1": SimpleNamespace(text="A textbook passage.")}
+            chunks_by_id={"chunk-1": SimpleNamespace(text=_author_payload()["evidence_quote"])}
         ),
         topic_registry=SimpleNamespace(topic_registry_version="v1"),
         profile_id="learner-test",
@@ -204,7 +204,9 @@ def test_textbook_quiz_uses_author_answer_without_calling_reviewer(monkeypatch):
 def test_question_without_locatable_textbook_quote_is_not_offered(monkeypatch):
     generator = OnlineQuizGenerator(
         author_client=_FakeClient(_author_payload()),
-        corpus=SimpleNamespace(chunks_by_id={"chunk-1": SimpleNamespace(text="Passage.")}),
+        corpus=SimpleNamespace(chunks_by_id={
+            "chunk-1": SimpleNamespace(text=_author_payload()["evidence_quote"]),
+        }),
         topic_registry=SimpleNamespace(topic_registry_version="v1"),
         profile_id="learner-test",
         quiz_config=SimpleNamespace(allow_unreviewed_questions=False),
