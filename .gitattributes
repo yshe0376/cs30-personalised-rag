@@ -12,3 +12,4 @@
 # changes no committed bytes; it only fixes what a Windows checkout produces.
 *.json  text eol=lf
 *.jsonl text eol=lf
+eval_inputs/m8/test-gates-20261029/test-question-ids.txt text eol=lf

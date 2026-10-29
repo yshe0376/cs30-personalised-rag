@@ -192,13 +192,24 @@ def registered_analysis(
             and result["p_value"] is not None
             and adjusted[result["level"]] <= ALPHA
             and result["estimate"] > 0
-            and result["answered_unscored_pairs"] == 0
+        )
+        result["statistically_negative"] = bool(
+            primary_model
+            and result["p_value"] is not None
+            and adjusted[result["level"]] <= ALPHA
+            and result["estimate"] < 0
         )
         floor = adaptation_noise_floors.get(result["level"]) if adaptation_noise_floors else None
         result["generation_repeat_noise_floor"] = floor
         result["positive_effect_supported"] = bool(
             result["statistically_positive"] and floor is not None and result["estimate"] > floor
         )
+        result["negative_effect_supported"] = bool(
+            result["statistically_negative"] and floor is not None and -result["estimate"] > floor
+        )
+        result["decision_rule"] = "Holm-adjusted two-sided p <= 0.05; direction from estimate"
+        result["interval_role"] = "descriptive, unadjusted 95% interval"
+        result["missingness_policy"] = "complete pairs; unscored counts reported alongside estimate"
 
     lower, upper = defaultdict(list), defaultdict(list)
     unresolved = 0

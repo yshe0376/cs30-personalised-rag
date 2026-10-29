@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 from pathlib import Path
 
 from .judge_results import load_judge_evaluation_outputs
@@ -21,6 +22,7 @@ from .v2_generation_models import (
 
 FROZEN_JUDGE_FILE_SHA = "90293ebf1248d58935490f37ffda4a11591f8265bd28125d540d45f40e11eb19"
 FROZEN_SPLIT_SHA = "991d9a68d0fa256b5d418549ffa62c331c6f31c0aacbc144f064f507bfd100fb"
+FROZEN_ELIGIBILITY_FILE_SHA = "ab585f05c02ec896889bae174475493f954eee1d4bb2dda32fc111fe4ef54c42"
 
 
 def file_sha(path):
@@ -38,6 +40,50 @@ def write_json(path, value):
         raise ValueError("output already exists; choose a separate new file")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes((json.dumps(value, indent=2, sort_keys=True) + "\n").encode())
+
+
+def load_noise_floors(path):
+    """Accept only the GPT-OSS Dev repeat record for this frozen Test scope."""
+    noise = json.loads(path.read_text(encoding="utf-8"))
+    expected = {
+        "policy": POLICY_VERSION,
+        "profile_package_sha256": PROFILE_SHA,
+        "source_split": "dev",
+        "metric": "adaptation_criterion_pass_rate",
+        "scope": "generation_repeat",
+        "generator": "gpt-oss-20b",
+        "test_split_map_sha256": FROZEN_SPLIT_SHA,
+        "test_eligibility_sha256": FROZEN_ELIGIBILITY_FILE_SHA,
+    }
+    digest = noise.get("source_artifact_sha256")
+    if (
+        any(noise.get(k) != v for k, v in expected.items())
+        or not isinstance(digest, str)
+        or len(digest) != 64
+        or any(c not in "0123456789abcdef" for c in digest)
+    ):
+        raise ValueError("noise floors require a bound GPT-OSS Dev adaptation-repeat source record")
+    floors = noise["adaptation_noise_floors"]
+    if set(floors) != {"beginner", "advanced"}:
+        raise ValueError("noise floors must cover both co-primary levels")
+    for level, floor in floors.items():
+        details = noise["details"][level]
+        mse, n = details["mean_squared_repeat_difference"], details["test_eligible_question_pairs"]
+        # The exact frozen split/label hashes above identify 128 eligible Test pairs per level.
+        if (
+            type(n) is not int
+            or n != 128
+            or type(mse) not in (int, float)
+            or not math.isfinite(mse)
+            or not 0 <= mse <= 1
+            or type(floor) not in (int, float)
+            or not math.isfinite(floor)
+            or not math.isclose(floor, math.sqrt(mse / n), rel_tol=1e-12, abs_tol=1e-15)
+        ):
+            raise ValueError(
+                "noise floor does not match its frozen Test n and Dev squared differences"
+            )
+    return floors
 
 
 def prepare(args):
@@ -89,6 +135,8 @@ def prepare(args):
     rubric_set_sha = canonical_json_sha256(
         [{"question_id": qid, "rubric_sha256": digest} for qid, digest in per_question.items()]
     )
+    if getattr(args, "noise_floors", None) is not None:
+        load_noise_floors(args.noise_floors)
     record = {
         "schema_version": "test-readiness-224-v1",
         "policy": POLICY_VERSION,
@@ -114,7 +162,8 @@ def prepare(args):
         "correctness_noninferiority_delta": 0.03,
         "adapted": "every applicable main criterion passes",
         "primary_model": "gpt-oss-20b",
-        "comparison_models": ["gemma-3-12b", "llama-3.1-8b"],
+        "comparison_models": [],
+        "scope_decision": "https://github.com/yshe0376/cs30-personalised-rag/pull/226",
         "expected_cells_per_generator": 2244,
         "bootstrap_draws": 2000,
         "bootstrap_seed": 5703,
@@ -122,6 +171,9 @@ def prepare(args):
         "budget_status": "separate approval required",
         "generated_answers_read_during_preparation": False,
         "provider_calls": 0,
+        "noise_floor_record_sha256": file_sha(args.noise_floors)
+        if getattr(args, "noise_floors", None) is not None
+        else None,
     }
     write_json(args.output, record)
     return record
@@ -151,6 +203,12 @@ def report(args):
     ) != ready.get("correctness_rubric_set_sha256"):
         raise ValueError("readiness frozen per-question rubric set is inconsistent")
     items = [GenerationEvaluationInput.model_validate(row) for row in objects(args.inputs)]
+    if any(
+        i.generation_model_family.casefold().rsplit("/", 1)[-1]
+        not in {"gpt-oss", "gpt-oss-20b", "gpt-oss:20b"}
+        for i in items
+    ):
+        raise ValueError("PR #226 permits only the main gpt-oss-20b Test generator")
     qids = set(ready["test_question_ids"])
     if len(qids) != 187 or len(items) != 2244 or any(i.source_split != "test" for i in items):
         raise ValueError("report requires the full 187-question Test matrix")
@@ -197,20 +255,13 @@ def report(args):
         for eid, score in scores.items()
     }
     floors = None
+    if ready.get("noise_floor_record_sha256") is not None and (
+        args.noise_floors is None
+        or file_sha(args.noise_floors) != ready["noise_floor_record_sha256"]
+    ):
+        raise ValueError("use the noise-floor record bound before Test scoring")
     if args.noise_floors is not None:
-        noise = json.loads(args.noise_floors.read_text(encoding="utf-8"))
-        if (
-            noise.get("policy") != POLICY_VERSION
-            or noise.get("profile_package_sha256") != PROFILE_SHA
-            or noise.get("source_split") != "dev"
-            or noise.get("metric") != "adaptation_criterion_pass_rate"
-            or noise.get("scope") != "generation_repeat"
-            or not isinstance(noise.get("source_artifact_sha256"), str)
-            or len(noise["source_artifact_sha256"]) != 64
-            or any(c not in "0123456789abcdef" for c in noise["source_artifact_sha256"])
-        ):
-            raise ValueError("noise floors require a Dev adaptation-repeat source record")
-        floors = noise["adaptation_noise_floors"]
+        floors = load_noise_floors(args.noise_floors)
     result = registered_analysis(
         items, numeric, judged["adaptation"], draws=2000, seed=5703, adaptation_noise_floors=floors
     )
@@ -256,6 +307,7 @@ def main():
     ):
         prep.add_argument("--" + name, type=Path, required=True)
     post = commands.add_parser("report", help="after scoring only; never executed by prepare")
+    prep.add_argument("--noise-floors", type=Path)
     prep.add_argument(
         "--expected-rubrics-sha256",
         required=True,

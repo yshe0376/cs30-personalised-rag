@@ -59,6 +59,7 @@ def test_waiver_binds_exact_label_bytes_profile_and_does_not_claim_calibration(t
         review_waiver=waiver(),
         profile_package_sha256=PROFILE_SHA,
         expected_question_ids=["sciq-train-00004"],
+        allow_superset=True,
         require_resolved=True,
     )
     assert record.calibration_question_count is None
@@ -128,6 +129,7 @@ def readiness_args(tmp_path):
                 "--eligibility-review-waiver",
                 str(review),
                 "--reportable",
+                "--allow-eligibility-superset",
                 "--output",
                 str(validation),
             ]
@@ -177,6 +179,7 @@ def test_prepare_records_all_187_rubrics_before_scores_and_never_reads_answers(r
     result = prepare(readiness_args)
     assert len(result["per_question_rubric_sha256"]) == 187
     assert result["expected_cells_per_generator"] == 2244
+    assert result["comparison_models"] == []
     assert result["rubrics_independently_reviewed"] is False
     assert result["eligibility_human_calibrated"] is False
     assert result["paid_execution_authorized"] is False
@@ -227,6 +230,74 @@ def test_waiver_authority_cannot_be_changed():
     payload["decided_by"] = "someone-else"
     with pytest.raises(ValueError):
         EligibilityReviewWaiver.model_validate(payload)
+
+
+def test_real_pre_scoring_record_is_consistent_without_opening_test_answers():
+    from cs30.evaluation.level_profiles import canonical_json_sha256
+    from cs30.evaluation.test_gate_readiness import load_noise_floors
+
+    root = REPO / "eval_inputs/m8/test-gates-20261029"
+    ready = json.loads((root / "readiness.json").read_text(encoding="utf-8"))
+    assert ready["comparison_models"] == []
+    assert ready["paid_execution_authorized"] is False
+    assert ready["input_validation_sha256"] == file_sha(root / "input-validation.json")
+    assert ready["noise_floor_record_sha256"] == file_sha(root / "dev-adaptation-noise-floors.json")
+    assert ready["question_ids_file_sha256"] == file_sha(root / "test-question-ids.txt")
+    assert len(ready["per_question_rubric_sha256"]) == 187
+    assert ready["correctness_rubric_set_sha256"] == canonical_json_sha256(
+        [
+            {"question_id": qid, "rubric_sha256": digest}
+            for qid, digest in sorted(ready["per_question_rubric_sha256"].items())
+        ]
+    )
+    assert set(load_noise_floors(root / "dev-adaptation-noise-floors.json")) == {
+        "beginner",
+        "advanced",
+    }
+
+
+def test_prepare_binds_noise_record_and_rejects_wrong_generator(readiness_args, tmp_path):
+    source = REPO / "eval_inputs/m8/test-gates-20261029/dev-adaptation-noise-floors.json"
+    readiness_args.noise_floors = source
+    result = prepare(readiness_args)
+    assert result["noise_floor_record_sha256"] == file_sha(source)
+    data = json.loads(source.read_text(encoding="utf-8"))
+    data["generator"] = "llama-3.1-8b"
+    readiness_args.noise_floors = save(tmp_path / "other-model.json", data)
+    readiness_args.output = tmp_path / "rejected-noise.json"
+    with pytest.raises(ValueError, match="GPT-OSS"):
+        prepare(readiness_args)
+    assert not readiness_args.output.exists()
+
+
+@pytest.mark.parametrize("use_waiver", [True, False])
+@pytest.mark.parametrize("allow_superset", [True, False])
+def test_superset_permission_is_independent_of_review_waiver(use_waiver, allow_superset):
+    review = (
+        {"review_waiver": waiver(), "profile_package_sha256": PROFILE_SHA}
+        if use_waiver
+        else {
+            "calibration_question_count": 15,
+            "leader_calibration_record_sha256": "b" * 64,
+            "label_provenance_record_sha256": "c" * 64,
+        }
+    )
+    kwargs = dict(
+        package_version="fixture",
+        gold_version="fixture",
+        gold_sha256="a" * 64,
+        expected_question_ids=["sciq-train-00004"],
+        allow_superset=allow_superset,
+        **review,
+    )
+    if allow_superset:
+        assert len(load_eligibility_package(LABELS, **kwargs).records) == 341
+    else:
+        with pytest.raises(ValueError, match="coverage mismatch"):
+            load_eligibility_package(LABELS, **kwargs)
+    kwargs["expected_question_ids"] = ["missing-fictional-id"]
+    with pytest.raises(ValueError, match="coverage mismatch"):
+        load_eligibility_package(LABELS, **kwargs)
 
 
 def test_synthetic_full_matrix_report_uses_native_bindings_and_rejects_changed_rubric(

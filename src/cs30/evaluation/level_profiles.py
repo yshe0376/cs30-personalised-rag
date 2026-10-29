@@ -106,6 +106,7 @@ def load_eligibility_package(
     review_waiver: EligibilityReviewWaiver | None = None,
     profile_package_sha256: str | None = None,
     expected_question_ids: Iterable[str] | None = None,
+    allow_superset: bool = False,
     require_resolved: bool = False,
 ) -> EligibilityPackage:
     """Load M3 labels without changing Gold or accepting silent coverage gaps."""
@@ -135,7 +136,7 @@ def load_eligibility_package(
         actual = {record.question_id for record in package.records}
         missing = sorted(expected - actual)
         extra = sorted(actual - expected)
-        if missing or (extra and review_waiver is None):
+        if missing or (extra and not allow_superset):
             raise ValueError(
                 f"{path}: eligibility coverage mismatch: missing={missing}, extra={extra}"
             )

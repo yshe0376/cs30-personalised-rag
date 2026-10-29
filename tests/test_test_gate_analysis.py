@@ -188,3 +188,33 @@ def test_changed_metadata_and_duplicate_cells_fail_closed():
         analysis.registered_analysis(items, scores, rows)
     with pytest.raises(ValueError, match="unique evaluation"):
         analysis.registered_analysis(items + [items[0]], scores, [])
+
+
+def test_unscored_adaptation_pair_is_counted_without_vetoing_complete_pair_result(monkeypatch):
+    items, scores, rows = fixtures()
+    rows.pop(0)
+    monkeypatch.setattr(
+        analysis,
+        "cluster_interval",
+        lambda *a, **k: {"estimate": 0.1, "p_value": 0.001, "ci_lower": 0.02, "ci_upper": 0.2},
+    )
+    result = analysis.registered_analysis(items, scores, rows)
+    endpoint = result["adaptation_endpoints"][0]
+    assert endpoint["answered_unscored_pairs"] == 1
+    assert endpoint["statistically_positive"] is True
+    assert "Holm-adjusted" in endpoint["decision_rule"]
+    assert "descriptive" in endpoint["interval_role"]
+
+
+def test_negative_effect_uses_the_same_holm_and_absolute_noise_floor(monkeypatch):
+    monkeypatch.setattr(
+        analysis,
+        "cluster_interval",
+        lambda *a, **k: {"estimate": -0.02, "p_value": 0.001, "ci_lower": -0.03, "ci_upper": -0.01},
+    )
+    result = analysis.registered_analysis(
+        *fixtures(), adaptation_noise_floors={"beginner": 0.03, "advanced": 0.01}
+    )
+    assert all(r["statistically_negative"] for r in result["adaptation_endpoints"])
+    assert not any(r["positive_effect_supported"] for r in result["adaptation_endpoints"])
+    assert [r["negative_effect_supported"] for r in result["adaptation_endpoints"]] == [False, True]

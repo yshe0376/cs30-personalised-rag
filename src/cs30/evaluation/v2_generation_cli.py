@@ -157,6 +157,10 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("--eligibility-version", required=True)
     validate.add_argument("--eligibility-calibration-count", type=int)
     validate.add_argument(
+        "--allow-eligibility-superset", action="store_true",
+        help="allow labels beyond the Gold question set, independently of review status",
+    )
+    validate.add_argument(
         "--eligibility-review-waiver",
         type=Path,
         help="hash-bound PR #224 waiver; mutually exclusive with review evidence",
@@ -377,6 +381,7 @@ def _validate_inputs(args: argparse.Namespace) -> int:
         review_waiver=waiver,
         profile_package_sha256=profiles.package_sha256,
         expected_question_ids=question_ids,
+        allow_superset=args.allow_eligibility_superset,
         require_resolved=args.reportable,
     )
     _write_json(
@@ -393,6 +398,7 @@ def _validate_inputs(args: argparse.Namespace) -> int:
             "question_ids": sorted(question_ids),
             "eligibility_evidence_sha256": evidence_hashes,
             "eligibility_human_calibrated": waiver is None,
+            "eligibility_superset_allowed": args.allow_eligibility_superset,
             "eligibility_review_waiver": waiver.model_dump(mode="json") if waiver else None,
             "reportable_input_validation": bool(args.reportable),
             "valid": True,
