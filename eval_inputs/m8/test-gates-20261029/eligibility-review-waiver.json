@@ -1,0 +1,10 @@
+{
+  "decision_record": "https://github.com/yshe0376/cs30-personalised-rag/pull/224",
+  "decided_by": "yshe0376",
+  "decision_date": "2026-10-29",
+  "profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "eligibility_sha256": "ab585f05c02ec896889bae174475493f954eee1d4bb2dda32fc111fe4ef54c42",
+  "calibration_waived": true,
+  "content_review_waived": true,
+  "labelling_rerun_waived": true
+}

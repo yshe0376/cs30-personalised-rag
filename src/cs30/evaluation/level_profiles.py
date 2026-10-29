@@ -17,6 +17,7 @@ from .models import PersonalisationEligibility
 from .v2_generation_models import (
     EligibilityPackage,
     EligibilityRecord,
+    EligibilityReviewWaiver,
     EvaluationEvidence,
     ProfileChecklistPackage,
 )
@@ -99,14 +100,21 @@ def load_eligibility_package(
     package_version: str,
     gold_version: str,
     gold_sha256: str,
-    calibration_question_count: int,
-    leader_calibration_record_sha256: str,
-    label_provenance_record_sha256: str,
+    calibration_question_count: int | None = None,
+    leader_calibration_record_sha256: str | None = None,
+    label_provenance_record_sha256: str | None = None,
+    review_waiver: EligibilityReviewWaiver | None = None,
+    profile_package_sha256: str | None = None,
     expected_question_ids: Iterable[str] | None = None,
     require_resolved: bool = False,
 ) -> EligibilityPackage:
     """Load M3 labels without changing Gold or accepting silent coverage gaps."""
 
+    if review_waiver is not None:
+        if profile_package_sha256 != review_waiver.profile_package_sha256:
+            raise ValueError("eligibility waiver is bound to a different frozen profile")
+        if hashlib.sha256(path.read_bytes()).hexdigest() != review_waiver.eligibility_sha256:
+            raise ValueError("eligibility waiver does not cover these label bytes")
     try:
         records = [EligibilityRecord.model_validate(row) for row in _read_jsonl(path)]
         package = EligibilityPackage(
@@ -116,6 +124,7 @@ def load_eligibility_package(
             calibration_question_count=calibration_question_count,
             leader_calibration_record_sha256=leader_calibration_record_sha256,
             label_provenance_record_sha256=label_provenance_record_sha256,
+            review_waiver=review_waiver,
             records=records,
         )
     except ValidationError as exc:
@@ -126,7 +135,7 @@ def load_eligibility_package(
         actual = {record.question_id for record in package.records}
         missing = sorted(expected - actual)
         extra = sorted(actual - expected)
-        if missing or extra:
+        if missing or (extra and review_waiver is None):
             raise ValueError(
                 f"{path}: eligibility coverage mismatch: missing={missing}, extra={extra}"
             )

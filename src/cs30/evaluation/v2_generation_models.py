@@ -248,27 +248,50 @@ class EligibilityRecord(ContractModel):
     calibration_version: Identifier
 
 
+class EligibilityReviewWaiver(ContractModel):
+    """The narrowly scoped eligibility decision approved in PR #224."""
+
+    decision_record: Literal["https://github.com/yshe0376/cs30-personalised-rag/pull/224"]
+    decided_by: Literal["yshe0376"]
+    decision_date: Literal["2026-10-29"]
+    profile_package_sha256: Literal[
+        "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238"
+    ]
+    eligibility_sha256: Literal["ab585f05c02ec896889bae174475493f954eee1d4bb2dda32fc111fe4ef54c42"]
+    calibration_waived: Literal[True]
+    content_review_waived: Literal[True]
+    labelling_rerun_waived: Literal[True]
+
+
 class EligibilityPackage(ContractModel):
     schema_version: Literal["1.0"] = "1.0"
     package_version: Identifier
     gold_version: Identifier
     gold_sha256: str
-    calibration_question_count: int = Field(ge=15, le=20)
-    leader_calibration_record_sha256: str
-    label_provenance_record_sha256: str
+    calibration_question_count: int | None = Field(default=None, ge=15, le=20)
+    leader_calibration_record_sha256: str | None = None
+    label_provenance_record_sha256: str | None = None
+    review_waiver: EligibilityReviewWaiver | None = None
     records: list[EligibilityRecord] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_package(self) -> EligibilityPackage:
         _validate_sha256(self.gold_sha256, "gold_sha256")
-        _validate_sha256(
+        evidence = (
+            self.calibration_question_count,
             self.leader_calibration_record_sha256,
-            "leader_calibration_record_sha256",
-        )
-        _validate_sha256(
             self.label_provenance_record_sha256,
-            "label_provenance_record_sha256",
         )
+        if self.review_waiver is not None:
+            if any(value is not None for value in evidence):
+                raise ValueError("a waiver must not claim completed calibration/provenance records")
+        else:
+            if any(value is None for value in evidence):
+                raise ValueError("eligibility requires calibration evidence or the recorded waiver")
+            _validate_sha256(
+                self.leader_calibration_record_sha256, "leader_calibration_record_sha256"
+            )
+            _validate_sha256(self.label_provenance_record_sha256, "label_provenance_record_sha256")
         question_ids = [record.question_id for record in self.records]
         if len(question_ids) != len(set(question_ids)):
             raise ValueError("eligibility package contains duplicate question_id values")
@@ -505,9 +528,7 @@ class JudgeResultEnvelope(ContractModel):
             raise ValueError("resolved judge results require a provider completion timestamp")
         if self.completed_at_utc is not None:
             try:
-                completed_at = datetime.fromisoformat(
-                    self.completed_at_utc.replace("Z", "+00:00")
-                )
+                completed_at = datetime.fromisoformat(self.completed_at_utc.replace("Z", "+00:00"))
             except ValueError as exc:
                 raise ValueError("completed_at_utc must be an ISO-8601 timestamp") from exc
             if completed_at.tzinfo is None or completed_at.utcoffset() is None:
