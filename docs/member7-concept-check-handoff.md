@@ -1,5 +1,8 @@
 # Member 7 V2 generation and Concept Check handoff
 
+The historical and current decisions are available in the English
+[Design Decisions and Open Questions](design-decisions-and-open-questions.md) log.
+
 > Online Demo update (2026-10-29): the user-selected textbook-grounded author-only
 > workflow, all-Topic scope and local citation checks are documented in
 > [the current API framework](superpowers/specs/2026-10-28-api-learning-demo-design.md). This online extension does not replace

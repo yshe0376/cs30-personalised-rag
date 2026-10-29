@@ -1,35 +1,39 @@
-# 在线 Concept Check 当前任务清单
+# Online Concept Check Task Checklist
 
-更新：2026-10-29；以 [当前框架 v3](../specs/2026-10-28-api-learning-demo-design.md) 为准。
-本文替代原首版计划中的独立模型复核、2–3 Topic 白名单和唯一 Topic 证据要求。
-下列“已实现”指本地工作区，不表示相关代码已经提交或合并 main。
+Recorded 2026-10-29; governed by [framework v3](../specs/2026-10-28-api-learning-demo-design.md).
+This replaces the initial plan's independent model review, 2–3 Topic allowlist and
+single-Topic evidence requirements. "Implemented" below describes the local
+worktree at that snapshot, not code submission or a merge into main. Later
+implementation delivery and definition updates are tracked separately in
+[PR #219](https://github.com/yshe0376/cs30-personalised-rag/pull/219).
 
-## 已实现的框架
+## Implemented Framework at the Snapshot
 
-- [x] 统一自由问答、教材引用、Concept Check 与画像的页面。
-- [x] 使用 Qwen3 混合检索和已有重排；保留资产身份与本地权重检查。
-- [x] 从回答的有效教材引用选择 Topic；`topic_ids = ["*"]` 开放全部注册 Topic。
-- [x] 允许多 Topic 的引用片段，按引用支持度加权选择一个 Topic 并写审计记录。
-- [x] API 根据对应教材原文生成题干、四选项、答案、解释和引用原句。
-- [x] 取消独立模型复核及答案唯一性复核，不调用复核 API。
-- [x] 保留结构检查、引用来源限制、原句及章节定位；每题最多两次作者请求。
-- [x] 作答后显示答案、解释与原句；本地判分与事件重放，草稿不写入正式题库。
-- [x] 侧栏跟随 Concept Check Topic，支持历史 Topic 切换、手动调级和新会话初始等级选择。
-- [x] 常见 LaTeX 格式适配；现有公式与代码块保护。
-- [x] 持久请求计数与上限；本地密钥、资产和事件不入 Git。
-- [x] 相关离线用例 17 项、相关 Ruff 检查通过；未为本轮验证调用付费 API。
+- [x] One page for free-text questions, textbook citations, Concept Checks and profiles.
+- [x] Qwen3 hybrid retrieval and existing reranking, retaining asset identity and local-weight checks.
+- [x] Select Topics from validated answer citations; `topic_ids = ["*"]` enables every registered Topic.
+- [x] Allow multi-Topic cited passages, select one Topic weighted by citation support, and persist an audit record.
+- [x] API authoring of question, four options, answer, explanation and source quotation from the corresponding textbook text.
+- [x] Remove independent model review and answer-uniqueness review; do not call a reviewer API.
+- [x] Retain structural checks, citation-source restrictions, and quotation/chapter location; at most two author requests per question.
+- [x] Show answer, explanation and quotation after an attempt; grade locally and replay events, without publishing drafts to the formal pool.
+- [x] Sidebar follows the Concept Check Topic, with historical Topic switching, manual level changes and initial-level selection for a new session.
+- [x] Common LaTeX display adaptation, preserving existing formulas and code blocks.
+- [x] Persistent request accounting and cap; local keys, assets and events stay out of Git.
+- [x] 17 related offline tests and corresponding Ruff checks passed; no paid API was called for that validation round.
 
-## 交付与验收待办
+## Delivery and Acceptance Items Open at the Snapshot
 
-- [ ] 将本地实现代码单独审查、提交并整合；本次框架文档 PR 不代替代码交付。
-- [ ] 在用户确认的请求额度内做当前组合版本真实问答、出题、作答、画像闭环验收。
-- [ ] 分教材和 Topic 抽样，人工审查答案、解释和引文语义对应关系。
-- [ ] 分别统计引用映射率、可出题率、结构失败率、定位失败率与人工正确率。
-- [ ] 复现并排查用户截图中的 Streamlit `removeChild` 前端错误；不声称已修复。
-- [ ] 若需开发诊断，补充原始作者响应的私有留存；当前只有页面安全失败摘要。
-- [ ] 正式 M7/M8、Test 和模型冻结继续使用各自冻结协议，在线模式不作为实验结论。
+- [ ] Separately review, commit and integrate local implementation code; this framework-documentation PR is not code delivery.
+- [ ] Within the user-confirmed request allowance, accept the combined real question-answering, quiz, attempt and profile loop.
+- [ ] Sample across textbooks and Topics to manually review semantic alignment among answers, explanations and quotations.
+- [ ] Report citation-mapping rate, question availability, structure failures, location failures and manually assessed correctness separately.
+- [ ] Reproduce and investigate the Streamlit `removeChild` frontend error in the user's screenshot; do not claim it is fixed.
+- [ ] If development diagnosis requires it, add private retention of raw author responses; only safe failure summaries are currently displayed.
+- [ ] Formal M7/M8, Test and model freezes continue under their own frozen protocols; online Demo operation is not an experimental conclusion.
 
-## 非验收保证
+## What Acceptance Does Not Establish
 
-全部注册 Topic 开放不意味着每个教材片段都有映射；引文能定位不意味着答案正确。
-mastery 是基于 AI 答案标签的练习状态，尚不能作为经过验证的学习能力测量。
+Enabling all registered Topics does not mean that every textbook passage is mapped.
+Locating a quotation does not establish answer correctness. Mastery is practice
+state derived from AI answer labels, not a validated measure of learning ability.

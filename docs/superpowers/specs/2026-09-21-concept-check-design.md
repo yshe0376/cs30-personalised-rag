@@ -6,7 +6,7 @@
 > the published-question gates or formal M7/M8 experiment protocol described here.
 
 
-> Status: decided (finalised 2026-09-22, recorded in the decided table of `docs/构思与待定.md`)
+> Status: decided (finalised 2026-09-22, recorded in the decided table of `docs/design-decisions-and-open-questions.md`)
 >
 > Date: drafted 2026-09-21, finalised 2026-09-22
 >

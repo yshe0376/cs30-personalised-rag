@@ -1,5 +1,9 @@
 # API Learning Demo Runbook
 
+This documentation-only PR records the v3 framework snapshot. Subsequent runnable
+Demo integration and definition changes are in
+[PR #219](https://github.com/yshe0376/cs30-personalised-rag/pull/219).
+
 Updated 2026-10-29. See the [current framework](superpowers/specs/2026-10-28-api-learning-demo-design.md).
 This runbook describes the local implementation workspace. A documentation publication alone
 is not a release of the implementation code.
