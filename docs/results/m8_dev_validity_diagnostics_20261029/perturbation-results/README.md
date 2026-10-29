@@ -96,4 +96,4 @@ The last column compares each perturbed answer with the **original full-Dev scor
 **Limits**
 - These are 18 purposefully written cases, reviewed before scoring. They are not a random sample and do not estimate population judge accuracy.
 - The cases were not revised after any score was seen.
-- This audit does not cover the remaining §6 checks: repeat-answer retest, order reversal and second-family judge.
+- Scope agreed with the Leader during the #220 review: the free offline checks plus this perturbation audit. The paid repeat-answer retest and order-reversal checks, and the second-family judge, were not run by that decision. Judge run-to-run variation and checklist-position effects are therefore not measured directly.
