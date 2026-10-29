@@ -16,7 +16,7 @@
   "expected_cells_per_generator": 2244,
   "generated_answers_read_during_preparation": false,
   "gold_sha256": "235c92a15c14ef0416ac2ad262628c5876b9ebdde03c7f51438d10536a2509d5",
-  "input_validation_sha256": "2a3183821e22dca516f8851c82267bb52fa9f4bb060a38a33da017ed3d7b47ee",
+  "input_validation_sha256": "425057ff92af40ee1e7950778824cbe0ffc0937fa5157db782bfb22c1435584a",
   "judge_config_sha256": "90293ebf1248d58935490f37ffda4a11591f8265bd28125d540d45f40e11eb19",
   "multiplicity": "Holm, alpha=0.05",
   "noise_floor_record_sha256": "b5c163e44a4c401b321a5ba7e1dba8032256469a5cf8ac2f8734f1b0f815c0ba",

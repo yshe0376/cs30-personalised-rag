@@ -131,11 +131,12 @@ def _require_exact_answer_hashes(items: list[GenerationEvaluationInput]) -> None
         raise ValueError("evaluation inputs with answers require exact answer hashes")
 
 
-def _write_json(path: Path, payload: object) -> None:
+def _write_json(path: Path, payload: object, *, newline: str | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
+        newline=newline,
     )
 
 
@@ -403,6 +404,7 @@ def _validate_inputs(args: argparse.Namespace) -> int:
             "reportable_input_validation": bool(args.reportable),
             "valid": True,
         },
+        newline="\n",
     )
     return 0
 

@@ -237,6 +237,7 @@ def test_real_pre_scoring_record_is_consistent_without_opening_test_answers():
     from cs30.evaluation.test_gate_readiness import load_noise_floors
 
     root = REPO / "eval_inputs/m8/test-gates-20261029"
+    assert b"\r" not in (root / "input-validation.json").read_bytes()
     ready = json.loads((root / "readiness.json").read_text(encoding="utf-8"))
     assert ready["comparison_models"] == []
     assert ready["paid_execution_authorized"] is False
