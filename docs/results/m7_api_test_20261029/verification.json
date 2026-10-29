@@ -1,0 +1,94 @@
+{
+  "verified_at_utc": "2026-10-29T03:23:13.463564+00:00",
+  "all_checks_passed": true,
+  "model": "openai/gpt-oss-20b",
+  "questions": 187,
+  "expected_cells": 2244,
+  "statuses": {
+    "answered": 2243,
+    "output_truncated": 1
+  },
+  "by_condition": [
+    {
+      "condition": "P0R0_plain",
+      "status": "answered",
+      "count": 561
+    },
+    {
+      "condition": "P0R1_reranking_only",
+      "status": "answered",
+      "count": 560
+    },
+    {
+      "condition": "P0R1_reranking_only",
+      "status": "output_truncated",
+      "count": 1
+    },
+    {
+      "condition": "P1R0_prompt_only",
+      "status": "answered",
+      "count": 561
+    },
+    {
+      "condition": "P1R1_combined",
+      "status": "answered",
+      "count": 561
+    }
+  ],
+  "checkpoint_answer_trace_equal": 2244,
+  "evidence_selection_recomputed": 2244,
+  "gold_excluded_from_generation_request": 2244,
+  "prompt_hashes_recomputed": 2244,
+  "citation_membership_verified": 2243,
+  "frozen_implementation_unchanged": true,
+  "original_failure_checkpoints_preserved": 1,
+  "comparison_test_runs_started": false,
+  "output_hashes_verified": true,
+  "run_manifest_sha256": "05174f9286fbd6ae4f0f5b99d4fd73f00db888b19f7505dd0caa3c8851df0543",
+  "api_audit": {
+    "http_attempts": 2261,
+    "pending_attempts_charge_unknown": 0,
+    "reported_input_tokens": 6662812,
+    "reported_output_tokens": 250192,
+    "http_attempts_by_format": {
+      "json_object": 2261
+    },
+    "successful_responses_by_format": {
+      "json_object": 2260
+    },
+    "policy": "All wire attempts, including superseded failures; absent provider usage is unknown and must be reconciled with provider billing."
+  },
+  "known_usage_cost_usd": 0.23491124,
+  "reportable": false,
+  "quality_scores": "Not computed; Test generation handoff for M8",
+  "limitations": "User-authorized Test generation only. Judge validity, eligibility review, human audit and formal reporting decisions are not asserted complete. No Test-based tuning or score selection.",
+  "m8_adapter_rows_verified": 2244,
+  "m8_adapter_sha256": "ae96d95dd87a1272fd832c0ea861d7bb5676eddbe95cf9b093fa9077a44915e7",
+  "split_coverage": {
+    "test_questions": 187,
+    "proposed_test_questions_included": 30,
+    "ck12_questions_included": 82,
+    "all_required_ids_present": true,
+    "api_calls": 0
+  },
+  "engineering_regression": {
+    "passed": 1434,
+    "failed": 0,
+    "skipped": 0
+  },
+  "archive_readback_verification": {
+    "archive_sha256_verified": true,
+    "fresh_extraction_readback_verified": true,
+    "corruption_rejected": true,
+    "scratch_probe_restored": true,
+    "api_calls": 0
+  },
+  "generation_source_commit": "d1c216fdabf8067fe0b4d35e4321b93a1ae3ea8c",
+  "archive": {
+    "filename": "m7_api_test_gpt_oss20b_20261029.tar.gz",
+    "sha256": "c9545bf50cb161a8f923546431ba9efda8dd3c40077114061f9827a2a4511ebc",
+    "bytes": 27225573,
+    "manifest_covered_files": 6799,
+    "configured_secret_scan": "passed"
+  }
+}

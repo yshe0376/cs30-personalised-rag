@@ -225,6 +225,13 @@ For native V2 four-condition generation, positive Dev-only lambda selection
 and the independent M8 scoring handoff, use
 [the V2 M7 experiment guide](docs/v2-member7-experiments.md).
 
+The [2026-10-29 primary-model Test generation](docs/results/m7_api_test_20261029/README.md)
+executed all 187 questions across three levels and four conditions with gpt-oss-20b:
+2,243 answered and one retained output truncation, out of 2,244 cells. The full
+frozen inputs, answers, traces, checkpoints and API caches are available in its
+pre-release. Test quality scoring and the remaining evaluation approvals are
+pending; this generation delivery remains `reportable=false`.
+
 The [2026-10-26 hosted API Dev delivery](docs/results/m7_api_dev_20261026/README.md)
 contains gpt-oss-20b, Gemma 3 12B and Llama 3.1 8B against the four-book inputs
 with Dev-selected lambda=0.1. All 6,624 Dev/repeat cells were executed:
@@ -232,8 +239,9 @@ with Dev-selected lambda=0.1. All 6,624 Dev/repeat cells were executed:
 The full frozen inputs, answers, traces, checkpoints and request/response caches
 are published in a development pre-release after explicit user authorization,
 with the uploaded SHA-256 digest verified against the local archive.
-Independent M8 scoring and formal Test remain pending;
-the results are non-reportable development outputs.
+The [M8 development scoring handoff](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m8-full-dev-low-20261028)
+retains explicit missing scores. Judge validation and formal Test quality scoring
+remain pending; these are non-reportable development outputs.
 
 The [complete 2026-10-17 Dev run with lambda=0.2](docs/results/m7_v2_dev_20261017_lambda02/README.md)
 contains **1,944/1,944 successful answers**, zero technical failures and zero
