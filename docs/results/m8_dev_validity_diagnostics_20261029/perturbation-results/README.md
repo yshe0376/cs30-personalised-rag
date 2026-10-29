@@ -72,6 +72,7 @@ The last column compares each perturbed answer with the **original full-Dev scor
 | Provider attempts | 115: 87 accepted, 28 invalid outputs retried or left unresolved |
 | Usage reported | All attempts; 264,197 input and 65,450 output tokens |
 | Estimated cost | ≈ USD 0.16 list price, ≈ AUD 0.26 adjusted (provider bill is authoritative) |
+| AI Studio balance (operator observation) | AUD 6.14 before, AUD 6.05 after (−0.09); charges may post with a delay, so this is not a reconciled invoice |
 
 **Judge settings and isolation**
 - The judge settings are identical to full Dev:
