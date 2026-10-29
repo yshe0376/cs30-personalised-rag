@@ -1,0 +1,34 @@
+{
+  "api_calls": 0,
+  "batch": "dev-gpt-oss",
+  "calibration_count": 10,
+  "candidate_cells": 1346,
+  "completed_ratings": 0,
+  "identity_key_in_repository": false,
+  "independent_audit_count": 20,
+  "known_exposed_question_count": 35,
+  "known_exposure_files_sha256": {
+    "docs/results/m8_dev_validity_diagnostics_20261029/perturbation-draft/cases.draft.jsonl": "8a008bb2af40910ae2b61b6420ea21e2c08435ded4e2b0eee1a24203248a790a",
+    "docs/results/m8_judge_trial_20261027/selection.json": "7b340db5f37f7b5c5a63d39a45326b3bdd096f0c4bec7ff5f6e1b2882fa60052",
+    "docs/results/m8_low_evidence_confirmation_20261028/selected_inputs.jsonl": "1271f19b644110d4c828d207afd619592018d3291991cc2aae424fedfbd63d91"
+  },
+  "limitations": [
+    "complete-case frame for the three audit dimensions; availability is not accuracy",
+    "known recorded exposures excluded; unrecorded prior access cannot be ruled out",
+    "only the primary generator is audited; comparators remain unaudited",
+    "ten orientation cases are new material, not proof of historical calibration"
+  ],
+  "rubric_sha256": "be59bc1f7058899e9fd64f24f32cb5a67fbb15dab022c5112bf7946a7ef9110c",
+  "sampling": "native normalized-answer deduplication and stratified seed 5703/5704",
+  "source_files_sha256": {
+    "batches/dev-gpt-oss/correctness/open_answer_scores.jsonl": "c95eb93ed8d6995f854fc650e0708fa7303a23620c43fd0c497e31235de27c62",
+    "batches/dev-gpt-oss/generation_evaluation_inputs.jsonl": "4129db6be6aa69df59166167200401201c728de6f5dbab312311895158b1ae5c",
+    "batches/dev-gpt-oss/judge_evaluation/adaptation_results.jsonl": "afe1e88de8d349a06ed83f6bd8b590908b3f0dea94baa7b1da66c276cd5ef07b",
+    "batches/dev-gpt-oss/judge_evaluation/discrimination_results.jsonl": "881a4da9df6455a522a39316fca1fa99286921fd435760328d73ba93d4335070",
+    "batches/dev-gpt-oss/judge_evaluation/evidence_support_results.jsonl": "e3e2c5d33d841814f247aea6054eaa023040804827e8b13841be205f0aabb6b3",
+    "batches/dev-gpt-oss/judge_results.reused.jsonl": "b70178bcafc941b8ced570d77cac663af112f753cb416a28dd9818612754381f",
+    "handoff_manifest.json": "20389065d4249f56d7924c8eebba577b0e1de94fa973af6e505583aee3c7f8bd",
+    "profile_checklist.frozen.json": "50bb9a61414268cb343b79c096bec3c380310c041eeb69deefbf51fc0ebd1b38"
+  },
+  "status": "prepared_only_no_human_approval"
+}

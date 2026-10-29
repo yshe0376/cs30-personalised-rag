@@ -1,0 +1,27 @@
+{
+  "audit_condition_coverage": [
+    "P0R0_plain",
+    "P0R1_reranking_only",
+    "P1R0_prompt_only",
+    "P1R1_combined"
+  ],
+  "audit_count": 20,
+  "audit_level_coverage": [
+    "advanced",
+    "beginner",
+    "intermediate"
+  ],
+  "audit_sha256": "5e09b2f72ae588f4991b82a6fe833865ec9e78f169b3a9c7519f4487d5f9b89d",
+  "calibration_count": 10,
+  "calibration_sha256": "ebbca9281180b2a54ccab57d989e6708ce1bb8c9f9da599c37a440bfce243509",
+  "condition_lambda_model_hidden_from_public_packets": true,
+  "deduplication": "normalized answer text sha256 across all questions and conditions",
+  "evaluation_inputs_sha256": "4129db6be6aa69df59166167200401201c728de6f5dbab312311895158b1ae5c",
+  "identity_set_sha256": "31fb85e98e6b23a77d3d5aee0bf53b43ed408208e77bd7667a610b70b9cd84af",
+  "packets_overlap": false,
+  "private_key_sha256": "5be6bffcf2dd5b99ff1e6d62c5804d2f2869228d8c132eadfbaa04ceb77a5593",
+  "schema_version": "1.0",
+  "seed": 5703,
+  "source_run_sha256": "c12aacada6ef6cfbb5a5219e9f1bb3cb334e0b874b86289b35aa14dc4a541ac8",
+  "unique_answer_count": 834
+}

@@ -1,0 +1,20 @@
+{
+  "instructions": [
+    "Read the question, answer and frozen level checklist before opening saved verdicts.",
+    "Record whether each saved judge dimension contains an obvious error, with a reason.",
+    "Use adaptation, discrimination and evidence support for the native audit ratings.",
+    "Review correctness separately when useful; it is not a native HumanAuditRating field.",
+    "I3 and citation support are reference-only; review and annotate them separately.",
+    "A true statement can be unsupported by the supplied evidence; truth is not support.",
+    "Do not use independent audit cases to tune prompts, thresholds or the checklist.",
+    "Do not mark any pending decision false merely because no review has occurred."
+  ],
+  "purpose": "find obvious judge errors, not estimate accuracy or agreement",
+  "rating_fields": {
+    "adaptation_obvious_error": "true: obvious error; false: checked, no obvious error",
+    "discrimination_obvious_error": "true: obvious error; false: checked, no obvious error",
+    "evidence_support_obvious_error": "true: obvious error; false: checked, no obvious error"
+  },
+  "reviewer": "Leader or M3; no completed review is claimed",
+  "status": "draft_for_Leader_or_M3_confirmation"
+}

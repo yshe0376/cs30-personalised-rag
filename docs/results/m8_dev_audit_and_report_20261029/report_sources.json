@@ -1,0 +1,14 @@
+{
+  "api_calls": 0,
+  "reportable": false,
+  "source_files_sha256": {
+    "development_reports/dev-gemma/v2_generation_condition_contrasts.csv": "0e8ca02982fef2537948001a46814d906b9976c8cf63e12c6451176b6c8195c8",
+    "development_reports/dev-gemma/v2_generation_evaluation.json": "839996c193ecb48a13e8bc46a20c0f3e0f040b6554d995e8a75af9e70b4976ec",
+    "development_reports/dev-gpt-oss/v2_generation_condition_contrasts.csv": "eae5b5f1400afd2010557c1a0ccbce0ccce13117492e5c7aaeebc9a0b2e85672",
+    "development_reports/dev-gpt-oss/v2_generation_evaluation.json": "d4ef3605b0a407d7040ebba79683d6b43d9c6236f7fbfb6e65186b4aef559ae1",
+    "development_reports/dev-llama/v2_generation_condition_contrasts.csv": "c4c6c597c323494f0a216544644a68bfa7863d50c7aa85d23ba53aef00c167ae",
+    "development_reports/dev-llama/v2_generation_evaluation.json": "0c562e18c9f08e8a26efc06f307502c504f5d3984e6aaad3f5a79c47a93216e1",
+    "handoff_manifest.json": "20389065d4249f56d7924c8eebba577b0e1de94fa973af6e505583aee3c7f8bd",
+    "missingness_by_task_model_level_condition.csv": "e42cbfe5eae8c8b0b3861238f6d50ce61fef092c5910f788519d9d9f0cb8411b"
+  }
+}

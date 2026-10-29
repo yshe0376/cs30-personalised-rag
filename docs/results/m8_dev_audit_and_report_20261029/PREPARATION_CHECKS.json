@@ -1,0 +1,26 @@
+{
+  "api_calls": 0,
+  "audit_condition_counts": {
+    "P0R0_plain": 4,
+    "P0R1_reranking_only": 5,
+    "P1R0_prompt_only": 5,
+    "P1R1_combined": 6
+  },
+  "audit_level_counts": {
+    "advanced": 6,
+    "beginner": 7,
+    "intermediate": 7
+  },
+  "base_dependency": "PR #223 follow-up f4ba3d25446dccecc52be6b0a2f9f176c114be17",
+  "calibration_cases": 10,
+  "completed_human_decisions": 0,
+  "english_only": true,
+  "formal_conclusion": false,
+  "independent_cases": 20,
+  "native_source_binding_validated_before_pending_ratings_rejected": true,
+  "network_blocked": true,
+  "normalized_answer_overlap": false,
+  "private_key_in_repository": false,
+  "reportable": false,
+  "source_package_files_unchanged": 136
+}
