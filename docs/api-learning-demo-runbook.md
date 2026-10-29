@@ -1,5 +1,8 @@
 # M8 page integration (2026-10-29)
 
+The earlier v3 documentation snapshot was published in PR #217. This runbook
+describes the integrated online Demo and its current v5 definition.
+
 For the current meaning of Concept Check and the two practice paths, use
 [Online Concept Check v5](superpowers/specs/2026-10-28-api-learning-demo-design.md).
 This runbook explains how to run that Demo; the original reviewed-pool specification

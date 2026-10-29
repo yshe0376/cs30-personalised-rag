@@ -15,6 +15,7 @@ from cs30.evaluation.models import GoldSample
 from cs30.generation.client import OllamaChatClient, OpenAIResponsesClient
 from cs30.v2.contracts import GoldQuestion
 
+from .evidence_quotes import ANSWER_QUOTE_POLICY
 from .gemini_judge_client import GeminiJudgeClient
 from .open_answer_models import (
     HumanDecision,
@@ -328,6 +329,9 @@ def main(argv: list[str] | None = None) -> int:
                 "judge_config_sha256": scorer.judge_config_sha256,
                 "attempt_log": str(attempt_log) if client is not None else None,
                 "allow_self_judge": args.allow_self_judge,
+                # Cached assessments are re-validated on load, so every row in this run
+                # was checked under this rule. Not part of judge_config or any cache key.
+                "answer_quote_policy": ANSWER_QUOTE_POLICY,
                 "expected_run_ids": [case.run_id for case in manifest.cases],
                 "rubrics_without_review_record": sorted(
                     key for key, rubric in rubrics.items() if rubric.review_record_id is None

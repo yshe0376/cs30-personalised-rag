@@ -1,5 +1,8 @@
 # Member 7 V2 generation and Concept Check handoff
 
+Historical and current decisions are recorded in the English
+[Design Decisions and Open Questions](design-decisions-and-open-questions.md) log.
+
 ## Current online Demo scope (2026-10-29)
 
 The online product definition is now [Online Concept Check v5](superpowers/specs/2026-10-28-api-learning-demo-design.md).

@@ -11,10 +11,27 @@ _TYPOGRAPHY = str.maketrans(
 _OMISSION = re.compile(r"\.{3,}|\u2026")
 QUOTE_ROW_SEPARATOR = "\n[quote-row]\n"
 
+# Version of the rule that checks judge quotations against the candidate answer.
+# v1 (results without this marker): raw exact substring. v2: contiguous match after
+# NFC, whitespace and typographic quote/hyphen normalisation. Recorded in result
+# metadata only; it is deliberately not part of any request, config or cache key.
+ANSWER_QUOTE_POLICY = "answer-quote-v2"
+
 
 def normalize_quote_text(text: str) -> str:
     """Normalize canonical Unicode, whitespace and typographic quotes/hyphens only."""
     return " ".join(unicodedata.normalize("NFC", text).translate(_TYPOGRAPHY).split())
+
+
+def quote_in_answer(quote: str, answer: str) -> bool:
+    """Contiguous match after NFC/whitespace/typography normalisation; no ellipsis splicing.
+
+    Only Unicode form, whitespace (including U+202F and other Unicode spaces) and
+    typographic quotes/hyphens are unified. Wording, case, numbers and mathematical
+    symbols are compared as written, so reworded, spliced or empty quotes still fail.
+    """
+    normalized = normalize_quote_text(quote)
+    return bool(normalized) and normalized in normalize_quote_text(answer)
 
 
 def quote_is_grounded(quote: str, evidence: str) -> bool:

@@ -745,3 +745,31 @@ are explicit inputs; pause signals do not stop scoring automatically.
 No API key is needed for the local stand-in tests. See
 [judge-attempt-accounting.md](../../../docs/evaluation/judge-attempt-accounting.md) for field
 semantics, cache/resume behavior, retry limits, offline checks and the pre-run gate.
+
+### Answer-quote policy v2 and evidence validator alignment
+
+Full Dev (24 jobs, `2b565b8`) showed judge quotations rejected only because the answer used
+Unicode spacing or typography the judge did not copy (for example U+202F narrow no-break
+spaces and curly apostrophes). Every check that a judge quotation appears in the candidate
+answer now uses `evidence_quotes.quote_in_answer`: a contiguous match after NFC, whitespace
+and typographic quote/hyphen normalisation. Wording, case, numbers and mathematical symbols
+are compared as written; ellipsis-spliced, reworded and empty quotations still fail. This
+covers correctness (`answer_quote` and error-flag quotes), adaptation and discrimination
+`exact_quote`, and evidence-support `claim_text`, in both the request-time validator
+(`judge_runtime.validate_output_against_request`) and each task's canonical validator.
+
+`ANSWER_QUOTE_POLICY = "answer-quote-v2"` is recorded as result metadata only: on fresh
+`JudgeResultEnvelope`s and in the correctness `run_manifest.json`. Envelopes without it were
+validated under v1 (exact substring). The policy is deliberately not part of any request,
+judge configuration or cache key: v2 only relaxes formatting, so earlier accepted results
+remain valid and are not re-run.
+
+The request-time evidence validator now also enforces the assembler's rule that a claim
+whose bundle support is not `supported` must not list supporting evidence. Previously such
+contradictory outputs could be cached at run time and then stop `assemble_judge_results`.
+
+`scripts/revalidate_full_dev_quotes.py --plan RUN_ROOT/run-plan.json --out NEW_DIR` replays
+a run offline (no API client): it recovers saved outputs that pass the current validators,
+flags previously accepted outputs that now fail, verifies the original files are unchanged,
+and writes prepared caches plus `RETRY_COMMANDS.md`. Re-running a job against its prepared
+cache calls the provider only for requests that are still unresolved.

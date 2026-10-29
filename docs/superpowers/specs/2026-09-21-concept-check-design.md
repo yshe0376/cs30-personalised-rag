@@ -8,7 +8,7 @@
 > online-authoring rules supersede this document's corresponding product-flow rules
 > for that Demo only. Reviewed-pool publication gates and formal experiment isolation remain.
 >
-> Original status: decided (finalised 2026-09-22, recorded in the decided table of `docs/构思与待定.md`)
+> Original status: decided (finalised 2026-09-22, recorded in the decided table of `docs/design-decisions-and-open-questions.md`)
 >
 > Date: drafted 2026-09-21, finalised 2026-09-22
 >
