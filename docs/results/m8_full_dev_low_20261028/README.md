@@ -1,28 +1,57 @@
 # Full Dev low thinking scoring run
 
-All 24 base jobs finished on 29 October 2026. This package archives the original
-execution and a separate offline v2 revalidation. It is a **development review
+All 24 base jobs finished on 29 October 2026. This review package indexes the original execution archive and contains a separate
+offline v2 revalidation report. It is a **development review
 package**, not completed judge validation, a repaired final score release or Test.
 No model call or paid retry was made while preparing this package.
 
 ## What is included
 
-- `original/results/`: all six correctness report directories and all 18 structured
-  judge result files, copied byte for byte from the operator's original run.
-- `original/ledgers/`: all 24 per-attempt logs, including rejected and failed attempts.
-- `original/run-plan.json` and `judge-config.low.json`: the actual recorded plan and configuration.
-- `run_index.json`: portable relative paths for each of the 24 jobs.
-- `revalidation-v2/`: counts and per-record diagnostics from the verified default
-  offline replay, including the prepared-cache coverage proof. These do not replace
-  any original score. Prepared caches and executable paid commands remain local.
-- `SHA256SUMS.json`: SHA-256 of every copied source artifact. The local W8 originals
-  remain untouched. `.gitattributes` prevents Git newline conversion of these bytes.
+Git retains the README, `SHA256SUMS.json`, `run_index.json`, `verification.json`,
+`revalidation-v2/`, and `.gitattributes` for byte preservation. Large original files
+are packaged separately for a pre-release.
 
-The copied original manifests and plan retain historical machine paths for audit.
-Use `run_index.json` to locate the archived files; do not treat historical paths as
-portable execution instructions. Original caches remain with the operator. Source
-generation inputs come from the verified upstream package below rather than being
-duplicated here.
+### Original execution archive: published pre-release
+
+Pre-release: [v2-m8-full-dev-low-20261028](https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m8-full-dev-low-20261028).
+The asset is published. A fresh download was verified against the archive SHA-256 below.
+
+- Asset: `m8_full_dev_low_20261028_original.tar.gz`.
+- Archive SHA-256: `adf3d11c39bfdbaec2747e13afef5a73969df9494e92ccc6c339153fd57bd5d4`.
+- Size: 7290565 bytes; 80 original files.
+
+The archive contains `original/results/` (six correctness report directories and 18
+structured-task result files), `original/ledgers/` (24 attempt logs), the recorded run
+plan and low-thinking configuration. **These are the original execution bytes,
+including errors and unresolved outputs. They have not been replaced with repaired
+scores, offline-recovered scores or paid-retry results.** All 80 archive members were
+verified against `SHA256SUMS.json`. Original local W8 files remain preserved.
+
+Download the original archive from the pre-release and extract it into this directory:
+
+```powershell
+tar -xzf "PATH_TO_DOWNLOADED/m8_full_dev_low_20261028_original.tar.gz" -C "docs/results/m8_full_dev_low_20261028"
+```
+
+This restores `docs/results/m8_full_dev_low_20261028/original/`. Paths in
+`run_index.json` are relative to this directory and **require extraction first**.
+Historical manifests and the recorded plan retain original machine paths for audit;
+those paths are not portable execution instructions.
+
+`SHA256SUMS.json` covers the 80 extracted original files and three retained diagnostic
+reports. The 83-file manifest does not mean the tarball contains 83 files.
+`.gitattributes` preserves report bytes across Git checkouts.
+
+### Offline diagnostics retained in Git
+
+`revalidation-v2/summary.json`, `records.csv` and `report.md` describe the separate
+new-policy replay: recoverable saved outputs were identified and prepared-cache
+coverage verified locally. **These reports do not overwrite original scores and are
+not a repaired final scoring package.** Prepared caches and runnable paid commands
+remain local. No paid retry has been executed.
+
+Source generation inputs come from the verified upstream package below rather than
+being duplicated in this scoring archive.
 
 ## Scope and source
 
@@ -85,7 +114,12 @@ Billing delays, tax and unknown usage require reconciliation with the final prov
 bill. No account identifiers, payment images or API keys are included.
 
 The existing actual-spend control remains **AUD 45 pause/report and AUD 60 cap**.
-The proposed small retry budget is not approved or automatically enforced here.
+The reviewer has requested a targeted retry of the 329 remaining unique requests.
+Execution has not started; this archive migration does not spend that budget or
+automatically enforce a monetary cap. The quoted AUD 1.6 is an estimate, not a
+guaranteed upper bound. Retry outputs, working caches and attempt logs must be
+written separately from all original records. After retry, report remaining missing
+scores by task, generator, target level and experimental condition; missing is not zero.
 An average-cost estimate is not a guaranteed maximum.
 
 ## Remaining work before final handoff
@@ -98,8 +132,9 @@ profile/eligibility limits remain explicit. Test is outside this run.
 
 ## 中文核对说明
 
-这里已经归档 24 项原始结果和全部调用日志，原文件逐字节保留；另列新规则下的离线
-检查结果。87 条从保存输出恢复、8 条由已有成功缓存覆盖，仍需补跑的独立请求为 329。
+24 项原始结果和全部调用日志已发布到上述 pre-release，并重新下载核验。压缩包仍是原始
+执行记录，保留错误和缺失状态；Git 中仅保留索引、校验清单与新规则下的离线检查报告。
+87 条可从保存输出恢复、8 条可由已有成功缓存覆盖，待处理独立请求为 329。
 没有启动补跑，也没有把这份原始记录归档冒充修复后的最终交接包。费用显示、估算与
 最终账单口径分开记录。实际支出仍受组长批准的 AU$45 暂停线和 AU$60 上限约束。
 
@@ -109,3 +144,12 @@ The patched source passed Ruff and **1,432 tests, with 2 skips**; the 39 new tes
 are included in that total. The default offline replay completed against the real
 24-job inputs. A separate count of actual prepared-cache misses also gives 329.
 No API call was made. See `verification.json` for the tested patch identity.
+
+## Publication and merge gate
+
+This local archive migration changes placement and documentation only; production
+code remains at the tested commit. All 80 archive members passed checksum checks.
+The pre-release asset is published and download-verified. Use **squash merge**, as
+requested by the reviewer: the net PR change then
+excludes original/. A normal merge would retain its earlier large-data commit in
+main history. No history rewrite or force push is required here.

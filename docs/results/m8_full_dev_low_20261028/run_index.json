@@ -171,5 +171,15 @@
       "output": "original/results/repeat-gemma/evidence_support.results.jsonl",
       "ledger": "original/ledgers/repeat-gemma.evidence_support.attempts.jsonl"
     }
-  ]
+  ],
+  "artifact_archive": {
+    "status": "published_download_verified",
+    "asset_name": "m8_full_dev_low_20261028_original.tar.gz",
+    "archive_sha256": "adf3d11c39bfdbaec2747e13afef5a73969df9494e92ccc6c339153fd57bd5d4",
+    "extraction_root": "docs/results/m8_full_dev_low_20261028/",
+    "path_note": "Job output and ledger paths are relative to the index directory and require extracting original/ here first. Historical plan paths are provenance, not portable execution instructions.",
+    "release_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m8-full-dev-low-20261028",
+    "asset_url": "https://github.com/yshe0376/cs30-personalised-rag/releases/download/v2-m8-full-dev-low-20261028/m8_full_dev_low_20261028_original.tar.gz",
+    "tag": "v2-m8-full-dev-low-20261028"
+  }
 }
