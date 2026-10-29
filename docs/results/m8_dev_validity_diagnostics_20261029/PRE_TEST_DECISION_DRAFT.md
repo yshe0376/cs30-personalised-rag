@@ -1,6 +1,8 @@
-# Proposed pre-Test small perturbation audit (review required)
+# Proposed small perturbation audit before Test scoring (review required)
 
-Status: draft, not registered, no perturbed judge outcomes observed.
+Status: draft, not approved or frozen; no perturbed judge outcomes observed.
+Test generation is already published in PR #221. Approval must precede perturbation
+scoring and remaining Test quality scoring, before any Test quality scores are viewed.
 
 Concrete candidate screening limits are in THRESHOLD_PROPOSAL.md. They were
 proposed after inspecting Dev summaries and are not retrospective preregistration

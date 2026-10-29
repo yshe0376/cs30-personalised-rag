@@ -9,7 +9,7 @@ scores, no existing result is relabelled as passed, and no model call is authori
 
 ## Ownership and timing
 
-The planning screenshot proposes a detection rule and assigns approval of rules
+The Leader's plan proposes a detection rule and assigns approval of rules
 and every answer edit to the Leader. M8 can submit a concrete candidate; the
 repository currently assigns formal threshold proposal to M7 and confirmation to
 the Leader. This document is input to that joint decision, not M7 endorsement or
@@ -32,7 +32,7 @@ these values after inspecting Test scores.
 | Within-level length association | Review when absolute Pearson r > 0.30 | At least 30 usable observations per generator/target-level stratum, with variation in both length and outcome | A deliberately interpretable screening limit for a noticeable association; not a causal-bias verdict. Report condition-specific details and question/content confounding. Do not pool levels to claim a pass. |
 | Formula versus no-formula difference | Review when absolute rate difference > 0.10 (10 percentage points) | At least 30 usable observations per generator/target level, including at least 10 with and 10 without a formula | A 10-point shift is a practical review trigger. If either subgroup is too small, report insufficient evidence for that comparison rather than passing it. |
 | Optional-criterion N/A warning X | Warn at N/A proportion >= 0.80 (80%) | At least 30 resolved unique Dev adaptation requests for the individual criterion/generator; B3, A2 and A3 separately; unresolved requests stay separate | Four out of five available judgements not assessing a criterion warrants checking its opportunity/applicability. This is a coverage warning, not a failed judgement or automatic criterion rejection. |
-| Small perturbation detection | At least 80% overall and at least one detection in every target group | 18 Leader-approved cases, three per target and one per generator, with targets/edits frozen before scoring; at least 15/18 detections | Retains the screenshot's suggested rule. Missing/unresolved outputs count as not detected in the overall denominator and are also reported separately. No target group may have zero detections. The small targeted sample does not estimate population judge accuracy. |
+| Small perturbation detection | At least 80% overall and at least one detection in every target group | 18 Leader-approved cases, three per target and one per generator, with targets/edits frozen before scoring; at least 15/18 detections | Retains the Leader's suggested rule. Missing/unresolved outputs count as not detected in the overall denominator and are also reported separately. No target group may have zero detections. The small targeted sample does not estimate population judge accuracy. |
 
 The sample-count choices above are practical screening safeguards, not a power
 calculation. If the Leader rejects a draft case, replace and approve it before

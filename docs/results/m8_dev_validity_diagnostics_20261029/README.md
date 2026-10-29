@@ -15,9 +15,11 @@ validate A4/I2. No live command or fabricated human decision is included.
 
 The primary score handoff remains m8_scoring_handoff_20261029.tar.gz on the existing
 release. This is its companion report, not a replacement scoring interface. M7
-may read and integrate current saved scores in parallel. Choices affecting formal
-Test selection/scoring must be agreed and frozen before relevant Test execution,
-not adjusted after seeing Test outcomes. This supplement does not set reportable=true.
+may read and integrate current saved scores in parallel. Choices affecting
+remaining formal Test quality scoring must be agreed and recorded before scoring and
+before viewing any Test quality scores. Test generation is already published in
+PR #221; record actual decision timing and any prior data access. This supplement
+does not set reportable=true.
 
 Reproduce offline (source package and repository are explicit inputs):
 python scripts/build_dev_diagnostics.py --package PATH_TO_EXTRACTED_SCORE_PACKAGE --repo PATH_TO_REPOSITORY --out NEW_EMPTY_OUTPUT_DIRECTORY --seed 5703
@@ -41,4 +43,4 @@ Its SHA-256 is da1b860a1204bb16a79026c5433614fa0d1b6202dfdbf9502d725e871969d07e.
 
 The script intentionally does not construct a judge client or emit paid commands.
 Numerical policy thresholds remain unset or proposed. This branch is a review
-proposal and must not be described as an approved Test-freeze record.
+proposal and must not be described as an approved Test-scoring freeze record.
