@@ -1,0 +1,538 @@
+{
+  "schema_version": "m8-curated-perturbation-edits-2",
+  "status": "draft_pending_leader_review",
+  "source_profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "source_scoring_bundle_manifest_sha256": "aa096b779de9eaa9574e77995168c6df93c9be66db110d065740446d71d34e3a",
+  "selection_method": "Purposeful coverage-constrained selection from scored-correct Dev originals; exact IDs and edits are fixed for review. Not a random representative sample.",
+  "supersedes": "perturbation-small-v1-draft; rejected repetitive stock-template design",
+  "seed": null,
+  "targets": [
+    "B1",
+    "B4",
+    "A1",
+    "I3",
+    "correctness",
+    "evidence_support"
+  ],
+  "generators": [
+    "gpt-oss",
+    "llama",
+    "gemma"
+  ],
+  "expected_case_count": 18,
+  "minimum_unique_domains": 9,
+  "cases": [
+    {
+      "case_id": "perturb-v2-b1-gpt-oss",
+      "target": "B1",
+      "generator": "gpt-oss",
+      "source_evaluation_id": "evaluation-d8c629c144cef8d5e503f547",
+      "source_question_id": "sciq-train-05303",
+      "source_target_level": "beginner",
+      "source_condition": "P1R1_combined",
+      "source_answer_sha256": "2d48177b299c6d4fc4875a0768b992b5719cb13d7d4ed2d35b909ecb267ea396",
+      "physics_domain": "fluid_transport",
+      "perturbation_type": "compress_cohesion_explanation_into_hydraulic_jargon",
+      "edit": {
+        "start": 18,
+        "end": 59,
+        "original_span": "water molecules stick together (cohesion)",
+        "perturbed_span": "cohesion maintains hydraulic continuity"
+      },
+      "selection_reason": "Replace the real sap-transport explanation with unexplained hydraulic terminology while preserving the leaf-evaporation pulling mechanism.",
+      "expected_non_target_invariants": [
+        "Leaf evaporation, the upward water-column pull and xylem transport remain unchanged.",
+        "No numerical claim or extra physical mechanism is introduced."
+      ],
+      "review_focus": "Confirm the replacement is physically accurate but inaccessible at the beginner prior; check whether the remaining water-column causal chain still meets B2. Reject if B2 also changes.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "moderate",
+      "difficulty_rationale": "The leaf-evaporation explanation remains readable, but the key cohesion explanation has become unexplained hydraulic terminology."
+    },
+    {
+      "case_id": "perturb-v2-b1-llama",
+      "target": "B1",
+      "generator": "llama",
+      "source_evaluation_id": "evaluation-c7807e5643a5695c9ef54c17",
+      "source_question_id": "sciq-train-08318",
+      "source_target_level": "beginner",
+      "source_condition": "P1R0_prompt_only",
+      "source_answer_sha256": "441726ac68261f729e2de90a209404fdc2f50e736cd9f6ce01c35e18fc1fc8ca",
+      "physics_domain": "mechanics",
+      "perturbation_type": "replace_everyday_newton_explanation_with_formal_jargon",
+      "edit": {
+        "start": 66,
+        "end": 232,
+        "original_span": "This means that an object at rest will remain at rest, and an object in motion will continue to move with a constant velocity, unless acted upon by an external force.",
+        "perturbed_span": "An inertial state persists unless the resultant external force is nonzero."
+      },
+      "selection_reason": "Keep the correct law name while replacing accessible physical wording with unexplained inertial-state/resultant terminology.",
+      "expected_non_target_invariants": [
+        "The identification remains the law of inertia.",
+        "The force-free motion claim is not reversed."
+      ],
+      "review_focus": "Confirm the formal replacement is physically equivalent, genuinely unfamiliar under the beginner prior, and not adequately explained elsewhere.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "subtle",
+      "difficulty_rationale": "The formal Newton-law wording is scientifically credible; the gap is accessibility of inertial state and resultant, not a false conclusion."
+    },
+    {
+      "case_id": "perturb-v2-b1-gemma",
+      "target": "B1",
+      "generator": "gemma",
+      "source_evaluation_id": "evaluation-8af395d4f3ca54b0eb1f0527",
+      "source_question_id": "sciq-train-01286",
+      "source_target_level": "beginner",
+      "source_condition": "P1R0_prompt_only",
+      "source_answer_sha256": "90e8a0edb0d44684578bf508d3e5434e7db8195e4f84cb3920ed87428c311f6e",
+      "physics_domain": "electrostatics",
+      "perturbation_type": "delete_standalone_equipotential_definition",
+      "edit": {
+        "start": 57,
+        "end": 129,
+        "original_span": " Equipotential lines are lines where the electric potential is constant.",
+        "perturbed_span": ""
+      },
+      "selection_reason": "Delete the subject-specific definition of the requested object; retain the perpendicularity statement.",
+      "expected_non_target_invariants": [
+        "The field-line direction and named equipotential lines are unchanged.",
+        "No mathematical notation or numerical claim is introduced."
+      ],
+      "review_focus": "Confirm the question does not already explain equipotential; judge the term gap rather than brevity alone.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "clear",
+      "difficulty_rationale": "The only standalone definition of the requested equipotential lines is removed."
+    },
+    {
+      "case_id": "perturb-v2-b4-gpt-oss",
+      "target": "B4",
+      "generator": "gpt-oss",
+      "source_evaluation_id": "evaluation-743a8ad9b62221dba6cbf9b5",
+      "source_question_id": "sciq-train-04113",
+      "source_target_level": "beginner",
+      "source_condition": "P0R1_reranking_only",
+      "source_answer_sha256": "e417b9d18ebbbbf72de8dea5448b06514ab57f87c43c62e3bf7e7349471b5917",
+      "physics_domain": "fluids",
+      "perturbation_type": "unexplained_differential_pressure_notation",
+      "edit": {
+        "start": 108,
+        "end": 108,
+        "original_span": "",
+        "perturbed_span": " Locally, \\(p=\\mathrm{d}F_\\perp/\\mathrm{d}A\\)."
+      },
+      "selection_reason": "Add a legitimate local pressure relation using calculus and a normal-force subscript without explaining them to a beginner.",
+      "expected_non_target_invariants": [
+        "Original force-per-area explanation is unchanged.",
+        "The local-pressure qualification avoids confusing an average with a spatially varying local value."
+      ],
+      "review_focus": "Confirm B4 fails for unexplained differential/subscript notation, not simply because an equation is present.",
+      "review_only_external_references": [
+        {
+          "url": "https://openstax.org/books/university-physics-volume-1/pages/14-1-fluids-density-and-pressure",
+          "purpose": "Review-only physics check of local p=dF/dA; never add this page to the judge evidence."
+        }
+      ],
+      "difficulty_proposal": "clear",
+      "difficulty_rationale": "The added differential and normal-force notation clearly exceeds the beginner mathematics prior."
+    },
+    {
+      "case_id": "perturb-v2-b4-llama",
+      "target": "B4",
+      "generator": "llama",
+      "source_evaluation_id": "evaluation-feab248764e2ec76f140eed2",
+      "source_question_id": "sciq-train-01031",
+      "source_target_level": "beginner",
+      "source_condition": "P1R1_combined",
+      "source_answer_sha256": "d5b898af7d2f67473eaef549e30612db321240590cede5f0f8f8895693628a67",
+      "physics_domain": "thermodynamics",
+      "perturbation_type": "replace_verbal_dalton_sum_with_unexplained_sigma",
+      "edit": {
+        "start": 146,
+        "end": 321,
+        "original_span": "In a mixture of gases, the total pressure is the sum of partial pressures of the component gases, assuming ideal gas behavior and no chemical reactions between the components.",
+        "perturbed_span": "For a nonreacting ideal-gas mixture, \\(p_{\\mathrm{tot}}=\\sum_{i=1}^{n}p_i\\)."
+      },
+      "selection_reason": "Express the same qualified pressure-sum relationship with summation indices that the beginner prior does not include.",
+      "expected_non_target_invariants": [
+        "The definition of partial pressure stays intact.",
+        "The ideal-gas and nonreacting qualifications are retained."
+      ],
+      "review_focus": "Confirm the notation is not already explained by the remaining sentences; check the equation preserves the physical relationship.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "moderate",
+      "difficulty_rationale": "The ideal-mixture relation is correct and contextual, but the sigma operator and indices are not explained."
+    },
+    {
+      "case_id": "perturb-v2-b4-gemma",
+      "target": "B4",
+      "generator": "gemma",
+      "source_evaluation_id": "evaluation-ece46aa5cb829c6d1dadb739",
+      "source_question_id": "sciq-train-05470",
+      "source_target_level": "beginner",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "08050817a7fc01a298529d33c0a55c7d1d0b54e1865192c2e220b81dd1d1ec27",
+      "physics_domain": "acoustics",
+      "perturbation_type": "unexplained_logarithmic_sound_level_relation",
+      "edit": {
+        "start": 312,
+        "end": 312,
+        "original_span": "",
+        "perturbed_span": " Quantitatively, \\(\\beta=10\\log_{10}(I/I_0)\\)."
+      },
+      "selection_reason": "Introduce the real decibel relation without defining beta, the reference intensity or the logarithm.",
+      "expected_non_target_invariants": [
+        "The requested decibel unit and original factual statements remain unchanged.",
+        "The logarithm is dimensionless because it is an intensity ratio."
+      ],
+      "review_focus": "Confirm B4 needs the missing notation/symbol explanations; keep correctness separate from beginner accessibility.",
+      "review_only_external_references": [
+        {
+          "url": "https://openstax.org/books/college-physics-2e/pages/17-3-sound-intensity-and-sound-level",
+          "purpose": "Review-only check of the sound-level relation."
+        }
+      ],
+      "difficulty_proposal": "subtle",
+      "difficulty_rationale": "The prose already names a logarithmic scale, so detecting the still-unexplained reference intensity and symbols requires reading beyond formula presence."
+    },
+    {
+      "case_id": "perturb-v2-a1-gpt-oss",
+      "target": "A1",
+      "generator": "gpt-oss",
+      "source_evaluation_id": "evaluation-c74671c78a3c07841e7f1cfa",
+      "source_question_id": "sciq-train-02258",
+      "source_target_level": "advanced",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "d75fe7e92fe823979c80e6cb861531b17598af3b0d4a0e51622c333611f2e964",
+      "physics_domain": "magnetism",
+      "perturbation_type": "preface_with_mastered_vector_direction_tutorial",
+      "edit": {
+        "start": 0,
+        "end": 0,
+        "original_span": "",
+        "perturbed_span": "Velocity is a vector quantity: it has a size and a direction. The size is the speed, while the direction describes where the charge is moving. A force is also a vector, so its direction can be discussed separately from its size. Perpendicular directions meet at a right angle, which is an angle of ninety degrees. "
+      },
+      "selection_reason": "Delay a compact magnetic-force identification with elementary vector/angle definitions already mastered by the advanced prior.",
+      "expected_non_target_invariants": [
+        "The original perpendicularity conclusion is preserved verbatim.",
+        "Every inserted definition is physically correct and on topic."
+      ],
+      "review_focus": "Confirm the preface obscures the requested identification rather than resolving a genuine ambiguity; word count alone is not failure.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "clear",
+      "difficulty_rationale": "Four elementary vector/angle definitions precede a one-sentence identification."
+    },
+    {
+      "case_id": "perturb-v2-a1-llama",
+      "target": "A1",
+      "generator": "llama",
+      "source_evaluation_id": "evaluation-c1823640473d2831e5dceeae",
+      "source_question_id": "sciq-train-06151",
+      "source_target_level": "advanced",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "48f60e2a677001713d5f390ddac3ae0a9bd4e8d08106a1c6f6fef9920ed1436d",
+      "physics_domain": "circuits",
+      "perturbation_type": "interrupt_answer_with_redundant_circuit_parenthesis",
+      "edit": {
+        "start": 0,
+        "end": 23,
+        "original_span": "Kirchhoff's second rule",
+        "perturbed_span": "Kirchhoff's second rule (a circuit is a connected path through which electric charge can move; current is the rate of charge flow; voltage is energy transferred per unit charge; charge is measured in coulombs, current in amperes, and voltage in volts; tracing a closed loop means following connected components back to the starting point)"
+      },
+      "selection_reason": "Place a circuit-specific elementary tutorial inside the short answer instead of appending a generic arithmetic paragraph.",
+      "expected_non_target_invariants": [
+        "The answer still names conservation of energy.",
+        "No conservation law, sign, unit or requested circuit conclusion is changed."
+      ],
+      "review_focus": "Confirm these mastered definitions obstruct the answer and are not needed to remove an ambiguity; inspect A4 for any unintended physical overstatement.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "moderate",
+      "difficulty_rationale": "The circuit definitions are on topic but interrupt the requested conservation-law identification inside a parenthesis."
+    },
+    {
+      "case_id": "perturb-v2-a1-gemma",
+      "target": "A1",
+      "generator": "gemma",
+      "source_evaluation_id": "evaluation-713300fdaee8fdbc04c92e3e",
+      "source_question_id": "sciq-train-06162",
+      "source_target_level": "advanced",
+      "source_condition": "P1R0_prompt_only",
+      "source_answer_sha256": "1f618ddbe9bf9ac79fffd1387a47008d123cb97c96eb109ab091b886918bb094",
+      "physics_domain": "gravitation",
+      "perturbation_type": "append_repeated_velocity_difference_walkthrough",
+      "edit": {
+        "start": 264,
+        "end": 264,
+        "original_span": "",
+        "perturbed_span": " Acceleration means the rate at which velocity changes. A change in velocity is obtained by subtracting the initial velocity from the final velocity. Dividing that change by the elapsed time gives the average acceleration. In the constant-acceleration fall described here, equal time intervals give equal velocity increases, so each interval gives the same ratio. This repeats the same constant gravitational acceleration identified above."
+      },
+      "selection_reason": "Repeat elementary acceleration operations in the actual falling-ball context; no unrelated sum or multiplication example is used.",
+      "expected_non_target_invariants": [
+        "The original constant-g conclusion and negligible-air-resistance setting are unchanged.",
+        "The added average-acceleration statements are restricted to the constant-acceleration case."
+      ],
+      "review_focus": "Confirm this walkthrough is redundant under the advanced prior rather than a useful brief explanation of the requested relationship.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "subtle",
+      "difficulty_rationale": "The velocity-difference walkthrough resembles a helpful explanation; the intended issue is repetition of mastered steps, which requires explicit human confirmation."
+    },
+    {
+      "case_id": "perturb-v2-i3-gpt-oss",
+      "target": "I3",
+      "generator": "gpt-oss",
+      "source_evaluation_id": "evaluation-f20c8c4db3c7925107ccbc45",
+      "source_question_id": "sciq-train-03171",
+      "source_target_level": "intermediate",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "063188f7aacef91ce007157f67c6cc362a60c9c806a268049de30b5aea1e3f5c",
+      "physics_domain": "particle_physics",
+      "perturbation_type": "remove_specialist_color_quantum_number_apposition",
+      "edit": {
+        "start": 90,
+        "end": 156,
+        "original_span": ", the quantum number that explains the strong force between quarks",
+        "perturbed_span": ""
+      },
+      "selection_reason": "Leave the correct color answer but remove the explanation distinguishing the specialist quantum property from ordinary visual color.",
+      "expected_non_target_invariants": [
+        "The requested property remains color.",
+        "No QCD mechanism or factual alternative is introduced."
+      ],
+      "review_focus": "Confirm the removed explanation is necessary under the intermediate prior and that name-only I1/I2 requirements still hold.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "clear",
+      "difficulty_rationale": "The specialist meaning distinguishing quantum color from visual color is deleted."
+    },
+    {
+      "case_id": "perturb-v2-i3-llama",
+      "target": "I3",
+      "generator": "llama",
+      "source_evaluation_id": "evaluation-86e19a783a40ff9c63a04c0f",
+      "source_question_id": "sciq-train-04566",
+      "source_target_level": "intermediate",
+      "source_condition": "P1R0_prompt_only",
+      "source_answer_sha256": "74b24bc8aa246dfc8be4086406d2b05f29a6380ea9cbeb553400e3ed583b33f3",
+      "physics_domain": "gravitation",
+      "perturbation_type": "substitute_unexplained_general_relativistic_model",
+      "edit": {
+        "start": 27,
+        "end": 124,
+        "original_span": "gravitational lensing, which is the bending of light around an intermediary galaxy due to gravity",
+        "perturbed_span": "gravitational lensing, described by null geodesics of the curved spacetime geometry"
+      },
+      "selection_reason": "Replace a plain lensing explanation with physically relevant specialist terminology beyond the algebra-based introductory prior.",
+      "expected_non_target_invariants": [
+        "The phenomenon remains gravitational lensing.",
+        "The multiple-image observation and source references remain unchanged."
+      ],
+      "review_focus": "Confirm the model wording is accurate and unexplained; judge the unfamiliar concepts, not the number of technical terms.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "subtle",
+      "difficulty_rationale": "The replacement is a credible general-relativistic account, but null geodesics lie outside the intermediate prior and are not explained."
+    },
+    {
+      "case_id": "perturb-v2-i3-gemma",
+      "target": "I3",
+      "generator": "gemma",
+      "source_evaluation_id": "evaluation-2323257417220cb419801c2c",
+      "source_question_id": "sciq-train-02662",
+      "source_target_level": "intermediate",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "82c5e92b72408de252bfa5a22c12e512b8718a4b63b46aefd07081193cb725cd",
+      "physics_domain": "metrology",
+      "perturbation_type": "repeat_mastered_frequency_period_definitions_in_clock_answer",
+      "edit": {
+        "start": 188,
+        "end": 188,
+        "original_span": "",
+        "perturbed_span": " Frequency means the number of repetitions per second. A hertz is one repetition per second, and a period is the time occupied by one repetition. Counting more repetitions in the same second means a higher frequency, while taking more time for one repetition means a longer period. Thus cycles per second and seconds per cycle describe the same repeated clock process from opposite sides."
+      },
+      "selection_reason": "Add a clock-specific introductory frequency/period tutorial that repeats knowledge explicitly allowed by the intermediate prior.",
+      "expected_non_target_invariants": [
+        "The atomic-clock answer and exact reference count remain unchanged.",
+        "The added frequency/period statements are true; no new specialist mechanism is assumed."
+      ],
+      "review_focus": "Confirm these frequency/period reminders are redundant for the intermediate prior rather than necessary to explain the atomic-clock reference; reject the draft if they resolve a real ambiguity.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "moderate",
+      "difficulty_rationale": "Frequency/period reminders relate to the atomic clock, but repeat introductory concepts already mastered at intermediate level."
+    },
+    {
+      "case_id": "perturb-v2-correctness-gpt-oss",
+      "target": "correctness",
+      "generator": "gpt-oss",
+      "source_evaluation_id": "evaluation-de142d318f71dc05242a2c50",
+      "source_question_id": "sciq-train-07345",
+      "source_target_level": "beginner",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "153880843c3abf17236dc1d5dbe62f0e64d8c1eef845d35493574f29549eee95",
+      "physics_domain": "atomic_physics",
+      "perturbation_type": "consistent_atomic_number_error_in_both_mentions",
+      "edit": {
+        "start": 42,
+        "end": 87,
+        "original_span": "6, which means each carbon nucleus contains 6",
+        "perturbed_span": "7, which means each carbon nucleus contains 7"
+      },
+      "selection_reason": "Change one atomic-number fact consistently in both mentions so no correct six-proton answer remains as an easy contradiction cue.",
+      "expected_non_target_invariants": [
+        "The same element and all surrounding wording remain unchanged.",
+        "Both repeated mentions of the single incorrect fact are updated together."
+      ],
+      "review_focus": "The intended error is the proton count, not answer self-contradiction. Confirm the rubric judges this key fact as wrong.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "clear",
+      "difficulty_rationale": "A single element fact is wrong in both mentions, so the judge must check proton count rather than detect internal inconsistency."
+    },
+    {
+      "case_id": "perturb-v2-correctness-llama",
+      "target": "correctness",
+      "generator": "llama",
+      "source_evaluation_id": "evaluation-a0de4f30b65e12bae092f797",
+      "source_question_id": "sciq-train-00580",
+      "source_target_level": "intermediate",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "75b55b847cf3d6d398d4b9dc66f66c8ce29fa49d31582ef828eb25a51bdf6797",
+      "physics_domain": "circuits",
+      "perturbation_type": "reverse_positive_charge_current_direction",
+      "edit": {
+        "start": 65,
+        "end": 107,
+        "original_span": "the same direction as conventional current",
+        "perturbed_span": "the opposite direction to conventional current"
+      },
+      "selection_reason": "Introduce a realistic sign/direction error while retaining one internally consistent statement.",
+      "expected_non_target_invariants": [
+        "The charge is still positive and the electric-field clause is untouched.",
+        "No correct alternative current direction appears elsewhere in the answer."
+      ],
+      "review_focus": "Check the entire answer, not only the edited phrase, for a surviving correct alternative or changed charge sign.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "moderate",
+      "difficulty_rationale": "A single direction word reverses the relation between positive charge motion and conventional current."
+    },
+    {
+      "case_id": "perturb-v2-correctness-gemma",
+      "target": "correctness",
+      "generator": "gemma",
+      "source_evaluation_id": "evaluation-91c23e61510112874179de4a",
+      "source_question_id": "sciq-train-09112",
+      "source_target_level": "advanced",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "2ed1117c6d3494bc3009b71c0ed274874fc3f000fe2d3cc00741ea57d00217ab",
+      "physics_domain": "optics",
+      "perturbation_type": "confuse_neighboring_wave_process_names",
+      "edit": {
+        "start": 0,
+        "end": 10,
+        "original_span": "Dispersion",
+        "perturbed_span": "Diffraction"
+      },
+      "selection_reason": "Substitute a plausible neighboring optics concept in a one-sentence definition; remove the old velocity/acceleration self-contradiction problem.",
+      "expected_non_target_invariants": [
+        "The white-light/spectrum description remains unchanged.",
+        "No later sentence restores dispersion or supplies the correct alternative."
+      ],
+      "review_focus": "Confirm the term substitution changes the required physical concept and does not rely on a contradictory second sentence.",
+      "review_only_external_references": [],
+      "difficulty_proposal": "subtle",
+      "difficulty_rationale": "Diffraction is a plausible neighboring optics term and the one-sentence answer contains no surviving correct alternative."
+    },
+    {
+      "case_id": "perturb-v2-evidence-support-gpt-oss",
+      "target": "evidence_support",
+      "generator": "gpt-oss",
+      "source_evaluation_id": "evaluation-8c33b99135907f94ac3e74d2",
+      "source_question_id": "sciq-train-01983",
+      "source_target_level": "advanced",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "819cb8ea678c8a5158629151a222d0f8c0ec3f1c869c27575b2476595ce749d0",
+      "physics_domain": "acoustics",
+      "perturbation_type": "insert_unprovided_temperature_specific_sound_speed",
+      "edit": {
+        "start": 32,
+        "end": 52,
+        "original_span": "the sound wave moves",
+        "perturbed_span": "the sound wave, travelling through dry air at 20 degrees Celsius at approximately 343 m/s, moves"
+      },
+      "selection_reason": "Embed a plausible quantitative sound claim in the actual wave explanation; the supplied passages describe wave type but not this temperature-specific speed.",
+      "expected_non_target_invariants": [
+        "The longitudinal classification and paper-motion reasoning remain unchanged.",
+        "The added value is physically reasonable under its explicit air/temperature conditions."
+      ],
+      "review_focus": "Read every supplied passage; identify whether any directly supports or derives 343 m/s at 20 C. External correctness must not count as bundle support.",
+      "review_only_external_references": [
+        {
+          "url": "https://openstax.org/books/college-physics-ap-courses/pages/17-2-speed-of-sound-frequency-and-wavelength",
+          "purpose": "Review-only fact check; do not add this outside passage to the scoring bundle."
+        }
+      ],
+      "difficulty_proposal": "moderate",
+      "difficulty_rationale": "A plausible temperature-specific speed is embedded in the supported wave explanation; source presence must be checked separately from scientific truth."
+    },
+    {
+      "case_id": "perturb-v2-evidence-support-llama",
+      "target": "evidence_support",
+      "generator": "llama",
+      "source_evaluation_id": "evaluation-14e73d4cb0cf3c91416902c7",
+      "source_question_id": "sciq-train-07974",
+      "source_target_level": "advanced",
+      "source_condition": "P0R0_plain",
+      "source_answer_sha256": "aada3e6fb61c7c040e1f9f2c66b60e1df3feaba73be9f90e60be2da4efc7ce00",
+      "physics_domain": "nuclear_physics",
+      "perturbation_type": "insert_unprovided_delayed_neutron_mechanism",
+      "edit": {
+        "start": 122,
+        "end": 153,
+        "original_span": " This is the opposite of fusion",
+        "perturbed_span": " Some neutrons are emitted after the split when radioactive fission products decay, rather than being emitted immediately in the splitting event. This is the opposite of fusion"
+      },
+      "selection_reason": "Add a relevant neutron-emission mechanism that is not established by the supplied introductory fission/fusion and decay passages.",
+      "expected_non_target_invariants": [
+        "The original fission/fusion definitions are preserved.",
+        "The new delayed-neutron statement is true, rather than an intentionally false nuclear claim."
+      ],
+      "review_focus": "The bundle mentions neutrons and decay separately; check whether it actually supports delayed-neutron emission from fission products, rather than inferring the mechanism from outside knowledge.",
+      "review_only_external_references": [
+        {
+          "url": "https://www.nrc.gov/reactors/operator-licensing/history-rulemaking-activities/generic-fundamentals-examinations/bwr/bwr-files/292001.pdf",
+          "purpose": "Review-only neutron question B7123 verifies the mechanism; never supply this reference to the judge."
+        }
+      ],
+      "difficulty_proposal": "subtle",
+      "difficulty_rationale": "The passages mention neutron production and radioactive decay separately, which can tempt an unwarranted inference to the added delayed-neutron mechanism."
+    },
+    {
+      "case_id": "perturb-v2-evidence-support-gemma",
+      "target": "evidence_support",
+      "generator": "gemma",
+      "source_evaluation_id": "evaluation-64a7f6e246c361983f97e50b",
+      "source_question_id": "sciq-train-00362",
+      "source_target_level": "advanced",
+      "source_condition": "P1R1_combined",
+      "source_answer_sha256": "b599b2fe2b1fb7a9a72cb7e8e5998c399700ad261dcc7cd4b772eaef52c09812",
+      "physics_domain": "electrical_measurement",
+      "perturbation_type": "extend_voltage_identification_to_unprovided_meter_connection",
+      "edit": {
+        "start": 97,
+        "end": 122,
+        "original_span": "v represents the voltage.",
+        "perturbed_span": "v represents the voltage measured by a voltmeter connected in parallel across the two points."
+      },
+      "selection_reason": "Extend the correct voltage identification to a credible measurement procedure absent from the supplied qV/potential-energy passages.",
+      "expected_non_target_invariants": [
+        "The qV relation, charge identification and voltage answer remain unchanged.",
+        "The added parallel-voltmeter procedure is physically correct."
+      ],
+      "review_focus": "Read all supplied passages, including objectives/headings; a passage naming voltage does not automatically support the meter-connection procedure.",
+      "review_only_external_references": [
+        {
+          "url": "https://openstax.org/books/college-physics-2e/pages/21-4-dc-voltmeters-and-ammeters",
+          "purpose": "Review-only meter fact check; not part of the model evidence bundle."
+        }
+      ],
+      "difficulty_proposal": "clear",
+      "difficulty_rationale": "The supplied passages identify voltage but none describes a voltmeter connection; the added procedure remains physically correct."
+    }
+  ],
+  "difficulty_design": "One proposed clear/moderate/subtle case per target, assigned before perturbed scoring; Leader may revise labels before freezing. These are design judgements, not measured difficulty."
+}

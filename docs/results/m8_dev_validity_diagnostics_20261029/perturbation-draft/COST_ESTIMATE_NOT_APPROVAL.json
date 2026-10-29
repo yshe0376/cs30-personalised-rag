@@ -1,0 +1,8 @@
+{
+  "plan_version": "perturbation-small-v2-draft",
+  "candidate_cases": 18,
+  "estimate_status": "pending_v2_request_preparation",
+  "approved_budget": null,
+  "paid_calls": 0,
+  "warning": "Re-estimate from the approved v2 inputs/configuration before execution. The earlier v1 average was neither a cap nor paid-launch approval."
+}

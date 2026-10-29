@@ -1,0 +1,4 @@
+generator,repeat_questions,paired_cells,complete_correctness_pairs,missing_correctness_pairs,known_strict_correct_flips,flip_rate_lower,flip_rate_upper,correctness_mean_absolute_difference_observed,adaptation_evaluated_pairs,adaptation_mean_absolute_rate_difference_observed,strict_correct_noise_floor_lower,strict_correct_noise_floor_upper,registered_primary_contrast,delta_frozen
+gpt-oss,30,360,355,5,8,0.022222222222222223,0.03611111111111111,0.04225352112676056,251,0.06739707835325366,0.006988565578146122,0.008908708063747479,,False
+llama,30,360,359,1,22,0.06111111111111111,0.06388888888888888,0.14206128133704735,246,0.07350948509485095,0.011526067913468744,0.011785113019775792,,False
+gemma,30,360,353,7,6,0.016666666666666666,0.03611111111111111,0.0226628895184136,251,0.029216467463479417,0.006032420898137438,0.008879483136231419,,False

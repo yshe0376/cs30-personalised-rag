@@ -1,0 +1,22 @@
+{
+  "api_calls": 0,
+  "scope": "Dev-only supplemental diagnostics; main scores and original assets unchanged",
+  "completed_computations": [
+    "P0R0 descriptive level bias",
+    "Within-level length/formula associations",
+    "Paired generation noise extraction plus independent flips check",
+    "Task/model/level/condition missingness",
+    "Optional-criterion not_applicable rates"
+  ],
+  "frozen_pass_decisions": false,
+  "pending": [
+    "Leader thresholds / Test-freeze decision",
+    "18 perturbation semantic-isolation reviews",
+    "Leader confirmation and dataset freeze",
+    "Any authorised paid scoring of perturbed answers"
+  ],
+  "source_manifest_sha256": "aa096b779de9eaa9574e77995168c6df93c9be66db110d065740446d71d34e3a",
+  "seed": null,
+  "selection_method": "Purposeful coverage-constrained selection from scored-correct Dev originals; exact IDs and edits are fixed for review. Not a random representative sample.",
+  "threshold_x": null
+}

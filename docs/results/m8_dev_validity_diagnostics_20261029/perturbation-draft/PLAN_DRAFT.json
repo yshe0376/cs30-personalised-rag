@@ -1,0 +1,85 @@
+{
+  "plan_version": "perturbation-small-v2-draft",
+  "status": "proposed_not_frozen_not_run",
+  "source_profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "source_scoring_bundle_manifest_sha256": "aa096b779de9eaa9574e77995168c6df93c9be66db110d065740446d71d34e3a",
+  "curated_edits_sha256": "89799c12f5a1388eab4220d0835a1639fe9e19f5e6b6ea07d024253032c1a8ea",
+  "selection_method": "Purposeful coverage-constrained selection from scored-correct Dev originals; exact IDs and edits are fixed for review. Not a random representative sample.",
+  "seed": null,
+  "selection_is_random": false,
+  "targets": [
+    "B1",
+    "B4",
+    "A1",
+    "I3",
+    "correctness",
+    "evidence_support"
+  ],
+  "coverage": {
+    "case_count": 18,
+    "unique_question_count": 18,
+    "physics_domains": [
+      "acoustics",
+      "atomic_physics",
+      "circuits",
+      "electrical_measurement",
+      "electrostatics",
+      "fluid_transport",
+      "fluids",
+      "gravitation",
+      "magnetism",
+      "mechanics",
+      "metrology",
+      "nuclear_physics",
+      "optics",
+      "particle_physics",
+      "thermodynamics"
+    ],
+    "by_generator": {
+      "gpt-oss": 6,
+      "llama": 6,
+      "gemma": 6
+    },
+    "by_target": {
+      "B1": 3,
+      "B4": 3,
+      "A1": 3,
+      "I3": 3,
+      "correctness": 3,
+      "evidence_support": 3
+    },
+    "by_condition": {
+      "P1R1_combined": 3,
+      "P1R0_prompt_only": 4,
+      "P0R1_reranking_only": 1,
+      "P0R0_plain": 10
+    },
+    "by_difficulty_proposal": {
+      "moderate": 6,
+      "subtle": 6,
+      "clear": 6
+    },
+    "human_reviews_completed": 0,
+    "semantic_diversity_human_confirmed": false
+  },
+  "expected_case_count": 18,
+  "detection_rate_proposal": 0.8,
+  "per_target_minimum_detected_proposal": 1,
+  "thresholds_frozen": false,
+  "difficulty_design": "One proposed clear/moderate/subtle case per target, assigned before perturbed scoring; Leader may revise labels before freezing. These are design judgements, not measured difficulty.",
+  "difficulty_labels_frozen": false,
+  "review_owner": "Leader",
+  "scoring_owner": "M8",
+  "step_4_status": "pending_leader_confirmation",
+  "step_5_status": "not_run",
+  "step_6_status": "not_run",
+  "paid_calls": 0,
+  "external_references_are_review_only": true,
+  "detection_scoring_proposal": {
+    "adaptation": "The selected criterion is fail; report other-criterion changes.",
+    "correctness": "The existing correctness rubric yields score below 2.",
+    "evidence_support": "A factual claim covering the added subclaim is bundle_support unsupported. Omitting the subclaim or marking it supported/not_applicable is not detection.",
+    "unresolved": "Keep in the denominator as not detected and report separately."
+  },
+  "interpretation": "Targeted sensitivity examples, not population judge accuracy."
+}

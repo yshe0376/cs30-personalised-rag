@@ -1,0 +1,106 @@
+[
+  {
+    "generator": "gpt-oss",
+    "expected_answered_control_cells": 462,
+    "available_predictions": 462,
+    "missing_predictions": 0,
+    "target_counts": {
+      "beginner": 154,
+      "intermediate": 154,
+      "advanced": 154
+    },
+    "observed_target_counts": {
+      "beginner": 154,
+      "intermediate": 154,
+      "advanced": 154
+    },
+    "target_balance_complete": true,
+    "observed_target_balance_complete": true,
+    "prediction_counts": {
+      "beginner": 333,
+      "intermediate": 121,
+      "uncertain": 5,
+      "advanced": 3
+    },
+    "unique_control_answers": 285,
+    "observed_accuracy": 0.329004329004329,
+    "chance_reference": 0.3333333333333333,
+    "observed_abs_deviation_from_one_third": 0.0043290043290042934,
+    "accuracy_bounds_including_missing": [
+      0.329004329004329,
+      0.329004329004329
+    ],
+    "threshold": null,
+    "passed": null,
+    "status": "computed_descriptive_threshold_pending"
+  },
+  {
+    "generator": "llama",
+    "expected_answered_control_cells": 462,
+    "available_predictions": 462,
+    "missing_predictions": 0,
+    "target_counts": {
+      "beginner": 154,
+      "intermediate": 154,
+      "advanced": 154
+    },
+    "observed_target_counts": {
+      "beginner": 154,
+      "intermediate": 154,
+      "advanced": 154
+    },
+    "target_balance_complete": true,
+    "observed_target_balance_complete": true,
+    "prediction_counts": {
+      "beginner": 346,
+      "intermediate": 98,
+      "uncertain": 18
+    },
+    "unique_control_answers": 255,
+    "observed_accuracy": 0.33766233766233766,
+    "chance_reference": 0.3333333333333333,
+    "observed_abs_deviation_from_one_third": 0.004329004329004349,
+    "accuracy_bounds_including_missing": [
+      0.33766233766233766,
+      0.33766233766233766
+    ],
+    "threshold": null,
+    "passed": null,
+    "status": "computed_descriptive_threshold_pending"
+  },
+  {
+    "generator": "gemma",
+    "expected_answered_control_cells": 462,
+    "available_predictions": 462,
+    "missing_predictions": 0,
+    "target_counts": {
+      "beginner": 154,
+      "intermediate": 154,
+      "advanced": 154
+    },
+    "observed_target_counts": {
+      "beginner": 154,
+      "intermediate": 154,
+      "advanced": 154
+    },
+    "target_balance_complete": true,
+    "observed_target_balance_complete": true,
+    "prediction_counts": {
+      "beginner": 366,
+      "intermediate": 81,
+      "uncertain": 12,
+      "advanced": 3
+    },
+    "unique_control_answers": 198,
+    "observed_accuracy": 0.3246753246753247,
+    "chance_reference": 0.3333333333333333,
+    "observed_abs_deviation_from_one_third": 0.008658008658008642,
+    "accuracy_bounds_including_missing": [
+      0.3246753246753247,
+      0.3246753246753247
+    ],
+    "threshold": null,
+    "passed": null,
+    "status": "computed_descriptive_threshold_pending"
+  }
+]

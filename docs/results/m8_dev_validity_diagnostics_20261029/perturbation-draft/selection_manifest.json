@@ -1,0 +1,95 @@
+{
+  "selection_method": "Purposeful coverage-constrained selection from scored-correct Dev originals; exact IDs and edits are fixed for review. Not a random representative sample.",
+  "seed": null,
+  "case_ids": [
+    "perturb-v2-b1-gpt-oss",
+    "perturb-v2-b1-llama",
+    "perturb-v2-b1-gemma",
+    "perturb-v2-b4-gpt-oss",
+    "perturb-v2-b4-llama",
+    "perturb-v2-b4-gemma",
+    "perturb-v2-a1-gpt-oss",
+    "perturb-v2-a1-llama",
+    "perturb-v2-a1-gemma",
+    "perturb-v2-i3-gpt-oss",
+    "perturb-v2-i3-llama",
+    "perturb-v2-i3-gemma",
+    "perturb-v2-correctness-gpt-oss",
+    "perturb-v2-correctness-llama",
+    "perturb-v2-correctness-gemma",
+    "perturb-v2-evidence-support-gpt-oss",
+    "perturb-v2-evidence-support-llama",
+    "perturb-v2-evidence-support-gemma"
+  ],
+  "question_ids": [
+    "sciq-train-05303",
+    "sciq-train-08318",
+    "sciq-train-01286",
+    "sciq-train-04113",
+    "sciq-train-01031",
+    "sciq-train-05470",
+    "sciq-train-02258",
+    "sciq-train-06151",
+    "sciq-train-06162",
+    "sciq-train-03171",
+    "sciq-train-04566",
+    "sciq-train-02662",
+    "sciq-train-07345",
+    "sciq-train-00580",
+    "sciq-train-09112",
+    "sciq-train-01983",
+    "sciq-train-07974",
+    "sciq-train-00362"
+  ],
+  "draft_sha256": "8a008bb2af40910ae2b61b6420ea21e2c08435ded4e2b0eee1a24203248a790a",
+  "curated_edits_sha256": "89799c12f5a1388eab4220d0835a1639fe9e19f5e6b6ea07d024253032c1a8ea",
+  "coverage": {
+    "case_count": 18,
+    "unique_question_count": 18,
+    "physics_domains": [
+      "acoustics",
+      "atomic_physics",
+      "circuits",
+      "electrical_measurement",
+      "electrostatics",
+      "fluid_transport",
+      "fluids",
+      "gravitation",
+      "magnetism",
+      "mechanics",
+      "metrology",
+      "nuclear_physics",
+      "optics",
+      "particle_physics",
+      "thermodynamics"
+    ],
+    "by_generator": {
+      "gpt-oss": 6,
+      "llama": 6,
+      "gemma": 6
+    },
+    "by_target": {
+      "B1": 3,
+      "B4": 3,
+      "A1": 3,
+      "I3": 3,
+      "correctness": 3,
+      "evidence_support": 3
+    },
+    "by_condition": {
+      "P1R1_combined": 3,
+      "P1R0_prompt_only": 4,
+      "P0R1_reranking_only": 1,
+      "P0R0_plain": 10
+    },
+    "by_difficulty_proposal": {
+      "moderate": 6,
+      "subtle": 6,
+      "clear": 6
+    },
+    "human_reviews_completed": 0,
+    "semantic_diversity_human_confirmed": false
+  },
+  "frozen": false,
+  "paid_calls": 0
+}
