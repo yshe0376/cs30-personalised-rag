@@ -1,0 +1,4 @@
+{"completed_at_utc":"2026-10-29T06:04:21.6764646Z","job":"adaptation","exit_code":3}
+{"completed_at_utc":"2026-10-29T06:04:59.6540142Z","job":"discrimination","exit_code":0}
+{"completed_at_utc":"2026-10-29T06:06:18.3814382Z","job":"evidence_support","exit_code":3}
+{"completed_at_utc":"2026-10-29T06:06:55.1215551Z","job":"correctness","exit_code":3}

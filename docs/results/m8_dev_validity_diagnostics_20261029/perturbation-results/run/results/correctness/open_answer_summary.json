@@ -1,0 +1,1813 @@
+{
+  "schema_version": "0.1",
+  "result_type": "open_answer_correctness_report",
+  "reportable": false,
+  "status": "DEVELOPMENT / RUBRIC AND JUDGE REQUIRE HUMAN VALIDATION",
+  "limitations": [
+    "Automatic scores are reference-based assessments, not human ground truth.",
+    "No formal evaluation approval is inferred from a successful run or review record ID.",
+    "Unresolved assessments keep their expected denominator and suppress point estimates.",
+    "Factual correctness, citation support and level adaptation remain separate metrics.",
+    "Human-subset calibration statistics do not establish population-level accuracy."
+  ],
+  "score_regime": "automatic_or_pending",
+  "by_scoring_source": {
+    "judge": {
+      "total_expected": 18,
+      "eligible": 18,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 17,
+        "judge_error": 1
+      },
+      "scoring_source_counts": {
+        "judge": 18
+      },
+      "score_counts": {
+        "0": 4,
+        "1": 0,
+        "2": 13
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 13,
+        "denominator": 18,
+        "value": null,
+        "lower_bound": 0.7222222222222222,
+        "upper_bound": 0.7777777777777778,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 13.0,
+        "denominator": 18,
+        "value": null,
+        "lower_bound": 0.7222222222222222,
+        "upper_bound": 0.7777777777777778,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 13,
+        "denominator": 18,
+        "value": null,
+        "lower_bound": 0.7222222222222222,
+        "upper_bound": 0.7777777777777778,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 17,
+        "denominator": 18,
+        "value": 0.9444444444444444,
+        "lower_bound": 0.9444444444444444,
+        "upper_bound": 0.9444444444444444,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 18,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 19
+    }
+  },
+  "provenance": {
+    "command": "score",
+    "matrix_version": "m8-perturbation-small-v2",
+    "generation_matrix_schema_version": "0.2",
+    "input_sha256": {
+      "gold": "235c92a15c14ef0416ac2ad262628c5876b9ebdde03c7f51438d10536a2509d5",
+      "rubrics": "acd5ae48672abe0d2ef9849c042f1f7222263a94bfb027c71e79c57d3faf9f97",
+      "runs": "dae5bc9f3d17956e05f20dea5504a362bdbfb1231be1bfc23866c15a03b70da6",
+      "expected_manifest": "8f5c2f40f7e8e43f4e832321d6fc1e42b1fb0d78f810c18ea43d06726cbbef57"
+    },
+    "provider": "gemini",
+    "judge_config": {
+      "model": "gemini-3.1-flash-lite",
+      "temperature": 1.0,
+      "client_type": "GeminiJudgeClient",
+      "endpoint_sha256": "a0e7b7e7de8182cfd1c69ac37b77cc902d1e516ba7d879b8f486201910d15235",
+      "prompt_version": "open-answer-facts-0.1",
+      "schema": {
+        "$defs": {
+          "CriterionVerdict": {
+            "additionalProperties": false,
+            "properties": {
+              "criterion_id": {
+                "minLength": 1,
+                "title": "Criterion Id",
+                "type": "string"
+              },
+              "verdict": {
+                "enum": [
+                  "met",
+                  "missing",
+                  "contradicted",
+                  "uncertain"
+                ],
+                "title": "Verdict",
+                "type": "string"
+              },
+              "answer_quote": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Answer Quote"
+              },
+              "reason": {
+                "minLength": 1,
+                "title": "Reason",
+                "type": "string"
+              }
+            },
+            "required": [
+              "criterion_id",
+              "verdict",
+              "answer_quote",
+              "reason"
+            ],
+            "title": "CriterionVerdict",
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "description": "The judge supplies observations; the program computes the numeric score.",
+        "properties": {
+          "criteria": {
+            "items": {
+              "$ref": "#/$defs/CriterionVerdict"
+            },
+            "title": "Criteria",
+            "type": "array"
+          },
+          "critical_error": {
+            "title": "Critical Error",
+            "type": "boolean"
+          },
+          "critical_error_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Critical Error Quote"
+          },
+          "minor_error": {
+            "title": "Minor Error",
+            "type": "boolean"
+          },
+          "minor_error_quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minor Error Quote"
+          },
+          "needs_review": {
+            "title": "Needs Review",
+            "type": "boolean"
+          },
+          "review_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Reason"
+          },
+          "rationale": {
+            "minLength": 1,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criteria",
+          "critical_error",
+          "critical_error_quote",
+          "minor_error",
+          "minor_error_quote",
+          "needs_review",
+          "review_reason",
+          "rationale"
+        ],
+        "title": "JudgeAssessment",
+        "type": "object"
+      },
+      "max_retries": 1,
+      "max_output_tokens": 8192,
+      "thinking_level": "low"
+    },
+    "judge_config_sha256": "f164434043dc88e9f20832e7dda65c5705c7f6c131b1fe720851303263e914ef",
+    "attempt_log": "C:\\Users\\86136\\Desktop\\2026 S2\\CAPSTONE 5703\\W8\\perturbation-run-20261029\\ledgers\\correctness.attempts.jsonl",
+    "allow_self_judge": false,
+    "answer_quote_policy": "answer-quote-v2",
+    "expected_run_ids": [
+      "perturb-v2-b1-gpt-oss",
+      "perturb-v2-b1-llama",
+      "perturb-v2-b1-gemma",
+      "perturb-v2-b4-gpt-oss",
+      "perturb-v2-b4-llama",
+      "perturb-v2-b4-gemma",
+      "perturb-v2-a1-gpt-oss",
+      "perturb-v2-a1-llama",
+      "perturb-v2-a1-gemma",
+      "perturb-v2-i3-gpt-oss",
+      "perturb-v2-i3-llama",
+      "perturb-v2-i3-gemma",
+      "perturb-v2-correctness-gpt-oss",
+      "perturb-v2-correctness-llama",
+      "perturb-v2-correctness-gemma",
+      "perturb-v2-evidence-support-gpt-oss",
+      "perturb-v2-evidence-support-llama",
+      "perturb-v2-evidence-support-gemma"
+    ],
+    "rubrics_without_review_record": [
+      "sciq-train-00004",
+      "sciq-train-00056",
+      "sciq-train-00058",
+      "sciq-train-00078",
+      "sciq-train-00231",
+      "sciq-train-00264",
+      "sciq-train-00362",
+      "sciq-train-00382",
+      "sciq-train-00397",
+      "sciq-train-00412",
+      "sciq-train-00580",
+      "sciq-train-00593",
+      "sciq-train-00790",
+      "sciq-train-00797",
+      "sciq-train-00915",
+      "sciq-train-00953",
+      "sciq-train-00963",
+      "sciq-train-00971",
+      "sciq-train-01031",
+      "sciq-train-01097",
+      "sciq-train-01128",
+      "sciq-train-01144",
+      "sciq-train-01215",
+      "sciq-train-01286",
+      "sciq-train-01344",
+      "sciq-train-01435",
+      "sciq-train-01486",
+      "sciq-train-01537",
+      "sciq-train-01931",
+      "sciq-train-01983",
+      "sciq-train-02140",
+      "sciq-train-02258",
+      "sciq-train-02266",
+      "sciq-train-02381",
+      "sciq-train-02393",
+      "sciq-train-02484",
+      "sciq-train-02528",
+      "sciq-train-02656",
+      "sciq-train-02657",
+      "sciq-train-02662",
+      "sciq-train-02692",
+      "sciq-train-02705",
+      "sciq-train-02746",
+      "sciq-train-02858",
+      "sciq-train-02881",
+      "sciq-train-02930",
+      "sciq-train-03171",
+      "sciq-train-03180",
+      "sciq-train-03308",
+      "sciq-train-03358",
+      "sciq-train-03406",
+      "sciq-train-03432",
+      "sciq-train-03493",
+      "sciq-train-03625",
+      "sciq-train-03691",
+      "sciq-train-03693",
+      "sciq-train-03743",
+      "sciq-train-03776",
+      "sciq-train-03865",
+      "sciq-train-03941",
+      "sciq-train-04113",
+      "sciq-train-04143",
+      "sciq-train-04256",
+      "sciq-train-04312",
+      "sciq-train-04566",
+      "sciq-train-04590",
+      "sciq-train-04632",
+      "sciq-train-04636",
+      "sciq-train-04691",
+      "sciq-train-04696",
+      "sciq-train-04725",
+      "sciq-train-04866",
+      "sciq-train-04946",
+      "sciq-train-04969",
+      "sciq-train-05093",
+      "sciq-train-05101",
+      "sciq-train-05157",
+      "sciq-train-05303",
+      "sciq-train-05355",
+      "sciq-train-05409",
+      "sciq-train-05470",
+      "sciq-train-05492",
+      "sciq-train-05691",
+      "sciq-train-05767",
+      "sciq-train-05930",
+      "sciq-train-05989",
+      "sciq-train-06027",
+      "sciq-train-06125",
+      "sciq-train-06151",
+      "sciq-train-06162",
+      "sciq-train-06336",
+      "sciq-train-06500",
+      "sciq-train-06774",
+      "sciq-train-06970",
+      "sciq-train-07169",
+      "sciq-train-07191",
+      "sciq-train-07227",
+      "sciq-train-07239",
+      "sciq-train-07276",
+      "sciq-train-07280",
+      "sciq-train-07345",
+      "sciq-train-07536",
+      "sciq-train-07578",
+      "sciq-train-07625",
+      "sciq-train-07687",
+      "sciq-train-07714",
+      "sciq-train-07765",
+      "sciq-train-07835",
+      "sciq-train-07874",
+      "sciq-train-07883",
+      "sciq-train-07886",
+      "sciq-train-07974",
+      "sciq-train-07985",
+      "sciq-train-08285",
+      "sciq-train-08318",
+      "sciq-train-08408",
+      "sciq-train-08455",
+      "sciq-train-08506",
+      "sciq-train-09014",
+      "sciq-train-09061",
+      "sciq-train-09086",
+      "sciq-train-09112",
+      "sciq-train-09140",
+      "sciq-train-09147",
+      "sciq-train-09217",
+      "sciq-train-09248",
+      "sciq-train-09311",
+      "sciq-train-09321",
+      "sciq-train-09476",
+      "sciq-train-09585",
+      "sciq-train-09630",
+      "sciq-train-09640",
+      "sciq-train-09676",
+      "sciq-train-09931",
+      "sciq-train-10006",
+      "sciq-train-10176",
+      "sciq-train-10180",
+      "sciq-train-10243",
+      "sciq-train-10262",
+      "sciq-train-10386",
+      "sciq-train-10421",
+      "sciq-train-10505",
+      "sciq-train-10613",
+      "sciq-train-10778",
+      "sciq-train-10810",
+      "sciq-train-10811",
+      "sciq-train-10899",
+      "sciq-train-10924",
+      "sciq-train-10950",
+      "sciq-train-10989",
+      "sciq-train-11044",
+      "sciq-train-11077",
+      "sciq-train-11078",
+      "sciq-train-11172"
+    ],
+    "gold_not_reviewed": [
+      "sciq-test-00024",
+      "sciq-test-00080",
+      "sciq-test-00085",
+      "sciq-test-00092",
+      "sciq-test-00098",
+      "sciq-test-00116",
+      "sciq-test-00218",
+      "sciq-test-00231",
+      "sciq-test-00246",
+      "sciq-test-00267",
+      "sciq-test-00328",
+      "sciq-test-00333",
+      "sciq-test-00335",
+      "sciq-test-00396",
+      "sciq-test-00401",
+      "sciq-test-00432",
+      "sciq-test-00465",
+      "sciq-test-00489",
+      "sciq-test-00492",
+      "sciq-test-00536",
+      "sciq-test-00540",
+      "sciq-test-00646",
+      "sciq-test-00725",
+      "sciq-test-00729",
+      "sciq-test-00770",
+      "sciq-test-00794",
+      "sciq-test-00913",
+      "sciq-test-00942",
+      "sciq-test-00955",
+      "sciq-test-00974",
+      "sciq-train-00004",
+      "sciq-train-00056",
+      "sciq-train-00058",
+      "sciq-train-00059",
+      "sciq-train-00078",
+      "sciq-train-00151",
+      "sciq-train-00211",
+      "sciq-train-00220",
+      "sciq-train-00231",
+      "sciq-train-00262",
+      "sciq-train-00264",
+      "sciq-train-00362",
+      "sciq-train-00365",
+      "sciq-train-00382",
+      "sciq-train-00397",
+      "sciq-train-00412",
+      "sciq-train-00438",
+      "sciq-train-00490",
+      "sciq-train-00514",
+      "sciq-train-00580",
+      "sciq-train-00591",
+      "sciq-train-00593",
+      "sciq-train-00621",
+      "sciq-train-00702",
+      "sciq-train-00790",
+      "sciq-train-00797",
+      "sciq-train-00901",
+      "sciq-train-00915",
+      "sciq-train-00945",
+      "sciq-train-00953",
+      "sciq-train-00963",
+      "sciq-train-00971",
+      "sciq-train-01031",
+      "sciq-train-01051",
+      "sciq-train-01059",
+      "sciq-train-01071",
+      "sciq-train-01081",
+      "sciq-train-01097",
+      "sciq-train-01128",
+      "sciq-train-01144",
+      "sciq-train-01215",
+      "sciq-train-01221",
+      "sciq-train-01255",
+      "sciq-train-01257",
+      "sciq-train-01286",
+      "sciq-train-01327",
+      "sciq-train-01344",
+      "sciq-train-01383",
+      "sciq-train-01408",
+      "sciq-train-01425",
+      "sciq-train-01435",
+      "sciq-train-01467",
+      "sciq-train-01486",
+      "sciq-train-01537",
+      "sciq-train-01881",
+      "sciq-train-01913",
+      "sciq-train-01921",
+      "sciq-train-01923",
+      "sciq-train-01931",
+      "sciq-train-01983",
+      "sciq-train-02096",
+      "sciq-train-02114",
+      "sciq-train-02140",
+      "sciq-train-02186",
+      "sciq-train-02217",
+      "sciq-train-02251",
+      "sciq-train-02258",
+      "sciq-train-02266",
+      "sciq-train-02324",
+      "sciq-train-02371",
+      "sciq-train-02381",
+      "sciq-train-02393",
+      "sciq-train-02440",
+      "sciq-train-02455",
+      "sciq-train-02484",
+      "sciq-train-02491",
+      "sciq-train-02494",
+      "sciq-train-02528",
+      "sciq-train-02582",
+      "sciq-train-02656",
+      "sciq-train-02657",
+      "sciq-train-02662",
+      "sciq-train-02692",
+      "sciq-train-02705",
+      "sciq-train-02710",
+      "sciq-train-02746",
+      "sciq-train-02773",
+      "sciq-train-02788",
+      "sciq-train-02838",
+      "sciq-train-02841",
+      "sciq-train-02858",
+      "sciq-train-02881",
+      "sciq-train-02930",
+      "sciq-train-03171",
+      "sciq-train-03180",
+      "sciq-train-03204",
+      "sciq-train-03209",
+      "sciq-train-03297",
+      "sciq-train-03308",
+      "sciq-train-03358",
+      "sciq-train-03397",
+      "sciq-train-03406",
+      "sciq-train-03426",
+      "sciq-train-03432",
+      "sciq-train-03479",
+      "sciq-train-03493",
+      "sciq-train-03606",
+      "sciq-train-03625",
+      "sciq-train-03691",
+      "sciq-train-03693",
+      "sciq-train-03702",
+      "sciq-train-03721",
+      "sciq-train-03743",
+      "sciq-train-03776",
+      "sciq-train-03778",
+      "sciq-train-03865",
+      "sciq-train-03893",
+      "sciq-train-03941",
+      "sciq-train-03991",
+      "sciq-train-04113",
+      "sciq-train-04140",
+      "sciq-train-04143",
+      "sciq-train-04188",
+      "sciq-train-04256",
+      "sciq-train-04264",
+      "sciq-train-04268",
+      "sciq-train-04312",
+      "sciq-train-04315",
+      "sciq-train-04328",
+      "sciq-train-04473",
+      "sciq-train-04536",
+      "sciq-train-04566",
+      "sciq-train-04590",
+      "sciq-train-04610",
+      "sciq-train-04632",
+      "sciq-train-04636",
+      "sciq-train-04643",
+      "sciq-train-04691",
+      "sciq-train-04696",
+      "sciq-train-04725",
+      "sciq-train-04746",
+      "sciq-train-04785",
+      "sciq-train-04851",
+      "sciq-train-04866",
+      "sciq-train-04946",
+      "sciq-train-04969",
+      "sciq-train-05012",
+      "sciq-train-05048",
+      "sciq-train-05093",
+      "sciq-train-05101",
+      "sciq-train-05157",
+      "sciq-train-05198",
+      "sciq-train-05286",
+      "sciq-train-05299",
+      "sciq-train-05303",
+      "sciq-train-05331",
+      "sciq-train-05346",
+      "sciq-train-05355",
+      "sciq-train-05409",
+      "sciq-train-05425",
+      "sciq-train-05470",
+      "sciq-train-05492",
+      "sciq-train-05550",
+      "sciq-train-05691",
+      "sciq-train-05754",
+      "sciq-train-05755",
+      "sciq-train-05767",
+      "sciq-train-05930",
+      "sciq-train-05980",
+      "sciq-train-05989",
+      "sciq-train-06027",
+      "sciq-train-06030",
+      "sciq-train-06104",
+      "sciq-train-06124",
+      "sciq-train-06125",
+      "sciq-train-06151",
+      "sciq-train-06162",
+      "sciq-train-06186",
+      "sciq-train-06202",
+      "sciq-train-06209",
+      "sciq-train-06245",
+      "sciq-train-06336",
+      "sciq-train-06385",
+      "sciq-train-06500",
+      "sciq-train-06571",
+      "sciq-train-06694",
+      "sciq-train-06774",
+      "sciq-train-06840",
+      "sciq-train-06843",
+      "sciq-train-06970",
+      "sciq-train-07169",
+      "sciq-train-07178",
+      "sciq-train-07191",
+      "sciq-train-07227",
+      "sciq-train-07238",
+      "sciq-train-07239",
+      "sciq-train-07276",
+      "sciq-train-07280",
+      "sciq-train-07345",
+      "sciq-train-07352",
+      "sciq-train-07389",
+      "sciq-train-07533",
+      "sciq-train-07536",
+      "sciq-train-07578",
+      "sciq-train-07625",
+      "sciq-train-07687",
+      "sciq-train-07714",
+      "sciq-train-07717",
+      "sciq-train-07732",
+      "sciq-train-07752",
+      "sciq-train-07759",
+      "sciq-train-07765",
+      "sciq-train-07835",
+      "sciq-train-07874",
+      "sciq-train-07883",
+      "sciq-train-07886",
+      "sciq-train-07949",
+      "sciq-train-07974",
+      "sciq-train-07985",
+      "sciq-train-08182",
+      "sciq-train-08273",
+      "sciq-train-08285",
+      "sciq-train-08318",
+      "sciq-train-08408",
+      "sciq-train-08455",
+      "sciq-train-08506",
+      "sciq-train-08706",
+      "sciq-train-08750",
+      "sciq-train-08830",
+      "sciq-train-09014",
+      "sciq-train-09031",
+      "sciq-train-09061",
+      "sciq-train-09086",
+      "sciq-train-09112",
+      "sciq-train-09140",
+      "sciq-train-09147",
+      "sciq-train-09217",
+      "sciq-train-09248",
+      "sciq-train-09311",
+      "sciq-train-09321",
+      "sciq-train-09331",
+      "sciq-train-09387",
+      "sciq-train-09476",
+      "sciq-train-09585",
+      "sciq-train-09630",
+      "sciq-train-09640",
+      "sciq-train-09676",
+      "sciq-train-09787",
+      "sciq-train-09931",
+      "sciq-train-09968",
+      "sciq-train-10006",
+      "sciq-train-10176",
+      "sciq-train-10180",
+      "sciq-train-10219",
+      "sciq-train-10243",
+      "sciq-train-10262",
+      "sciq-train-10333",
+      "sciq-train-10386",
+      "sciq-train-10421",
+      "sciq-train-10479",
+      "sciq-train-10505",
+      "sciq-train-10613",
+      "sciq-train-10668",
+      "sciq-train-10778",
+      "sciq-train-10810",
+      "sciq-train-10811",
+      "sciq-train-10899",
+      "sciq-train-10924",
+      "sciq-train-10950",
+      "sciq-train-10961",
+      "sciq-train-10980",
+      "sciq-train-10989",
+      "sciq-train-11032",
+      "sciq-train-11044",
+      "sciq-train-11077",
+      "sciq-train-11078",
+      "sciq-train-11160",
+      "sciq-train-11172",
+      "sciq-train-11258",
+      "sciq-train-11265",
+      "sciq-train-11310",
+      "sciq-train-11373",
+      "sciq-train-11426",
+      "sciq-train-11429",
+      "sciq-train-11450",
+      "sciq-train-11650",
+      "sciq-validation-00010",
+      "sciq-validation-00069",
+      "sciq-validation-00071",
+      "sciq-validation-00252",
+      "sciq-validation-00277",
+      "sciq-validation-00342",
+      "sciq-validation-00364",
+      "sciq-validation-00366",
+      "sciq-validation-00374",
+      "sciq-validation-00437",
+      "sciq-validation-00443",
+      "sciq-validation-00481",
+      "sciq-validation-00490",
+      "sciq-validation-00612",
+      "sciq-validation-00635",
+      "sciq-validation-00669",
+      "sciq-validation-00680",
+      "sciq-validation-00715",
+      "sciq-validation-00736",
+      "sciq-validation-00761",
+      "sciq-validation-00831",
+      "sciq-validation-00910",
+      "sciq-validation-00932",
+      "sciq-validation-00979",
+      "sciq-validation-00995"
+    ]
+  },
+  "overall": {
+    "total_expected": 18,
+    "eligible": 18,
+    "excluded_reasons": {},
+    "score_status_counts": {
+      "scored": 17,
+      "judge_error": 1
+    },
+    "scoring_source_counts": {
+      "judge": 18
+    },
+    "score_counts": {
+      "0": 4,
+      "1": 0,
+      "2": 13
+    },
+    "open_answer_full_correct_rate_e2e": {
+      "numerator": 13,
+      "denominator": 18,
+      "value": null,
+      "lower_bound": 0.7222222222222222,
+      "upper_bound": 0.7777777777777778,
+      "unresolved": 1
+    },
+    "open_answer_mean_credit_e2e": {
+      "numerator": 13.0,
+      "denominator": 18,
+      "value": null,
+      "lower_bound": 0.7222222222222222,
+      "upper_bound": 0.7777777777777778,
+      "unresolved": 1
+    },
+    "open_answer_full_correct_rate_answered": {
+      "numerator": 13,
+      "denominator": 18,
+      "value": null,
+      "lower_bound": 0.7222222222222222,
+      "upper_bound": 0.7777777777777778,
+      "unresolved": 1
+    },
+    "scoring_coverage": {
+      "numerator": 17,
+      "denominator": 18,
+      "value": 0.9444444444444444,
+      "lower_bound": 0.9444444444444444,
+      "upper_bound": 0.9444444444444444,
+      "unresolved": 0
+    },
+    "technical_failure_rate": {
+      "numerator": 0,
+      "denominator": 18,
+      "value": 0.0,
+      "lower_bound": 0.0,
+      "upper_bound": 0.0,
+      "unresolved": 0
+    },
+    "missing_run_count": 0,
+    "cache_hit_count": 0,
+    "judge_calls_this_run": 19
+  },
+  "groups": [
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R0_plain",
+      "generator_model": "google/gemma-3-12b-it",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 1,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0.0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R0_plain",
+      "generator_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "total_expected": 2,
+      "eligible": 2,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "judge_error": 1,
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 2
+      },
+      "score_counts": {
+        "0": 1,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "unresolved": 1
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0.0,
+        "denominator": 2,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "unresolved": 1
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": null,
+        "lower_bound": 0.0,
+        "upper_bound": 0.5,
+        "unresolved": 1
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 2,
+        "value": 0.5,
+        "lower_bound": 0.5,
+        "upper_bound": 0.5,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 3
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P0R0_plain",
+      "generator_model": "openai/gpt-oss-20b",
+      "total_expected": 2,
+      "eligible": 2,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 2
+      },
+      "scoring_source_counts": {
+        "judge": 2
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 2
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 2,
+        "denominator": 2,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 2.0,
+        "denominator": 2,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 2,
+        "denominator": 2,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 2,
+        "denominator": 2,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 2,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 2
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "google/gemma-3-12b-it",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "advanced",
+      "condition_id": "P1R1_combined",
+      "generator_model": "google/gemma-3-12b-it",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R0_plain",
+      "generator_model": "google/gemma-3-12b-it",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R0_plain",
+      "generator_model": "openai/gpt-oss-20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 1,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0.0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P0R1_reranking_only",
+      "generator_model": "openai/gpt-oss-20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "google/gemma-3-12b-it",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R1_combined",
+      "generator_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "beginner",
+      "condition_id": "P1R1_combined",
+      "generator_model": "openai/gpt-oss-20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R0_plain",
+      "generator_model": "google/gemma-3-12b-it",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R0_plain",
+      "generator_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 1,
+        "1": 0,
+        "2": 0
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 0.0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P0R0_plain",
+      "generator_model": "openai/gpt-oss-20b",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    },
+    {
+      "split": "dev",
+      "student_level": "intermediate",
+      "condition_id": "P1R0_prompt_only",
+      "generator_model": "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+      "total_expected": 1,
+      "eligible": 1,
+      "excluded_reasons": {},
+      "score_status_counts": {
+        "scored": 1
+      },
+      "scoring_source_counts": {
+        "judge": 1
+      },
+      "score_counts": {
+        "0": 0,
+        "1": 0,
+        "2": 1
+      },
+      "open_answer_full_correct_rate_e2e": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_mean_credit_e2e": {
+        "numerator": 1.0,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "open_answer_full_correct_rate_answered": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "scoring_coverage": {
+        "numerator": 1,
+        "denominator": 1,
+        "value": 1.0,
+        "lower_bound": 1.0,
+        "upper_bound": 1.0,
+        "unresolved": 0
+      },
+      "technical_failure_rate": {
+        "numerator": 0,
+        "denominator": 1,
+        "value": 0.0,
+        "lower_bound": 0.0,
+        "upper_bound": 0.0,
+        "unresolved": 0
+      },
+      "missing_run_count": 0,
+      "cache_hit_count": 0,
+      "judge_calls_this_run": 1
+    }
+  ]
+}

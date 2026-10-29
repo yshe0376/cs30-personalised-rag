@@ -1,0 +1,82 @@
+{
+  "audit": "M8 small perturbation audit v2 (Dev-only synthetic answers)",
+  "cases": 18,
+  "detected": 15,
+  "detection_rate": 0.8333,
+  "rule": ">= 80% overall and >= 1 detected per target; unresolved count as not detected",
+  "rule_passed": false,
+  "by_target": {
+    "B1": {
+      "cases": 3,
+      "detected": 3,
+      "unresolved": 0
+    },
+    "B4": {
+      "cases": 3,
+      "detected": 3,
+      "unresolved": 0
+    },
+    "A1": {
+      "cases": 3,
+      "detected": 3,
+      "unresolved": 0
+    },
+    "I3": {
+      "cases": 3,
+      "detected": 0,
+      "unresolved": 0
+    },
+    "correctness": {
+      "cases": 3,
+      "detected": 3,
+      "unresolved": 0
+    },
+    "evidence_support": {
+      "cases": 3,
+      "detected": 3,
+      "unresolved": 0
+    }
+  },
+  "by_difficulty_proposal": {
+    "clear": {
+      "cases": 6,
+      "detected": 5
+    },
+    "moderate": {
+      "cases": 6,
+      "detected": 5
+    },
+    "subtle": {
+      "cases": 6,
+      "detected": 5
+    }
+  },
+  "unresolved_target_cases": 0,
+  "cases_with_non_target_changes": 15,
+  "usage": {
+    "attempts": 115,
+    "input_tokens": 264197,
+    "output_tokens": 65450,
+    "unknown_usage": 0,
+    "status": {
+      "accepted": 87,
+      "invalid_output": 28
+    },
+    "known_list_price_usd": 0.164224,
+    "adjusted_estimate_aud": 0.2612,
+    "pricing_assumptions": {
+      "input_usd_per_million": 0.25,
+      "output_usd_per_million": 1.5,
+      "usd_to_aud": 1.5,
+      "input_multiplier": 1.15
+    }
+  },
+  "inputs_sha256": {
+    "case_map.json": "54b92fdd9dff81c1fd9c29921fef2b9ebd0e490674b074ad86d27b57720c1ede",
+    "adaptation.results.jsonl": "d9ed35b5d34590934babfbbedbbda93df4ae767fe58bc16016793bb66421531c",
+    "discrimination.results.jsonl": "f6ae6e53abe4d8b8fc2ea7d22d8dc838dd6cd763529cda71eb2a43fd37464c00",
+    "evidence_support.results.jsonl": "16bcc1de5dd175ebbecabfac7c5ef8411538f58f6d9065cb0ba5e5be8bb38525",
+    "correctness/open_answer_scores.jsonl": "c87817289bc453569d552b9727be11ae1831bffe6f7afb94aa061b7c74300280"
+  },
+  "interpretation": "Targeted sensitivity examples written and reviewed before scoring; not population judge accuracy."
+}
