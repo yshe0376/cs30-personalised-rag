@@ -131,11 +131,12 @@ def _require_exact_answer_hashes(items: list[GenerationEvaluationInput]) -> None
         raise ValueError("evaluation inputs with answers require exact answer hashes")
 
 
-def _write_json(path: Path, payload: object) -> None:
+def _write_json(path: Path, payload: object, *, newline: str | None = None) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
+        newline=newline,
     )
 
 
@@ -155,16 +156,23 @@ def _parser() -> argparse.ArgumentParser:
     validate.add_argument("--gold", required=True, type=Path)
     validate.add_argument("--gold-version", required=True)
     validate.add_argument("--eligibility-version", required=True)
-    validate.add_argument("--eligibility-calibration-count", required=True, type=int)
+    validate.add_argument("--eligibility-calibration-count", type=int)
+    validate.add_argument(
+        "--allow-eligibility-superset", action="store_true",
+        help="allow labels beyond the Gold question set, independently of review status",
+    )
+    validate.add_argument(
+        "--eligibility-review-waiver",
+        type=Path,
+        help="hash-bound PR #224 waiver; mutually exclusive with review evidence",
+    )
     validate.add_argument(
         "--leader-calibration-record",
-        required=True,
         type=Path,
         help="nonempty reviewed Leader calibration record whose bytes are hash-bound",
     )
     validate.add_argument(
         "--label-provenance-record",
-        required=True,
         type=Path,
         help="nonempty label-provenance record whose bytes are hash-bound",
     )
@@ -347,19 +355,34 @@ def _validate_inputs(args: argparse.Namespace) -> int:
         "label_provenance_record": args.label_provenance_record,
     }
     evidence_hashes: dict[str, str] = {}
-    for label, path in evidence_files.items():
-        if not path.is_file() or not path.read_bytes().strip():
-            raise ValueError(f"{label} must point to a nonempty evidence file")
-        evidence_hashes[label] = hashlib.sha256(path.read_bytes()).hexdigest()
+    waiver_path = getattr(args, "eligibility_review_waiver", None)
+    waiver = None
+    if waiver_path is not None:
+        from .v2_generation_models import EligibilityReviewWaiver
+
+        waiver = EligibilityReviewWaiver.model_validate_json(waiver_path.read_bytes())
+        if args.eligibility_calibration_count is not None or any(evidence_files.values()):
+            raise ValueError("review waiver cannot be combined with claimed review evidence")
+        evidence_hashes["eligibility_review_waiver"] = hashlib.sha256(
+            waiver_path.read_bytes()
+        ).hexdigest()
+    else:
+        for label, path in evidence_files.items():
+            if path is None or not path.is_file() or not path.read_bytes().strip():
+                raise ValueError(f"{label} must point to a nonempty evidence file")
+            evidence_hashes[label] = hashlib.sha256(path.read_bytes()).hexdigest()
     eligibility = load_eligibility_package(
         args.eligibility,
         package_version=args.eligibility_version,
         gold_version=args.gold_version,
         gold_sha256=gold_sha256,
         calibration_question_count=args.eligibility_calibration_count,
-        leader_calibration_record_sha256=evidence_hashes["leader_calibration_record"],
-        label_provenance_record_sha256=evidence_hashes["label_provenance_record"],
+        leader_calibration_record_sha256=evidence_hashes.get("leader_calibration_record"),
+        label_provenance_record_sha256=evidence_hashes.get("label_provenance_record"),
+        review_waiver=waiver,
+        profile_package_sha256=profiles.package_sha256,
         expected_question_ids=question_ids,
+        allow_superset=args.allow_eligibility_superset,
         require_resolved=args.reportable,
     )
     _write_json(
@@ -373,10 +396,15 @@ def _validate_inputs(args: argparse.Namespace) -> int:
             "gold_version": eligibility.gold_version,
             "gold_sha256": eligibility.gold_sha256,
             "question_count": len(question_ids),
+            "question_ids": sorted(question_ids),
             "eligibility_evidence_sha256": evidence_hashes,
+            "eligibility_human_calibrated": waiver is None,
+            "eligibility_superset_allowed": args.allow_eligibility_superset,
+            "eligibility_review_waiver": waiver.model_dump(mode="json") if waiver else None,
             "reportable_input_validation": bool(args.reportable),
             "valid": True,
         },
+        newline="\n",
     )
     return 0
 

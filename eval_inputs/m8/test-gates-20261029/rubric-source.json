@@ -1,0 +1,19 @@
+{
+  "archive_name": "m7_api_test_gpt_oss20b_20261029.tar.gz",
+  "archive_sha256": "c9545bf50cb161a8f923546431ba9efda8dd3c40077114061f9827a2a4511ebc",
+  "downloaded_archive_retained_locally": false,
+  "extracted_directory": "m7-api-test-20261029/test-correctness-rubrics/",
+  "extracted_file_sha256": {
+    "rubric_manifest.json": "18a32ef37e023d067925762096d71b57f80e325aacbb43952c77d601b288b592",
+    "rubric_review.jsonl": "6c52b414f64121585d6cbb4f0e629d65b5f5dd5804082edd80979a7d074686f4",
+    "rubrics.draft.jsonl": "0dd87977f7a24747ec7677828b39b28e15dbc6d73d52f37e7c64fc09e100e6fc"
+  },
+  "generated_Test_answers_extracted": false,
+  "generated_Test_answers_read": false,
+  "gold_sha256": "235c92a15c14ef0416ac2ad262628c5876b9ebdde03c7f51438d10536a2509d5",
+  "gold_source": "existing 2026-10-26 Dev handoff converted/gold.jsonl; same Gold bytes",
+  "provider_calls": 0,
+  "review_status": "frozen as drafted by Leader waiver; no independent content review claimed",
+  "rubric_count": 187,
+  "source_release": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m7-api-test-gpt-oss20b-20261029"
+}

@@ -1,0 +1,58 @@
+{
+  "adaptation_noise_floors": {
+    "advanced": 0.02123253445022271,
+    "beginner": 0.014286230976105822
+  },
+  "decision_record": "https://github.com/yshe0376/cs30-personalised-rag/pull/225#issuecomment-6494640705",
+  "details": {
+    "advanced": {
+      "expected_repeat_cells": 42,
+      "mean_squared_repeat_difference": 0.057705026455026454,
+      "non_answer_repeat_cells": 0,
+      "resolved_by_condition": {
+        "P0R0_plain": 21,
+        "P1R0_prompt_only": 21
+      },
+      "resolved_repeat_cells": 42,
+      "test_eligible_question_pairs": 128,
+      "unscored_repeat_cells": 0
+    },
+    "beginner": {
+      "expected_repeat_cells": 42,
+      "mean_squared_repeat_difference": 0.026124338624338626,
+      "non_answer_repeat_cells": 0,
+      "resolved_by_condition": {
+        "P0R0_plain": 21,
+        "P1R0_prompt_only": 21
+      },
+      "resolved_repeat_cells": 42,
+      "test_eligible_question_pairs": 128,
+      "unscored_repeat_cells": 0
+    }
+  },
+  "formula": "sqrt(mean((repeat_rate - baseline_rate)^2) / Test_eligible_pair_count)",
+  "generator": "gpt-oss-20b",
+  "metric": "adaptation_criterion_pass_rate",
+  "missingness_policy": "available Dev repeat pairs; missing counts retained, never zero-filled",
+  "policy": "test-gates-20261029-v1",
+  "profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "provider_calls": 0,
+  "scope": "generation_repeat",
+  "source_artifact_sha256": "20389065d4249f56d7924c8eebba577b0e1de94fa973af6e505583aee3c7f8bd",
+  "source_files_sha256": {
+    "batches/dev-gpt-oss/generation_evaluation_inputs.jsonl": "4129db6be6aa69df59166167200401201c728de6f5dbab312311895158b1ae5c",
+    "batches/dev-gpt-oss/judge_evaluation/adaptation_results.jsonl": "afe1e88de8d349a06ed83f6bd8b590908b3f0dea94baa7b1da66c276cd5ef07b",
+    "batches/dev-gpt-oss/judge_evaluation/judge_evaluation_manifest.json": "fb91cbd03203ca29b3e8fa8f4ad0218bdf54f5e6829edf5323d0edbfc6e57e56",
+    "batches/repeat-gpt-oss/generation_evaluation_inputs.jsonl": "cd7b07b9da27826bcba4bc20633c63dac37b571ce2ffa533d080e67c01a3f856",
+    "batches/repeat-gpt-oss/judge_evaluation/adaptation_results.jsonl": "8787d539828abf2162b45a99b6fa3281f7cd86feac2aba2ace28b4da33e09a6e",
+    "batches/repeat-gpt-oss/judge_evaluation/judge_evaluation_manifest.json": "42ba56337ad1799018dce2c1a11ebc50c262c8a6efa21dcdb5e0722ceb15439d",
+    "handoff_manifest.json": "20389065d4249f56d7924c8eebba577b0e1de94fa973af6e505583aee3c7f8bd",
+    "judge-config.low.json": "90293ebf1248d58935490f37ffda4a11591f8265bd28125d540d45f40e11eb19",
+    "profile_checklist.frozen.json": "50bb9a61414268cb343b79c096bec3c380310c041eeb69deefbf51fc0ebd1b38"
+  },
+  "source_release": "https://github.com/yshe0376/cs30-personalised-rag/releases/tag/v2-m8-full-dev-low-20261028",
+  "source_split": "dev",
+  "test_answers_read": false,
+  "test_eligibility_sha256": "ab585f05c02ec896889bae174475493f954eee1d4bb2dda32fc111fe4ef54c42",
+  "test_split_map_sha256": "991d9a68d0fa256b5d418549ffa62c331c6f31c0aacbc144f064f507bfd100fb"
+}
