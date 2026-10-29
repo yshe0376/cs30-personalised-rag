@@ -1,0 +1,321 @@
+{
+  "citation_support_by_level_condition": [
+    {
+      "answer_count": 177,
+      "condition": "P0R0_plain",
+      "evaluable_count": 176,
+      "mean_citation_support": 0.8963068181818182,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 179,
+      "condition": "P0R1_reranking_only",
+      "evaluable_count": 177,
+      "mean_citation_support": 0.8931261770244822,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 177,
+      "condition": "P1R0_prompt_only",
+      "evaluable_count": 177,
+      "mean_citation_support": 0.8752354048964218,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 178,
+      "condition": "P1R1_combined",
+      "evaluable_count": 175,
+      "mean_citation_support": 0.871904761904762,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 172,
+      "condition": "P0R0_plain",
+      "evaluable_count": 170,
+      "mean_citation_support": 0.9019607843137255,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 181,
+      "condition": "P0R1_reranking_only",
+      "evaluable_count": 180,
+      "mean_citation_support": 0.8967592592592593,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 176,
+      "condition": "P1R0_prompt_only",
+      "evaluable_count": 176,
+      "mean_citation_support": 0.8399621212121212,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 179,
+      "condition": "P1R1_combined",
+      "evaluable_count": 179,
+      "mean_citation_support": 0.8635940409683427,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 178,
+      "condition": "P0R0_plain",
+      "evaluable_count": 177,
+      "mean_citation_support": 0.8879472693032014,
+      "target_level": "intermediate"
+    },
+    {
+      "answer_count": 176,
+      "condition": "P0R1_reranking_only",
+      "evaluable_count": 176,
+      "mean_citation_support": 0.9178977272727273,
+      "target_level": "intermediate"
+    },
+    {
+      "answer_count": 172,
+      "condition": "P1R0_prompt_only",
+      "evaluable_count": 170,
+      "mean_citation_support": 0.857843137254902,
+      "target_level": "intermediate"
+    },
+    {
+      "answer_count": 168,
+      "condition": "P1R1_combined",
+      "evaluable_count": 168,
+      "mean_citation_support": 0.8601190476190477,
+      "target_level": "intermediate"
+    }
+  ],
+  "discrimination": {
+    "accuracy_excluding_uncertain": 0.3498861047835991,
+    "accuracy_including_uncertain": 0.34239857333927776,
+    "confusion_matrix_3x3": {
+      "advanced": {
+        "advanced": 4,
+        "beginner": 550,
+        "intermediate": 177
+      },
+      "beginner": {
+        "advanced": 3,
+        "beginner": 603,
+        "intermediate": 125
+      },
+      "intermediate": {
+        "advanced": 4,
+        "beginner": 568,
+        "intermediate": 161
+      }
+    },
+    "decided_count": 2195,
+    "guess_counts": {
+      "advanced": 11,
+      "beginner": 1721,
+      "intermediate": 463,
+      "uncertain": 48
+    },
+    "per_target_level": {
+      "advanced": {
+        "correct": 4,
+        "denominator_including_uncertain": 747,
+        "guess_accuracy_including_uncertain": 0.00535475234270415
+      },
+      "beginner": {
+        "correct": 603,
+        "denominator_including_uncertain": 748,
+        "guess_accuracy_including_uncertain": 0.8061497326203209
+      },
+      "intermediate": {
+        "correct": 161,
+        "denominator_including_uncertain": 748,
+        "guess_accuracy_including_uncertain": 0.21524064171122995
+      }
+    },
+    "total": 2243,
+    "uncertain_count": 48,
+    "uncertain_rate": 0.02139991083370486
+  },
+  "evidence_bundle_by_level_condition": [
+    {
+      "answer_count": 177,
+      "condition": "P0R0_plain",
+      "evaluable_count": 177,
+      "mean_bundle_faithfulness": 0.9425612052730697,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 179,
+      "condition": "P0R1_reranking_only",
+      "evaluable_count": 178,
+      "mean_bundle_faithfulness": 0.9386704119850188,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 177,
+      "condition": "P1R0_prompt_only",
+      "evaluable_count": 177,
+      "mean_bundle_faithfulness": 0.9491525423728814,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 178,
+      "condition": "P1R1_combined",
+      "evaluable_count": 177,
+      "mean_bundle_faithfulness": 0.9345574387947269,
+      "target_level": "advanced"
+    },
+    {
+      "answer_count": 172,
+      "condition": "P0R0_plain",
+      "evaluable_count": 172,
+      "mean_bundle_faithfulness": 0.9622093023255814,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 181,
+      "condition": "P0R1_reranking_only",
+      "evaluable_count": 180,
+      "mean_bundle_faithfulness": 0.9416666666666667,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 176,
+      "condition": "P1R0_prompt_only",
+      "evaluable_count": 176,
+      "mean_bundle_faithfulness": 0.934185606060606,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 179,
+      "condition": "P1R1_combined",
+      "evaluable_count": 178,
+      "mean_bundle_faithfulness": 0.9489700374531834,
+      "target_level": "beginner"
+    },
+    {
+      "answer_count": 178,
+      "condition": "P0R0_plain",
+      "evaluable_count": 178,
+      "mean_bundle_faithfulness": 0.9456928838951312,
+      "target_level": "intermediate"
+    },
+    {
+      "answer_count": 176,
+      "condition": "P0R1_reranking_only",
+      "evaluable_count": 176,
+      "mean_bundle_faithfulness": 0.953409090909091,
+      "target_level": "intermediate"
+    },
+    {
+      "answer_count": 172,
+      "condition": "P1R0_prompt_only",
+      "evaluable_count": 170,
+      "mean_bundle_faithfulness": 0.9387254901960785,
+      "target_level": "intermediate"
+    },
+    {
+      "answer_count": 168,
+      "condition": "P1R1_combined",
+      "evaluable_count": 168,
+      "mean_bundle_faithfulness": 0.9260912698412699,
+      "target_level": "intermediate"
+    }
+  ],
+  "not_applicable_by_criterion_level_condition": [
+    {
+      "condition": "P0R0_plain",
+      "criterion": "A2",
+      "not_applicable": 175,
+      "not_applicable_fraction": 0.9358288770053476,
+      "resolved_criterion_verdicts": 187,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P0R1_reranking_only",
+      "criterion": "A2",
+      "not_applicable": 175,
+      "not_applicable_fraction": 0.9408602150537635,
+      "resolved_criterion_verdicts": 186,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P1R0_prompt_only",
+      "criterion": "A2",
+      "not_applicable": 174,
+      "not_applicable_fraction": 0.9405405405405406,
+      "resolved_criterion_verdicts": 185,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P1R1_combined",
+      "criterion": "A2",
+      "not_applicable": 172,
+      "not_applicable_fraction": 0.9347826086956522,
+      "resolved_criterion_verdicts": 184,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P0R0_plain",
+      "criterion": "A3",
+      "not_applicable": 157,
+      "not_applicable_fraction": 0.839572192513369,
+      "resolved_criterion_verdicts": 187,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P0R1_reranking_only",
+      "criterion": "A3",
+      "not_applicable": 159,
+      "not_applicable_fraction": 0.8548387096774194,
+      "resolved_criterion_verdicts": 186,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P1R0_prompt_only",
+      "criterion": "A3",
+      "not_applicable": 146,
+      "not_applicable_fraction": 0.7891891891891892,
+      "resolved_criterion_verdicts": 185,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P1R1_combined",
+      "criterion": "A3",
+      "not_applicable": 146,
+      "not_applicable_fraction": 0.7934782608695652,
+      "resolved_criterion_verdicts": 184,
+      "target_level": "advanced"
+    },
+    {
+      "condition": "P0R0_plain",
+      "criterion": "B3",
+      "not_applicable": 117,
+      "not_applicable_fraction": 0.65,
+      "resolved_criterion_verdicts": 180,
+      "target_level": "beginner"
+    },
+    {
+      "condition": "P0R1_reranking_only",
+      "criterion": "B3",
+      "not_applicable": 117,
+      "not_applicable_fraction": 0.6464088397790055,
+      "resolved_criterion_verdicts": 181,
+      "target_level": "beginner"
+    },
+    {
+      "condition": "P1R0_prompt_only",
+      "criterion": "B3",
+      "not_applicable": 112,
+      "not_applicable_fraction": 0.6054054054054054,
+      "resolved_criterion_verdicts": 185,
+      "target_level": "beginner"
+    },
+    {
+      "condition": "P1R1_combined",
+      "criterion": "B3",
+      "not_applicable": 114,
+      "not_applicable_fraction": 0.6229508196721312,
+      "resolved_criterion_verdicts": 183,
+      "target_level": "beginner"
+    }
+  ],
+  "status": "descriptive_reference_only; not additional primary hypothesis tests"
+}

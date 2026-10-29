@@ -1,0 +1,19 @@
+{
+  "api_calls": 0,
+  "cells": 2244,
+  "correctness_run_and_answer_binding_valid": true,
+  "corrupted_file_rejected": true,
+  "credential_pattern_scan_passed": true,
+  "files_verified": 25,
+  "final_audit_archive_sha256": "f8b482711a14f412692bc16458e791fb2fd24d233cc8d1f5540d07c6b72363ae",
+  "final_scoring_archive_sha256": "2772888f8b4ea7b138784248d5b71d0130870e884dc55b0b8064c138949079b9",
+  "fresh_archive_readback": true,
+  "incorrect_answer_binding_rejected": true,
+  "m7_source_adapter_replayed_identically": true,
+  "native_canonical_reassembly_equal": true,
+  "original_audit_files_verified": 8270,
+  "original_receipts_and_frozen_files_unchanged": true,
+  "registered_analysis_replayed_identically": true,
+  "reportable": false,
+  "verification_source": "fresh extraction of both final archives"
+}
