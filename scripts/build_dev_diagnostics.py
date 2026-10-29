@@ -25,9 +25,10 @@ def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def json_file(path, value):
+def json_file(path, value, *, sort_keys=False):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    with path.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=sort_keys) + "\n")
 
 
 def jsonl(path, values):
@@ -755,7 +756,7 @@ def main():
         "threshold_x": None,
     }
     json_file(out / "summary.json", summary)
-    json_file(out / "SOURCE_HASHES.json", source_hashes)
+    json_file(out / "SOURCE_HASHES.json", source_hashes, sort_keys=True)
     for relative, digest in source_hashes.items():
         assert sha(package / relative) == digest, relative
     print(

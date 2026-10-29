@@ -1,0 +1,28 @@
+{
+  "purpose": "M8 small perturbation audit, step 5 inputs (Dev-only synthetic answers)",
+  "repo_commit_expected": "45f53c2 (main after #220) or later with identical evaluation source",
+  "curated_edits_sha256": "89799c12f5a1388eab4220d0835a1639fe9e19f5e6b6ea07d024253032c1a8ea",
+  "cases": 18,
+  "request_counts": {
+    "adaptation": 38,
+    "discrimination": 18,
+    "evidence_support": 18,
+    "correctness": 18
+  },
+  "judge_settings": "unchanged full-Dev configuration: gemini-3.1-flash-lite, thinking low, same prompts/profile/rubrics",
+  "isolation": "new evaluation/run IDs, fresh caches, separate results and attempt logs; no score enters primary Dev/Test",
+  "paid_calls_during_build": 0,
+  "files_sha256": {
+    "case_map.json": "54b92fdd9dff81c1fd9c29921fef2b9ebd0e490674b074ad86d27b57720c1ede",
+    "config/judge-config.low.json": "90293ebf1248d58935490f37ffda4a11591f8265bd28125d540d45f40e11eb19",
+    "config/profile_checklist.frozen.json": "50bb9a61414268cb343b79c096bec3c380310c041eeb69deefbf51fc0ebd1b38",
+    "correctness/expected_experiment.perturbed.json": "8f5c2f40f7e8e43f4e832321d6fc1e42b1fb0d78f810c18ea43d06726cbbef57",
+    "correctness/gold.jsonl": "235c92a15c14ef0416ac2ad262628c5876b9ebdde03c7f51438d10536a2509d5",
+    "correctness/rubrics.draft.jsonl": "acd5ae48672abe0d2ef9849c042f1f7222263a94bfb027c71e79c57d3faf9f97",
+    "correctness/saved_answers.perturbed.jsonl": "dae5bc9f3d17956e05f20dea5504a362bdbfb1231be1bfc23866c15a03b70da6",
+    "inputs/perturbed_generation_evaluation_inputs.jsonl": "3b889f583bf015d9d613211248a1dd5f9ad3a1b9f9a3d38875ed1aa09ce93f56",
+    "requests/adaptation.requests.jsonl": "508eb7015cfd383543f66019746b4293245e835070edcbfecda43bd6985db2af",
+    "requests/discrimination.requests.jsonl": "fc936fd6ac94325d7bb198bcb8d06c69e2b8734095e320d2fa0f48c177d28a8a",
+    "requests/evidence_support.requests.jsonl": "e46d302d8b50abdf53c369a1d7742428de196f50c1ec2a54c53f9a4ee4e87e72"
+  }
+}
