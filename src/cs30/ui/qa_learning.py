@@ -105,6 +105,10 @@ def render_learning_page() -> None:
             st.rerun()
     render_profile_sidebar(runtime, initial_level)
     render_session_report(runtime)
+    st.sidebar.caption(
+        "Undo applies to the latest graded Topic attempt. Textbook-based practice "
+        "does not change Topic progress."
+    )
     if st.sidebar.button("Undo the latest graded attempt"):
         st.session_state["learning_revoke_request"] = {"event_id": f"revoke-{uuid.uuid4().hex}"}
     revoke_request = st.session_state.pop("learning_revoke_request", None)
@@ -187,10 +191,10 @@ def render_learning_page() -> None:
             "locally."
         )
         st.caption(
-            "The Demo selects only among approved Topic IDs assigned to citation-validated "
-            "evidence. A candidate needs at least one cited chunk assigned to that Topic; chunks "
-            "may support several Topics. If several candidates qualify, selection is proportional "
-            "to rank-weighted citation support. This online Demo policy is not M7-validated."
+            "Practice uses a mapped Topic when one is available. Otherwise, a question is "
+            "generated directly from this answer's validated textbook passages. "
+            "Textbook-based practice shows an answer and explanation but does not change "
+            "Topic mastery or level."
         )
         st.caption(
             f"Question author output mode: {config.quiz_api.structured_output}. "
@@ -291,9 +295,13 @@ def render_session_report(runtime) -> None:
     )
 
     with st.sidebar.expander("Session report"):
+        st.caption(
+            "Topic statistics include mapped-Topic attempts only. Textbook-based attempts "
+            "are saved separately and do not contribute to these statistics."
+        )
         events = runtime.event_store.events(runtime.static_profile.profile_id)
         if not events:
-            st.caption("Complete a Concept Check to record progress.")
+            st.caption("Complete a mapped-Topic Concept Check to record Topic progress.")
             return
         report = build_concept_check_report(
             events,

@@ -1,5 +1,14 @@
 # M8 page integration (2026-10-29)
 
+Concept Check now prefers a mapped Topic, then falls back to the answer's validated
+textbook passages when no eligible Topic is mapped. The fallback generates a question,
+answer and explanation with the same local quotation checks and request limits.
+It uses the learner's starting level, makes no Topic assignment, and saves grading
+or skip results in `textbook_practice_attempts.jsonl` in the learner's session folder.
+These attempts do not change Topic mastery/levels and are excluded from Topic event
+reports and the Topic-attempt undo action. Invalid citations or mismatched assets
+still block generation. Fallback is for Topic selection failure, not API author failures.
+
 The online learning demo now runs inside M8's `qa_app.py` page. Use
 `start_v2_demo.cmd` and select **Demo Mode → Online learning · textbook quizzes**,
 or run `start_learning_demo.cmd` to open that mode directly. Both routes use the

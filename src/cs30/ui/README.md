@@ -1,5 +1,11 @@
 # Unified online Concept Check
 
+Concept Check prefers mapped Topics. If validated cited passages have no eligible
+Topic, it generates textbook-based practice directly from those passages. These
+questions can be graded or skipped, with answers, explanations and located quotations;
+they do not update Topic mastery or level. Their local attempt log is separate from
+Topic progress reports. Citation validation and asset identity checks remain required.
+
 The M8 page now hosts the textbook-grounded online learning workflow. Run
 `start_v2_demo.cmd` and choose **Demo Mode → Online learning · textbook quizzes**.
 When `configs/learning-demo.toml` (or `CS30_LEARNING_CONFIG`) exists, this mode is

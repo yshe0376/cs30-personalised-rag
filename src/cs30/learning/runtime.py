@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import time
 import uuid
@@ -350,8 +351,7 @@ class LearningRuntime:
                     )
                     resolution_has_support = (
                         resolution.status is TopicResolutionStatus.RESOLVED
-                        or resolution.error_code
-                        in {"TOPIC_TIE", "TOPIC_SUPPORT_BELOW_THRESHOLD"}
+                        or resolution.error_code in {"TOPIC_TIE", "TOPIC_SUPPORT_BELOW_THRESHOLD"}
                     )
                     topic_selection_trace = select_cited_demo_topic(
                         profile_id=self.static_profile.profile_id,
@@ -383,35 +383,54 @@ class LearningRuntime:
                         }
                     )
                     if resolved_topic_id is None:
-                        raise OnlineQuizUnavailable(
-                            topic_selection_trace.failure_reason
-                            or "No eligible approved Topic had sufficient cited evidence."
+                        # Missing labels may use cited text; identity/binding failures may not.
+                        if (
+                            not resolution_has_support
+                            and resolution.error_code != "NO_TOPIC_AVAILABLE"
+                        ):
+                            raise OnlineQuizUnavailable(
+                                "Textbook evidence cannot be used: "
+                                f"{resolution.error_code or 'unknown'}"
+                            )
+                        cited_chunk_ids = tuple(turn.validated_answer.resolved_citations)
+                        retrieved_ids = {hit.chunk_id for hit in retrieval.hits}
+                        if not cited_chunk_ids or any(
+                            chunk_id not in retrieved_ids
+                            or chunk_id not in self.assets.corpus.chunks_by_id
+                            for chunk_id in cited_chunk_ids
+                        ):
+                            raise OnlineQuizUnavailable(
+                                "No valid cited textbook passages are available."
+                            )
+                        topic = None
+                        target_level = self.static_profile.level
+                    else:
+                        selected_candidate = next(
+                            candidate
+                            for candidate in topic_selection_trace.candidates
+                            if candidate.topic_id == resolved_topic_id and candidate.eligible
                         )
-                    selected_candidate = next(
-                        candidate
-                        for candidate in topic_selection_trace.candidates
-                        if candidate.topic_id == resolved_topic_id and candidate.eligible
-                    )
-                    topic = next(
-                        item
-                        for item in self.assets.topic_registry.topics
-                        if item.topic_id == resolved_topic_id
-                    )
-                    state = self.learner_state
-                    topic_state = state.topics.get(resolved_topic_id) or TopicState(
-                        topic_id=resolved_topic_id,
-                        level=self.static_profile.topic_levels.get(
-                            resolved_topic_id, self.static_profile.level
-                        ),
-                    )
-                    target_level = target_levels(topic_state, self.concept_service.config)[0]
+                        cited_chunk_ids = selected_candidate.sufficient_evidence_chunk_ids
+                        topic = next(
+                            item
+                            for item in self.assets.topic_registry.topics
+                            if item.topic_id == resolved_topic_id
+                        )
+                        state = self.learner_state
+                        topic_state = state.topics.get(resolved_topic_id) or TopicState(
+                            topic_id=resolved_topic_id,
+                            level=self.static_profile.topic_levels.get(
+                                resolved_topic_id, self.static_profile.level
+                            ),
+                        )
+                        target_level = target_levels(topic_state, self.concept_service.config)[0]
                     quiz_started = True
                     draft = self.quiz_generator.generate(
                         turn,
                         quiz_index=quiz_index,
                         topic=topic,
                         target_level=target_level,
-                        cited_chunk_ids=selected_candidate.sufficient_evidence_chunk_ids,
+                        cited_chunk_ids=cited_chunk_ids,
                         topic_selection_trace=topic_selection_trace,
                     )
                 turn.private_quizzes[quiz_index] = draft.record
@@ -473,27 +492,27 @@ class LearningRuntime:
                 attempt_id=record.attempt_id,
                 selected_choice=choice,
             )
-            event = ConceptCheckEvent(
-                event_id=record.event_id,
-                profile_id=self.static_profile.profile_id,
-                attempt_id=record.attempt_id,
-                question_id=record.question.question_id,
-                topic_id=record.topic_id,
-                topic_registry_version=self.assets.topic_registry.topic_registry_version,
-                question_difficulty=record.question.difficulty,
-                selected_choice=grade.selected_choice,
-                performance=grade.performance,
-                event_type=(
-                    ConceptCheckEventType.ATTEMPT_SKIPPED
-                    if grade.result is ConceptCheckResult.SKIPPED
-                    else ConceptCheckEventType.ATTEMPT_SUBMITTED
-                ),
-                state_version_before=0,
-                stream_version=1,
-                created_at=datetime.now(UTC),
-            )
-            stored = self.event_store.append(event)
-            learner_state = self.replayer.replay(self.event_store.events(stored.profile_id))
+            if record.topic_id is None:
+                # Textbook-only attempts belong to the session, never to a registry Topic.
+                path = self.event_store.directory / "textbook_practice_attempts.jsonl"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                payload = {
+                    "practice_id": practice_id,
+                    "profile_id": self.static_profile.profile_id,
+                    "turn_id": turn_id,
+                    "topic_id": None,
+                    "generation_basis": "textbook",
+                    "created_at_utc": datetime.now(UTC).isoformat(),
+                    "evidence_chunk_ids": record.evidence_chunk_ids,
+                    "grade": grade.model_dump(mode="json"),
+                }
+                with path.open("a", encoding="utf-8", newline="\n") as stream:
+                    stream.write(json.dumps(payload) + "\n")
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                learner_state = state_before
+            else:
+                learner_state = self._record_topic_attempt(record, grade)
             after = learner_state.topics.get(record.topic_id)
             level_after = after.level if after else level_before
             result = PracticeResult(
@@ -520,6 +539,29 @@ class LearningRuntime:
                 }
             )
             return result
+
+    def _record_topic_attempt(self, record, grade) -> LearnerState:
+        event = ConceptCheckEvent(
+            event_id=record.event_id,
+            profile_id=self.static_profile.profile_id,
+            attempt_id=record.attempt_id,
+            question_id=record.question.question_id,
+            topic_id=record.topic_id,
+            topic_registry_version=self.assets.topic_registry.topic_registry_version,
+            question_difficulty=record.question.difficulty,
+            selected_choice=grade.selected_choice,
+            performance=grade.performance,
+            event_type=(
+                ConceptCheckEventType.ATTEMPT_SKIPPED
+                if grade.result is ConceptCheckResult.SKIPPED
+                else ConceptCheckEventType.ATTEMPT_SUBMITTED
+            ),
+            state_version_before=0,
+            stream_version=1,
+            created_at=datetime.now(UTC),
+        )
+        stored = self.event_store.append(event)
+        return self.replayer.replay(self.event_store.events(stored.profile_id))
 
     def override_level(
         self,
@@ -639,11 +681,17 @@ class LearningRuntime:
             practice_id=draft.record.practice_id,
             status="offered",
             topic_id=draft.record.topic_id,
+            generation_basis="topic" if draft.record.topic_id else "textbook",
             difficulty=question.difficulty,
             question=question.question,
             options=question.options,
             topic_selection_trace=draft.record.topic_selection_trace,
-            notice="Generated from textbook evidence; no independent model review.",
+            notice=(
+                "Generated from textbook evidence; no independent model review."
+                if draft.record.topic_id
+                else "No mapped Topic was available. Generated directly from the answer's cited "
+                "textbook passages; this practice does not update Topic mastery or level."
+            ),
             evidence_labels=tuple(labels),
         )
 

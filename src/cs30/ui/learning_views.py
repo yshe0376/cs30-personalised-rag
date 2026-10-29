@@ -72,7 +72,16 @@ def render_sources(turn: LearningTurn, corpus) -> None:
 
 def render_quiz(view: OnlineQuizView, result: PracticeResult | None, record=None) -> None:
     selection_trace = getattr(view, "topic_selection_trace", None)
-    if selection_trace is not None:
+    textbook_only = getattr(view, "generation_basis", "topic") == "textbook"
+    if textbook_only:
+        st.info(
+            "Textbook-based practice: no usable mapped Topic was found. This question uses "
+            "the answer's validated textbook passages and does not change Topic mastery or level."
+        )
+        if selection_trace is not None:
+            with st.expander("Topic lookup details"):
+                _render_topic_selection_trace(selection_trace)
+    elif selection_trace is not None:
         _render_topic_selection_trace(selection_trace)
     elif view.topic_id:
         st.caption(f"Topic ID: `{view.topic_id}`")
@@ -153,11 +162,14 @@ def render_quiz(view: OnlineQuizView, result: PracticeResult | None, record=None
         for span in question.evidence_anchors:
             st.write(span.verbatim_text)
             st.caption(f"{span.textbook_id} · Chapter {span.chapter_id}")
-    st.caption(
-        f"Topic level: {result.level_before.value} → {result.level_after.value} · "
-        f"Profile event version: {result.learner_state.state_version}. "
-        "Mastery can change even when the level stays the same."
-    )
+    if result.topic_id is None:
+        st.caption("Practice result saved. Topic mastery and levels were not changed.")
+    else:
+        st.caption(
+            f"Topic level: {result.level_before.value} → {result.level_after.value} · "
+            f"Profile event version: {result.learner_state.state_version}. "
+            "Mastery can change even when the level stays the same."
+        )
 
 
 def _render_topic_selection_trace(trace) -> None:

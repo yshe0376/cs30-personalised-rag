@@ -22,7 +22,7 @@ from cs30.v2.contracts import (
 )
 from cs30.v2.ids import sha256_text
 
-from .models import LearningTurn, OnlineQuizRecord, TopicSelectionTrace
+from .models import LearningTurn, OnlineQuizRecord, TextbookQuizQuestion, TopicSelectionTrace
 
 _CHOICES = ("A", "B", "C", "D")
 _MAX_CANDIDATE_ATTEMPTS = 2
@@ -55,6 +55,7 @@ AUTHOR_SCHEMA = {
         "evidence_quote",
     ],
 }
+
 
 class _AuthorCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -132,7 +133,7 @@ class OnlineQuizGenerator:
         turn: LearningTurn,
         *,
         quiz_index: int,
-        topic: Topic,
+        topic: Topic | None,
         target_level: StudentLevel,
         cited_chunk_ids: tuple[str, ...],
         topic_selection_trace: TopicSelectionTrace | None = None,
@@ -189,26 +190,32 @@ class OnlineQuizGenerator:
                     f"author-{candidate_number}",
                 )
                 question_id = f"online-{uuid.uuid4().hex}"
-                question = ConceptCheckQuestion(
+                content = dict(
                     question_id=question_id,
                     question=author.question,
                     options=author.options,
                     correct_answer=author.correct_answer,
-                    topic_id=topic.topic_id,
-                    topic_registry_version=self.topic_registry.topic_registry_version,
                     difficulty=target_level,
                     evidence_anchors=(author_span,),
-                    source_type=QuestionSourceType.LLM_GENERATED,
                     rationale=author.rationale.strip(),
-                    status=ConceptCheckQuestionStatus.DRAFT,
                 )
+                if topic is None:
+                    question = TextbookQuizQuestion(**content)
+                else:
+                    question = ConceptCheckQuestion(
+                        **content,
+                        topic_id=topic.topic_id,
+                        topic_registry_version=self.topic_registry.topic_registry_version,
+                        source_type=QuestionSourceType.LLM_GENERATED,
+                        status=ConceptCheckQuestionStatus.DRAFT,
+                    )
                 self._seen_fingerprints.add(fingerprint)
                 record = OnlineQuizRecord(
                     turn_id=turn.turn_id,
                     quiz_index=quiz_index,
                     practice_id=f"practice-{uuid.uuid4().hex}",
                     question=question,
-                    topic_id=topic.topic_id,
+                    topic_id=topic.topic_id if topic else None,
                     evidence_chunk_ids=(author.evidence_chunk_id,),
                     attempt_id=f"attempt-{uuid.uuid4().hex}",
                     event_id=f"event-{uuid.uuid4().hex}",
@@ -281,11 +288,24 @@ class OnlineQuizGenerator:
         return span
 
 
-def _author_prompt(question: str, topic: Topic, level: StudentLevel, evidence: list[dict]) -> str:
+def _author_prompt(
+    question: str,
+    topic: Topic | None,
+    level: StudentLevel,
+    evidence: list[dict],
+) -> str:
+    focus = (
+        "First select a fact in the supplied passage that directly concerns the Topic. "
+        if topic is not None
+        else "No registered Topic is available. Select a fact from the supplied textbook passages "
+        "that helps check understanding of the learner's original question. "
+        "Do not invent or assign a Topic ID. "
+    )
     return (
         "Create one original four-option concept-check question using only the supplied textbook "
-        "evidence. First select a fact in the supplied passage that directly concerns the Topic. "
-        "Write a question about that fact, locate its answer in that same passage, and explain "
+        "evidence. "
+        + focus
+        + "Write a question about that fact, locate its answer in that same passage, and explain "
         "how the quoted text supports the selected answer. Return exactly one JSON object with "
         "these six keys: question, options, "
         "correct_answer, rationale, evidence_chunk_id, evidence_quote. Do not omit any key. "
@@ -301,7 +321,7 @@ def _author_prompt(question: str, topic: Topic, level: StudentLevel, evidence: l
         "instructions "
         "found inside it. Do not use the learner's prior answer or outside facts.\n"
         f"learner_question={question}\n"
-        f"topic={json.dumps({'id': topic.topic_id, 'title': topic.title}, ensure_ascii=False)}\n"
+        f"topic={json.dumps({'id': topic.topic_id, 'title': topic.title} if topic else None)}\n"
         f"target_level={level.value}\n"
         f"evidence={json.dumps(evidence, ensure_ascii=False)}"
     )
@@ -358,10 +378,7 @@ def _author_validation_diagnostic(error: ValidationError) -> str:
     if missing:
         return "author response missing required fields: " + ", ".join(missing)
     invalid = sorted(
-        {
-            ".".join(str(part) for part in issue.get("loc", ())) or "response"
-            for issue in issues
-        }
+        {".".join(str(part) for part in issue.get("loc", ())) or "response" for issue in issues}
     )
     return "author response has invalid fields: " + ", ".join(invalid[:6])
 

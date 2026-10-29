@@ -12,7 +12,9 @@ from cs30.concept_check.service import PreparedRound
 from cs30.v2.contracts import (
     ConceptCheckGrade,
     ConceptCheckQuestion,
+    ConceptCheckQuestionStatus,
     EvidenceBundle,
+    EvidenceSpan,
     GeneratedAnswer,
     LearnerContextSnapshot,
     LearnerState,
@@ -87,6 +89,7 @@ class OnlineQuizView(BaseModel):
     status: Literal["pending", "offered", "unavailable", "interrupted", "expired", "submitted"]
     topic_id: str | None = None
     candidate_topic_ids: tuple[str, ...] = ()
+    generation_basis: Literal["topic", "textbook"] = "topic"
     topic_selection_trace: TopicSelectionTrace | None = None
     difficulty: StudentLevel | None = None
     question: str | None = None
@@ -124,12 +127,28 @@ class LearningTurn:
 
 
 @dataclass
+class TextbookQuizQuestion:
+    """Local draft with validated author content and anchors, without a registry Topic."""
+
+    question_id: str
+    question: str
+    options: dict[str, str]
+    correct_answer: str
+    difficulty: StudentLevel
+    evidence_anchors: tuple[EvidenceSpan, ...]
+    rationale: str
+    status: ConceptCheckQuestionStatus = field(
+        default=ConceptCheckQuestionStatus.DRAFT, init=False,
+    )
+
+
+@dataclass
 class OnlineQuizRecord:
     turn_id: str
     quiz_index: int
     practice_id: str
-    question: ConceptCheckQuestion
-    topic_id: str
+    question: ConceptCheckQuestion | TextbookQuizQuestion
+    topic_id: str | None
     evidence_chunk_ids: tuple[str, ...]
     attempt_id: str
     event_id: str
@@ -147,6 +166,6 @@ class PracticeResult:
     learner_state: LearnerState
     correct_answer: str
     explanation: str
-    topic_id: str
+    topic_id: str | None
     level_before: StudentLevel
     level_after: StudentLevel

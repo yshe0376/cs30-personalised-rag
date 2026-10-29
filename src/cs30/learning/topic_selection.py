@@ -113,13 +113,13 @@ def select_cited_demo_topic(
     failure_reason: str | None = None
     if not allow_selection:
         failure_reason = (
-            "The citation Topic map or citation-to-retrieval binding is unavailable; "
-            "no quiz was generated."
+            "The cited passages have no mapped Topic."
+            if resolver_error_code == "NO_TOPIC_AVAILABLE" else
+            "Topic selection is unavailable: " + (resolver_error_code or resolver_status)
         )
     elif not candidates:
         failure_reason = (
-            "No in-scope Topic is mapped to the validated citations. "
-            "Try a question supported by mapped textbook passages."
+            "No in-scope Topic is mapped to the validated citations."
         )
     elif not eligible:
         failure_reason = (
