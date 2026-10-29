@@ -60,7 +60,7 @@ def main():
         "Selected scope: GPT-OSS only, with ten orientation/calibration cases and 20 independent "
         "audit cases. Llama and Gemma remain unaudited. The orientation cases are not proof "
         "of completed historical calibration or permission to tune the frozen judge. This "
-        "local branch depends on the #223 follow-up; no new PR or Release update is implied.",
+        "branch includes the merged #223 follow-up; no new PR or Release update is implied.",
         "",
         "## Scope and sources",
         "",
@@ -103,8 +103,9 @@ def main():
         "analysis. Intervals are the saved question-cluster bootstrap intervals. No primary "
         "contrast, multiplicity correction or non-inferiority margin is invented.",
         "",
-        "| Generator | Metric | Contrast | Difference (pp) | Interval (pp) | Missing pairs |",
-        "|---|---|---|---:|---|---:|",
+        "| Generator | Metric | Contrast | Difference (pp) | Interval (pp) | "
+        "Resolved pairs | Question clusters | Missing pairs |",
+        "|---|---|---|---:|---|---:|---:|---:|",
     ]
     for name in reports:
         with source(f"development_reports/dev-{name}/v2_generation_condition_contrasts.csv").open(
@@ -117,8 +118,41 @@ def main():
                     f"| {name} | {row['metric']} | {row['contrast']} | "
                     f"{100 * float(row['estimate']):+.2f} | "
                     f"[{100 * float(row['ci_lower']):+.2f}, "
-                    f"{100 * float(row['ci_upper']):+.2f}] | {row['missing_pair_count']} |"
+                    f"{100 * float(row['ci_upper']):+.2f}] | "
+                    f"{row['paired_question_level_count']} | {row['question_cluster_count']} | "
+                    f"{row['missing_pair_count']} |"
                 )
+    # This reviewed Dev supplement separates intermediate coverage from all-level contrasts.
+    relative = "docs/results/m8_dev_validity_diagnostics_20261029"
+    diagnostics = Path(__file__).resolve().parents[1] / relative
+    i3_path = diagnostics / "perturbation-results/dev_i3_sensitivity.json"
+    i3_sha = hashlib.sha256(i3_path.read_bytes()).hexdigest()
+    expected = json.loads((diagnostics / "SHA256SUMS.json").read_text(encoding="utf-8"))
+    if expected["perturbation-results/dev_i3_sensitivity.json"] != i3_sha:
+        raise ValueError("reviewed Dev I3 supplement hash mismatch")
+    i3 = json.loads(i3_path.read_text(encoding="utf-8"))
+    text += [
+        "",
+        "### Llama prompt contrasts: resolved-count warning",
+        "",
+        "The Leader's final #223 review requires resolved counts beside Llama prompt "
+        "contrasts. Above, resolved pairs and question clusters describe each exact "
+        "contrast's available paired sample, not independent answer counts. Below is "
+        "the separate intermediate-level coverage context. In the all-target view, "
+        "each prompt arm has 134/154 resolved, versus 153/154 in each no-prompt arm. "
+        "This imbalance can affect available-case comparisons. The main-eligible "
+        "subset has a different denominator; do not substitute one scope for another.",
+        "",
+        "| Scope | Condition | Resolved / expected | Unresolved |",
+        "|---|---|---:|---:|",
+    ]
+    for row in i3["by_batch"]["dev-llama"]:
+        if row["condition"] != "all_conditions":
+            text.append(
+                f"| {row['scope']} | {row['condition']} | "
+                f"{row['resolved_cells']} / {row['expected_cells']} | "
+                f"{row['unresolved_cells']} |"
+            )
     text += [
         "",
         "Reranking effects are not clearly demonstrated in these exploratory comparisons; "
@@ -201,23 +235,36 @@ def main():
                 group = missing[(row["generator"], row["task"])]
                 for index, field in enumerate(("applicable_cells", "scored", "missing")):
                     group[index] += int(row[field])
-    text += ["## Primary Dev task coverage", "",
-             "Cell-level counts from the saved missingness table, not unique API requests. "
-             "Repeat batches are excluded. Evidence coverage differs by generator; missing "
-             "judgements are not zero or automatically N/A.", "",
-             "| Generator | Task | Applicable cells | Scored | Missing | Missing rate |",
-             "|---|---|---:|---:|---:|---:|"]
+    text += [
+        "## Primary Dev task coverage",
+        "",
+        "Cell-level counts from the saved missingness table, not unique API requests. "
+        "Repeat batches are excluded. Evidence coverage differs by generator; missing "
+        "judgements are not zero or automatically N/A.",
+        "",
+        "| Generator | Task | Applicable cells | Scored | Missing | Missing rate |",
+        "|---|---|---:|---:|---:|---:|",
+    ]
     for (generator, task), (total, scored, count) in sorted(missing.items()):
         rate = f"{count / total:.2%}" if total else "N/A"
         text.append(f"| {generator} | {task} | {total} | {scored} | {count} | {rate} |")
-    text += ["", "For full level/condition breakdowns use the unchanged source missingness "
-             "tables. No threshold-based adaptation pass rate is inferred.", ""]
+    text += [
+        "",
+        "For full level/condition breakdowns use the unchanged source missingness "
+        "tables. No threshold-based adaptation pass rate is inferred.",
+        "",
+    ]
     out.mkdir(parents=True)
     (out / "DEV_REPORT_DRAFT.md").write_bytes("\n".join(text).encode())
     (out / "report_sources.json").write_bytes(
         (
             json.dumps(
-                {"reportable": False, "source_files_sha256": used, "api_calls": 0},
+                {
+                    "reportable": False,
+                    "source_files_sha256": used,
+                    "api_calls": 0,
+                    "repository_dev_i3_sensitivity_sha256": i3_sha,
+                },
                 indent=2,
                 sort_keys=True,
             )

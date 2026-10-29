@@ -1,6 +1,6 @@
 {
   ".gitattributes": "730a35ae3d558080083c3103d9ac8100c3f6561678092abe341701dfa331eb1d",
-  "DEV_REPORT_DRAFT.md": "de424fde8c6d1883b212e32111b00699ca3b3e2d3d3b9db34c633b945b8d3025",
+  "DEV_REPORT_DRAFT.md": "9fe48011a398acff3769b37df0ea896f4e23a6a1e5cca6ada8ae55f1409ed9a4",
   "PREPARATION_CHECKS.json": "f4d49b1a585cf678d12775b8808a61c479d0167ee152f11fb45322988d51679d",
   "audit/AUDIT_GUIDE.md": "5419f6b239a462fbeeeb94a7bd018a155d1743d367c9aa2915eca9c845b6dd48",
   "audit/calibration_review.md": "c16cb6484ac38b69b501a93c592b216c788c447429493c13149fd93123486d34",
@@ -12,5 +12,5 @@
   "audit/preparation_manifest.json": "f24b86b14839a16fc37a29357b87f3f0b106f8a4365f1dc49976eb7e32f2d94d",
   "audit/profile_checklist.frozen.json": "596da9e771a8b0619d3e246f97acaeb8cfaf602011216eb1976de9d8f0ce2062",
   "audit/ratings.pending.jsonl": "acf983b95e54226352db581bd2be2a6b54018325bc224d5eb239a531f9fc76b9",
-  "report_sources.json": "722d9cdef812efcc4a65a6acfe6473f4a6036a2714082d3ef548db7a6bbbf243"
+  "report_sources.json": "1fe15083b49be7fe17e68a24a564adf2bdfbea71160a04b6301dac3d2ec5d9be"
 }

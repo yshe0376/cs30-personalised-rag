@@ -6,7 +6,7 @@
 
 Leader/M3: read [the audit guide](audit/AUDIT_GUIDE.md), confirm the draft audit rubric, optionally inspect calibration_review.md, then review the 20 cases in [independent_review.md](audit/independent_review.md). Fill actual decisions in the pending lines in the review sheet; M8 transcribes them to ratings.pending.jsonl and later checks the ratings with the private binding key and native load_bound_human_audit. Preparing this packet does not complete an audit.
 
-Selected scope: GPT-OSS only, with ten orientation/calibration cases and 20 independent audit cases. Llama and Gemma remain unaudited. The orientation cases are not proof of completed historical calibration or permission to tune the frozen judge. This local branch depends on the #223 follow-up; no new PR or Release update is implied.
+Selected scope: GPT-OSS only, with ten orientation/calibration cases and 20 independent audit cases. Llama and Gemma remain unaudited. The orientation cases are not proof of completed historical calibration or permission to tune the frozen judge. This branch includes the merged #223 follow-up; no new PR or Release update is implied.
 
 ## Scope and sources
 
@@ -30,32 +30,47 @@ Unresolved judgements remain unknown in the denominator; no complete-case point 
 
 Adaptation below is a continuous mean criterion pass rate, not a thresholded answer pass rate. The saved contrasts include I3 and are not the final revised primary analysis. Intervals are the saved question-cluster bootstrap intervals. No primary contrast, multiplicity correction or non-inferiority margin is invented.
 
-| Generator | Metric | Contrast | Difference (pp) | Interval (pp) | Missing pairs |
-|---|---|---|---:|---|---:|
-| gpt-oss | strict_correct | prompt_without_reranking | -0.66 | [-1.99, +0.44] | 7 |
-| gpt-oss | strict_correct | prompt_with_reranking | +0.22 | [-1.09, +1.53] | 3 |
-| gpt-oss | strict_correct | reranking_without_prompt | -0.87 | [-1.97, +0.00] | 4 |
-| gpt-oss | strict_correct | reranking_with_prompt | +0.00 | [-1.33, +1.53] | 7 |
-| gpt-oss | adaptation_criterion_pass_rate | prompt_without_reranking | -0.76 | [-3.12, +1.56] | 9 |
-| gpt-oss | adaptation_criterion_pass_rate | prompt_with_reranking | +1.22 | [-1.03, +3.61] | 5 |
-| gpt-oss | adaptation_criterion_pass_rate | reranking_without_prompt | -0.35 | [-2.58, +1.96] | 6 |
-| gpt-oss | adaptation_criterion_pass_rate | reranking_with_prompt | +1.82 | [+0.03, +3.64] | 6 |
-| llama | strict_correct | prompt_without_reranking | -8.48 | [-12.94, -4.33] | 2 |
-| llama | strict_correct | prompt_with_reranking | -9.11 | [-12.34, -5.86] | 1 |
-| llama | strict_correct | reranking_without_prompt | +0.87 | [-1.30, +3.26] | 2 |
-| llama | strict_correct | reranking_with_prompt | +0.43 | [-3.46, +4.55] | 0 |
-| llama | adaptation_criterion_pass_rate | prompt_without_reranking | -1.17 | [-4.14, +1.74] | 3 |
-| llama | adaptation_criterion_pass_rate | prompt_with_reranking | -0.54 | [-3.72, +2.58] | 4 |
-| llama | adaptation_criterion_pass_rate | reranking_without_prompt | -0.24 | [-2.18, +1.60] | 5 |
-| llama | adaptation_criterion_pass_rate | reranking_with_prompt | -0.15 | [-2.95, +2.76] | 2 |
-| gemma | strict_correct | prompt_without_reranking | +1.96 | [-0.65, +5.00] | 2 |
-| gemma | strict_correct | prompt_with_reranking | +1.09 | [-1.52, +3.94] | 4 |
-| gemma | strict_correct | reranking_without_prompt | +0.43 | [-0.44, +1.52] | 1 |
-| gemma | strict_correct | reranking_with_prompt | -0.44 | [-1.75, +0.87] | 4 |
-| gemma | adaptation_criterion_pass_rate | prompt_without_reranking | +6.26 | [+2.81, +10.02] | 8 |
-| gemma | adaptation_criterion_pass_rate | prompt_with_reranking | +7.20 | [+4.19, +10.68] | 8 |
-| gemma | adaptation_criterion_pass_rate | reranking_without_prompt | -0.64 | [-1.96, +0.77] | 7 |
-| gemma | adaptation_criterion_pass_rate | reranking_with_prompt | +0.16 | [-1.47, +1.88] | 8 |
+| Generator | Metric | Contrast | Difference (pp) | Interval (pp) | Resolved pairs | Question clusters | Missing pairs |
+|---|---|---|---:|---|---:|---:|---:|
+| gpt-oss | strict_correct | prompt_without_reranking | -0.66 | [-1.99, +0.44] | 455 | 154 | 7 |
+| gpt-oss | strict_correct | prompt_with_reranking | +0.22 | [-1.09, +1.53] | 459 | 154 | 3 |
+| gpt-oss | strict_correct | reranking_without_prompt | -0.87 | [-1.97, +0.00] | 458 | 153 | 4 |
+| gpt-oss | strict_correct | reranking_with_prompt | +0.00 | [-1.33, +1.53] | 455 | 154 | 7 |
+| gpt-oss | adaptation_criterion_pass_rate | prompt_without_reranking | -0.76 | [-3.12, +1.56] | 309 | 106 | 9 |
+| gpt-oss | adaptation_criterion_pass_rate | prompt_with_reranking | +1.22 | [-1.03, +3.61] | 313 | 106 | 5 |
+| gpt-oss | adaptation_criterion_pass_rate | reranking_without_prompt | -0.35 | [-2.58, +1.96] | 312 | 106 | 6 |
+| gpt-oss | adaptation_criterion_pass_rate | reranking_with_prompt | +1.82 | [+0.03, +3.64] | 312 | 106 | 6 |
+| llama | strict_correct | prompt_without_reranking | -8.48 | [-12.94, -4.33] | 460 | 154 | 2 |
+| llama | strict_correct | prompt_with_reranking | -9.11 | [-12.34, -5.86] | 461 | 154 | 1 |
+| llama | strict_correct | reranking_without_prompt | +0.87 | [-1.30, +3.26] | 460 | 154 | 2 |
+| llama | strict_correct | reranking_with_prompt | +0.43 | [-3.46, +4.55] | 462 | 154 | 0 |
+| llama | adaptation_criterion_pass_rate | prompt_without_reranking | -1.17 | [-4.14, +1.74] | 291 | 105 | 3 |
+| llama | adaptation_criterion_pass_rate | prompt_with_reranking | -0.54 | [-3.72, +2.58] | 292 | 106 | 4 |
+| llama | adaptation_criterion_pass_rate | reranking_without_prompt | -0.24 | [-2.18, +1.60] | 313 | 106 | 5 |
+| llama | adaptation_criterion_pass_rate | reranking_with_prompt | -0.15 | [-2.95, +2.76] | 282 | 105 | 2 |
+| gemma | strict_correct | prompt_without_reranking | +1.96 | [-0.65, +5.00] | 460 | 154 | 2 |
+| gemma | strict_correct | prompt_with_reranking | +1.09 | [-1.52, +3.94] | 458 | 154 | 4 |
+| gemma | strict_correct | reranking_without_prompt | +0.43 | [-0.44, +1.52] | 461 | 154 | 1 |
+| gemma | strict_correct | reranking_with_prompt | -0.44 | [-1.75, +0.87] | 458 | 154 | 4 |
+| gemma | adaptation_criterion_pass_rate | prompt_without_reranking | +6.26 | [+2.81, +10.02] | 310 | 106 | 8 |
+| gemma | adaptation_criterion_pass_rate | prompt_with_reranking | +7.20 | [+4.19, +10.68] | 310 | 106 | 8 |
+| gemma | adaptation_criterion_pass_rate | reranking_without_prompt | -0.64 | [-1.96, +0.77] | 311 | 106 | 7 |
+| gemma | adaptation_criterion_pass_rate | reranking_with_prompt | +0.16 | [-1.47, +1.88] | 310 | 106 | 8 |
+
+### Llama prompt contrasts: resolved-count warning
+
+The Leader's final #223 review requires resolved counts beside Llama prompt contrasts. Above, resolved pairs and question clusters describe each exact contrast's available paired sample, not independent answer counts. Below is the separate intermediate-level coverage context. In the all-target view, each prompt arm has 134/154 resolved, versus 153/154 in each no-prompt arm. This imbalance can affect available-case comparisons. The main-eligible subset has a different denominator; do not substitute one scope for another.
+
+| Scope | Condition | Resolved / expected | Unresolved |
+|---|---|---:|---:|
+| all_target_intermediate | P0R0_plain | 153 / 154 | 1 |
+| all_target_intermediate | P0R1_reranking_only | 153 / 154 | 1 |
+| all_target_intermediate | P1R0_prompt_only | 134 / 154 | 20 |
+| all_target_intermediate | P1R1_combined | 134 / 154 | 20 |
+| main_eligible_intermediate | P0R0_plain | 106 / 106 | 0 |
+| main_eligible_intermediate | P0R1_reranking_only | 106 / 106 | 0 |
+| main_eligible_intermediate | P1R0_prompt_only | 96 / 106 | 10 |
+| main_eligible_intermediate | P1R1_combined | 93 / 106 | 13 |
 
 Reranking effects are not clearly demonstrated in these exploratory comparisons; this is not proof of no effect. These are judge evaluations, not learner outcomes.
 
