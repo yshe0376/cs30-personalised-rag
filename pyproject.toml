@@ -56,6 +56,7 @@ cs30-v2-generation-eval = "cs30.evaluation.v2_generation_cli:main"
 cs30-score-open-answers = "cs30.evaluation.open_answer_cli:main"
 cs30-build-v2 = "cs30.v2.cli:run"
 cs30-experiment-v2 = "cs30.v2.experiment_cli:main"
+cs30-learning-preflight = "cs30.learning.preflight:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

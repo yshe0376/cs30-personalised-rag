@@ -1,8 +1,45 @@
-# API Learning Demo Runbook
+# M8 page integration (2026-10-29)
 
-This documentation-only PR records the v3 framework snapshot. Subsequent runnable
-Demo integration and definition changes are in
-[PR #219](https://github.com/yshe0376/cs30-personalised-rag/pull/219).
+The earlier v3 documentation snapshot was published in PR #217. This runbook
+describes the integrated online Demo and its current v5 definition.
+
+For the current meaning of Concept Check and the two practice paths, use
+[Online Concept Check v5](superpowers/specs/2026-10-28-api-learning-demo-design.md).
+This runbook explains how to run that Demo; the original reviewed-pool specification
+does not define its full online question-availability policy.
+
+Quiz quotation handling now supplies a bounded set of contiguous, uniquely locatable
+source quotations in each passage's `allowed_quotes`. The per-request response schema
+restricts quote text and chunk IDs to those supplied values. Every returned quote
+still passes the local locator and shared span resolver. A retry includes the previous
+validation error; the two-request limit is unchanged. Later quizzes include earlier
+question texts to discourage duplicate questions. The author still supplies the answer
+and explanation; source matching does not independently verify their semantic accuracy.
+
+Concept Check now prefers a mapped Topic, then falls back to the answer's validated
+textbook passages when no eligible Topic is mapped. The fallback generates a question,
+answer and explanation with the same local quotation checks and request limits.
+It uses the learner's starting level, makes no Topic assignment, and saves grading
+or skip results in `textbook_practice_attempts.jsonl` in the learner's session folder.
+These attempts do not change Topic mastery/levels and are excluded from Topic event
+reports and the Topic-attempt undo action. Invalid citations or mismatched assets
+still block generation. Fallback is for Topic selection failure, not API author failures.
+
+The online learning demo now runs inside M8's `qa_app.py` page. Use
+`start_v2_demo.cmd` and select **Demo Mode → Online learning · textbook quizzes**,
+or run `start_learning_demo.cmd` to open that mode directly. Both routes use the
+same online runtime and page components. `CS30_PYTHON` optionally selects the Python
+executable and `CS30_PORT` selects the port (default 8512).
+
+Online mode reads its answer/quiz models and retrieval settings from the local
+learning configuration. Team V2's model/retriever controls belong to the separate
+comparison mode. The original fixture workflow remains available without API keys.
+Existing setup and asset preparation instructions below still apply. The merged
+page adds M8's answer/source cards, two-column practice options and session report
+downloads, while retaining the user's online Topic selection, authoring, local
+grading and persisted profile events.
+
+# API Learning Demo Runbook
 
 Updated 2026-10-29. See the [current framework](superpowers/specs/2026-10-28-api-learning-demo-design.md).
 This runbook describes the local implementation workspace. A documentation publication alone

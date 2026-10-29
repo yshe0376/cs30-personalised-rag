@@ -1,6 +1,9 @@
 # Secrets and local environment
 .env
 .env.*
+!.env.learning.example
+/configs/learning-demo.toml
+/artifacts/learning-demo-runtime/
 !.env.example
 .venv/
 venv/

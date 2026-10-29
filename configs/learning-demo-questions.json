@@ -1,0 +1,12 @@
+[
+  {"question_id": "q01", "question": "What does acceleration measure, and how is it related to a change in velocity?"},
+  {"question_id": "q02", "question": "A car increases its speed from rest to 20 metres per second in 5 seconds. What is its average acceleration?"},
+  {"question_id": "q03", "question": "How can the slope of a velocity-time graph tell us about an object's acceleration?"},
+  {"question_id": "q04", "question": "Why can an object moving at constant speed in a circle still be accelerating?"},
+  {"question_id": "q05", "question": "What relationship does Newton's second law describe between net force, mass, and acceleration?"},
+  {"question_id": "q06", "question": "If the net force on an object doubles while its mass stays constant, what happens to its acceleration?"},
+  {"question_id": "q07", "question": "Why does a more massive object need a larger net force to achieve the same acceleration?"},
+  {"question_id": "q08", "question": "How are action-reaction force pairs different from two forces that balance on one object?"},
+  {"question_id": "q09", "question": "Why does a book resting on a table have no vertical acceleration?"},
+  {"question_id": "q10", "question": "What is the difference between an object's mass and its weight?"}
+]

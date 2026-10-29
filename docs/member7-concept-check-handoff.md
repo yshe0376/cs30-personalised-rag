@@ -1,13 +1,25 @@
 # Member 7 V2 generation and Concept Check handoff
 
-The historical and current decisions are available in the English
+Historical and current decisions are recorded in the English
 [Design Decisions and Open Questions](design-decisions-and-open-questions.md) log.
 
-> Online Demo update (2026-10-29): the user-selected textbook-grounded author-only
-> workflow, all-Topic scope and local citation checks are documented in
-> [the current API framework](superpowers/specs/2026-10-28-api-learning-demo-design.md). This online extension does not replace
-> the published-question gates or formal M7/M8 experiment protocol described here.
+## Current online Demo scope (2026-10-29)
 
+The online product definition is now [Online Concept Check v5](superpowers/specs/2026-10-28-api-learning-demo-design.md).
+It is optional comprehension practice based on the answer's validated textbook
+citations. `cs30.learning` first chooses a supported Topic; if none is usable, it
+authors textbook-only practice without assigning a Topic or changing Topic mastery.
+Both paths provide local grading, answers, explanations and located quotations.
+Online answers/explanations are author-generated drafts, not independently reviewed items.
+
+The `ConceptCheckService.select()` decision table below describes the shared
+reviewed-pool/fixture service. It does not describe the online Demo's entire
+availability policy. The Demo composes that service's Topic resolution, event store
+and replay rules with its own online authoring path. Textbook-only results use a
+separate local attempt log and are excluded from Topic reports. No shared published
+question contract, pool-release requirement, or formal experiment rule changes.
+
+## Shared M7 delivery
 
 The native V2 four-condition batch entry, explicit M3 Gold conversion, Dev-only
 lambda selection, offline correctness scoring and blind review-packet workflow

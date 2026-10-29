@@ -533,6 +533,7 @@ def rerank_retrieval(
     weight: float,
     *,
     parameter_source: Literal["fixture", "dev"] = "fixture",
+    taxonomy_status: Literal["fixture", "frozen"] = "fixture",
     taxonomy_version: str = "unavailable-role-taxonomy",
 ) -> tuple[RetrievalResult, dict]:
     """Delegate M7's exact normalizer, Role preferences and stable ties to its runner."""
@@ -562,6 +563,7 @@ def rerank_retrieval(
         config=RerankConfig(
             lambda_weight=weight,
             parameter_source=parameter_source,
+            taxonomy_status=taxonomy_status,
             taxonomy_version=taxonomy_version,
         ),
     ).rerank(
