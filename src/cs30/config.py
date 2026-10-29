@@ -120,6 +120,10 @@ def _read_toml(environment: str) -> dict:
     if directory is None:
         raise ConfigError("no bundled configuration directory is available")
     path = directory / f"{environment}.toml"
+    # Feature-specific TOMLs in ./configs must not hide bundled app defaults.
+    # An explicit CS30_CONFIG_DIR remains authoritative, including missing files.
+    if not path.is_file() and not os.environ.get("CS30_CONFIG_DIR"):
+        path = Path(str(files("cs30").joinpath("configs", f"{environment}.toml")))
     if not path.is_file():
         raise ConfigError(f"no configuration file for environment {environment!r}: {path}")
     try:

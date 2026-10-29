@@ -8,6 +8,22 @@ from cs30.errors import ConfigError
 from cs30.retrieval.model_policy import PRIMARY_EMBEDDING_MODEL
 
 
+def test_learning_demo_config_does_not_shadow_bundled_app_config(monkeypatch, tmp_path):
+    directory = tmp_path / "configs"
+    directory.mkdir()
+    (directory / "learning-demo.example.toml").write_text("[assets]\n", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("CS30_CONFIG_DIR", raising=False)
+    assert load_config("development").environment == "development"
+    assert load_config("staging").fixture_mode is False
+
+
+def test_explicit_config_directory_still_requires_requested_environment(monkeypatch, tmp_path):
+    monkeypatch.setenv("CS30_CONFIG_DIR", str(tmp_path))
+    with pytest.raises(ConfigError, match="no configuration file"):
+        load_config("staging")
+
+
 def test_development_config_is_read_from_toml() -> None:
     config = load_config("development")
 

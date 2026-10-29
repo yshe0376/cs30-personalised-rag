@@ -81,12 +81,18 @@ from cs30.v2.contracts import StudentLevel, StudentProfile  # noqa: E402
 QUIZ_KEY = "qa-quiz"
 LIVE_MODE = "Team V2 · DeepInfra"
 FIXTURE_MODE = "Fixture mode · offline, no API key"
+ONLINE_MODE = "Online learning · textbook quizzes"
 RETRIEVAL_OPTIONS = {
     "hybrid": "Hybrid · Qwen3 0.10 + BM25 0.90 (M6 system retriever)",
     "bm25": "BM25 baseline (comparison only)",
 }
 # Resolve assets inside this checkout, independently of the preview directory.
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+
+def online_config_available() -> bool:
+    path = Path(os.environ.get("CS30_LEARNING_CONFIG", REPO_ROOT / "configs/learning-demo.toml"))
+    return path.expanduser().is_file()
 
 
 def hybrid_index_dir() -> Path:
@@ -841,7 +847,7 @@ def demo_settings() -> dict:
         st.session_state.setdefault(
             "qa-demo-settings",
             {
-                "mode": LIVE_MODE
+                "mode": ONLINE_MODE if online_config_available() else LIVE_MODE
                 if os.environ.get("DEEPINFRA_API_KEY", "").strip()
                 else FIXTURE_MODE,
                 "model": next(iter(TEAM_MODELS)),
@@ -879,7 +885,7 @@ def show_demo_mode() -> None:
         ("qa-retrieval", settings["retrieval"]),
     ):
         st.session_state.setdefault(key, value)
-    modes = [LIVE_MODE, FIXTURE_MODE]
+    modes = [ONLINE_MODE, LIVE_MODE, FIXTURE_MODE]
     mode = st.selectbox(
         "Demo mode",
         modes,
@@ -888,6 +894,12 @@ def show_demo_mode() -> None:
         label_visibility="collapsed",
     )
     live = mode == LIVE_MODE
+    if mode == ONLINE_MODE:
+        st.info(
+            "Textbook-grounded online questions, explanations and Topic progress use "
+            "configs/learning-demo.toml (or CS30_LEARNING_CONFIG). Answer and quiz models, "
+            "hybrid retrieval and the saved request cap come from that configuration."
+        )
     st.caption(
         "Fixture mode needs no API key: test corpus + simulated answers, "
         "full pipeline and Concept Check."
@@ -909,9 +921,9 @@ def show_demo_mode() -> None:
         on_change=save_demo_settings,
         disabled=not live,
     )
-    if not live:
+    if mode == FIXTURE_MODE:
         st.caption("Fixture mode searches the small test corpus with BM25 (no Qwen3 index).")
-    else:
+    elif live:
         st.caption(
             "Hybrid is the team's selected retriever (decision table 2026-10-23). "
             "Top-5 fused results go to the answer model."
@@ -951,6 +963,20 @@ def main() -> None:
         show_demo_mode()
     settings = demo_settings()
     mode = settings["mode"]
+    if mode == ONLINE_MODE:
+        from cs30.ui.qa_learning import render_learning_page
+
+        st.markdown(
+            '<div class="v3-header"><div><p class="v2-eyebrow">CS-30 / VERSION 2</p>'
+            '<h1 class="v3-title">Personalised Learning Assistant</h1>'
+            '<p class="v3-subtitle">Ask a physics question, check its textbook sources, '
+            'then practise with an online Concept Check.</p></div>'
+            '<span class="v3-mode v3-mode-live">Online learning · textbook quizzes</span></div>',
+            unsafe_allow_html=True,
+        )
+        render_back_to_top()
+        render_learning_page()
+        return
     live = mode == LIVE_MODE
     model_id = settings["model"]
     retrieval_kind = settings["retrieval"] if live else "bm25"

@@ -1,3 +1,28 @@
+# Unified online Concept Check
+
+The M8 page now hosts the textbook-grounded online learning workflow. Run
+`start_v2_demo.cmd` and choose **Demo Mode → Online learning · textbook quizzes**.
+When `configs/learning-demo.toml` (or `CS30_LEARNING_CONFIG`) exists, this mode is
+selected on first opening. `start_learning_demo.cmd` opens the same page directly
+in online mode; `learning_app.py` is a compatibility entry, not a separate UI.
+
+Online mode uses the existing `cs30.learning` backend: API answers, weighted
+selection of Topics mapped to validated citations, API question authoring,
+local quotation binding, grading, event replay, manual Topic levels and undo.
+Answers and sources use M8's adjacent cards; practice uses its two-column option
+styles. Questions stay drafts and answers/explanations appear after submit or skip.
+The sidebar exports the same CSV/JSON/Markdown session reports as M8's page.
+
+Models and hybrid retrieval for online mode come from the learning configuration.
+Team V2's existing model/retriever controls apply to Team V2 mode only. Both Team V2
+and the offline fixture mode remain available in the same mode dialog.
+
+Copy `configs/learning-demo.example.toml` to `configs/learning-demo.toml` and follow
+[the setup runbook](../../../docs/api-learning-demo-runbook.md). Local configuration,
+keys, indexes, request counters and learner events are ignored by Git. Online mode
+requires the existing asset checks and a positive saved request cap before clients
+are created; changing mode or rendering the page sends no generation requests.
+
 # Member 8 UI interfaces
 
 ## V2 learning layout

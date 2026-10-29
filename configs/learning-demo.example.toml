@@ -1,0 +1,70 @@
+[assets]
+# Copy this file to configs/learning-demo.toml, then replace the PATH_* values.
+corpus_dir = "PATH_TO_LOCAL_FOUR_BOOK_CORPUS"
+source_topic_map_path = "artifacts/v2/topics/releases/2.0.0-rc.1/chunk_topic_map_topics-0.2.json"
+topic_map_path = "artifacts/learning-demo-runtime/topic_map_bound.json"
+topic_registry_path = "artifacts/v2/topics/releases/2.0.0-rc.1/topic_registry_v0.2.json"
+role_manifest_path = "PATH_TO_LOCAL_ROLE_PACKAGE/role_labels_v2_provenance_manifest.json"
+lambda_selection_path = "PATH_TO_M7_SELECTED_LAMBDA_JSON"
+index_artifact_path = "PATH_TO_QWEN3_INDEX/artifact.json"
+index_file_path = "PATH_TO_QWEN3_INDEX/index.faiss"
+compatibility_index_dir = "artifacts/learning-demo-runtime/retrieval-view"
+state_dir = "artifacts/learning-demo-runtime"
+preflight_report_path = "artifacts/learning-demo-runtime/topic-preflight.json"
+
+[retrieval]
+dense_embedding_model = "Qwen/Qwen3-Embedding-0.6B"
+dense_embedding_revision = "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+query_instruction = ""
+query_prompt_name = "query"
+dense_weight = 0.1
+bm25_weight = 0.9
+rrf_k = 60
+candidate_k = 20
+evidence_k = 5
+
+[demo]
+question_bank_path = "configs/learning-demo-questions.json"
+minimum_topic_resolution_rate = 0.8
+# Fill with 2–3 IDs chosen from the completed offline preflight report.
+topic_ids = ["*"]
+
+[api]
+# Keep disabled until assets pass preflight, model roles are reviewed, and the
+# process-level request cap is set. No API client is constructed by doctor.
+live_calls_enabled = false
+model_selection_status = "provisional"
+total_request_cap = 0
+
+[api.answer]
+provider_name = "DeepInfra"
+base_url = "https://api.deepinfra.com/v1/openai"
+model = "openai/gpt-oss-20b"
+model_version = "public-model-alias;immutable-revision-unverified"
+api_key_env = "DEEPINFRA_API_KEY"
+structured_output = "json_object"
+timeout_seconds = 120
+max_output_tokens = 4096
+extra_body = { reasoning_effort = "low" }
+
+[api.quiz]
+provider_name = "DeepInfra"
+base_url = "https://api.deepinfra.com/v1/openai"
+model = "openai/gpt-oss-20b"
+model_version = "public-model-alias;immutable-revision-unverified"
+api_key_env = "DEEPINFRA_API_KEY"
+structured_output = "json_schema"
+timeout_seconds = 120
+max_output_tokens = 4096
+extra_body = { reasoning_effort = "low" }
+
+[api.verify]
+provider_name = "DeepInfra"
+base_url = "https://api.deepinfra.com/v1/openai"
+model = "google/gemma-3-12b-it"
+model_version = "public-model-alias;immutable-revision-unverified"
+api_key_env = "DEEPINFRA_API_KEY"
+structured_output = "json_schema"
+timeout_seconds = 120
+max_output_tokens = 2048
+extra_body = {}
