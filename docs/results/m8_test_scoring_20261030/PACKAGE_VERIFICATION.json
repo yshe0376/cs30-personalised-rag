@@ -1,0 +1,13 @@
+{
+  "api_calls": 0,
+  "api_calls_during_delivery": 0,
+  "cells": 2244,
+  "correctness_run_and_answer_binding_valid": true,
+  "files_verified": 25,
+  "m7_source_adapter_replayed_identically": true,
+  "native_canonical_reassembly_equal": true,
+  "original_audit_files_verified": 8270,
+  "original_receipts_and_frozen_files_unchanged": true,
+  "registered_analysis_replayed_identically": true,
+  "reportable": false
+}

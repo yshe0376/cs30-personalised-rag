@@ -1,0 +1,20 @@
+{
+  "api_calls": 0,
+  "billing_wording_only_no_scoring_data_changes": true,
+  "cells": 2244,
+  "correctness_run_and_answer_binding_valid": true,
+  "corrupted_file_rejected": true,
+  "credential_pattern_scan_passed": true,
+  "files_verified": 25,
+  "final_audit_archive_sha256": "f8b482711a14f412692bc16458e791fb2fd24d233cc8d1f5540d07c6b72363ae",
+  "final_scoring_archive_sha256": "5d222d02e07d9b9040aa887454b05e8c92f733b4d2b8f23f2151058f650e2d64",
+  "fresh_archive_readback": true,
+  "incorrect_answer_binding_rejected": true,
+  "m7_source_adapter_replayed_identically": true,
+  "native_canonical_reassembly_equal": true,
+  "original_audit_files_verified": 8270,
+  "original_receipts_and_frozen_files_unchanged": true,
+  "registered_analysis_replayed_identically": true,
+  "reportable": false,
+  "verification_source": "fresh extraction of both final archives"
+}
