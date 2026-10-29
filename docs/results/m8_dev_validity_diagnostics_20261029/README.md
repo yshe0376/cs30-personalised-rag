@@ -1,6 +1,8 @@
 # Supplemental Dev diagnostics and perturbation review draft
 
 Start with REPORT.md. It includes the English report.
+Read THRESHOLD_PROPOSAL.md for concrete Dev-informed candidate limits awaiting
+M7/Leader review. Approved thresholds remain unset; no current pass flag changes.
 This supplement adds five offline computations without replacing the original scores:
 P0R0 observations, length/formula associations, generation noise, missingness, and
 optional-criterion N/A proportions. The numeric warning threshold X is still unset.

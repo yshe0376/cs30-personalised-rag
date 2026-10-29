@@ -2,6 +2,10 @@
 
 Status: draft, not registered, no perturbed judge outcomes observed.
 
+Concrete candidate screening limits are in THRESHOLD_PROPOSAL.md. They were
+proposed after inspecting Dev summaries and are not retrospective preregistration
+or a complete production validity configuration. Approval remains pending.
+
 - Scope: Dev-only synthetic audit; no Test inputs or primary score replacement.
 - Candidate targets: B1, B4, A1, I3, correctness, evidence supportedness. Three base
   generators per target, one case per generator, total 18. Seed 5703 and case IDs/hash
