@@ -1,3 +1,5 @@
+> Status update: see [perturbation results](perturbation-results/README.md) and [Dev I3 comparison](perturbation-results/DEV_I3_SENSITIVITY.md). Planning sections below retain the pre-run snapshot. Current policy excludes I3 from the main intermediate rate and reports it separately. Original offline tables below retain their original three-criterion basis.
+
 # Dev diagnostics supplement and perturbation review draft
 
 ## What is completed

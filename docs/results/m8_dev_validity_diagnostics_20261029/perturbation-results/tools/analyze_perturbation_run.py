@@ -350,9 +350,8 @@ def main() -> int:
         ),
     }
     a.out.mkdir(parents=True)
-    (a.out / "perturbation_summary.json").write_text(
-        json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
+    with (a.out / "perturbation_summary.json").open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
     with (a.out / "perturbation_cases.jsonl").open("w", encoding="utf-8", newline="\n") as s:
         for r in results:
             s.write(json.dumps(r, ensure_ascii=False) + "\n")

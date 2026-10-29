@@ -28,7 +28,7 @@ By proposed difficulty: clear 5/6, moderate 5/6, subtle 5/6 (each miss is one of
 
 In the judge's rationales, the terminology was "used appropriately" and the definitions were "not redundant". On this small sample, I3 does not respond to the kinds of change it is meant to catch.
 
-**Proposed treatment, for Leader confirmation:** following the agreed fallback, report I3 on Test as reference-only and state this in the report. Do not change the I3 wording or the judge prompt in response to this result.
+**Leader-confirmed treatment (2026-10-29):** report I3 separately as reference-only on Test; compute the main intermediate adaptation rate using I1 and I2, without I3. Keep I3 verdicts, the checklist wording and judge prompt unchanged. See [the Dev with/without-I3 comparison](DEV_I3_SENSITIVITY.md) and its source-bound JSON. This changes reporting aggregation only; it does not overwrite original judge scores or claim that the original detection rule passed.
 
 ## Per-case results
 
@@ -61,8 +61,8 @@ The last column compares each perturbed answer with the **original full-Dev scor
 
 **Reading the non-target column**
 - **Some changes are expected.** A wrong core answer also fails the reasoning criteria (B2/I2/A4). Advanced notation shifting the predicted level to intermediate is likewise expected.
-- **Some changes show the edit was not fully isolated.** The clearest case is evidence-llama, where the correctness judge read the inserted delayed-neutron sentence as a factual error and scored it 0 (*critical error*).
-- **This run cannot separate edit effects from judge randomness.** The judge runs at temperature 1, and this audit has no same-answer rescoring. That is the separate repeat-retest check of plan §6, which has not run yet.
+- **One observed correctness false fail:** evidence-llama is a correct answer with a true, unreferenced delayed-neutron addition. The sentence says *some* neutrons are emitted when fission products decay. The correctness judge misread this as neutrons *only* appearing during later decay and assigned 0 with a critical error; the evidence-support rationale shows the same misreading. The Leader identified this as a judge false fail, not an isolation problem. More detailed generators may be more exposed to this failure mode. Preserve the raw outputs; do not replace their scores by hand.
+- **Not every non-target change is caused by the edit.** For example, b4-gemma beginner B1 changed from fail to pass after an unexplained formula was added. The edit does not explain that direction; it is consistent with judge randomness at temperature 1. This run cannot separate edit effects from judge randomness because no independent same-answer retest was run.
 
 ## Execution record
 
@@ -88,6 +88,7 @@ The last column compares each perturbed answer with the **original full-Dev scor
 | File | Contents |
 |---|---|
 | `perturbation_summary.json` | Totals, rule outcome, usage, input hashes |
+| `dev_i3_sensitivity.json` / `DEV_I3_SENSITIVITY.md` | Offline Dev rates with and without I3; source hashes, scopes and missing counts |
 | `perturbation_cases.jsonl` | Per-case detection, judge reasons, non-target changes |
 | `run/` | `case_map.json`, `BUILD_MANIFEST.json`, perturbed inputs, judge configuration and frozen profile, judge results, correctness reports, attempt ledgers, run status |
 | `tools/build_perturbation_run.py` | Offline builder for the step-5 inputs and requests |
@@ -96,4 +97,14 @@ The last column compares each perturbed answer with the **original full-Dev scor
 **Limits**
 - These are 18 purposefully written cases, reviewed before scoring. They are not a random sample and do not estimate population judge accuracy.
 - The cases were not revised after any score was seen.
-- Scope agreed with the Leader during the #220 review: the free offline checks plus this perturbation audit. The paid repeat-answer retest and order-reversal checks, and the second-family judge, were not run by that decision. Judge run-to-run variation and checklist-position effects are therefore not measured directly.
+- **No should-pass controls were run.** The 15/18 result measures targeted sensitivity only. A judge that fails everything would score 18/18 on these should-fail cases. The false-fail rate is not measured; evidence-llama is one observed correctness false fail, not an estimated rate.
+- **Leader-accepted plan section 6 scope:** the offline checks in #220 plus this audit; no paid same-answer retest, order reversal or second-family judge. This is acceptance of a limited scope, not a claim that the original detection rule passed.
+- Generation-repeat batches measure combined generation-plus-judge noise, not judge-only variation. Test differences below the applicable metric-specific noise floor must not be reported as differences; no new numerical threshold is inferred here.
+- Checklist-position effects are not measured.
+- No second-family judge was used. Gemini and Gemma come from the same vendor; any apparent Gemma advantage must be reported with that caveat.
+- Citation support remains reference-only: the Leader notes a judge error in handling the structured citation_ids field. Do not use its condition contrasts for formal conclusions. This review does not request a prompt change or a rerun.
+- These limitations must accompany the Test report. Other Test gates, including registered comparisons/delta, sampling, frozen eligibility and reviewed rubrics, remain separate; no Test answers were read for this update.
+
+## Review and reproduction corrections
+
+[Leader review](https://github.com/yshe0376/cs30-personalised-rag/pull/223#issuecomment-6490707658) accepted the limited scope and I3 treatment. The analysis writer now explicitly uses LF newlines on Windows. SOURCE_HASHES.json is sorted by key; its values are unchanged. Raw run inputs, results, caches and ledgers remain unchanged.
