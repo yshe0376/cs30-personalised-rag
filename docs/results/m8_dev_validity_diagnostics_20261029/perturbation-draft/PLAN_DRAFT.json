@@ -1,0 +1,39 @@
+{
+  "plan_version": "perturbation-small-v1-draft",
+  "status": "proposed_not_frozen_not_run",
+  "seed": 5703,
+  "source_profile_package_sha256": "1888c3b7fb6f2f0fd52dbe06455c40cef88ff8839ab47383a76d7c29a1088238",
+  "source_scoring_bundle_manifest_sha256": "aa096b779de9eaa9574e77995168c6df93c9be66db110d065740446d71d34e3a",
+  "targets": [
+    "B1",
+    "B4",
+    "A1",
+    "I3",
+    "correctness",
+    "evidence_support"
+  ],
+  "cases_per_target": 3,
+  "generators_per_target": [
+    "gpt-oss",
+    "llama",
+    "gemma"
+  ],
+  "expected_case_count": 18,
+  "detection_rate_proposal": 0.8,
+  "per_target_minimum_detected_proposal": 1,
+  "thresholds_frozen": false,
+  "answer_change_review_required": "Leader reviews and confirms semantic isolation before any judge call",
+  "paid_calls": 0,
+  "review_owner": "Leader",
+  "scoring_owner": "M8",
+  "post_scoring_report_owner": "M8",
+  "step_4_status": "pending_leader_confirmation",
+  "step_5_status": "not_run",
+  "step_6_status": "not_run",
+  "reviewer_student_substitution_allowed": false,
+  "prompt_and_thinking": "Use unchanged production prompt/model/temperature/thinking low; fresh requests/execution/cache/ledger; never add to main scores",
+  "preregistration_destination": "Record the approved plan in a versioned pre-Test decision before inspecting perturbation or relevant Test outcomes",
+  "interpretation": "Small sensitivity audit for these selected clauses, not judge accuracy, calibration or full validity approval",
+  "frozen_rule_correction": "A1 checks unnecessary introductory teaching; A4 checks rigor. Recognition-only questions must not fail solely for lacking derivation. B4 does not require a formula.",
+  "selection": "Targeted eligible Dev originals with correct score2 and target verdict pass. Stable seeded SHA256 ranking within generator/target; no perturbed scoring outcomes used. This is not a representative population sample."
+}

@@ -1,0 +1,10 @@
+{
+  "basis": "Historical retry mean cost per attempt, recorded list prices; not an actual quote or cap",
+  "candidate_cases": 18,
+  "one_attempt_per_case_estimate_usd": 0.025812604045279033,
+  "one_attempt_estimate_aud_at_planning_fx_1_5": 0.03871890606791855,
+  "two_attempts_estimate_aud_at_planning_fx_1_5": 0.0774378121358371,
+  "up_to_two_application_attempts_per_case": 36,
+  "full_8192_output_tokens_twice_output_only_aud": 0.6635519999999999,
+  "warning": "Input, output length, exchange, tax and retries vary; do not treat the average estimate as an upper bound. No budget or sample/threshold freeze has been approved by this draft. No API calls."
+}
