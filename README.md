@@ -23,8 +23,13 @@ Online questions are API-authored drafts with local structure and quotation chec
 they are not independently reviewed published-bank questions. See the
 [current concept and framework](docs/superpowers/specs/2026-10-28-api-learning-demo-design.md)
 for the two practice paths and their relationship to the original design.
-Start with `start_learning_demo.cmd` or `start_v2_demo.cmd`; local asset/configuration
-setup is described in the [runbook](docs/api-learning-demo-runbook.md).
+For a computer with no previous setup, follow the
+[online Demo installation and startup guide](docs/online-demo-setup.md).
+It covers dependencies, separately supplied textbook/index assets, the pinned local
+embedding model, API configuration, validation, and restarting the app.
+The launchers do not install these online-mode prerequisites automatically.
+For asset provenance and detailed diagnostics, see the
+[runbook](docs/api-learning-demo-runbook.md).
 
 ## M6 W6 four-book retrieval experiment
 

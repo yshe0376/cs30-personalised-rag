@@ -1,5 +1,9 @@
 # M8 page integration (2026-10-29)
 
+For first-time installation on a new computer, start with the
+[online Demo setup guide](online-demo-setup.md). It lists required external assets,
+provides portable configuration examples, and separates first setup from later startups.
+
 The earlier v3 documentation snapshot was published in PR #217. This runbook
 describes the integrated online Demo and its current v5 definition.
 
@@ -28,8 +32,10 @@ still block generation. Fallback is for Topic selection failure, not API author 
 The online learning demo now runs inside M8's `qa_app.py` page. Use
 `start_v2_demo.cmd` and select **Demo Mode → Online learning · textbook quizzes**,
 or run `start_learning_demo.cmd` to open that mode directly. Both routes use the
-same online runtime and page components. `CS30_PYTHON` optionally selects the Python
-executable and `CS30_PORT` selects the port (default 8512).
+same online runtime and page components. For `start_learning_demo.cmd`,
+`CS30_PYTHON` optionally selects the Python executable and `CS30_PORT` selects
+the port (default 8512). The shell launcher uses the active Python environment
+and Streamlit's configured/default port.
 
 Online mode reads its answer/quiz models and retrieval settings from the local
 learning configuration. Team V2's model/retriever controls belong to the separate
@@ -172,8 +178,10 @@ Do not upload local keys, TOML overrides, request ledgers, learner events, weigh
 .\start_learning_demo.cmd
 ```
 
-On macOS/Linux use `bash start_learning_demo.sh`. Stop the old server before restarting
-and open the URL printed in the terminal (normally `http://127.0.0.1:8501`).
+On Windows the launcher defaults to `http://127.0.0.1:8512`. On macOS/Linux,
+activate the virtual environment and use `bash start_learning_demo.sh` (normally
+`http://127.0.0.1:8501`). Stop the old server before restarting and use the URL
+printed in the terminal.
 
 1. Select the starting level and start a learning session.
 2. Ask a physics question and inspect its textbook citations.
